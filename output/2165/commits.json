@@ -1,0 +1,74 @@
+[
+  {
+    "sha": "bb0726a8cfbe985beb668790bb5d01a4caaaa5c4",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiYjA3MjZhOGNmYmU5ODViZWI2Njg3OTBiYjVkMDFhNGNhYWFhNWM0",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-01-10T07:52:39Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-01-23T21:41:28Z"
+      },
+      "message": "Bitcoin-Qt: cleanup / optimise addressbookpage\n\n- don't show QR Code context menu, when USE_QRCODE=1 was not specified\n  when compiling the client\n- re-work on_showQRCode_clicked() for better readability and remove an\n  unneeded duplicate check\n- re-work on_signMessage_clicked() and on_verifyMessage_clicked() to match\n  foreach in on_showQRCode_clicked(), which seems more robust / cleaner\n- re-order context menu stuff to match real context menu layout\n- add comments for all private slots in the class",
+      "tree": {
+        "sha": "cedaff095745c71b0f25abe1ccdbc46a96648ff5",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/cedaff095745c71b0f25abe1ccdbc46a96648ff5"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/bb0726a8cfbe985beb668790bb5d01a4caaaa5c4",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/bb0726a8cfbe985beb668790bb5d01a4caaaa5c4",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/bb0726a8cfbe985beb668790bb5d01a4caaaa5c4",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/bb0726a8cfbe985beb668790bb5d01a4caaaa5c4/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "09c69c03f701b1f4ab2bd734eca375f939e4d728",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/09c69c03f701b1f4ab2bd734eca375f939e4d728",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/09c69c03f701b1f4ab2bd734eca375f939e4d728"
+      }
+    ],
+    "stats": {
+      "total": 45,
+      "additions": 24,
+      "deletions": 21
+    },
+    "files": [
+      {
+        "sha": "f4696d5a3bf7111c49c5ae47d00648ca721d5796",
+        "filename": "src/qt/addressbookpage.cpp",
+        "status": "modified",
+        "additions": 12,
+        "deletions": 14,
+        "changes": 26,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/bb0726a8cfbe985beb668790bb5d01a4caaaa5c4/src/qt/addressbookpage.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/bb0726a8cfbe985beb668790bb5d01a4caaaa5c4/src/qt/addressbookpage.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/addressbookpage.cpp?ref=bb0726a8cfbe985beb668790bb5d01a4caaaa5c4",
+        "patch": "@@ -62,8 +62,8 @@ AddressBookPage::AddressBookPage(Mode mode, Tabs tab, QWidget *parent) :\n     }\n \n     // Context menu actions\n-    QAction *copyLabelAction = new QAction(tr(\"Copy &Label\"), this);\n     QAction *copyAddressAction = new QAction(ui->copyToClipboard->text(), this);\n+    QAction *copyLabelAction = new QAction(tr(\"Copy &Label\"), this);\n     QAction *editAction = new QAction(tr(\"&Edit\"), this);\n     QAction *showQRCodeAction = new QAction(ui->showQRCode->text(), this);\n     QAction *signMessageAction = new QAction(ui->signMessage->text(), this);\n@@ -78,7 +78,9 @@ AddressBookPage::AddressBookPage(Mode mode, Tabs tab, QWidget *parent) :\n     if(tab == SendingTab)\n         contextMenu->addAction(deleteAction);\n     contextMenu->addSeparator();\n+#ifdef USE_QRCODE\n     contextMenu->addAction(showQRCodeAction);\n+#endif\n     if(tab == ReceivingTab)\n         contextMenu->addAction(signMessageAction);\n     else if(tab == SendingTab)\n@@ -184,36 +186,31 @@ void AddressBookPage::on_signMessage_clicked()\n {\n     QTableView *table = ui->tableView;\n     QModelIndexList indexes = table->selectionModel()->selectedRows(AddressTableModel::Address);\n-    QString addr;\n \n     foreach (QModelIndex index, indexes)\n     {\n-        QVariant address = index.data();\n-        addr = address.toString();\n+        QString address = index.data().toString();\n+        emit signMessage(address);\n     }\n-\n-    emit signMessage(addr);\n }\n \n void AddressBookPage::on_verifyMessage_clicked()\n {\n     QTableView *table = ui->tableView;\n     QModelIndexList indexes = table->selectionModel()->selectedRows(AddressTableModel::Address);\n-    QString addr;\n \n     foreach (QModelIndex index, indexes)\n     {\n-        QVariant address = index.data();\n-        addr = address.toString();\n+        QString address = index.data().toString();\n+        emit verifyMessage(address);\n     }\n-\n-    emit verifyMessage(addr);\n }\n \n void AddressBookPage::on_newAddressButton_clicked()\n {\n     if(!model)\n         return;\n+\n     EditAddressDialog dlg(\n             tab == SendingTab ?\n             EditAddressDialog::NewSendingAddress :\n@@ -230,6 +227,7 @@ void AddressBookPage::on_deleteButton_clicked()\n     QTableView *table = ui->tableView;\n     if(!table->selectionModel())\n         return;\n+\n     QModelIndexList indexes = table->selectionModel()->selectedRows();\n     if(!indexes.isEmpty())\n     {\n@@ -341,11 +339,11 @@ void AddressBookPage::on_showQRCode_clicked()\n \n     foreach (QModelIndex index, indexes)\n     {\n-        QString address = index.data().toString(), label = index.sibling(index.row(), 0).data(Qt::EditRole).toString();\n+        QString address = index.data().toString();\n+        QString label = index.sibling(index.row(), 0).data(Qt::EditRole).toString();\n \n         QRCodeDialog *dialog = new QRCodeDialog(address, label, tab == ReceivingTab, this);\n-        if(optionsModel)\n-            dialog->setModel(optionsModel);\n+        dialog->setModel(optionsModel);\n         dialog->setAttribute(Qt::WA_DeleteOnClose);\n         dialog->show();\n     }"
+      },
+      {
+        "sha": "c676d1e941e2fd971fb9a20e11200423d7f8b517",
+        "filename": "src/qt/addressbookpage.h",
+        "status": "modified",
+        "additions": 12,
+        "deletions": 7,
+        "changes": 19,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/bb0726a8cfbe985beb668790bb5d01a4caaaa5c4/src/qt/addressbookpage.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/bb0726a8cfbe985beb668790bb5d01a4caaaa5c4/src/qt/addressbookpage.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/addressbookpage.h?ref=bb0726a8cfbe985beb668790bb5d01a4caaaa5c4",
+        "patch": "@@ -54,26 +54,31 @@ public slots:\n     QString returnValue;\n     QSortFilterProxyModel *proxyModel;\n     QMenu *contextMenu;\n-    QAction *deleteAction;\n+    QAction *deleteAction; // to be able to explicitly disable it\n     QString newAddressToSelect;\n \n private slots:\n+    /** Delete currently selected address entry */\n     void on_deleteButton_clicked();\n+    /** Create a new address for receiving coins and / or add a new address book entry */\n     void on_newAddressButton_clicked();\n     /** Copy address of currently selected address entry to clipboard */\n     void on_copyToClipboard_clicked();\n+    /** Open the sign message tab in the Sign/Verify Message dialog with currently selected address */\n     void on_signMessage_clicked();\n+    /** Open the verify message tab in the Sign/Verify Message dialog with currently selected address */\n     void on_verifyMessage_clicked();\n-    void selectionChanged();\n+    /** Generate a QR Code from the currently selected address */\n     void on_showQRCode_clicked();\n-    /** Spawn contextual menu (right mouse menu) for address book entry */\n-    void contextualMenu(const QPoint &point);\n-\n-    /** Copy label of currently selected address entry to clipboard */\n+    /** Copy label of currently selected address entry to clipboard (no button) */\n     void onCopyLabelAction();\n-    /** Edit currently selected address entry */\n+    /** Edit currently selected address entry (no button) */\n     void onEditAction();\n \n+    /** Set button states based on selected tab and selection */\n+    void selectionChanged();\n+    /** Spawn contextual menu (right mouse menu) for address book entry */\n+    void contextualMenu(const QPoint &point);\n     /** New entry/entries were added to address table */\n     void selectNewAddress(const QModelIndex &parent, int begin, int /*end*/);\n "
+      }
+    ]
+  }
+]

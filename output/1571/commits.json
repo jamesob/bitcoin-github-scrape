@@ -1,0 +1,74 @@
+[
+  {
+    "sha": "1376a542b45ec4c733c772fd3e4844d70bf4da40",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxMzc2YTU0MmI0NWVjNGM3MzNjNzcyZmQzZTQ4NDRkNzBiZjRkYTQw",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-07-09T09:14:38Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-07-21T23:12:11Z"
+      },
+      "message": "optionsdialog cleanup\n\n- remove duplicate includes, that are already present in ui_optionsdialog.h\n- change QIntValidator to not allow 0 as port-number\n- re-order some function calls to match the Ui element order, for better readbility and to prepare for the addition of further IPv6 and Tor proxy options\n- restat warning for the language selection is only shown, when the language was changed (not on simply activating the Ui element)\n- split check for object == ui->proxyIp into seperate if-clause\n- micro-optimize the code in the above mentioned if-clause\n- unify used format for comments in the code\n- introduce handleProxyIpValid() function, which handles UI elements and the\nsave button states for valid/invalid proxy IPs",
+      "tree": {
+        "sha": "1a79a87ecdb39c83f7c90a8df9c5f88305506545",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/1a79a87ecdb39c83f7c90a8df9c5f88305506545"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/1376a542b45ec4c733c772fd3e4844d70bf4da40",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1376a542b45ec4c733c772fd3e4844d70bf4da40",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/1376a542b45ec4c733c772fd3e4844d70bf4da40",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1376a542b45ec4c733c772fd3e4844d70bf4da40/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "fa914f1ddaeed79f1e2d5404b4789e3a1c1aebb2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fa914f1ddaeed79f1e2d5404b4789e3a1c1aebb2",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/fa914f1ddaeed79f1e2d5404b4789e3a1c1aebb2"
+      }
+    ],
+    "stats": {
+      "total": 82,
+      "additions": 43,
+      "deletions": 39
+    },
+    "files": [
+      {
+        "sha": "6bb7eaec2ee493c7e02eb0e6028f9f2294d7193d",
+        "filename": "src/qt/optionsdialog.cpp",
+        "status": "modified",
+        "additions": 40,
+        "deletions": 38,
+        "changes": 78,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1376a542b45ec4c733c772fd3e4844d70bf4da40/src/qt/optionsdialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1376a542b45ec4c733c772fd3e4844d70bf4da40/src/qt/optionsdialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/optionsdialog.cpp?ref=1376a542b45ec4c733c772fd3e4844d70bf4da40",
+        "patch": "@@ -1,26 +1,17 @@\n #include \"optionsdialog.h\"\n #include \"ui_optionsdialog.h\"\n \n-#include \"bitcoinamountfield.h\"\n #include \"bitcoinunits.h\"\n #include \"monitoreddatamapper.h\"\n #include \"netbase.h\"\n #include \"optionsmodel.h\"\n-#include \"qvalidatedlineedit.h\"\n-#include \"qvaluecombobox.h\"\n \n-#include <QCheckBox>\n #include <QDir>\n #include <QIntValidator>\n-#include <QLabel>\n-#include <QLineEdit>\n #include <QLocale>\n #include <QMessageBox>\n-#include <QPushButton>\n #include <QRegExp>\n #include <QRegExpValidator>\n-#include <QTabWidget>\n-#include <QWidget>\n \n OptionsDialog::OptionsDialog(QWidget *parent) :\n     QDialog(parent),\n@@ -38,18 +29,19 @@ OptionsDialog::OptionsDialog(QWidget *parent) :\n     ui->mapPortUpnp->setEnabled(false);\n #endif\n \n+    ui->proxyIp->setEnabled(false);\n+    ui->proxyPort->setEnabled(false);\n+    ui->proxyPort->setValidator(new QIntValidator(1, 65535, this));\n+\n     ui->socksVersion->setEnabled(false);\n     ui->socksVersion->addItem(\"5\", 5);\n     ui->socksVersion->addItem(\"4\", 4);\n     ui->socksVersion->setCurrentIndex(0);\n \n-    ui->proxyIp->setEnabled(false);\n-    ui->proxyPort->setEnabled(false);\n-    ui->proxyPort->setValidator(new QIntValidator(0, 65535, this));\n-\n-    connect(ui->connectSocks, SIGNAL(toggled(bool)), ui->socksVersion, SLOT(setEnabled(bool)));\n     connect(ui->connectSocks, SIGNAL(toggled(bool)), ui->proxyIp, SLOT(setEnabled(bool)));\n     connect(ui->connectSocks, SIGNAL(toggled(bool)), ui->proxyPort, SLOT(setEnabled(bool)));\n+    connect(ui->connectSocks, SIGNAL(toggled(bool)), ui->socksVersion, SLOT(setEnabled(bool)));\n+    connect(ui->connectSocks, SIGNAL(clicked(bool)), this, SLOT(showRestartWarning_Proxy()));\n \n     ui->proxyIp->installEventFilter(this);\n \n@@ -90,9 +82,6 @@ OptionsDialog::OptionsDialog(QWidget *parent) :\n \n     ui->unit->setModel(new BitcoinUnits(this));\n \n-    connect(ui->connectSocks, SIGNAL(clicked(bool)), this, SLOT(showRestartWarning_Proxy()));\n-    connect(ui->lang, SIGNAL(activated(int)), this, SLOT(showRestartWarning_Lang()));\n-\n     /* Widget-to-option mapper */\n     mapper = new MonitoredDataMapper(this);\n     mapper->setSubmitPolicy(QDataWidgetMapper::ManualSubmit);\n@@ -102,8 +91,8 @@ OptionsDialog::OptionsDialog(QWidget *parent) :\n     connect(mapper, SIGNAL(viewModified()), this, SLOT(enableSaveButtons()));\n     /* disable save buttons when new data loaded */\n     connect(mapper, SIGNAL(currentIndexChanged(int)), this, SLOT(disableSaveButtons()));\n-    /* disable/enable save buttons when proxy IP is invalid/valid */\n-    connect(this, SIGNAL(proxyIpValid(bool)), this, SLOT(setSaveButtonState(bool)));\n+    /* setup/change UI elements when proxy IP is invalid/valid */\n+    connect(this, SIGNAL(proxyIpValid(QValidatedLineEdit *, bool)), this, SLOT(handleProxyIpValid(QValidatedLineEdit *, bool)));\n }\n \n OptionsDialog::~OptionsDialog()\n@@ -124,8 +113,11 @@ void OptionsDialog::setModel(OptionsModel *model)\n         mapper->toFirst();\n     }\n \n-    // update the display unit, to not use the default (\"BTC\")\n+    /* update the display unit, to not use the default (\"BTC\") */\n     updateDisplayUnit();\n+\n+    /* warn only when language selection changes (placed here so init of ui->lang via mapper doesn't trigger this) */\n+    connect(ui->lang, SIGNAL(valueChanged()), this, SLOT(showRestartWarning_Lang()));\n }\n \n void OptionsDialog::setMapper()\n@@ -137,10 +129,11 @@ void OptionsDialog::setMapper()\n \n     /* Network */\n     mapper->addMapping(ui->mapPortUpnp, OptionsModel::MapPortUPnP);\n+\n     mapper->addMapping(ui->connectSocks, OptionsModel::ProxyUse);\n-    mapper->addMapping(ui->socksVersion, OptionsModel::ProxySocksVersion);\n     mapper->addMapping(ui->proxyIp, OptionsModel::ProxyIP);\n     mapper->addMapping(ui->proxyPort, OptionsModel::ProxyPort);\n+    mapper->addMapping(ui->socksVersion, OptionsModel::ProxySocksVersion);\n \n     /* Window */\n #ifndef Q_WS_MAC\n@@ -156,7 +149,7 @@ void OptionsDialog::setMapper()\n \n void OptionsDialog::enableSaveButtons()\n {\n-    // prevent enabling of the save buttons when data modified, if there is an invalid proxy address present\n+    /* prevent enabling of the save buttons when data modified, if there is an invalid proxy address present */\n     if(fProxyIpValid)\n         setSaveButtonState(true);\n }\n@@ -211,30 +204,39 @@ void OptionsDialog::updateDisplayUnit()\n {\n     if(model)\n     {\n-        // Update transactionFee with the current unit\n+        /* Update transactionFee with the current unit */\n         ui->transactionFee->setDisplayUnit(model->getDisplayUnit());\n     }\n }\n \n+void OptionsDialog::handleProxyIpValid(QValidatedLineEdit *object, bool fState)\n+{\n+    // this is used in a check before re-enabling the save buttons\n+    fProxyIpValid = fState;\n+\n+    if(fProxyIpValid)\n+    {\n+        enableSaveButtons();\n+        ui->statusLabel->clear();\n+    }\n+    else\n+    {\n+        disableSaveButtons();\n+        object->setValid(fProxyIpValid);\n+        ui->statusLabel->setStyleSheet(\"QLabel { color: red; }\");\n+        ui->statusLabel->setText(tr(\"The supplied proxy address is invalid.\"));\n+    }\n+}\n+\n bool OptionsDialog::eventFilter(QObject *object, QEvent *event)\n {\n-    if(object == ui->proxyIp && event->type() == QEvent::FocusOut)\n+    if(event->type() == QEvent::FocusOut)\n     {\n-        // Check proxyIP for a valid IPv4/IPv6 address\n-        CService addr;\n-        if(!LookupNumeric(ui->proxyIp->text().toStdString().c_str(), addr))\n-        {\n-            ui->proxyIp->setValid(false);\n-            fProxyIpValid = false;\n-            ui->statusLabel->setStyleSheet(\"QLabel { color: red; }\");\n-            ui->statusLabel->setText(tr(\"The supplied proxy address is invalid.\"));\n-            emit proxyIpValid(false);\n-        }\n-        else\n+        if(object == ui->proxyIp)\n         {\n-            fProxyIpValid = true;\n-            ui->statusLabel->clear();\n-            emit proxyIpValid(true);\n+            CService addr;\n+            /* Check proxyIp for a valid IPv4/IPv6 address and emit the proxyIpValid signal */\n+            emit proxyIpValid(ui->proxyIp, LookupNumeric(ui->proxyIp->text().toStdString().c_str(), addr));\n         }\n     }\n     return QDialog::eventFilter(object, event);"
+      },
+      {
+        "sha": "9e91000b63ce4306cc9b894a6148507db70c5c2c",
+        "filename": "src/qt/optionsdialog.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 1,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1376a542b45ec4c733c772fd3e4844d70bf4da40/src/qt/optionsdialog.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1376a542b45ec4c733c772fd3e4844d70bf4da40/src/qt/optionsdialog.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/optionsdialog.h?ref=1376a542b45ec4c733c772fd3e4844d70bf4da40",
+        "patch": "@@ -8,6 +8,7 @@ class OptionsDialog;\n }\n class OptionsModel;\n class MonitoredDataMapper;\n+class QValidatedLineEdit;\n \n /** Preferences dialog. */\n class OptionsDialog : public QDialog\n@@ -38,9 +39,10 @@ private slots:\n     void showRestartWarning_Proxy();\n     void showRestartWarning_Lang();\n     void updateDisplayUnit();\n+    void handleProxyIpValid(QValidatedLineEdit *object, bool fState);\n \n signals:\n-    void proxyIpValid(bool fValid);\n+    void proxyIpValid(QValidatedLineEdit *object, bool fValid);\n \n private:\n     Ui::OptionsDialog *ui;"
+      }
+    ]
+  }
+]

@@ -1,0 +1,100 @@
+[
+  {
+    "sha": "962444295d92744e6f671dac2462037f9f3d79d7",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5NjI0NDQyOTVkOTI3NDRlNmY2NzFkYWMyNDYyMDM3ZjlmM2Q3OWQ3",
+    "commit": {
+      "author": {
+        "name": "Sebastian Falbesoner",
+        "email": "sebastian.falbesoner@gmail.com",
+        "date": "2020-11-28T17:30:32Z"
+      },
+      "committer": {
+        "name": "Sebastian Falbesoner",
+        "email": "sebastian.falbesoner@gmail.com",
+        "date": "2021-01-21T13:35:21Z"
+      },
+      "message": "zmq: deduplicate 'sequence' publisher message creation/sending",
+      "tree": {
+        "sha": "7288324774dcd98e24eae27d06cdff6939418247",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/7288324774dcd98e24eae27d06cdff6939418247"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/962444295d92744e6f671dac2462037f9f3d79d7",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/962444295d92744e6f671dac2462037f9f3d79d7",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/962444295d92744e6f671dac2462037f9f3d79d7",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/962444295d92744e6f671dac2462037f9f3d79d7/comments",
+    "author": {
+      "login": "theStack",
+      "id": 91535,
+      "node_id": "MDQ6VXNlcjkxNTM1",
+      "avatar_url": "https://avatars.githubusercontent.com/u/91535?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/theStack",
+      "html_url": "https://github.com/theStack",
+      "followers_url": "https://api.github.com/users/theStack/followers",
+      "following_url": "https://api.github.com/users/theStack/following{/other_user}",
+      "gists_url": "https://api.github.com/users/theStack/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/theStack/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/theStack/subscriptions",
+      "organizations_url": "https://api.github.com/users/theStack/orgs",
+      "repos_url": "https://api.github.com/users/theStack/repos",
+      "events_url": "https://api.github.com/users/theStack/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/theStack/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "theStack",
+      "id": 91535,
+      "node_id": "MDQ6VXNlcjkxNTM1",
+      "avatar_url": "https://avatars.githubusercontent.com/u/91535?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/theStack",
+      "html_url": "https://github.com/theStack",
+      "followers_url": "https://api.github.com/users/theStack/followers",
+      "following_url": "https://api.github.com/users/theStack/following{/other_user}",
+      "gists_url": "https://api.github.com/users/theStack/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/theStack/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/theStack/subscriptions",
+      "organizations_url": "https://api.github.com/users/theStack/orgs",
+      "repos_url": "https://api.github.com/users/theStack/repos",
+      "events_url": "https://api.github.com/users/theStack/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/theStack/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "7ae86b3c6845873ca96650fc69beb4ae5285c801",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7ae86b3c6845873ca96650fc69beb4ae5285c801",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/7ae86b3c6845873ca96650fc69beb4ae5285c801"
+      }
+    ],
+    "stats": {
+      "total": 40,
+      "additions": 17,
+      "deletions": 23
+    },
+    "files": [
+      {
+        "sha": "168ba841c8d1f13130b271cecd1c27db8cfcae5d",
+        "filename": "src/zmq/zmqpublishnotifier.cpp",
+        "status": "modified",
+        "additions": 17,
+        "deletions": 23,
+        "changes": 40,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/962444295d92744e6f671dac2462037f9f3d79d7/src/zmq/zmqpublishnotifier.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/962444295d92744e6f671dac2462037f9f3d79d7/src/zmq/zmqpublishnotifier.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/zmq/zmqpublishnotifier.cpp?ref=962444295d92744e6f671dac2462037f9f3d79d7",
+        "patch": "@@ -17,6 +17,7 @@\n #include <cstdarg>\n #include <cstddef>\n #include <map>\n+#include <optional>\n #include <string>\n #include <utility>\n \n@@ -227,50 +228,43 @@ bool CZMQPublishRawTransactionNotifier::NotifyTransaction(const CTransaction &tr\n     return SendZmqMessage(MSG_RAWTX, &(*ss.begin()), ss.size());\n }\n \n+// Helper function to send a 'sequence' topic message with the following structure:\n+//    <32-byte hash> | <1-byte label> | <8-byte LE sequence> (optional)\n+static bool SendSequenceMsg(CZMQAbstractPublishNotifier& notifier, uint256 hash, char label, std::optional<uint64_t> sequence = {})\n+{\n+    unsigned char data[sizeof(hash) + sizeof(label) + sizeof(uint64_t)];\n+    for (unsigned int i = 0; i < sizeof(hash); ++i) {\n+        data[sizeof(hash) - 1 - i] = hash.begin()[i];\n+    }\n+    data[sizeof(hash)] = label;\n+    if (sequence) WriteLE64(data + sizeof(hash) + sizeof(label), *sequence);\n+    return notifier.SendZmqMessage(MSG_SEQUENCE, data, sequence ? sizeof(data) : sizeof(hash) + sizeof(label));\n+}\n \n-// TODO: Dedup this code to take label char, log string\n bool CZMQPublishSequenceNotifier::NotifyBlockConnect(const CBlockIndex *pindex)\n {\n     uint256 hash = pindex->GetBlockHash();\n     LogPrint(BCLog::ZMQ, \"zmq: Publish sequence block connect %s to %s\\n\", hash.GetHex(), this->address);\n-    char data[sizeof(uint256)+1];\n-    for (unsigned int i = 0; i < sizeof(uint256); i++)\n-        data[sizeof(uint256) - 1 - i] = hash.begin()[i];\n-    data[sizeof(data) - 1] = 'C'; // Block (C)onnect\n-    return SendZmqMessage(MSG_SEQUENCE, data, sizeof(data));\n+    return SendSequenceMsg(*this, hash, /* Block (C)onnect */ 'C');\n }\n \n bool CZMQPublishSequenceNotifier::NotifyBlockDisconnect(const CBlockIndex *pindex)\n {\n     uint256 hash = pindex->GetBlockHash();\n     LogPrint(BCLog::ZMQ, \"zmq: Publish sequence block disconnect %s to %s\\n\", hash.GetHex(), this->address);\n-    char data[sizeof(uint256)+1];\n-    for (unsigned int i = 0; i < sizeof(uint256); i++)\n-        data[sizeof(uint256) - 1 - i] = hash.begin()[i];\n-    data[sizeof(data) - 1] = 'D'; // Block (D)isconnect\n-    return SendZmqMessage(MSG_SEQUENCE, data, sizeof(data));\n+    return SendSequenceMsg(*this, hash, /* Block (D)isconnect */ 'D');\n }\n \n bool CZMQPublishSequenceNotifier::NotifyTransactionAcceptance(const CTransaction &transaction, uint64_t mempool_sequence)\n {\n     uint256 hash = transaction.GetHash();\n     LogPrint(BCLog::ZMQ, \"zmq: Publish hashtx mempool acceptance %s to %s\\n\", hash.GetHex(), this->address);\n-    unsigned char data[sizeof(uint256)+sizeof(mempool_sequence)+1];\n-    for (unsigned int i = 0; i < sizeof(uint256); i++)\n-        data[sizeof(uint256) - 1 - i] = hash.begin()[i];\n-    data[sizeof(uint256)] = 'A'; // Mempool (A)cceptance\n-    WriteLE64(data+sizeof(uint256)+1, mempool_sequence);\n-    return SendZmqMessage(MSG_SEQUENCE, data, sizeof(data));\n+    return SendSequenceMsg(*this, hash, /* Mempool (A)cceptance */ 'A', mempool_sequence);\n }\n \n bool CZMQPublishSequenceNotifier::NotifyTransactionRemoval(const CTransaction &transaction, uint64_t mempool_sequence)\n {\n     uint256 hash = transaction.GetHash();\n     LogPrint(BCLog::ZMQ, \"zmq: Publish hashtx mempool removal %s to %s\\n\", hash.GetHex(), this->address);\n-    unsigned char data[sizeof(uint256)+sizeof(mempool_sequence)+1];\n-    for (unsigned int i = 0; i < sizeof(uint256); i++)\n-        data[sizeof(uint256) - 1 - i] = hash.begin()[i];\n-    data[sizeof(uint256)] = 'R'; // Mempool (R)emoval\n-    WriteLE64(data+sizeof(uint256)+1, mempool_sequence);\n-    return SendZmqMessage(MSG_SEQUENCE, data, sizeof(data));\n+    return SendSequenceMsg(*this, hash, /* Mempool (R)emoval */ 'R', mempool_sequence);\n }"
+      }
+    ]
+  }
+]

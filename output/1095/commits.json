@@ -1,0 +1,302 @@
+[
+  {
+    "sha": "235507ae48718ee8ce5289b2791b4b449090dabc",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyMzU1MDdhZTQ4NzE4ZWU4Y2U1Mjg5YjI3OTFiNGI0NDkwOTBkYWJj",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jeff@garzik.org",
+        "date": "2012-04-13T20:03:09Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-04-15T18:41:27Z"
+      },
+      "message": "New class CTxMemPool, encapsulating TX memory pool data members",
+      "tree": {
+        "sha": "f8c6e75a572c8c404ddcac640b205dd38cc968fb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f8c6e75a572c8c404ddcac640b205dd38cc968fb"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/235507ae48718ee8ce5289b2791b4b449090dabc",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/235507ae48718ee8ce5289b2791b4b449090dabc",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/235507ae48718ee8ce5289b2791b4b449090dabc",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/235507ae48718ee8ce5289b2791b4b449090dabc/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "5a701eb7ea16b87b56263996ee8e98ec89e2a3d8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5a701eb7ea16b87b56263996ee8e98ec89e2a3d8",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/5a701eb7ea16b87b56263996ee8e98ec89e2a3d8"
+      }
+    ],
+    "stats": {
+      "total": 67,
+      "additions": 37,
+      "deletions": 30
+    },
+    "files": [
+      {
+        "sha": "9e2fbe99e746dc55289bce677cefcb1af4c19e2c",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 29,
+        "deletions": 30,
+        "changes": 59,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/235507ae48718ee8ce5289b2791b4b449090dabc/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/235507ae48718ee8ce5289b2791b4b449090dabc/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=235507ae48718ee8ce5289b2791b4b449090dabc",
+        "patch": "@@ -23,10 +23,8 @@ set<CWallet*> setpwalletRegistered;\n \n CCriticalSection cs_main;\n \n-static map<uint256, CTransaction> mapTransactions;\n-CCriticalSection cs_mapTransactions;\n+static CTxMemPool mempool;\n unsigned int nTransactionsUpdated = 0;\n-map<COutPoint, CInPoint> mapNextTx;\n \n map<uint256, CBlockIndex*> mapBlockIndex;\n uint256 hashGenesisBlock(\"0x000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f\");\n@@ -474,8 +472,8 @@ bool CTransaction::AcceptToMemoryPool(CTxDB& txdb, bool fCheckInputs, bool* pfMi\n     // Do we already have it?\n     uint256 hash = GetHash();\n     {\n-        LOCK(cs_mapTransactions);\n-        if (mapTransactions.count(hash))\n+        LOCK(mempool.cs);\n+        if (mempool.mapTx.count(hash))\n             return false;\n     }\n     if (fCheckInputs)\n@@ -487,23 +485,23 @@ bool CTransaction::AcceptToMemoryPool(CTxDB& txdb, bool fCheckInputs, bool* pfMi\n     for (int i = 0; i < vin.size(); i++)\n     {\n         COutPoint outpoint = vin[i].prevout;\n-        if (mapNextTx.count(outpoint))\n+        if (mempool.mapNextTx.count(outpoint))\n         {\n             // Disable replacement feature for now\n             return false;\n \n             // Allow replacing with a newer version of the same transaction\n             if (i != 0)\n                 return false;\n-            ptxOld = mapNextTx[outpoint].ptx;\n+            ptxOld = mempool.mapNextTx[outpoint].ptx;\n             if (ptxOld->IsFinal())\n                 return false;\n             if (!IsNewerThan(*ptxOld))\n                 return false;\n             for (int i = 0; i < vin.size(); i++)\n             {\n                 COutPoint outpoint = vin[i].prevout;\n-                if (!mapNextTx.count(outpoint) || mapNextTx[outpoint].ptx != ptxOld)\n+                if (!mempool.mapNextTx.count(outpoint) || mempool.mapNextTx[outpoint].ptx != ptxOld)\n                     return false;\n             }\n             break;\n@@ -574,7 +572,7 @@ bool CTransaction::AcceptToMemoryPool(CTxDB& txdb, bool fCheckInputs, bool* pfMi\n \n     // Store transaction in memory\n     {\n-        LOCK(cs_mapTransactions);\n+        LOCK(mempool.cs);\n         if (ptxOld)\n         {\n             printf(\"AcceptToMemoryPool() : replacing tx %s with new version\\n\", ptxOld->GetHash().ToString().c_str());\n@@ -596,15 +594,15 @@ uint64 nPooledTx = 0;\n \n bool CTransaction::AddToMemoryPoolUnchecked()\n {\n-    printf(\"AcceptToMemoryPoolUnchecked(): size %lu\\n\",  mapTransactions.size());\n+    printf(\"AcceptToMemoryPoolUnchecked(): size %lu\\n\",  mempool.mapTx.size());\n     // Add to memory pool without checking anything.  Don't call this directly,\n     // call AcceptToMemoryPool to properly check the transaction first.\n     {\n-        LOCK(cs_mapTransactions);\n+        LOCK(mempool.cs);\n         uint256 hash = GetHash();\n-        mapTransactions[hash] = *this;\n+        mempool.mapTx[hash] = *this;\n         for (int i = 0; i < vin.size(); i++)\n-            mapNextTx[vin[i].prevout] = CInPoint(&mapTransactions[hash], i);\n+            mempool.mapNextTx[vin[i].prevout] = CInPoint(&mempool.mapTx[hash], i);\n         nTransactionsUpdated++;\n         ++nPooledTx;\n     }\n@@ -616,13 +614,13 @@ bool CTransaction::RemoveFromMemoryPool()\n {\n     // Remove transaction from memory pool\n     {\n-        LOCK(cs_mapTransactions);\n+        LOCK(mempool.cs);\n         uint256 hash = GetHash();\n-        if (mapTransactions.count(hash))\n+        if (mempool.mapTx.count(hash))\n         {\n             BOOST_FOREACH(const CTxIn& txin, vin)\n-                mapNextTx.erase(txin.prevout);\n-            mapTransactions.erase(hash);\n+                mempool.mapNextTx.erase(txin.prevout);\n+            mempool.mapTx.erase(hash);\n             nTransactionsUpdated++;\n             --nPooledTx;\n         }\n@@ -695,14 +693,14 @@ bool CWalletTx::AcceptWalletTransaction(CTxDB& txdb, bool fCheckInputs)\n {\n \n     {\n-        LOCK(cs_mapTransactions);\n+        LOCK(mempool.cs);\n         // Add previous supporting transactions first\n         BOOST_FOREACH(CMerkleTx& tx, vtxPrev)\n         {\n             if (!tx.IsCoinBase())\n             {\n                 uint256 hash = tx.GetHash();\n-                if (!mapTransactions.count(hash) && !txdb.ContainsTx(hash))\n+                if (!mempool.mapTx.count(hash) && !txdb.ContainsTx(hash))\n                     tx.AcceptToMemoryPool(txdb, fCheckInputs);\n             }\n         }\n@@ -1017,10 +1015,10 @@ bool CTransaction::FetchInputs(CTxDB& txdb, const map<uint256, CTxIndex>& mapTes\n         {\n             // Get prev tx from single transactions in memory\n             {\n-                LOCK(cs_mapTransactions);\n-                if (!mapTransactions.count(prevout.hash))\n-                    return error(\"FetchInputs() : %s mapTransactions prev not found %s\", GetHash().ToString().substr(0,10).c_str(),  prevout.hash.ToString().substr(0,10).c_str());\n-                txPrev = mapTransactions[prevout.hash];\n+                LOCK(mempool.cs);\n+                if (!mempool.mapTx.count(prevout.hash))\n+                    return error(\"FetchInputs() : %s mempool.mapTx prev not found %s\", GetHash().ToString().substr(0,10).c_str(),  prevout.hash.ToString().substr(0,10).c_str());\n+                txPrev = mempool.mapTx[prevout.hash];\n             }\n             if (!fFound)\n                 txindex.vSpent.resize(txPrev.vout.size());\n@@ -1183,15 +1181,15 @@ bool CTransaction::ClientConnectInputs()\n \n     // Take over previous transactions' spent pointers\n     {\n-        LOCK(cs_mapTransactions);\n+        LOCK(mempool.cs);\n         int64 nValueIn = 0;\n         for (int i = 0; i < vin.size(); i++)\n         {\n             // Get prev tx from single transactions in memory\n             COutPoint prevout = vin[i].prevout;\n-            if (!mapTransactions.count(prevout.hash))\n+            if (!mempool.mapTx.count(prevout.hash))\n                 return false;\n-            CTransaction& txPrev = mapTransactions[prevout.hash];\n+            CTransaction& txPrev = mempool.mapTx[prevout.hash];\n \n             if (prevout.n >= txPrev.vout.size())\n                 return false;\n@@ -1200,7 +1198,8 @@ bool CTransaction::ClientConnectInputs()\n             if (!VerifySignature(txPrev, *this, i, true, 0))\n                 return error(\"ConnectInputs() : VerifySignature failed\");\n \n-            ///// this is redundant with the mapNextTx stuff, not sure which I want to get rid of\n+            ///// this is redundant with the mempool.mapNextTx stuff,\n+            ///// not sure which I want to get rid of\n             ///// this has to go away now that posNext is gone\n             // // Check for conflicts\n             // if (!txPrev.vout[prevout.n].posNext.IsNull())\n@@ -2135,7 +2134,7 @@ bool static AlreadyHave(CTxDB& txdb, const CInv& inv)\n {\n     switch (inv.type)\n     {\n-    case MSG_TX:    return mapTransactions.count(inv.hash) || mapOrphanTransactions.count(inv.hash) || txdb.ContainsTx(inv.hash);\n+    case MSG_TX:    return mempool.mapTx.count(inv.hash) || mapOrphanTransactions.count(inv.hash) || txdb.ContainsTx(inv.hash);\n     case MSG_BLOCK: return mapBlockIndex.count(inv.hash) || mapOrphanBlocks.count(inv.hash);\n     }\n     // Don't know what it is, just say we already got one\n@@ -3093,14 +3092,14 @@ CBlock* CreateNewBlock(CReserveKey& reservekey)\n     // Collect memory pool transactions into the block\n     int64 nFees = 0;\n     {\n-        LOCK2(cs_main, cs_mapTransactions);\n+        LOCK2(cs_main, mempool.cs);\n         CTxDB txdb(\"r\");\n \n         // Priority order to process transactions\n         list<COrphan> vOrphan; // list memory doesn't move\n         map<uint256, vector<COrphan*> > mapDependers;\n         multimap<double, CTransaction*> mapPriority;\n-        for (map<uint256, CTransaction>::iterator mi = mapTransactions.begin(); mi != mapTransactions.end(); ++mi)\n+        for (map<uint256, CTransaction>::iterator mi = mempool.mapTx.begin(); mi != mempool.mapTx.end(); ++mi)\n         {\n             CTransaction& tx = (*mi).second;\n             if (tx.IsCoinBase() || !tx.IsFinal())"
+      },
+      {
+        "sha": "ef4ee137b601d4d6bb6ea1785908a86c618f6cbe",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 0,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/235507ae48718ee8ce5289b2791b4b449090dabc/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/235507ae48718ee8ce5289b2791b4b449090dabc/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=235507ae48718ee8ce5289b2791b4b449090dabc",
+        "patch": "@@ -1608,4 +1608,12 @@ class CAlert : public CUnsignedAlert\n     bool ProcessAlert();\n };\n \n+class CTxMemPool\n+{\n+public:\n+    mutable CCriticalSection cs;\n+    std::map<uint256, CTransaction> mapTx;\n+    std::map<COutPoint, CInPoint> mapNextTx;\n+};\n+\n #endif"
+      }
+    ]
+  },
+  {
+    "sha": "8e45ed66dde5d5eb5fde0fc1eba64b26bd48bfb0",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4ZTQ1ZWQ2NmRkZTVkNWViNWZkZTBmYzFlYmE2NGIyNmJkNDhiZmIw",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jeff@garzik.org",
+        "date": "2012-04-13T20:28:07Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-04-15T18:42:52Z"
+      },
+      "message": "CTxMemPool: encapsulate AddToMemoryPoolUnchecked(), RemoveFromMemoryPool(),\nand nPooledTx",
+      "tree": {
+        "sha": "a14ee478db4d23b7aa3b258db990f3df596583f9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/a14ee478db4d23b7aa3b258db990f3df596583f9"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/8e45ed66dde5d5eb5fde0fc1eba64b26bd48bfb0",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8e45ed66dde5d5eb5fde0fc1eba64b26bd48bfb0",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/8e45ed66dde5d5eb5fde0fc1eba64b26bd48bfb0",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8e45ed66dde5d5eb5fde0fc1eba64b26bd48bfb0/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "235507ae48718ee8ce5289b2791b4b449090dabc",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/235507ae48718ee8ce5289b2791b4b449090dabc",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/235507ae48718ee8ce5289b2791b4b449090dabc"
+      }
+    ],
+    "stats": {
+      "total": 59,
+      "additions": 31,
+      "deletions": 28
+    },
+    "files": [
+      {
+        "sha": "b8ef5275f8ede0d4cd1fce817a0168704eb329b5",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8e45ed66dde5d5eb5fde0fc1eba64b26bd48bfb0/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8e45ed66dde5d5eb5fde0fc1eba64b26bd48bfb0/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=8e45ed66dde5d5eb5fde0fc1eba64b26bd48bfb0",
+        "patch": "@@ -363,7 +363,7 @@ Value getmininginfo(const Array& params, bool fHelp)\n     obj.push_back(Pair(\"generate\",      GetBoolArg(\"-gen\")));\n     obj.push_back(Pair(\"genproclimit\",  (int)GetArg(\"-genproclimit\", -1)));\n     obj.push_back(Pair(\"hashespersec\",  gethashespersec(params, false)));\n-    obj.push_back(Pair(\"pooledtx\",      (uint64_t)nPooledTx));\n+    obj.push_back(Pair(\"pooledtx\",      (uint64_t)mempool.size()));\n     obj.push_back(Pair(\"testnet\",       fTestNet));\n     return obj;\n }"
+      },
+      {
+        "sha": "ba20af0550e7f6e0b5d57e4b6469ce9fd4af6649",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 19,
+        "deletions": 23,
+        "changes": 42,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8e45ed66dde5d5eb5fde0fc1eba64b26bd48bfb0/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8e45ed66dde5d5eb5fde0fc1eba64b26bd48bfb0/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=8e45ed66dde5d5eb5fde0fc1eba64b26bd48bfb0",
+        "patch": "@@ -23,7 +23,7 @@ set<CWallet*> setpwalletRegistered;\n \n CCriticalSection cs_main;\n \n-static CTxMemPool mempool;\n+CTxMemPool mempool;\n unsigned int nTransactionsUpdated = 0;\n \n map<uint256, CBlockIndex*> mapBlockIndex;\n@@ -576,9 +576,9 @@ bool CTransaction::AcceptToMemoryPool(CTxDB& txdb, bool fCheckInputs, bool* pfMi\n         if (ptxOld)\n         {\n             printf(\"AcceptToMemoryPool() : replacing tx %s with new version\\n\", ptxOld->GetHash().ToString().c_str());\n-            ptxOld->RemoveFromMemoryPool();\n+            mempool.remove(*ptxOld);\n         }\n-        AddToMemoryPoolUnchecked();\n+        mempool.addUnchecked(*this);\n     }\n \n     ///// are we sure this is ok when loading transactions or restoring block txes\n@@ -590,39 +590,35 @@ bool CTransaction::AcceptToMemoryPool(CTxDB& txdb, bool fCheckInputs, bool* pfMi\n     return true;\n }\n \n-uint64 nPooledTx = 0;\n-\n-bool CTransaction::AddToMemoryPoolUnchecked()\n+bool CTxMemPool::addUnchecked(CTransaction &tx)\n {\n-    printf(\"AcceptToMemoryPoolUnchecked(): size %lu\\n\",  mempool.mapTx.size());\n+    printf(\"AcceptToMemoryPoolUnchecked(): size %lu\\n\",  mapTx.size());\n     // Add to memory pool without checking anything.  Don't call this directly,\n     // call AcceptToMemoryPool to properly check the transaction first.\n     {\n-        LOCK(mempool.cs);\n-        uint256 hash = GetHash();\n-        mempool.mapTx[hash] = *this;\n-        for (int i = 0; i < vin.size(); i++)\n-            mempool.mapNextTx[vin[i].prevout] = CInPoint(&mempool.mapTx[hash], i);\n+        LOCK(cs);\n+        uint256 hash = tx.GetHash();\n+        mapTx[hash] = tx;\n+        for (int i = 0; i < tx.vin.size(); i++)\n+            mapNextTx[tx.vin[i].prevout] = CInPoint(&mapTx[hash], i);\n         nTransactionsUpdated++;\n-        ++nPooledTx;\n     }\n     return true;\n }\n \n \n-bool CTransaction::RemoveFromMemoryPool()\n+bool CTxMemPool::remove(CTransaction &tx)\n {\n     // Remove transaction from memory pool\n     {\n-        LOCK(mempool.cs);\n-        uint256 hash = GetHash();\n-        if (mempool.mapTx.count(hash))\n+        LOCK(cs);\n+        uint256 hash = tx.GetHash();\n+        if (mapTx.count(hash))\n         {\n-            BOOST_FOREACH(const CTxIn& txin, vin)\n-                mempool.mapNextTx.erase(txin.prevout);\n-            mempool.mapTx.erase(hash);\n+            BOOST_FOREACH(const CTxIn& txin, tx.vin)\n+                mapNextTx.erase(txin.prevout);\n+            mapTx.erase(hash);\n             nTransactionsUpdated++;\n-            --nPooledTx;\n         }\n     }\n     return true;\n@@ -1435,7 +1431,7 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)\n \n     // Delete redundant memory transactions that are in the connected branch\n     BOOST_FOREACH(CTransaction& tx, vDelete)\n-        tx.RemoveFromMemoryPool();\n+        mempool.remove(tx);\n \n     printf(\"REORGANIZE: done\\n\");\n \n@@ -1471,7 +1467,7 @@ bool CBlock::SetBestChainInner(CTxDB& txdb, CBlockIndex *pindexNew)\n \n     // Delete redundant memory transactions\n     BOOST_FOREACH(CTransaction& tx, vtx)\n-        tx.RemoveFromMemoryPool();\n+        mempool.remove(tx);\n \n     return true;\n }"
+      },
+      {
+        "sha": "bf24944ce28509fb85eda0967b04b83f203feef0",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 4,
+        "changes": 15,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8e45ed66dde5d5eb5fde0fc1eba64b26bd48bfb0/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8e45ed66dde5d5eb5fde0fc1eba64b26bd48bfb0/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=8e45ed66dde5d5eb5fde0fc1eba64b26bd48bfb0",
+        "patch": "@@ -67,7 +67,6 @@ extern CBigNum bnBestChainWork;\n extern CBigNum bnBestInvalidWork;\n extern uint256 hashBestChain;\n extern CBlockIndex* pindexBest;\n-extern uint64 nPooledTx;\n extern unsigned int nTransactionsUpdated;\n extern uint64 nLastBlockTx;\n extern uint64 nLastBlockSize;\n@@ -689,9 +688,6 @@ class CTransaction\n \n protected:\n     const CTxOut& GetOutputFor(const CTxIn& input, const MapPrevTx& inputs) const;\n-    bool AddToMemoryPoolUnchecked();\n-public:\n-    bool RemoveFromMemoryPool();\n };\n \n \n@@ -1614,6 +1610,17 @@ class CTxMemPool\n     mutable CCriticalSection cs;\n     std::map<uint256, CTransaction> mapTx;\n     std::map<COutPoint, CInPoint> mapNextTx;\n+\n+    bool addUnchecked(CTransaction &tx);\n+    bool remove(CTransaction &tx);\n+\n+    unsigned long size()\n+    {\n+        LOCK(cs);\n+        return mapTx.size();\n+    }\n };\n \n+extern CTxMemPool mempool;\n+\n #endif"
+      }
+    ]
+  },
+  {
+    "sha": "d01903e7511c143f8844bd83da884e7c9d25241e",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkMDE5MDNlNzUxMWMxNDNmODg0NGJkODNkYTg4NGU3YzlkMjUyNDFl",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jeff@garzik.org",
+        "date": "2012-04-13T21:34:22Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-04-15T18:43:19Z"
+      },
+      "message": "CTxMemPool: encapsulate AcceptToMemoryPool",
+      "tree": {
+        "sha": "9f7e40e055223bbfef922d9a8b719a87b2c24894",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/9f7e40e055223bbfef922d9a8b719a87b2c24894"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/d01903e7511c143f8844bd83da884e7c9d25241e",
+      "comment_count": 1,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d01903e7511c143f8844bd83da884e7c9d25241e",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/d01903e7511c143f8844bd83da884e7c9d25241e",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d01903e7511c143f8844bd83da884e7c9d25241e/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "8e45ed66dde5d5eb5fde0fc1eba64b26bd48bfb0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8e45ed66dde5d5eb5fde0fc1eba64b26bd48bfb0",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/8e45ed66dde5d5eb5fde0fc1eba64b26bd48bfb0"
+      }
+    ],
+    "stats": {
+      "total": 88,
+      "additions": 48,
+      "deletions": 40
+    },
+    "files": [
+      {
+        "sha": "facf355ec0d4769204ab53d5576f0e23f8daa0a8",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 46,
+        "deletions": 40,
+        "changes": 86,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d01903e7511c143f8844bd83da884e7c9d25241e/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d01903e7511c143f8844bd83da884e7c9d25241e/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=d01903e7511c143f8844bd83da884e7c9d25241e",
+        "patch": "@@ -449,31 +449,32 @@ bool CTransaction::CheckTransaction() const\n     return true;\n }\n \n-bool CTransaction::AcceptToMemoryPool(CTxDB& txdb, bool fCheckInputs, bool* pfMissingInputs)\n+bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,\n+                        bool* pfMissingInputs)\n {\n     if (pfMissingInputs)\n         *pfMissingInputs = false;\n \n-    if (!CheckTransaction())\n-        return error(\"AcceptToMemoryPool() : CheckTransaction failed\");\n+    if (!tx.CheckTransaction())\n+        return error(\"CTxMemPool::accept() : CheckTransaction failed\");\n \n     // Coinbase is only valid in a block, not as a loose transaction\n-    if (IsCoinBase())\n-        return DoS(100, error(\"AcceptToMemoryPool() : coinbase as individual tx\"));\n+    if (tx.IsCoinBase())\n+        return tx.DoS(100, error(\"CTxMemPool::accept() : coinbase as individual tx\"));\n \n     // To help v0.1.5 clients who would see it as a negative number\n-    if ((int64)nLockTime > std::numeric_limits<int>::max())\n-        return error(\"AcceptToMemoryPool() : not accepting nLockTime beyond 2038 yet\");\n+    if ((int64)tx.nLockTime > std::numeric_limits<int>::max())\n+        return error(\"CTxMemPool::accept() : not accepting nLockTime beyond 2038 yet\");\n \n     // Rather not work on nonstandard transactions (unless -testnet)\n-    if (!fTestNet && !IsStandard())\n-        return error(\"AcceptToMemoryPool() : nonstandard transaction type\");\n+    if (!fTestNet && !tx.IsStandard())\n+        return error(\"CTxMemPool::accept() : nonstandard transaction type\");\n \n     // Do we already have it?\n-    uint256 hash = GetHash();\n+    uint256 hash = tx.GetHash();\n     {\n-        LOCK(mempool.cs);\n-        if (mempool.mapTx.count(hash))\n+        LOCK(cs);\n+        if (mapTx.count(hash))\n             return false;\n     }\n     if (fCheckInputs)\n@@ -482,26 +483,26 @@ bool CTransaction::AcceptToMemoryPool(CTxDB& txdb, bool fCheckInputs, bool* pfMi\n \n     // Check for conflicts with in-memory transactions\n     CTransaction* ptxOld = NULL;\n-    for (int i = 0; i < vin.size(); i++)\n+    for (int i = 0; i < tx.vin.size(); i++)\n     {\n-        COutPoint outpoint = vin[i].prevout;\n-        if (mempool.mapNextTx.count(outpoint))\n+        COutPoint outpoint = tx.vin[i].prevout;\n+        if (mapNextTx.count(outpoint))\n         {\n             // Disable replacement feature for now\n             return false;\n \n             // Allow replacing with a newer version of the same transaction\n             if (i != 0)\n                 return false;\n-            ptxOld = mempool.mapNextTx[outpoint].ptx;\n+            ptxOld = mapNextTx[outpoint].ptx;\n             if (ptxOld->IsFinal())\n                 return false;\n-            if (!IsNewerThan(*ptxOld))\n+            if (!tx.IsNewerThan(*ptxOld))\n                 return false;\n-            for (int i = 0; i < vin.size(); i++)\n+            for (int i = 0; i < tx.vin.size(); i++)\n             {\n-                COutPoint outpoint = vin[i].prevout;\n-                if (!mempool.mapNextTx.count(outpoint) || mempool.mapNextTx[outpoint].ptx != ptxOld)\n+                COutPoint outpoint = tx.vin[i].prevout;\n+                if (!mapNextTx.count(outpoint) || mapNextTx[outpoint].ptx != ptxOld)\n                     return false;\n             }\n             break;\n@@ -513,29 +514,29 @@ bool CTransaction::AcceptToMemoryPool(CTxDB& txdb, bool fCheckInputs, bool* pfMi\n         MapPrevTx mapInputs;\n         map<uint256, CTxIndex> mapUnused;\n         bool fInvalid = false;\n-        if (!FetchInputs(txdb, mapUnused, false, false, mapInputs, fInvalid))\n+        if (!tx.FetchInputs(txdb, mapUnused, false, false, mapInputs, fInvalid))\n         {\n             if (fInvalid)\n-                return error(\"AcceptToMemoryPool() : FetchInputs found invalid tx %s\", hash.ToString().substr(0,10).c_str());\n+                return error(\"CTxMemPool::accept() : FetchInputs found invalid tx %s\", hash.ToString().substr(0,10).c_str());\n             if (pfMissingInputs)\n                 *pfMissingInputs = true;\n-            return error(\"AcceptToMemoryPool() : FetchInputs failed %s\", hash.ToString().substr(0,10).c_str());\n+            return error(\"CTxMemPool::accept() : FetchInputs failed %s\", hash.ToString().substr(0,10).c_str());\n         }\n \n         // Check for non-standard pay-to-script-hash in inputs\n-        if (!AreInputsStandard(mapInputs) && !fTestNet)\n-            return error(\"AcceptToMemoryPool() : nonstandard transaction input\");\n+        if (!tx.AreInputsStandard(mapInputs) && !fTestNet)\n+            return error(\"CTxMemPool::accept() : nonstandard transaction input\");\n \n         // Note: if you modify this code to accept non-standard transactions, then\n         // you should add code here to check that the transaction does a\n         // reasonable number of ECDSA signature verifications.\n \n-        int64 nFees = GetValueIn(mapInputs)-GetValueOut();\n-        unsigned int nSize = ::GetSerializeSize(*this, SER_NETWORK);\n+        int64 nFees = tx.GetValueIn(mapInputs)-tx.GetValueOut();\n+        unsigned int nSize = ::GetSerializeSize(tx, SER_NETWORK);\n \n         // Don't accept it if it can't get into a block\n-        if (nFees < GetMinFee(1000, true, GMF_RELAY))\n-            return error(\"AcceptToMemoryPool() : not enough fees\");\n+        if (nFees < tx.GetMinFee(1000, true, GMF_RELAY))\n+            return error(\"CTxMemPool::accept() : not enough fees\");\n \n         // Continuously rate-limit free transactions\n         // This mitigates 'penny-flooding' -- sending thousands of free transactions just to\n@@ -554,8 +555,8 @@ bool CTransaction::AcceptToMemoryPool(CTxDB& txdb, bool fCheckInputs, bool* pfMi\n                 nLastTime = nNow;\n                 // -limitfreerelay unit is thousand-bytes-per-minute\n                 // At default rate it would take over a month to fill 1GB\n-                if (dFreeCount > GetArg(\"-limitfreerelay\", 15)*10*1000 && !IsFromMe(*this))\n-                    return error(\"AcceptToMemoryPool() : free transaction rejected by rate limiter\");\n+                if (dFreeCount > GetArg(\"-limitfreerelay\", 15)*10*1000 && !IsFromMe(tx))\n+                    return error(\"CTxMemPool::accept() : free transaction rejected by rate limiter\");\n                 if (fDebug)\n                     printf(\"Rate limit dFreeCount: %g => %g\\n\", dFreeCount, dFreeCount+nSize);\n                 dFreeCount += nSize;\n@@ -564,37 +565,42 @@ bool CTransaction::AcceptToMemoryPool(CTxDB& txdb, bool fCheckInputs, bool* pfMi\n \n         // Check against previous transactions\n         // This is done last to help prevent CPU exhaustion denial-of-service attacks.\n-        if (!ConnectInputs(mapInputs, mapUnused, CDiskTxPos(1,1,1), pindexBest, false, false))\n+        if (!tx.ConnectInputs(mapInputs, mapUnused, CDiskTxPos(1,1,1), pindexBest, false, false))\n         {\n-            return error(\"AcceptToMemoryPool() : ConnectInputs failed %s\", hash.ToString().substr(0,10).c_str());\n+            return error(\"CTxMemPool::accept() : ConnectInputs failed %s\", hash.ToString().substr(0,10).c_str());\n         }\n     }\n \n     // Store transaction in memory\n     {\n-        LOCK(mempool.cs);\n+        LOCK(cs);\n         if (ptxOld)\n         {\n-            printf(\"AcceptToMemoryPool() : replacing tx %s with new version\\n\", ptxOld->GetHash().ToString().c_str());\n-            mempool.remove(*ptxOld);\n+            printf(\"CTxMemPool::accept() : replacing tx %s with new version\\n\", ptxOld->GetHash().ToString().c_str());\n+            remove(*ptxOld);\n         }\n-        mempool.addUnchecked(*this);\n+        addUnchecked(tx);\n     }\n \n     ///// are we sure this is ok when loading transactions or restoring block txes\n     // If updated, erase old tx from wallet\n     if (ptxOld)\n         EraseFromWallets(ptxOld->GetHash());\n \n-    printf(\"AcceptToMemoryPool(): accepted %s\\n\", hash.ToString().substr(0,10).c_str());\n+    printf(\"CTxMemPool::accept() : accepted %s\\n\", hash.ToString().substr(0,10).c_str());\n     return true;\n }\n \n+bool CTransaction::AcceptToMemoryPool(CTxDB& txdb, bool fCheckInputs, bool* pfMissingInputs)\n+{\n+    return mempool.accept(txdb, *this, fCheckInputs, pfMissingInputs);\n+}\n+\n bool CTxMemPool::addUnchecked(CTransaction &tx)\n {\n-    printf(\"AcceptToMemoryPoolUnchecked(): size %lu\\n\",  mapTx.size());\n+    printf(\"addUnchecked(): size %lu\\n\",  mapTx.size());\n     // Add to memory pool without checking anything.  Don't call this directly,\n-    // call AcceptToMemoryPool to properly check the transaction first.\n+    // call CTxMemPool::accept to properly check the transaction first.\n     {\n         LOCK(cs);\n         uint256 hash = tx.GetHash();"
+      },
+      {
+        "sha": "29bd358c5cdf4aafb40cc2b03683a5eb591221b6",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d01903e7511c143f8844bd83da884e7c9d25241e/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d01903e7511c143f8844bd83da884e7c9d25241e/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=d01903e7511c143f8844bd83da884e7c9d25241e",
+        "patch": "@@ -1611,6 +1611,8 @@ class CTxMemPool\n     std::map<uint256, CTransaction> mapTx;\n     std::map<COutPoint, CInPoint> mapNextTx;\n \n+    bool accept(CTxDB& txdb, CTransaction &tx,\n+                bool fCheckInputs, bool* pfMissingInputs);\n     bool addUnchecked(CTransaction &tx);\n     bool remove(CTransaction &tx);\n "
+      }
+    ]
+  },
+  {
+    "sha": "ca4c4c53a8b1417563c72da0aea626f111a7f25d",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjYTRjNGM1M2E4YjE0MTc1NjNjNzJkYTBhZWE2MjZmMTExYTdmMjVk",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jeff@garzik.org",
+        "date": "2012-04-13T22:20:44Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-04-15T18:43:19Z"
+      },
+      "message": "CTxMemPool: add helper methods, to reduce global mempool.mapTx accesses",
+      "tree": {
+        "sha": "50cf1fd707a6093269d0eaba6cab6df558ea45b6",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/50cf1fd707a6093269d0eaba6cab6df558ea45b6"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/ca4c4c53a8b1417563c72da0aea626f111a7f25d",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ca4c4c53a8b1417563c72da0aea626f111a7f25d",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/ca4c4c53a8b1417563c72da0aea626f111a7f25d",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ca4c4c53a8b1417563c72da0aea626f111a7f25d/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "d01903e7511c143f8844bd83da884e7c9d25241e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d01903e7511c143f8844bd83da884e7c9d25241e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/d01903e7511c143f8844bd83da884e7c9d25241e"
+      }
+    ],
+    "stats": {
+      "total": 34,
+      "additions": 26,
+      "deletions": 8
+    },
+    "files": [
+      {
+        "sha": "1c040bdee71cccde4a3f77e7f5e040ceffdea484",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 8,
+        "changes": 24,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ca4c4c53a8b1417563c72da0aea626f111a7f25d/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ca4c4c53a8b1417563c72da0aea626f111a7f25d/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=ca4c4c53a8b1417563c72da0aea626f111a7f25d",
+        "patch": "@@ -702,7 +702,7 @@ bool CWalletTx::AcceptWalletTransaction(CTxDB& txdb, bool fCheckInputs)\n             if (!tx.IsCoinBase())\n             {\n                 uint256 hash = tx.GetHash();\n-                if (!mempool.mapTx.count(hash) && !txdb.ContainsTx(hash))\n+                if (!mempool.exists(hash) && !txdb.ContainsTx(hash))\n                     tx.AcceptToMemoryPool(txdb, fCheckInputs);\n             }\n         }\n@@ -1018,9 +1018,9 @@ bool CTransaction::FetchInputs(CTxDB& txdb, const map<uint256, CTxIndex>& mapTes\n             // Get prev tx from single transactions in memory\n             {\n                 LOCK(mempool.cs);\n-                if (!mempool.mapTx.count(prevout.hash))\n-                    return error(\"FetchInputs() : %s mempool.mapTx prev not found %s\", GetHash().ToString().substr(0,10).c_str(),  prevout.hash.ToString().substr(0,10).c_str());\n-                txPrev = mempool.mapTx[prevout.hash];\n+                if (!mempool.exists(prevout.hash))\n+                    return error(\"FetchInputs() : %s mempool Tx prev not found %s\", GetHash().ToString().substr(0,10).c_str(),  prevout.hash.ToString().substr(0,10).c_str());\n+                txPrev = mempool.lookup(prevout.hash);\n             }\n             if (!fFound)\n                 txindex.vSpent.resize(txPrev.vout.size());\n@@ -1189,9 +1189,9 @@ bool CTransaction::ClientConnectInputs()\n         {\n             // Get prev tx from single transactions in memory\n             COutPoint prevout = vin[i].prevout;\n-            if (!mempool.mapTx.count(prevout.hash))\n+            if (!mempool.exists(prevout.hash))\n                 return false;\n-            CTransaction& txPrev = mempool.mapTx[prevout.hash];\n+            CTransaction& txPrev = mempool.lookup(prevout.hash);\n \n             if (prevout.n >= txPrev.vout.size())\n                 return false;\n@@ -2136,8 +2136,16 @@ bool static AlreadyHave(CTxDB& txdb, const CInv& inv)\n {\n     switch (inv.type)\n     {\n-    case MSG_TX:    return mempool.mapTx.count(inv.hash) || mapOrphanTransactions.count(inv.hash) || txdb.ContainsTx(inv.hash);\n-    case MSG_BLOCK: return mapBlockIndex.count(inv.hash) || mapOrphanBlocks.count(inv.hash);\n+    case MSG_TX:\n+\t{\n+        LOCK(mempool.cs);\n+        return mempool.exists(inv.hash) ||\n+               mapOrphanTransactions.count(inv.hash) ||\n+               txdb.ContainsTx(inv.hash);\n+\t}\n+\n+    case MSG_BLOCK:\n+        return mapBlockIndex.count(inv.hash) || mapOrphanBlocks.count(inv.hash);\n     }\n     // Don't know what it is, just say we already got one\n     return true;"
+      },
+      {
+        "sha": "30bf1dd698675194f3249303b954fa032e752cca",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 10,
+        "deletions": 0,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ca4c4c53a8b1417563c72da0aea626f111a7f25d/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ca4c4c53a8b1417563c72da0aea626f111a7f25d/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=ca4c4c53a8b1417563c72da0aea626f111a7f25d",
+        "patch": "@@ -1621,6 +1621,16 @@ class CTxMemPool\n         LOCK(cs);\n         return mapTx.size();\n     }\n+\n+    bool exists(uint256 hash)\n+    {\n+        return (mapTx.count(hash) != 0);\n+    }\n+\n+    CTransaction& lookup(uint256 hash)\n+    {\n+        return mapTx[hash];\n+    }\n };\n \n extern CTxMemPool mempool;"
+      }
+    ]
+  }
+]

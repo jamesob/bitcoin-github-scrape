@@ -1,0 +1,282 @@
+[
+  {
+    "sha": "77851ab682bf94f78874a245919bcc4b79dc054e",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3Nzg1MWFiNjgyYmY5NGY3ODg3NGEyNDU5MTliY2M0Yjc5ZGMwNTRl",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-02-16T23:19:49Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-05-01T05:25:17Z"
+      },
+      "message": "GUI: Refactor actual QR code rendering into new QRImageWidget::setQR",
+      "tree": {
+        "sha": "eb7526213d014cc07fc3c45e2e394fc004451aeb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/eb7526213d014cc07fc3c45e2e394fc004451aeb"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/77851ab682bf94f78874a245919bcc4b79dc054e",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/77851ab682bf94f78874a245919bcc4b79dc054e",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/77851ab682bf94f78874a245919bcc4b79dc054e",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/77851ab682bf94f78874a245919bcc4b79dc054e/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "37f236acc6de08745118ac6cb4268bb5206e67c6",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/37f236acc6de08745118ac6cb4268bb5206e67c6",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/37f236acc6de08745118ac6cb4268bb5206e67c6"
+      }
+    ],
+    "stats": {
+      "total": 109,
+      "additions": 61,
+      "deletions": 48
+    },
+    "files": [
+      {
+        "sha": "6eb2171f1b3f26fac13feed7c7d6dad4c02fc6c1",
+        "filename": "src/qt/receiverequestdialog.cpp",
+        "status": "modified",
+        "additions": 60,
+        "deletions": 48,
+        "changes": 108,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/77851ab682bf94f78874a245919bcc4b79dc054e/src/qt/receiverequestdialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/77851ab682bf94f78874a245919bcc4b79dc054e/src/qt/receiverequestdialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/receiverequestdialog.cpp?ref=77851ab682bf94f78874a245919bcc4b79dc054e",
+        "patch": "@@ -37,6 +37,64 @@ QRImageWidget::QRImageWidget(QWidget *parent):\n     contextMenu->addAction(copyImageAction);\n }\n \n+bool QRImageWidget::setQR(const QString& data, const QString& text)\n+{\n+#ifdef USE_QRCODE\n+    setText(\"\");\n+    if (data.isEmpty()) return false;\n+\n+    // limit length\n+    if (data.length() > MAX_URI_LENGTH) {\n+        setText(tr(\"Resulting URI too long, try to reduce the text for label / message.\"));\n+        return false;\n+    }\n+\n+    QRcode *code = QRcode_encodeString(data.toUtf8().constData(), 0, QR_ECLEVEL_L, QR_MODE_8, 1);\n+\n+    if (!code) {\n+        setText(tr(\"Error encoding URI into QR Code.\"));\n+        return false;\n+    }\n+\n+    QImage qrImage = QImage(code->width + 8, code->width + 8, QImage::Format_RGB32);\n+    qrImage.fill(0xffffff);\n+    unsigned char *p = code->data;\n+    for (int y = 0; y < code->width; ++y) {\n+        for (int x = 0; x < code->width; ++x) {\n+            qrImage.setPixel(x + 4, y + 4, ((*p & 1) ? 0x0 : 0xffffff));\n+            ++p;\n+        }\n+    }\n+    QRcode_free(code);\n+\n+    QImage qrAddrImage = QImage(QR_IMAGE_SIZE, QR_IMAGE_SIZE + (text.isEmpty() ? 0 : 20), QImage::Format_RGB32);\n+    qrAddrImage.fill(0xffffff);\n+    QPainter painter(&qrAddrImage);\n+    painter.drawImage(0, 0, qrImage.scaled(QR_IMAGE_SIZE, QR_IMAGE_SIZE));\n+\n+    if (!text.isEmpty()) {\n+        QFont font = GUIUtil::fixedPitchFont();\n+        QRect paddedRect = qrAddrImage.rect();\n+\n+        // calculate ideal font size\n+        qreal font_size = GUIUtil::calculateIdealFontSize(paddedRect.width() - 20, text, font);\n+        font.setPointSizeF(font_size);\n+\n+        painter.setFont(font);\n+        paddedRect.setHeight(QR_IMAGE_SIZE+12);\n+        painter.drawText(paddedRect, Qt::AlignBottom|Qt::AlignCenter, text);\n+    }\n+\n+    painter.end();\n+    setPixmap(QPixmap::fromImage(qrAddrImage));\n+\n+    return true;\n+#else\n+    setText(tr(\"QR code support not available.\"));\n+    return false;\n+#endif\n+}\n+\n QImage QRImageWidget::exportImage()\n {\n     if(!pixmap())\n@@ -150,55 +208,9 @@ void ReceiveRequestDialog::update()\n     }\n     ui->outUri->setText(html);\n \n-#ifdef USE_QRCODE\n-    ui->lblQRCode->setText(\"\");\n-    if(!uri.isEmpty())\n-    {\n-        // limit URI length\n-        if (uri.length() > MAX_URI_LENGTH)\n-        {\n-            ui->lblQRCode->setText(tr(\"Resulting URI too long, try to reduce the text for label / message.\"));\n-        } else {\n-            QRcode *code = QRcode_encodeString(uri.toUtf8().constData(), 0, QR_ECLEVEL_L, QR_MODE_8, 1);\n-            if (!code)\n-            {\n-                ui->lblQRCode->setText(tr(\"Error encoding URI into QR Code.\"));\n-                return;\n-            }\n-            QImage qrImage = QImage(code->width + 8, code->width + 8, QImage::Format_RGB32);\n-            qrImage.fill(0xffffff);\n-            unsigned char *p = code->data;\n-            for (int y = 0; y < code->width; y++)\n-            {\n-                for (int x = 0; x < code->width; x++)\n-                {\n-                    qrImage.setPixel(x + 4, y + 4, ((*p & 1) ? 0x0 : 0xffffff));\n-                    p++;\n-                }\n-            }\n-            QRcode_free(code);\n-\n-            QImage qrAddrImage = QImage(QR_IMAGE_SIZE, QR_IMAGE_SIZE+20, QImage::Format_RGB32);\n-            qrAddrImage.fill(0xffffff);\n-            QPainter painter(&qrAddrImage);\n-            painter.drawImage(0, 0, qrImage.scaled(QR_IMAGE_SIZE, QR_IMAGE_SIZE));\n-            QFont font = GUIUtil::fixedPitchFont();\n-            QRect paddedRect = qrAddrImage.rect();\n-\n-            // calculate ideal font size\n-            qreal font_size = GUIUtil::calculateIdealFontSize(paddedRect.width() - 20, info.address, font);\n-            font.setPointSizeF(font_size);\n-\n-            painter.setFont(font);\n-            paddedRect.setHeight(QR_IMAGE_SIZE+12);\n-            painter.drawText(paddedRect, Qt::AlignBottom|Qt::AlignCenter, info.address);\n-            painter.end();\n-\n-            ui->lblQRCode->setPixmap(QPixmap::fromImage(qrAddrImage));\n-            ui->btnSaveAs->setEnabled(true);\n-        }\n+    if (ui->lblQRCode->setQR(uri, info.address)) {\n+        ui->btnSaveAs->setEnabled(true);\n     }\n-#endif\n }\n \n void ReceiveRequestDialog::on_btnCopyURI_clicked()"
+      },
+      {
+        "sha": "0e62c26fd35ae390a43c41e31f2e6d8c35f1cab6",
+        "filename": "src/qt/receiverequestdialog.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/77851ab682bf94f78874a245919bcc4b79dc054e/src/qt/receiverequestdialog.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/77851ab682bf94f78874a245919bcc4b79dc054e/src/qt/receiverequestdialog.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/receiverequestdialog.h?ref=77851ab682bf94f78874a245919bcc4b79dc054e",
+        "patch": "@@ -29,6 +29,7 @@ class QRImageWidget : public QLabel\n \n public:\n     explicit QRImageWidget(QWidget *parent = nullptr);\n+    bool setQR(const QString& data, const QString& text = \"\");\n     QImage exportImage();\n \n public Q_SLOTS:"
+      }
+    ]
+  },
+  {
+    "sha": "fc929842c20ac81869a33edce765e389a46e6c0c",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmYzkyOTg0MmMyMGFjODE4NjlhMzNlZGNlNzY1ZTM4OWE0NmU2YzBj",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-05-01T05:18:54Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-05-02T12:18:18Z"
+      },
+      "message": "GUI: Move QRImageWidget to its own file-pair",
+      "tree": {
+        "sha": "2f0fb72ba45df61593e4917e67188240ff8ea2e1",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/2f0fb72ba45df61593e4917e67188240ff8ea2e1"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/fc929842c20ac81869a33edce765e389a46e6c0c",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fc929842c20ac81869a33edce765e389a46e6c0c",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/fc929842c20ac81869a33edce765e389a46e6c0c",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fc929842c20ac81869a33edce765e389a46e6c0c/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "77851ab682bf94f78874a245919bcc4b79dc054e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/77851ab682bf94f78874a245919bcc4b79dc054e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/77851ab682bf94f78874a245919bcc4b79dc054e"
+      }
+    ],
+    "stats": {
+      "total": 356,
+      "additions": 191,
+      "deletions": 165
+    },
+    "files": [
+      {
+        "sha": "c4c08487f349b13caccbb7b473009886ee4d5d2b",
+        "filename": "src/Makefile.qt.include",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fc929842c20ac81869a33edce765e389a46e6c0c/src/Makefile.qt.include",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fc929842c20ac81869a33edce765e389a46e6c0c/src/Makefile.qt.include",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/Makefile.qt.include?ref=fc929842c20ac81869a33edce765e389a46e6c0c",
+        "patch": "@@ -140,6 +140,7 @@ QT_MOC_CPP = \\\n   qt/moc_overviewpage.cpp \\\n   qt/moc_peertablemodel.cpp \\\n   qt/moc_paymentserver.cpp \\\n+  qt/moc_qrimagewidget.cpp \\\n   qt/moc_qvalidatedlineedit.cpp \\\n   qt/moc_qvaluecombobox.cpp \\\n   qt/moc_receivecoinsdialog.cpp \\\n@@ -220,6 +221,7 @@ BITCOIN_QT_H = \\\n   qt/paymentserver.h \\\n   qt/peertablemodel.h \\\n   qt/platformstyle.h \\\n+  qt/qrimagewidget.h \\\n   qt/qvalidatedlineedit.h \\\n   qt/qvaluecombobox.h \\\n   qt/receivecoinsdialog.h \\\n@@ -340,6 +342,7 @@ BITCOIN_QT_WALLET_CPP = \\\n   qt/openuridialog.cpp \\\n   qt/overviewpage.cpp \\\n   qt/paymentserver.cpp \\\n+  qt/qrimagewidget.cpp \\\n   qt/receivecoinsdialog.cpp \\\n   qt/receiverequestdialog.cpp \\\n   qt/recentrequeststablemodel.cpp \\"
+      },
+      {
+        "sha": "9f896ee3b199bcec63e9b5a52f15b084895bc32c",
+        "filename": "src/qt/forms/receiverequestdialog.ui",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fc929842c20ac81869a33edce765e389a46e6c0c/src/qt/forms/receiverequestdialog.ui",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fc929842c20ac81869a33edce765e389a46e6c0c/src/qt/forms/receiverequestdialog.ui",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/forms/receiverequestdialog.ui?ref=fc929842c20ac81869a33edce765e389a46e6c0c",
+        "patch": "@@ -127,7 +127,7 @@\n   <customwidget>\n    <class>QRImageWidget</class>\n    <extends>QLabel</extends>\n-   <header>qt/receiverequestdialog.h</header>\n+   <header>qt/qrimagewidget.h</header>\n   </customwidget>\n  </customwidgets>\n  <resources/>"
+      },
+      {
+        "sha": "d8f55949838070105914b398481df19d064cd7a6",
+        "filename": "src/qt/guiconstants.h",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 6,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fc929842c20ac81869a33edce765e389a46e6c0c/src/qt/guiconstants.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fc929842c20ac81869a33edce765e389a46e6c0c/src/qt/guiconstants.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/guiconstants.h?ref=fc929842c20ac81869a33edce765e389a46e6c0c",
+        "patch": "@@ -37,12 +37,6 @@ static const bool DEFAULT_SPLASHSCREEN = true;\n  */\n static const int TOOLTIP_WRAP_THRESHOLD = 80;\n \n-/* Maximum allowed URI length */\n-static const int MAX_URI_LENGTH = 255;\n-\n-/* QRCodeDialog -- size of exported QR Code image */\n-#define QR_IMAGE_SIZE 300\n-\n /* Number of frames in spinner animation */\n #define SPINNER_FRAMES 36\n "
+      },
+      {
+        "sha": "bf1baf54705630a7189031010302d3a387599b00",
+        "filename": "src/qt/qrimagewidget.cpp",
+        "status": "added",
+        "additions": 141,
+        "deletions": 0,
+        "changes": 141,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fc929842c20ac81869a33edce765e389a46e6c0c/src/qt/qrimagewidget.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fc929842c20ac81869a33edce765e389a46e6c0c/src/qt/qrimagewidget.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/qrimagewidget.cpp?ref=fc929842c20ac81869a33edce765e389a46e6c0c",
+        "patch": "@@ -0,0 +1,141 @@\n+// Copyright (c) 2011-2018 The Bitcoin Core developers\n+// Distributed under the MIT software license, see the accompanying\n+// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+#include <qt/qrimagewidget.h>\n+\n+#include <qt/guiutil.h>\n+\n+#include <QApplication>\n+#include <QClipboard>\n+#include <QDrag>\n+#include <QMenu>\n+#include <QMimeData>\n+#include <QMouseEvent>\n+#include <QPainter>\n+\n+#if defined(HAVE_CONFIG_H)\n+#include <config/bitcoin-config.h> /* for USE_QRCODE */\n+#endif\n+\n+#ifdef USE_QRCODE\n+#include <qrencode.h>\n+#endif\n+\n+QRImageWidget::QRImageWidget(QWidget *parent):\n+    QLabel(parent), contextMenu(nullptr)\n+{\n+    contextMenu = new QMenu(this);\n+    QAction *saveImageAction = new QAction(tr(\"&Save Image...\"), this);\n+    connect(saveImageAction, &QAction::triggered, this, &QRImageWidget::saveImage);\n+    contextMenu->addAction(saveImageAction);\n+    QAction *copyImageAction = new QAction(tr(\"&Copy Image\"), this);\n+    connect(copyImageAction, &QAction::triggered, this, &QRImageWidget::copyImage);\n+    contextMenu->addAction(copyImageAction);\n+}\n+\n+bool QRImageWidget::setQR(const QString& data, const QString& text)\n+{\n+#ifdef USE_QRCODE\n+    setText(\"\");\n+    if (data.isEmpty()) return false;\n+\n+    // limit length\n+    if (data.length() > MAX_URI_LENGTH) {\n+        setText(tr(\"Resulting URI too long, try to reduce the text for label / message.\"));\n+        return false;\n+    }\n+\n+    QRcode *code = QRcode_encodeString(data.toUtf8().constData(), 0, QR_ECLEVEL_L, QR_MODE_8, 1);\n+\n+    if (!code) {\n+        setText(tr(\"Error encoding URI into QR Code.\"));\n+        return false;\n+    }\n+\n+    QImage qrImage = QImage(code->width + 8, code->width + 8, QImage::Format_RGB32);\n+    qrImage.fill(0xffffff);\n+    unsigned char *p = code->data;\n+    for (int y = 0; y < code->width; ++y) {\n+        for (int x = 0; x < code->width; ++x) {\n+            qrImage.setPixel(x + 4, y + 4, ((*p & 1) ? 0x0 : 0xffffff));\n+            ++p;\n+        }\n+    }\n+    QRcode_free(code);\n+\n+    QImage qrAddrImage = QImage(QR_IMAGE_SIZE, QR_IMAGE_SIZE + (text.isEmpty() ? 0 : 20), QImage::Format_RGB32);\n+    qrAddrImage.fill(0xffffff);\n+    QPainter painter(&qrAddrImage);\n+    painter.drawImage(0, 0, qrImage.scaled(QR_IMAGE_SIZE, QR_IMAGE_SIZE));\n+\n+    if (!text.isEmpty()) {\n+        QFont font = GUIUtil::fixedPitchFont();\n+        QRect paddedRect = qrAddrImage.rect();\n+\n+        // calculate ideal font size\n+        qreal font_size = GUIUtil::calculateIdealFontSize(paddedRect.width() - 20, text, font);\n+        font.setPointSizeF(font_size);\n+\n+        painter.setFont(font);\n+        paddedRect.setHeight(QR_IMAGE_SIZE+12);\n+        painter.drawText(paddedRect, Qt::AlignBottom|Qt::AlignCenter, text);\n+    }\n+\n+    painter.end();\n+    setPixmap(QPixmap::fromImage(qrAddrImage));\n+\n+    return true;\n+#else\n+    setText(tr(\"QR code support not available.\"));\n+    return false;\n+#endif\n+}\n+\n+QImage QRImageWidget::exportImage()\n+{\n+    if(!pixmap())\n+        return QImage();\n+    return pixmap()->toImage();\n+}\n+\n+void QRImageWidget::mousePressEvent(QMouseEvent *event)\n+{\n+    if(event->button() == Qt::LeftButton && pixmap())\n+    {\n+        event->accept();\n+        QMimeData *mimeData = new QMimeData;\n+        mimeData->setImageData(exportImage());\n+\n+        QDrag *drag = new QDrag(this);\n+        drag->setMimeData(mimeData);\n+        drag->exec();\n+    } else {\n+        QLabel::mousePressEvent(event);\n+    }\n+}\n+\n+void QRImageWidget::saveImage()\n+{\n+    if(!pixmap())\n+        return;\n+    QString fn = GUIUtil::getSaveFileName(this, tr(\"Save QR Code\"), QString(), tr(\"PNG Image (*.png)\"), nullptr);\n+    if (!fn.isEmpty())\n+    {\n+        exportImage().save(fn);\n+    }\n+}\n+\n+void QRImageWidget::copyImage()\n+{\n+    if(!pixmap())\n+        return;\n+    QApplication::clipboard()->setImage(exportImage());\n+}\n+\n+void QRImageWidget::contextMenuEvent(QContextMenuEvent *event)\n+{\n+    if(!pixmap())\n+        return;\n+    contextMenu->exec(event->globalPos());\n+}"
+      },
+      {
+        "sha": "2a219ac101f25bd4877658c2be0a6189ccec94ea",
+        "filename": "src/qt/qrimagewidget.h",
+        "status": "added",
+        "additions": 45,
+        "deletions": 0,
+        "changes": 45,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fc929842c20ac81869a33edce765e389a46e6c0c/src/qt/qrimagewidget.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fc929842c20ac81869a33edce765e389a46e6c0c/src/qt/qrimagewidget.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/qrimagewidget.h?ref=fc929842c20ac81869a33edce765e389a46e6c0c",
+        "patch": "@@ -0,0 +1,45 @@\n+// Copyright (c) 2011-2018 The Bitcoin Core developers\n+// Distributed under the MIT software license, see the accompanying\n+// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+#ifndef BITCOIN_QT_QRIMAGEWIDGET_H\n+#define BITCOIN_QT_QRIMAGEWIDGET_H\n+\n+#include <QImage>\n+#include <QLabel>\n+\n+/* Maximum allowed URI length */\n+static const int MAX_URI_LENGTH = 255;\n+\n+/* Size of exported QR Code image */\n+static const int QR_IMAGE_SIZE = 300;\n+\n+QT_BEGIN_NAMESPACE\n+class QMenu;\n+QT_END_NAMESPACE\n+\n+/* Label widget for QR code. This image can be dragged, dropped, copied and saved\n+ * to disk.\n+ */\n+class QRImageWidget : public QLabel\n+{\n+    Q_OBJECT\n+\n+public:\n+    explicit QRImageWidget(QWidget *parent = nullptr);\n+    bool setQR(const QString& data, const QString& text = \"\");\n+    QImage exportImage();\n+\n+public Q_SLOTS:\n+    void saveImage();\n+    void copyImage();\n+\n+protected:\n+    virtual void mousePressEvent(QMouseEvent *event);\n+    virtual void contextMenuEvent(QContextMenuEvent *event);\n+\n+private:\n+    QMenu *contextMenu;\n+};\n+\n+#endif // BITCOIN_QT_QRIMAGEWIDGET_H"
+      },
+      {
+        "sha": "20b29145a0234f4a83bbfc1d95cdadb9ecfbded1",
+        "filename": "src/qt/receiverequestdialog.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 127,
+        "changes": 128,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fc929842c20ac81869a33edce765e389a46e6c0c/src/qt/receiverequestdialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fc929842c20ac81869a33edce765e389a46e6c0c/src/qt/receiverequestdialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/receiverequestdialog.cpp?ref=fc929842c20ac81869a33edce765e389a46e6c0c",
+        "patch": "@@ -6,143 +6,17 @@\n #include <qt/forms/ui_receiverequestdialog.h>\n \n #include <qt/bitcoinunits.h>\n-#include <qt/guiconstants.h>\n #include <qt/guiutil.h>\n #include <qt/optionsmodel.h>\n+#include <qt/qrimagewidget.h>\n \n #include <QClipboard>\n-#include <QDrag>\n-#include <QMenu>\n-#include <QMimeData>\n-#include <QMouseEvent>\n #include <QPixmap>\n \n #if defined(HAVE_CONFIG_H)\n #include <config/bitcoin-config.h> /* for USE_QRCODE */\n #endif\n \n-#ifdef USE_QRCODE\n-#include <qrencode.h>\n-#endif\n-\n-QRImageWidget::QRImageWidget(QWidget *parent):\n-    QLabel(parent), contextMenu(nullptr)\n-{\n-    contextMenu = new QMenu(this);\n-    QAction *saveImageAction = new QAction(tr(\"&Save Image...\"), this);\n-    connect(saveImageAction, &QAction::triggered, this, &QRImageWidget::saveImage);\n-    contextMenu->addAction(saveImageAction);\n-    QAction *copyImageAction = new QAction(tr(\"&Copy Image\"), this);\n-    connect(copyImageAction, &QAction::triggered, this, &QRImageWidget::copyImage);\n-    contextMenu->addAction(copyImageAction);\n-}\n-\n-bool QRImageWidget::setQR(const QString& data, const QString& text)\n-{\n-#ifdef USE_QRCODE\n-    setText(\"\");\n-    if (data.isEmpty()) return false;\n-\n-    // limit length\n-    if (data.length() > MAX_URI_LENGTH) {\n-        setText(tr(\"Resulting URI too long, try to reduce the text for label / message.\"));\n-        return false;\n-    }\n-\n-    QRcode *code = QRcode_encodeString(data.toUtf8().constData(), 0, QR_ECLEVEL_L, QR_MODE_8, 1);\n-\n-    if (!code) {\n-        setText(tr(\"Error encoding URI into QR Code.\"));\n-        return false;\n-    }\n-\n-    QImage qrImage = QImage(code->width + 8, code->width + 8, QImage::Format_RGB32);\n-    qrImage.fill(0xffffff);\n-    unsigned char *p = code->data;\n-    for (int y = 0; y < code->width; ++y) {\n-        for (int x = 0; x < code->width; ++x) {\n-            qrImage.setPixel(x + 4, y + 4, ((*p & 1) ? 0x0 : 0xffffff));\n-            ++p;\n-        }\n-    }\n-    QRcode_free(code);\n-\n-    QImage qrAddrImage = QImage(QR_IMAGE_SIZE, QR_IMAGE_SIZE + (text.isEmpty() ? 0 : 20), QImage::Format_RGB32);\n-    qrAddrImage.fill(0xffffff);\n-    QPainter painter(&qrAddrImage);\n-    painter.drawImage(0, 0, qrImage.scaled(QR_IMAGE_SIZE, QR_IMAGE_SIZE));\n-\n-    if (!text.isEmpty()) {\n-        QFont font = GUIUtil::fixedPitchFont();\n-        QRect paddedRect = qrAddrImage.rect();\n-\n-        // calculate ideal font size\n-        qreal font_size = GUIUtil::calculateIdealFontSize(paddedRect.width() - 20, text, font);\n-        font.setPointSizeF(font_size);\n-\n-        painter.setFont(font);\n-        paddedRect.setHeight(QR_IMAGE_SIZE+12);\n-        painter.drawText(paddedRect, Qt::AlignBottom|Qt::AlignCenter, text);\n-    }\n-\n-    painter.end();\n-    setPixmap(QPixmap::fromImage(qrAddrImage));\n-\n-    return true;\n-#else\n-    setText(tr(\"QR code support not available.\"));\n-    return false;\n-#endif\n-}\n-\n-QImage QRImageWidget::exportImage()\n-{\n-    if(!pixmap())\n-        return QImage();\n-    return pixmap()->toImage();\n-}\n-\n-void QRImageWidget::mousePressEvent(QMouseEvent *event)\n-{\n-    if(event->button() == Qt::LeftButton && pixmap())\n-    {\n-        event->accept();\n-        QMimeData *mimeData = new QMimeData;\n-        mimeData->setImageData(exportImage());\n-\n-        QDrag *drag = new QDrag(this);\n-        drag->setMimeData(mimeData);\n-        drag->exec();\n-    } else {\n-        QLabel::mousePressEvent(event);\n-    }\n-}\n-\n-void QRImageWidget::saveImage()\n-{\n-    if(!pixmap())\n-        return;\n-    QString fn = GUIUtil::getSaveFileName(this, tr(\"Save QR Code\"), QString(), tr(\"PNG Image (*.png)\"), nullptr);\n-    if (!fn.isEmpty())\n-    {\n-        exportImage().save(fn);\n-    }\n-}\n-\n-void QRImageWidget::copyImage()\n-{\n-    if(!pixmap())\n-        return;\n-    QApplication::clipboard()->setImage(exportImage());\n-}\n-\n-void QRImageWidget::contextMenuEvent(QContextMenuEvent *event)\n-{\n-    if(!pixmap())\n-        return;\n-    contextMenu->exec(event->globalPos());\n-}\n-\n ReceiveRequestDialog::ReceiveRequestDialog(QWidget *parent) :\n     QDialog(parent),\n     ui(new Ui::ReceiveRequestDialog),"
+      },
+      {
+        "sha": "a6e1a2af1627240ea1bc20269eb21c678a7c0928",
+        "filename": "src/qt/receiverequestdialog.h",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 31,
+        "changes": 31,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fc929842c20ac81869a33edce765e389a46e6c0c/src/qt/receiverequestdialog.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fc929842c20ac81869a33edce765e389a46e6c0c/src/qt/receiverequestdialog.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/receiverequestdialog.h?ref=fc929842c20ac81869a33edce765e389a46e6c0c",
+        "patch": "@@ -8,42 +8,11 @@\n #include <qt/walletmodel.h>\n \n #include <QDialog>\n-#include <QImage>\n-#include <QLabel>\n-#include <QPainter>\n \n namespace Ui {\n     class ReceiveRequestDialog;\n }\n \n-QT_BEGIN_NAMESPACE\n-class QMenu;\n-QT_END_NAMESPACE\n-\n-/* Label widget for QR code. This image can be dragged, dropped, copied and saved\n- * to disk.\n- */\n-class QRImageWidget : public QLabel\n-{\n-    Q_OBJECT\n-\n-public:\n-    explicit QRImageWidget(QWidget *parent = nullptr);\n-    bool setQR(const QString& data, const QString& text = \"\");\n-    QImage exportImage();\n-\n-public Q_SLOTS:\n-    void saveImage();\n-    void copyImage();\n-\n-protected:\n-    virtual void mousePressEvent(QMouseEvent *event);\n-    virtual void contextMenuEvent(QContextMenuEvent *event);\n-\n-private:\n-    QMenu *contextMenu;\n-};\n-\n class ReceiveRequestDialog : public QDialog\n {\n     Q_OBJECT"
+      }
+    ]
+  }
+]

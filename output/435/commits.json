@@ -1,0 +1,124 @@
+[
+  {
+    "sha": "b63241d4511896fcd65996ac7d9a5cb935118ca3",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiNjMyNDFkNDUxMTg5NmZjZDY1OTk2YWM3ZDlhNWNiOTM1MTE4Y2Ez",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2011-07-26T17:15:45Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2011-07-26T17:41:47Z"
+      },
+      "message": "Bugfix: don't overuse limited ExtractAddress\n\nExtractAddress was called with the keystore as argument in RPC and\nUI, limiting results to own keys. This caused empty \"address\"\nfields.",
+      "tree": {
+        "sha": "83715fff9d1c9c428bc1d806316c1aad94578793",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/83715fff9d1c9c428bc1d806316c1aad94578793"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/b63241d4511896fcd65996ac7d9a5cb935118ca3",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b63241d4511896fcd65996ac7d9a5cb935118ca3",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/b63241d4511896fcd65996ac7d9a5cb935118ca3",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b63241d4511896fcd65996ac7d9a5cb935118ca3/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "a0eb1d151f60ac49ce30042c7ae4039cf538992d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a0eb1d151f60ac49ce30042c7ae4039cf538992d",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/a0eb1d151f60ac49ce30042c7ae4039cf538992d"
+      }
+    ],
+    "stats": {
+      "total": 43,
+      "additions": 25,
+      "deletions": 18
+    },
+    "files": [
+      {
+        "sha": "0fc4611fdad864fa6637596ddd0dc2f427e20762",
+        "filename": "src/script.cpp",
+        "status": "modified",
+        "additions": 20,
+        "deletions": 13,
+        "changes": 33,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b63241d4511896fcd65996ac7d9a5cb935118ca3/src/script.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b63241d4511896fcd65996ac7d9a5cb935118ca3/src/script.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script.cpp?ref=b63241d4511896fcd65996ac7d9a5cb935118ca3",
+        "patch": "@@ -1122,30 +1122,37 @@ bool IsMine(const CKeyStore &keystore, const CScript& scriptPubKey)\n     return true;\n }\n \n-\n-bool ExtractAddress(const CScript& scriptPubKey, const CKeyStore* keystore, CBitcoinAddress& addressRet)\n+// requires either keystore==0, or a lock on keystore->cs_KeyStore\n+bool static ExtractAddressInner(const CScript& scriptPubKey, const CKeyStore* keystore, CBitcoinAddress& addressRet)\n {\n     vector<pair<opcodetype, valtype> > vSolution;\n     if (!Solver(scriptPubKey, vSolution))\n         return false;\n \n-    CRITICAL_BLOCK(keystore->cs_KeyStore)\n+    BOOST_FOREACH(PAIRTYPE(opcodetype, valtype)& item, vSolution)\n     {\n-        BOOST_FOREACH(PAIRTYPE(opcodetype, valtype)& item, vSolution)\n-        {\n-            uint160 hash160;\n-            if (item.first == OP_PUBKEY)\n-                addressRet.SetPubKey(item.second);\n-            else if (item.first == OP_PUBKEYHASH)\n-                addressRet.SetHash160((uint160)item.second);\n-            if (keystore == NULL || keystore->HaveKey(addressRet))\n-                return true;\n-        }\n+        if (item.first == OP_PUBKEY)\n+            addressRet.SetPubKey(item.second);\n+        else if (item.first == OP_PUBKEYHASH)\n+            addressRet.SetHash160((uint160)item.second);\n+        if (keystore == NULL || keystore->HaveKey(addressRet))\n+            return true;\n     }\n     return false;\n }\n \n \n+bool ExtractAddress(const CScript& scriptPubKey, const CKeyStore* keystore, CBitcoinAddress& addressRet)\n+{\n+    if (keystore)\n+        CRITICAL_BLOCK(keystore->cs_KeyStore)\n+            return ExtractAddressInner(scriptPubKey, keystore, addressRet);\n+    else\n+        return ExtractAddressInner(scriptPubKey, NULL, addressRet);\n+    return false;\n+}\n+\n+\n bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, const CTransaction& txTo, unsigned int nIn, int nHashType)\n {\n     vector<vector<unsigned char> > stack;"
+      },
+      {
+        "sha": "c3c234439c7380ad3b907eef10a667f78b4e41f2",
+        "filename": "src/ui.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 4,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b63241d4511896fcd65996ac7d9a5cb935118ca3/src/ui.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b63241d4511896fcd65996ac7d9a5cb935118ca3/src/ui.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/ui.cpp?ref=b63241d4511896fcd65996ac7d9a5cb935118ca3",
+        "patch": "@@ -776,6 +776,7 @@ bool CMainFrame::InsertTransaction(const CWalletTx& wtx, bool fNew, int nIndex)\n                 if (pwalletMain->IsMine(txout))\n                     continue;\n \n+                CBitcoinAddress address;\n                 string strAddress;\n                 if (!mapValue[\"to\"].empty())\n                 {\n@@ -785,15 +786,14 @@ bool CMainFrame::InsertTransaction(const CWalletTx& wtx, bool fNew, int nIndex)\n                 else\n                 {\n                     // Sent to Bitcoin Address\n-                    CBitcoinAddress address;\n-                    if (ExtractAddress(txout.scriptPubKey, pwalletMain, address))\n+                    if (ExtractAddress(txout.scriptPubKey, NULL, address))\n                         strAddress = address.ToString();\n                 }\n \n                 string strDescription = _(\"To: \");\n                 CRITICAL_BLOCK(pwalletMain->cs_mapAddressBook)\n-                    if (pwalletMain->mapAddressBook.count(strAddress) && !pwalletMain->mapAddressBook[strAddress].empty())\n-                        strDescription += pwalletMain->mapAddressBook[strAddress] + \" \";\n+                    if (pwalletMain->mapAddressBook.count(address) && !pwalletMain->mapAddressBook[address].empty())\n+                        strDescription += pwalletMain->mapAddressBook[address] + \" \";\n                 strDescription += strAddress;\n                 if (!mapValue[\"message\"].empty())\n                 {"
+      },
+      {
+        "sha": "1f3f44bfa0b383ee0874fddb1c7410ef46920576",
+        "filename": "src/wallet.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b63241d4511896fcd65996ac7d9a5cb935118ca3/src/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b63241d4511896fcd65996ac7d9a5cb935118ca3/src/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.cpp?ref=b63241d4511896fcd65996ac7d9a5cb935118ca3",
+        "patch": "@@ -437,7 +437,7 @@ void CWalletTx::GetAmounts(int64& nGeneratedImmature, int64& nGeneratedMature, l\n     {\n         CBitcoinAddress address;\n         vector<unsigned char> vchPubKey;\n-        if (!ExtractAddress(txout.scriptPubKey, pwallet, address))\n+        if (!ExtractAddress(txout.scriptPubKey, NULL, address))\n         {\n             printf(\"CWalletTx::GetAmounts: Unknown transaction type found, txid %s\\n\",\n                    this->GetHash().ToString().c_str());"
+      }
+    ]
+  }
+]

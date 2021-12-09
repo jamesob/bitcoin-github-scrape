@@ -1,0 +1,230 @@
+[
+  {
+    "sha": "7e1701899534151972ddff3c08cc964a9db64bc5",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3ZTE3MDE4OTk1MzQxNTE5NzJkZGZmM2MwOGNjOTY0YTlkYjY0YmM1",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2013-08-24T04:33:46Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2013-08-24T04:33:46Z"
+      },
+      "message": "CreateNewBlock() now takes scriptPubKey argument,\nrather than a key.\n\nCreateNewBlockWithKey() helper is added to restore existing functionality,\nmaking this an equivalent-transformation change.",
+      "tree": {
+        "sha": "f8ec4db2675d980d98d0893046bc543c67efe09c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f8ec4db2675d980d98d0893046bc543c67efe09c"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/7e1701899534151972ddff3c08cc964a9db64bc5",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7e1701899534151972ddff3c08cc964a9db64bc5",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/7e1701899534151972ddff3c08cc964a9db64bc5",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7e1701899534151972ddff3c08cc964a9db64bc5/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "b60012f2b6770105557db2af40dc34947e884330",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b60012f2b6770105557db2af40dc34947e884330",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b60012f2b6770105557db2af40dc34947e884330"
+      }
+    ],
+    "stats": {
+      "total": 47,
+      "additions": 27,
+      "deletions": 20
+    },
+    "files": [
+      {
+        "sha": "bea69ad1b6fcab953f4868b71b21358c9f825cbc",
+        "filename": "src/miner.cpp",
+        "status": "modified",
+        "additions": 12,
+        "deletions": 6,
+        "changes": 18,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7e1701899534151972ddff3c08cc964a9db64bc5/src/miner.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7e1701899534151972ddff3c08cc964a9db64bc5/src/miner.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/miner.cpp?ref=7e1701899534151972ddff3c08cc964a9db64bc5",
+        "patch": "@@ -141,7 +141,7 @@ class TxPriorityCompare\n     }\n };\n \n-CBlockTemplate* CreateNewBlock(CReserveKey& reservekey)\n+CBlockTemplate* CreateNewBlock(CScript& scriptPubKeyIn)\n {\n     // Create new block\n     auto_ptr<CBlockTemplate> pblocktemplate(new CBlockTemplate());\n@@ -154,10 +154,7 @@ CBlockTemplate* CreateNewBlock(CReserveKey& reservekey)\n     txNew.vin.resize(1);\n     txNew.vin[0].prevout.SetNull();\n     txNew.vout.resize(1);\n-    CPubKey pubkey;\n-    if (!reservekey.GetReservedKey(pubkey))\n-        return NULL;\n-    txNew.vout[0].scriptPubKey << pubkey << OP_CHECKSIG;\n+    txNew.vout[0].scriptPubKey = scriptPubKeyIn;\n \n     // Add our coinbase tx as first transaction\n     pblock->vtx.push_back(txNew);\n@@ -383,6 +380,15 @@ CBlockTemplate* CreateNewBlock(CReserveKey& reservekey)\n     return pblocktemplate.release();\n }\n \n+CBlockTemplate* CreateNewBlockWithKey(CReserveKey& reservekey)\n+{\n+    CPubKey pubkey;\n+    if (!reservekey.GetReservedKey(pubkey))\n+        return NULL;\n+\n+    CScript scriptPubKey = CScript() << pubkey << OP_CHECKSIG;\n+    return CreateNewBlock(scriptPubKey);\n+}\n \n void IncrementExtraNonce(CBlock* pblock, CBlockIndex* pindexPrev, unsigned int& nExtraNonce)\n {\n@@ -510,7 +516,7 @@ void static BitcoinMiner(CWallet *pwallet)\n         unsigned int nTransactionsUpdatedLast = nTransactionsUpdated;\n         CBlockIndex* pindexPrev = pindexBest;\n \n-        auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(reservekey));\n+        auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlockWithKey(reservekey));\n         if (!pblocktemplate.get())\n             return;\n         CBlock *pblock = &pblocktemplate->block;"
+      },
+      {
+        "sha": "0bc76be1048abbdf3e2fc42a0d673cd1f2940c82",
+        "filename": "src/miner.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 1,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7e1701899534151972ddff3c08cc964a9db64bc5/src/miner.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7e1701899534151972ddff3c08cc964a9db64bc5/src/miner.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/miner.h?ref=7e1701899534151972ddff3c08cc964a9db64bc5",
+        "patch": "@@ -11,7 +11,8 @@\n /** Run the miner threads */\n void GenerateBitcoins(bool fGenerate, CWallet* pwallet);\n /** Generate a new block, without valid proof-of-work */\n-CBlockTemplate* CreateNewBlock(CReserveKey& reservekey);\n+CBlockTemplate* CreateNewBlock(CScript& scriptPubKeyIn);\n+CBlockTemplate* CreateNewBlockWithKey(CReserveKey& reservekey);\n /** Modify the extranonce in a block */\n void IncrementExtraNonce(CBlock* pblock, CBlockIndex* pindexPrev, unsigned int& nExtraNonce);\n /** Do mining precalculation */"
+      },
+      {
+        "sha": "8b562680adfbb4816006035a65a03060fca4fc19",
+        "filename": "src/rpcmining.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7e1701899534151972ddff3c08cc964a9db64bc5/src/rpcmining.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7e1701899534151972ddff3c08cc964a9db64bc5/src/rpcmining.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcmining.cpp?ref=7e1701899534151972ddff3c08cc964a9db64bc5",
+        "patch": "@@ -149,7 +149,7 @@ Value getwork(const Array& params, bool fHelp)\n             nStart = GetTime();\n \n             // Create new block\n-            pblocktemplate = CreateNewBlock(*pMiningKey);\n+            pblocktemplate = CreateNewBlockWithKey(*pMiningKey);\n             if (!pblocktemplate)\n                 throw JSONRPCError(RPC_OUT_OF_MEMORY, \"Out of memory\");\n             vNewBlockTemplate.push_back(pblocktemplate);\n@@ -280,7 +280,7 @@ Value getblocktemplate(const Array& params, bool fHelp)\n             delete pblocktemplate;\n             pblocktemplate = NULL;\n         }\n-        pblocktemplate = CreateNewBlock(*pMiningKey);\n+        pblocktemplate = CreateNewBlockWithKey(*pMiningKey);\n         if (!pblocktemplate)\n             throw JSONRPCError(RPC_OUT_OF_MEMORY, \"Out of memory\");\n "
+      },
+      {
+        "sha": "818350414772aee86f25dc41a3d419f9ae834a3a",
+        "filename": "src/test/miner_tests.cpp",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 11,
+        "changes": 22,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7e1701899534151972ddff3c08cc964a9db64bc5/src/test/miner_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7e1701899534151972ddff3c08cc964a9db64bc5/src/test/miner_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/miner_tests.cpp?ref=7e1701899534151972ddff3c08cc964a9db64bc5",
+        "patch": "@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n     uint256 hash;\n \n     // Simple block creation, nothing special yet:\n-    BOOST_CHECK(pblocktemplate = CreateNewBlock(reservekey));\n+    BOOST_CHECK(pblocktemplate = CreateNewBlockWithKey(reservekey));\n \n     // We can't make transactions until we have inputs\n     // Therefore, load 100 blocks :)\n@@ -82,7 +82,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n     delete pblocktemplate;\n \n     // Just to make sure we can still make simple blocks\n-    BOOST_CHECK(pblocktemplate = CreateNewBlock(reservekey));\n+    BOOST_CHECK(pblocktemplate = CreateNewBlockWithKey(reservekey));\n \n     // block sigops > limit: 1000 CHECKMULTISIG + 1\n     tx.vin.resize(1);\n@@ -99,7 +99,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n         mempool.addUnchecked(hash, tx);\n         tx.vin[0].prevout.hash = hash;\n     }\n-    BOOST_CHECK(pblocktemplate = CreateNewBlock(reservekey));\n+    BOOST_CHECK(pblocktemplate = CreateNewBlockWithKey(reservekey));\n     delete pblocktemplate;\n     mempool.clear();\n \n@@ -119,14 +119,14 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n         mempool.addUnchecked(hash, tx);\n         tx.vin[0].prevout.hash = hash;\n     }\n-    BOOST_CHECK(pblocktemplate = CreateNewBlock(reservekey));\n+    BOOST_CHECK(pblocktemplate = CreateNewBlockWithKey(reservekey));\n     delete pblocktemplate;\n     mempool.clear();\n \n     // orphan in mempool\n     hash = tx.GetHash();\n     mempool.addUnchecked(hash, tx);\n-    BOOST_CHECK(pblocktemplate = CreateNewBlock(reservekey));\n+    BOOST_CHECK(pblocktemplate = CreateNewBlockWithKey(reservekey));\n     delete pblocktemplate;\n     mempool.clear();\n \n@@ -144,7 +144,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n     tx.vout[0].nValue = 5900000000LL;\n     hash = tx.GetHash();\n     mempool.addUnchecked(hash, tx);\n-    BOOST_CHECK(pblocktemplate = CreateNewBlock(reservekey));\n+    BOOST_CHECK(pblocktemplate = CreateNewBlockWithKey(reservekey));\n     delete pblocktemplate;\n     mempool.clear();\n \n@@ -155,7 +155,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n     tx.vout[0].nValue = 0;\n     hash = tx.GetHash();\n     mempool.addUnchecked(hash, tx);\n-    BOOST_CHECK(pblocktemplate = CreateNewBlock(reservekey));\n+    BOOST_CHECK(pblocktemplate = CreateNewBlockWithKey(reservekey));\n     delete pblocktemplate;\n     mempool.clear();\n \n@@ -173,7 +173,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n     tx.vout[0].nValue -= 1000000;\n     hash = tx.GetHash();\n     mempool.addUnchecked(hash,tx);\n-    BOOST_CHECK(pblocktemplate = CreateNewBlock(reservekey));\n+    BOOST_CHECK(pblocktemplate = CreateNewBlockWithKey(reservekey));\n     delete pblocktemplate;\n     mempool.clear();\n \n@@ -187,17 +187,17 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n     tx.vout[0].scriptPubKey = CScript() << OP_2;\n     hash = tx.GetHash();\n     mempool.addUnchecked(hash, tx);\n-    BOOST_CHECK(pblocktemplate = CreateNewBlock(reservekey));\n+    BOOST_CHECK(pblocktemplate = CreateNewBlockWithKey(reservekey));\n     delete pblocktemplate;\n     mempool.clear();\n \n     // subsidy changing\n     int nHeight = pindexBest->nHeight;\n     pindexBest->nHeight = 209999;\n-    BOOST_CHECK(pblocktemplate = CreateNewBlock(reservekey));\n+    BOOST_CHECK(pblocktemplate = CreateNewBlockWithKey(reservekey));\n     delete pblocktemplate;\n     pindexBest->nHeight = 210000;\n-    BOOST_CHECK(pblocktemplate = CreateNewBlock(reservekey));\n+    BOOST_CHECK(pblocktemplate = CreateNewBlockWithKey(reservekey));\n     delete pblocktemplate;\n     pindexBest->nHeight = nHeight;\n }"
+      }
+    ]
+  },
+  {
+    "sha": "7bb0f6c5e89a4d5c9a6ef42f5643f42646da44c9",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3YmIwZjZjNWU4OWE0ZDVjOWE2ZWY0MmY1NjQzZjQyNjQ2ZGE0NGM5",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2013-08-24T04:45:17Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2013-08-24T04:45:17Z"
+      },
+      "message": "RPC: getblocktemplate does not require a key, to create a block template\n\ngetblocktemplate only uses certain portions of the coinbase transaction,\nnotably ignoring the coinbase TX output entirely.\n\nUse CreateNewBlock() rather than CreateNewBlockWithKey(), eliminating\nthe needless key passing.\n\nShould be zero behavior changes.",
+      "tree": {
+        "sha": "3bb44736b9465b1d99aabf079628c45d8c618aa4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/3bb44736b9465b1d99aabf079628c45d8c618aa4"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/7bb0f6c5e89a4d5c9a6ef42f5643f42646da44c9",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7bb0f6c5e89a4d5c9a6ef42f5643f42646da44c9",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/7bb0f6c5e89a4d5c9a6ef42f5643f42646da44c9",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7bb0f6c5e89a4d5c9a6ef42f5643f42646da44c9/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "7e1701899534151972ddff3c08cc964a9db64bc5",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7e1701899534151972ddff3c08cc964a9db64bc5",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/7e1701899534151972ddff3c08cc964a9db64bc5"
+      }
+    ],
+    "stats": {
+      "total": 3,
+      "additions": 2,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "c7f516caa7508d66e683a7c74f7d082d3398e75c",
+        "filename": "src/rpcmining.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 1,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7bb0f6c5e89a4d5c9a6ef42f5643f42646da44c9/src/rpcmining.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7bb0f6c5e89a4d5c9a6ef42f5643f42646da44c9/src/rpcmining.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcmining.cpp?ref=7bb0f6c5e89a4d5c9a6ef42f5643f42646da44c9",
+        "patch": "@@ -280,7 +280,8 @@ Value getblocktemplate(const Array& params, bool fHelp)\n             delete pblocktemplate;\n             pblocktemplate = NULL;\n         }\n-        pblocktemplate = CreateNewBlockWithKey(*pMiningKey);\n+        CScript scriptDummy = CScript() << OP_TRUE;\n+        pblocktemplate = CreateNewBlock(scriptDummy);\n         if (!pblocktemplate)\n             throw JSONRPCError(RPC_OUT_OF_MEMORY, \"Out of memory\");\n "
+      }
+    ]
+  },
+  {
+    "sha": "f1dbed9233fb138026c646db0ac34e83ae2114f1",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmMWRiZWQ5MjMzZmIxMzgwMjZjNjQ2ZGIwYWMzNGU4M2FlMjExNGYx",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2013-08-26T00:16:23Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2013-08-26T00:16:23Z"
+      },
+      "message": "miner: constify CreateNewBlock() arg scriptPubKeyIn",
+      "tree": {
+        "sha": "68ab1a6332c0f59fc03541a8a1e1a4cad68d18e2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/68ab1a6332c0f59fc03541a8a1e1a4cad68d18e2"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/f1dbed9233fb138026c646db0ac34e83ae2114f1",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f1dbed9233fb138026c646db0ac34e83ae2114f1",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/f1dbed9233fb138026c646db0ac34e83ae2114f1",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f1dbed9233fb138026c646db0ac34e83ae2114f1/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "7bb0f6c5e89a4d5c9a6ef42f5643f42646da44c9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7bb0f6c5e89a4d5c9a6ef42f5643f42646da44c9",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/7bb0f6c5e89a4d5c9a6ef42f5643f42646da44c9"
+      }
+    ],
+    "stats": {
+      "total": 4,
+      "additions": 2,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "3ecf1609e1bd726910521f2c4159bac4588c3ba9",
+        "filename": "src/miner.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f1dbed9233fb138026c646db0ac34e83ae2114f1/src/miner.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f1dbed9233fb138026c646db0ac34e83ae2114f1/src/miner.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/miner.cpp?ref=f1dbed9233fb138026c646db0ac34e83ae2114f1",
+        "patch": "@@ -141,7 +141,7 @@ class TxPriorityCompare\n     }\n };\n \n-CBlockTemplate* CreateNewBlock(CScript& scriptPubKeyIn)\n+CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)\n {\n     // Create new block\n     auto_ptr<CBlockTemplate> pblocktemplate(new CBlockTemplate());"
+      },
+      {
+        "sha": "36d58be00f8189a1a697560b945c5d486660bc6d",
+        "filename": "src/miner.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f1dbed9233fb138026c646db0ac34e83ae2114f1/src/miner.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f1dbed9233fb138026c646db0ac34e83ae2114f1/src/miner.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/miner.h?ref=f1dbed9233fb138026c646db0ac34e83ae2114f1",
+        "patch": "@@ -11,7 +11,7 @@\n /** Run the miner threads */\n void GenerateBitcoins(bool fGenerate, CWallet* pwallet);\n /** Generate a new block, without valid proof-of-work */\n-CBlockTemplate* CreateNewBlock(CScript& scriptPubKeyIn);\n+CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn);\n CBlockTemplate* CreateNewBlockWithKey(CReserveKey& reservekey);\n /** Modify the extranonce in a block */\n void IncrementExtraNonce(CBlock* pblock, CBlockIndex* pindexPrev, unsigned int& nExtraNonce);"
+      }
+    ]
+  }
+]

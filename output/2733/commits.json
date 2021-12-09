@@ -1,0 +1,563 @@
+[
+  {
+    "sha": "b5ba77b77ac7b289df2481817eccdfeba9324718",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiNWJhNzdiNzdhYzdiMjg5ZGYyNDgxODE3ZWNjZGZlYmE5MzI0NzE4",
+    "commit": {
+      "author": {
+        "name": "patrick s",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2013-06-03T23:35:03Z"
+      },
+      "committer": {
+        "name": "patrick s",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2013-06-03T23:35:03Z"
+      },
+      "message": "improve wallet load time by removing duplicated checks in EC_KEY_check_key and adding a hash for \"key\" entries in wallet.dat",
+      "tree": {
+        "sha": "83d14c6949e4ba44ce823bdff085a5f3e100e36b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/83d14c6949e4ba44ce823bdff085a5f3e100e36b"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/b5ba77b77ac7b289df2481817eccdfeba9324718",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b5ba77b77ac7b289df2481817eccdfeba9324718",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/b5ba77b77ac7b289df2481817eccdfeba9324718",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b5ba77b77ac7b289df2481817eccdfeba9324718/comments",
+    "author": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "3d661110dae5fe62585ab753ef996f081a11855d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3d661110dae5fe62585ab753ef996f081a11855d",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/3d661110dae5fe62585ab753ef996f081a11855d"
+      }
+    ],
+    "stats": {
+      "total": 106,
+      "additions": 97,
+      "deletions": 9
+    },
+    "files": [
+      {
+        "sha": "f6150e5bf6f850b2563b5484043446f772fcdd8a",
+        "filename": "src/key.cpp",
+        "status": "modified",
+        "additions": 68,
+        "deletions": 3,
+        "changes": 71,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b5ba77b77ac7b289df2481817eccdfeba9324718/src/key.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b5ba77b77ac7b289df2481817eccdfeba9324718/src/key.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/key.cpp?ref=b5ba77b77ac7b289df2481817eccdfeba9324718",
+        "patch": "@@ -5,9 +5,13 @@\n #include <openssl/ecdsa.h>\n #include <openssl/rand.h>\n #include <openssl/obj_mac.h>\n+#include <openssl/err.h>\n+#include <openssl/asn1t.h>\n+#include <openssl/objects.h>\n+#include <openssl/evp.h>\n \n #include \"key.h\"\n-\n+#include \"util.h\"\n \n // anonymous namespace with local implementation code (OpenSSL interaction)\n namespace {\n@@ -164,13 +168,56 @@ class CECKey {\n         assert(nSize == nSize2);\n     }\n \n-    bool SetPrivKey(const CPrivKey &privkey) {\n+    bool SetPrivKey(const CPrivKey &privkey, bool fSkipCheck=false) {\n         const unsigned char* pbegin = &privkey[0];\n         if (d2i_ECPrivateKey(&pkey, &pbegin, privkey.size())) {\n             // d2i_ECPrivateKey returns true if parsing succeeds.\n             // This doesn't necessarily mean the key is valid.\n-            if (EC_KEY_check_key(pkey))\n+            \n+            if (fSkipCheck)\n                 return true;\n+            \n+            const EC_GROUP *group = EC_KEY_get0_group(pkey);\n+            const EC_POINT *pub_key = EC_KEY_get0_public_key(pkey);\n+            const BIGNUM *priv_key = EC_KEY_get0_private_key(pkey);\n+\n+            BN_CTX\t*ctx = NULL;\n+            BIGNUM\t*order  = NULL;\n+            EC_POINT *point = NULL;\n+\n+            if (!pkey || !group || !pub_key || !priv_key)\n+                goto err;\n+            \n+            order = BN_new();\n+            \n+            if ((ctx = BN_CTX_new()) == NULL)\n+                goto err;\n+            \n+            if (!EC_GROUP_get_order(group, order, ctx))\n+                goto err;\n+            \n+            // check if generator * priv_key == pub_key \n+            if (BN_cmp(priv_key, order) >= 0)\n+                goto err;\n+            \n+            if ((point = EC_POINT_new(group)) == NULL)\n+                goto err;\n+            \n+            if (!EC_POINT_mul(group, point, priv_key, NULL, NULL, ctx))\n+                goto err;\n+            \n+            if (EC_POINT_cmp(group, point, pub_key, ctx) != 0)\n+                goto err;\n+            \n+            return true;\n+\n+            err:\n+                if (ctx   != NULL)\n+                    BN_CTX_free(ctx);\n+                if (point != NULL)\n+                    EC_POINT_free(point);\n+                return false;\n+            \n         }\n         return false;\n     }\n@@ -393,3 +440,21 @@ bool CPubKey::Decompress() {\n     key.GetPubKey(*this, false);\n     return true;\n }\n+\n+bool CKey::Load(CPrivKey &privkey, CPubKey &vchPubKey, bool fSkipCheck=false) {\n+    CECKey key;\n+    if (!key.SetPrivKey(privkey, fSkipCheck))\n+        return false;\n+    \n+    key.GetSecretBytes(vch);\n+    fCompressed = vchPubKey.IsCompressed();\n+    fValid = true;\n+    \n+    // TODO maybe this can be skipped also\n+    CPubKey pubkey;\n+    key.GetPubKey(pubkey, fCompressed);\n+    if (pubkey != vchPubKey)\n+        return false;\n+    \n+    return true;\n+}"
+      },
+      {
+        "sha": "f369743050345437791b05aede48d3d28e7dced7",
+        "filename": "src/key.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b5ba77b77ac7b289df2481817eccdfeba9324718/src/key.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b5ba77b77ac7b289df2481817eccdfeba9324718/src/key.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/key.h?ref=b5ba77b77ac7b289df2481817eccdfeba9324718",
+        "patch": "@@ -251,6 +251,9 @@ class CKey {\n     //                  0x1D = second key with even y, 0x1E = second key with odd y,\n     //                  add 0x04 for compressed keys.\n     bool SignCompact(const uint256 &hash, std::vector<unsigned char>& vchSig) const;\n+    \n+    // Load private key and check that public key matches.\n+    bool Load(CPrivKey &privkey, CPubKey &vchPubKey, bool fSkipCheck);\n };\n \n #endif"
+      },
+      {
+        "sha": "b8de88ba67af6f58049786bcd392e9281eb959b3",
+        "filename": "src/walletdb.cpp",
+        "status": "modified",
+        "additions": 25,
+        "deletions": 5,
+        "changes": 30,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b5ba77b77ac7b289df2481817eccdfeba9324718/src/walletdb.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b5ba77b77ac7b289df2481817eccdfeba9324718/src/walletdb.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/walletdb.cpp?ref=b5ba77b77ac7b289df2481817eccdfeba9324718",
+        "patch": "@@ -5,6 +5,7 @@\n \n #include \"walletdb.h\"\n #include \"wallet.h\"\n+#include \"hash.h\"\n #include <boost/filesystem.hpp>\n \n using namespace std;\n@@ -191,6 +192,7 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,\n         // Taking advantage of the fact that pair serialization\n         // is just the two items serialized one after the other\n         ssKey >> strType;\n+        \n         if (strType == \"name\")\n         {\n             string strAddress;\n@@ -269,23 +271,41 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,\n                 strErr = \"Error reading wallet database: CPubKey corrupt\";\n                 return false;\n             }\n+            \n             CKey key;\n             CPrivKey pkey;\n+            uint256 hash = 0;\n+            \n             if (strType == \"key\")\n                 ssValue >> pkey;\n             else {\n                 CWalletKey wkey;\n                 ssValue >> wkey;\n                 pkey = wkey.vchPrivKey;\n             }\n-            if (!key.SetPrivKey(pkey, vchPubKey.IsCompressed()))\n+            \n+            try\n             {\n-                strErr = \"Error reading wallet database: CPrivKey corrupt\";\n-                return false;\n+                ssValue >> hash;\n+            }\n+            catch(...){}\n+            \n+            bool fSkipCheck = false;\n+            \n+            if (hash != 0)\n+            {\n+                if (Hash(pkey.begin(), pkey.end()) != hash)\n+                {\n+                    strErr = \"Error reading wallet database: CPrivKey corrupt\";\n+                    return false;\n+                }\n+                \n+                fSkipCheck = true;\n             }\n-            if (key.GetPubKey() != vchPubKey)\n+            \n+            if (!key.Load(pkey, vchPubKey, fSkipCheck))\n             {\n-                strErr = \"Error reading wallet database: CPrivKey pubkey inconsistency\";\n+                strErr = \"Error reading wallet database: CPrivKey corrupt\";\n                 return false;\n             }\n             if (!pwallet->LoadKey(key, vchPubKey))"
+      },
+      {
+        "sha": "d286029da3344e2c1e641204f83aa3cd5853cb51",
+        "filename": "src/walletdb.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b5ba77b77ac7b289df2481817eccdfeba9324718/src/walletdb.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b5ba77b77ac7b289df2481817eccdfeba9324718/src/walletdb.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/walletdb.h?ref=b5ba77b77ac7b289df2481817eccdfeba9324718",
+        "patch": "@@ -53,7 +53,7 @@ class CWalletDB : public CDB\n     bool WriteKey(const CPubKey& vchPubKey, const CPrivKey& vchPrivKey)\n     {\n         nWalletDBUpdated++;\n-        return Write(std::make_pair(std::string(\"key\"), vchPubKey), vchPrivKey, false);\n+        return Write(std::make_pair(std::string(\"key\"), vchPubKey), std::make_pair(vchPrivKey, Hash(vchPrivKey.begin(), vchPrivKey.end())), false);\n     }\n \n     bool WriteCryptedKey(const CPubKey& vchPubKey, const std::vector<unsigned char>& vchCryptedSecret, bool fEraseUnencryptedKey = true)"
+      }
+    ]
+  },
+  {
+    "sha": "ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphYjEzOWM5NjRlMzJiM2VjNTI3OWVlYTBlNzQ5ZTBmZTRhMzFhMmRk",
+    "commit": {
+      "author": {
+        "name": "patrick s",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2013-06-03T23:37:06Z"
+      },
+      "committer": {
+        "name": "patrick s",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2013-06-03T23:37:06Z"
+      },
+      "message": "Merge branch 'master' of git://github.com/bitcoin/bitcoin into keyfix",
+      "tree": {
+        "sha": "66dc3332c7293ffdf1c93fe9c6967f307e8f2196",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/66dc3332c7293ffdf1c93fe9c6967f307e8f2196"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/comments",
+    "author": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "b5ba77b77ac7b289df2481817eccdfeba9324718",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b5ba77b77ac7b289df2481817eccdfeba9324718",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b5ba77b77ac7b289df2481817eccdfeba9324718"
+      },
+      {
+        "sha": "c83d4d2170bf00863bd5c21c6eaea91b00390e72",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c83d4d2170bf00863bd5c21c6eaea91b00390e72",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c83d4d2170bf00863bd5c21c6eaea91b00390e72"
+      }
+    ],
+    "stats": {
+      "total": 399,
+      "additions": 260,
+      "deletions": 139
+    },
+    "files": [
+      {
+        "sha": "05fb5545af379859ceb76c401f3c0c7957b55262",
+        "filename": "bitcoin-qt.pro",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 2,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/bitcoin-qt.pro",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/bitcoin-qt.pro",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/bitcoin-qt.pro?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -3,7 +3,8 @@ TARGET = bitcoin-qt\n macx:TARGET = \"Bitcoin-Qt\"\n VERSION = 0.8.2\n INCLUDEPATH += src src/json src/qt\n-QT += network\n+QT += core gui network\n+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets\n DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE\n CONFIG += no_include_pwd\n CONFIG += thread\n@@ -211,6 +212,7 @@ HEADERS += src/qt/bitcoingui.h \\\n     src/leveldb.h \\\n     src/threadsafety.h \\\n     src/limitedmap.h \\\n+    src/qt/macnotificationhandler.h \\\n     src/qt/splashscreen.h\n \n SOURCES += src/qt/bitcoin.cpp \\\n@@ -312,6 +314,7 @@ DEFINES += BITCOIN_QT_TEST\n   macx: CONFIG -= app_bundle\n }\n \n+# Todo: Remove this line when switching to Qt5, as that option was removed\n CODECFORTR = UTF-8\n \n # for lrelease/lupdate\n@@ -335,6 +338,7 @@ QMAKE_EXTRA_COMPILERS += TSQM\n OTHER_FILES += README.md \\\n     doc/*.rst \\\n     doc/*.txt \\\n+    doc/*.md \\\n     src/qt/res/bitcoin-qt.rc \\\n     src/test/*.cpp \\\n     src/test/*.h \\\n@@ -394,7 +398,7 @@ win32:!contains(MINGW_THREAD_BUGFIX, 0) {\n \n macx:HEADERS += src/qt/macdockiconhandler.h src/qt/macnotificationhandler.h\n macx:OBJECTIVE_SOURCES += src/qt/macdockiconhandler.mm src/qt/macnotificationhandler.mm\n-macx:LIBS += -framework Foundation -framework ApplicationServices -framework AppKit\n+macx:LIBS += -framework Foundation -framework ApplicationServices -framework AppKit -framework CoreServices\n macx:DEFINES += MAC_OSX MSG_NOSIGNAL=0\n macx:ICON = src/qt/res/icons/bitcoin.icns\n macx:QMAKE_CFLAGS_THREAD += -pthread"
+      },
+      {
+        "sha": "95cb33650f62ecff7e98c2c7918514a675b2353e",
+        "filename": "doc/readme-qt.rst",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 0,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/doc/readme-qt.rst",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/doc/readme-qt.rst",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/doc/readme-qt.rst?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -28,6 +28,12 @@ for Ubuntu >= 12.04 (please read the 'Berkely DB version warning' below):\n         libboost-filesystem-dev libboost-program-options-dev libboost-thread-dev \\\n         libssl-dev libdb++-dev libminiupnpc-dev\n \n+For Qt 5 you need the following, otherwise you get an error with lrelease when running qmake:\n+\n+::\n+\n+    apt-get install qt5-qmake libqt5gui5 libqt5core5 libqt5dbus5 qttools5-dev-tools\n+\n then execute the following:\n \n ::"
+      },
+      {
+        "sha": "c99b74f183fe4daca5bcf4dec4577b864f0f7fd3",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 3,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -757,7 +757,7 @@ void StartRPCThreads()\n     rpc_io_service = new asio::io_service();\n     rpc_ssl_context = new ssl::context(*rpc_io_service, ssl::context::sslv23);\n \n-    const bool fUseSSL = GetBoolArg(\"-rpcssl\");\n+    const bool fUseSSL = GetBoolArg(\"-rpcssl\", false);\n \n     if (fUseSSL)\n     {\n@@ -1037,7 +1037,7 @@ json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_s\n \n     // Observe safe mode\n     string strWarning = GetWarnings(\"rpc\");\n-    if (strWarning != \"\" && !GetBoolArg(\"-disablesafemode\") &&\n+    if (strWarning != \"\" && !GetBoolArg(\"-disablesafemode\", false) &&\n         !pcmd->okSafeMode)\n         throw JSONRPCError(RPC_FORBIDDEN_BY_SAFE_MODE, string(\"Safe mode: \") + strWarning);\n \n@@ -1071,7 +1071,7 @@ Object CallRPC(const string& strMethod, const Array& params)\n                 GetConfigFile().string().c_str()));\n \n     // Connect to localhost\n-    bool fUseSSL = GetBoolArg(\"-rpcssl\");\n+    bool fUseSSL = GetBoolArg(\"-rpcssl\", false);\n     asio::io_service io_service;\n     ssl::context context(io_service, ssl::context::sslv23);\n     context.set_options(ssl::context::no_sslv2);"
+      },
+      {
+        "sha": "78f838f7cb405c5d6fe4435046d62834c2a5be9a",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 14,
+        "deletions": 14,
+        "changes": 28,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -198,7 +198,7 @@ bool AppInit(int argc, char* argv[])\n             exit(ret);\n         }\n #if !defined(WIN32)\n-        fDaemon = GetBoolArg(\"-daemon\");\n+        fDaemon = GetBoolArg(\"-daemon\", false);\n         if (fDaemon)\n         {\n             // Daemonize\n@@ -495,7 +495,7 @@ bool AppInit2(boost::thread_group& threadGroup)\n \n     // ********************************************************* Step 2: parameter interactions\n \n-    fTestNet = GetBoolArg(\"-testnet\");\n+    fTestNet = GetBoolArg(\"-testnet\", false);\n     Checkpoints::fEnabled = GetBoolArg(\"-checkpoints\", true);\n \n     if (mapArgs.count(\"-bind\")) {\n@@ -526,7 +526,7 @@ bool AppInit2(boost::thread_group& threadGroup)\n         SoftSetBoolArg(\"-discover\", false);\n     }\n \n-    if (GetBoolArg(\"-salvagewallet\")) {\n+    if (GetBoolArg(\"-salvagewallet\", false)) {\n         // Rewrite just private keys: rescan to find transactions\n         SoftSetBoolArg(\"-rescan\", true);\n     }\n@@ -543,8 +543,8 @@ bool AppInit2(boost::thread_group& threadGroup)\n \n     // ********************************************************* Step 3: parameter-to-internal-flags\n \n-    fDebug = GetBoolArg(\"-debug\");\n-    fBenchmark = GetBoolArg(\"-benchmark\");\n+    fDebug = GetBoolArg(\"-debug\", false);\n+    fBenchmark = GetBoolArg(\"-benchmark\", false);\n \n     // -par=0 means autodetect, but nScriptCheckThreads==0 means no concurrency\n     nScriptCheckThreads = GetArg(\"-par\", 0);\n@@ -559,20 +559,20 @@ bool AppInit2(boost::thread_group& threadGroup)\n     if (fDebug)\n         fDebugNet = true;\n     else\n-        fDebugNet = GetBoolArg(\"-debugnet\");\n+        fDebugNet = GetBoolArg(\"-debugnet\", false);\n \n     if (fDaemon)\n         fServer = true;\n     else\n-        fServer = GetBoolArg(\"-server\");\n+        fServer = GetBoolArg(\"-server\", false);\n \n     /* force fServer when running without GUI */\n #if !defined(QT_GUI)\n     fServer = true;\n #endif\n-    fPrintToConsole = GetBoolArg(\"-printtoconsole\");\n-    fPrintToDebugger = GetBoolArg(\"-printtodebugger\");\n-    fLogTimestamps = GetBoolArg(\"-logtimestamps\");\n+    fPrintToConsole = GetBoolArg(\"-printtoconsole\", false);\n+    fPrintToDebugger = GetBoolArg(\"-printtodebugger\", false);\n+    fLogTimestamps = GetBoolArg(\"-logtimestamps\", false);\n \n     if (mapArgs.count(\"-timeout\"))\n     {\n@@ -677,7 +677,7 @@ bool AppInit2(boost::thread_group& threadGroup)\n         }\n     }\n \n-    if (GetBoolArg(\"-salvagewallet\"))\n+    if (GetBoolArg(\"-salvagewallet\", false))\n     {\n         // Recover readable keypairs:\n         if (!CWalletDB::Recover(bitdb, \"wallet.dat\", true))\n@@ -799,7 +799,7 @@ bool AppInit2(boost::thread_group& threadGroup)\n \n     // ********************************************************* Step 7: load block chain\n \n-    fReindex = GetBoolArg(\"-reindex\");\n+    fReindex = GetBoolArg(\"-reindex\", false);\n \n     // Upgrading to 0.8; hard-link the old blknnnn.dat files into /blocks/\n     filesystem::path blocksDir = GetDataDir() / \"blocks\";\n@@ -922,7 +922,7 @@ bool AppInit2(boost::thread_group& threadGroup)\n     }\n     printf(\" block index %15\"PRI64d\"ms\\n\", GetTimeMillis() - nStart);\n \n-    if (GetBoolArg(\"-printblockindex\") || GetBoolArg(\"-printblocktree\"))\n+    if (GetBoolArg(\"-printblockindex\", false) || GetBoolArg(\"-printblocktree\", false))\n     {\n         PrintBlockTree();\n         return false;\n@@ -1018,7 +1018,7 @@ bool AppInit2(boost::thread_group& threadGroup)\n     RegisterWallet(pwalletMain);\n \n     CBlockIndex *pindexRescan = pindexBest;\n-    if (GetBoolArg(\"-rescan\"))\n+    if (GetBoolArg(\"-rescan\", false))\n         pindexRescan = pindexGenesisBlock;\n     else\n     {"
+      },
+      {
+        "sha": "a98b83b6af50d906c13d0bcc523adf50aee50b73",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -2931,7 +2931,7 @@ string GetWarnings(string strFor)\n     string strStatusBar;\n     string strRPC;\n \n-    if (GetBoolArg(\"-testsafemode\"))\n+    if (GetBoolArg(\"-testsafemode\", false))\n         strRPC = \"test\";\n \n     if (!CLIENT_VERSION_IS_RELEASE)\n@@ -4175,7 +4175,7 @@ CBlockTemplate* CreateNewBlock(CReserveKey& reservekey)\n         // Priority order to process transactions\n         list<COrphan> vOrphan; // list memory doesn't move\n         map<uint256, vector<COrphan*> > mapDependers;\n-        bool fPrintPriority = GetBoolArg(\"-printpriority\");\n+        bool fPrintPriority = GetBoolArg(\"-printpriority\", false);\n \n         // This vector will be sorted into a priority queue:\n         vector<TxPriority> vecPriority;"
+      },
+      {
+        "sha": "8906174d7d9f4aeec558b84233c5e46b109aff50",
+        "filename": "src/qt/addressbookpage.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 0,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/addressbookpage.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/addressbookpage.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/addressbookpage.cpp?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -143,8 +143,13 @@ void AddressBookPage::setModel(AddressTableModel *model)\n     ui->tableView->sortByColumn(0, Qt::AscendingOrder);\n \n     // Set column widths\n+#if QT_VERSION < 0x050000\n     ui->tableView->horizontalHeader()->setResizeMode(AddressTableModel::Label, QHeaderView::Stretch);\n     ui->tableView->horizontalHeader()->setResizeMode(AddressTableModel::Address, QHeaderView::ResizeToContents);\n+#else\n+    ui->tableView->horizontalHeader()->setSectionResizeMode(AddressTableModel::Label, QHeaderView::Stretch);\n+    ui->tableView->horizontalHeader()->setSectionResizeMode(AddressTableModel::Address, QHeaderView::ResizeToContents);\n+#endif\n \n     connect(ui->tableView->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)),\n             this, SLOT(selectionChanged()));"
+      },
+      {
+        "sha": "73a5a12efac6fac6865e29159cd71ee304d48ecd",
+        "filename": "src/qt/bitcoin.cpp",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 15,
+        "changes": 26,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/bitcoin.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/bitcoin.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoin.cpp?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -17,16 +17,14 @@\n #include \"splashscreen.h\"\n \n #include <QMessageBox>\n+#if QT_VERSION < 0x050000\n #include <QTextCodec>\n+#endif\n #include <QLocale>\n #include <QTimer>\n #include <QTranslator>\n #include <QLibraryInfo>\n \n-#ifdef Q_OS_MAC\n-#include \"macdockiconhandler.h\"\n-#endif\n-\n #if defined(BITCOIN_NEED_QT_PLUGINS) && !defined(_BITCOIN_QT_PLUGINS_INCLUDED)\n #define _BITCOIN_QT_PLUGINS_INCLUDED\n #define __INSURE__\n@@ -118,9 +116,11 @@ int main(int argc, char *argv[])\n     // Command-line options take precedence:\n     ParseParameters(argc, argv);\n \n+#if QT_VERSION < 0x050000\n     // Internal string conversion is all UTF-8\n     QTextCodec::setCodecForTr(QTextCodec::codecForName(\"UTF-8\"));\n     QTextCodec::setCodecForCStrings(QTextCodec::codecForTr());\n+#endif\n \n     Q_INIT_RESOURCE(bitcoin);\n     QApplication app(argc, argv);\n@@ -152,7 +152,7 @@ int main(int argc, char *argv[])\n     // as it is used to locate QSettings)\n     QApplication::setOrganizationName(\"Bitcoin\");\n     QApplication::setOrganizationDomain(\"bitcoin.org\");\n-    if(GetBoolArg(\"-testnet\")) // Separate UI settings for testnet\n+    if (GetBoolArg(\"-testnet\", false)) // Separate UI settings for testnet\n         QApplication::setApplicationName(\"Bitcoin-Qt-testnet\");\n     else\n         QApplication::setApplicationName(\"Bitcoin-Qt\");\n@@ -202,15 +202,8 @@ int main(int argc, char *argv[])\n         return 1;\n     }\n \n-#ifdef Q_OS_MAC\n-    // on mac, also change the icon now because it would look strange to have a testnet splash (green) and a std app icon (orange)\n-    if(GetBoolArg(\"-testnet\")) {\n-        MacDockIconHandler::instance()->setIcon(QIcon(\":icons/bitcoin_testnet\"));\n-    }\n-#endif\n-\n     SplashScreen splash(QPixmap(), 0);\n-    if (GetBoolArg(\"-splash\", true) && !GetBoolArg(\"-min\"))\n+    if (GetBoolArg(\"-splash\", true) && !GetBoolArg(\"-min\", false))\n     {\n         splash.show();\n         splash.setAutoFillBackground(true);\n@@ -222,13 +215,16 @@ int main(int argc, char *argv[])\n \n     try\n     {\n+#ifndef Q_OS_MAC\n         // Regenerate startup link, to fix links to old versions\n+        // OSX: makes no sense on mac and might also scan/mount external (and sleeping) volumes (can take up some secs)\n         if (GUIUtil::GetStartOnSystemStartup())\n             GUIUtil::SetStartOnSystemStartup(true);\n+#endif\n \n         boost::thread_group threadGroup;\n \n-        BitcoinGUI window;\n+        BitcoinGUI window(GetBoolArg(\"-testnet\", false), 0);\n         guiref = &window;\n \n         QTimer* pollShutdownTimer = new QTimer(guiref);\n@@ -254,7 +250,7 @@ int main(int argc, char *argv[])\n                 window.setCurrentWallet(\"~Default\");\n \n                 // If -min option passed, start window minimized.\n-                if(GetBoolArg(\"-min\"))\n+                if(GetBoolArg(\"-min\", false))\n                 {\n                     window.showMinimized();\n                 }"
+      },
+      {
+        "sha": "190da6caf80f3a7482b6860d1fab49a21339ea59",
+        "filename": "src/qt/bitcoingui.cpp",
+        "status": "modified",
+        "additions": 45,
+        "deletions": 33,
+        "changes": 78,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/bitcoingui.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/bitcoingui.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoingui.cpp?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -44,7 +44,9 @@\n #include <QMovie>\n #include <QTimer>\n #include <QDragEnterEvent>\n+#if QT_VERSION < 0x050000\n #include <QUrl>\n+#endif\n #include <QMimeData>\n #include <QStyle>\n #include <QSettings>\n@@ -55,7 +57,7 @@\n \n const QString BitcoinGUI::DEFAULT_WALLET = \"~Default\";\n \n-BitcoinGUI::BitcoinGUI(QWidget *parent) :\n+BitcoinGUI::BitcoinGUI(bool fIsTestnet, QWidget *parent) :\n     QMainWindow(parent),\n     clientModel(0),\n     encryptWalletAction(0),\n@@ -67,14 +69,30 @@ BitcoinGUI::BitcoinGUI(QWidget *parent) :\n     prevBlocks(0)\n {\n     restoreWindowGeometry();\n-    setWindowTitle(tr(\"Bitcoin\") + \" - \" + tr(\"Wallet\"));\n+\n #ifndef Q_OS_MAC\n-    QApplication::setWindowIcon(QIcon(\":icons/bitcoin\"));\n-    setWindowIcon(QIcon(\":icons/bitcoin\"));\n+    if (!fIsTestnet)\n+    {\n+        setWindowTitle(tr(\"Bitcoin\") + \" - \" + tr(\"Wallet\"));\n+        QApplication::setWindowIcon(QIcon(\":icons/bitcoin\"));\n+        setWindowIcon(QIcon(\":icons/bitcoin\"));\n+    }\n+    else\n+    {\n+        setWindowTitle(tr(\"Bitcoin\") + \" - \" + tr(\"Wallet\") + \" \" + tr(\"[testnet]\"));\n+        QApplication::setWindowIcon(QIcon(\":icons/bitcoin_testnet\"));\n+        setWindowIcon(QIcon(\":icons/bitcoin_testnet\"));\n+    }\n #else\n     setUnifiedTitleAndToolBarOnMac(true);\n     QApplication::setAttribute(Qt::AA_DontShowIconsInMenus);\n+\n+    if (!fIsTestnet)\n+        MacDockIconHandler::instance()->setIcon(QIcon(\":icons/bitcoin\"));\n+    else\n+        MacDockIconHandler::instance()->setIcon(QIcon(\":icons/bitcoin_testnet\"));\n #endif\n+\n     // Create wallet frame and make it the central widget\n     walletFrame = new WalletFrame(this);\n     setCentralWidget(walletFrame);\n@@ -84,7 +102,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent) :\n \n     // Create actions for the toolbar, menu bar and tray/dock icon\n     // Needs walletFrame to be initialized\n-    createActions();\n+    createActions(fIsTestnet);\n \n     // Create application menu bar\n     createMenuBar();\n@@ -93,7 +111,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent) :\n     createToolBars();\n \n     // Create system tray icon and notification\n-    createTrayIcon();\n+    createTrayIcon(fIsTestnet);\n \n     // Create status bar\n     statusBar();\n@@ -157,7 +175,7 @@ BitcoinGUI::~BitcoinGUI()\n #endif\n }\n \n-void BitcoinGUI::createActions()\n+void BitcoinGUI::createActions(bool fIsTestnet)\n {\n     QActionGroup *tabGroup = new QActionGroup(this);\n \n@@ -211,7 +229,10 @@ void BitcoinGUI::createActions()\n     quitAction->setStatusTip(tr(\"Quit application\"));\n     quitAction->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_Q));\n     quitAction->setMenuRole(QAction::QuitRole);\n-    aboutAction = new QAction(QIcon(\":/icons/bitcoin\"), tr(\"&About Bitcoin\"), this);\n+    if (!fIsTestnet)\n+        aboutAction = new QAction(QIcon(\":/icons/bitcoin\"), tr(\"&About Bitcoin\"), this);\n+    else\n+        aboutAction = new QAction(QIcon(\":/icons/bitcoin_testnet\"), tr(\"&About Bitcoin\"), this);\n     aboutAction->setStatusTip(tr(\"Show information about Bitcoin\"));\n     aboutAction->setMenuRole(QAction::AboutRole);\n     aboutQtAction = new QAction(QIcon(\":/trolltech/qmessagebox/images/qtlogo-64.png\"), tr(\"About &Qt\"), this);\n@@ -220,7 +241,10 @@ void BitcoinGUI::createActions()\n     optionsAction = new QAction(QIcon(\":/icons/options\"), tr(\"&Options...\"), this);\n     optionsAction->setStatusTip(tr(\"Modify configuration options for Bitcoin\"));\n     optionsAction->setMenuRole(QAction::PreferencesRole);\n-    toggleHideAction = new QAction(QIcon(\":/icons/bitcoin\"), tr(\"&Show / Hide\"), this);\n+    if (!fIsTestnet)\n+        toggleHideAction = new QAction(QIcon(\":/icons/bitcoin\"), tr(\"&Show / Hide\"), this);\n+    else\n+        toggleHideAction = new QAction(QIcon(\":/icons/bitcoin_testnet\"), tr(\"&Show / Hide\"), this);\n     toggleHideAction->setStatusTip(tr(\"Show or hide the main Window\"));\n \n     encryptWalletAction = new QAction(QIcon(\":/icons/lock_closed\"), tr(\"&Encrypt Wallet...\"), this);\n@@ -297,27 +321,6 @@ void BitcoinGUI::setClientModel(ClientModel *clientModel)\n     this->clientModel = clientModel;\n     if(clientModel)\n     {\n-        // Replace some strings and icons, when using the testnet\n-        if(clientModel->isTestNet())\n-        {\n-            setWindowTitle(windowTitle() + QString(\" \") + tr(\"[testnet]\"));\n-#ifndef Q_OS_MAC\n-            QApplication::setWindowIcon(QIcon(\":icons/bitcoin_testnet\"));\n-            setWindowIcon(QIcon(\":icons/bitcoin_testnet\"));\n-#else\n-            MacDockIconHandler::instance()->setIcon(QIcon(\":icons/bitcoin_testnet\"));\n-#endif\n-            if(trayIcon)\n-            {\n-                // Just attach \" [testnet]\" to the existing tooltip\n-                trayIcon->setToolTip(trayIcon->toolTip() + QString(\" \") + tr(\"[testnet]\"));\n-                trayIcon->setIcon(QIcon(\":/icons/toolbar_testnet\"));\n-            }\n-\n-            toggleHideAction->setIcon(QIcon(\":/icons/toolbar_testnet\"));\n-            aboutAction->setIcon(QIcon(\":/icons/toolbar_testnet\"));\n-        }\n-\n         // Create system tray menu (or setup the dock menu) that late to prevent users from calling actions,\n         // while the client has not yet fully loaded\n         createTrayIconMenu();\n@@ -352,13 +355,22 @@ void BitcoinGUI::removeAllWallets()\n     walletFrame->removeAllWallets();\n }\n \n-void BitcoinGUI::createTrayIcon()\n+void BitcoinGUI::createTrayIcon(bool fIsTestnet)\n {\n #ifndef Q_OS_MAC\n     trayIcon = new QSystemTrayIcon(this);\n \n-    trayIcon->setToolTip(tr(\"Bitcoin client\"));\n-    trayIcon->setIcon(QIcon(\":/icons/toolbar\"));\n+    if (!fIsTestnet)\n+    {\n+        trayIcon->setToolTip(tr(\"Bitcoin client\"));\n+        trayIcon->setIcon(QIcon(\":/icons/toolbar\"));\n+    }\n+    else\n+    {\n+        trayIcon->setToolTip(tr(\"Bitcoin client\") + \" \" + tr(\"[testnet]\"));\n+        trayIcon->setIcon(QIcon(\":/icons/toolbar_testnet\"));\n+    }\n+\n     trayIcon->show();\n #endif\n "
+      },
+      {
+        "sha": "685ce8b4302c17cabde6a45e8601f72fe40733e0",
+        "filename": "src/qt/bitcoingui.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 3,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/bitcoingui.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/bitcoingui.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoingui.h?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -43,7 +43,7 @@ class BitcoinGUI : public QMainWindow\n public:\n     static const QString DEFAULT_WALLET;\n \n-    explicit BitcoinGUI(QWidget *parent = 0);\n+    explicit BitcoinGUI(bool fIsTestnet = false, QWidget *parent = 0);\n     ~BitcoinGUI();\n \n     /** Set the client model.\n@@ -113,13 +113,13 @@ class BitcoinGUI : public QMainWindow\n     int prevBlocks;\n \n     /** Create the main UI actions. */\n-    void createActions();\n+    void createActions(bool fIsTestnet);\n     /** Create the menu bar and sub-menus. */\n     void createMenuBar();\n     /** Create the toolbars */\n     void createToolBars();\n     /** Create system tray icon and notification */\n-    void createTrayIcon();\n+    void createTrayIcon(bool fIsTestnet);\n     /** Create system tray menu (or setup the dock menu) */\n     void createTrayIconMenu();\n     /** Save window size and position */"
+      },
+      {
+        "sha": "88a6e7226e57e8f8fe9ced0e98e7bd368fbb63e8",
+        "filename": "src/qt/guiutil.cpp",
+        "status": "modified",
+        "additions": 73,
+        "deletions": 4,
+        "changes": 77,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/guiutil.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/guiutil.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/guiutil.cpp?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -13,8 +13,12 @@\n #include <QDoubleValidator>\n #include <QFont>\n #include <QLineEdit>\n+#if QT_VERSION >= 0x050000\n+#include <QUrlQuery>\n+#else\n #include <QUrl>\n-#include <QTextDocument> // For Qt::escape\n+#endif\n+#include <QTextDocument> // for Qt::mightBeRichText\n #include <QAbstractItemView>\n #include <QClipboard>\n #include <QFileDialog>\n@@ -86,7 +90,13 @@ bool parseBitcoinURI(const QUrl &uri, SendCoinsRecipient *out)\n     SendCoinsRecipient rv;\n     rv.address = uri.path();\n     rv.amount = 0;\n+\n+#if QT_VERSION < 0x050000\n     QList<QPair<QString, QString> > items = uri.queryItems();\n+#else\n+    QUrlQuery uriQuery(uri);\n+    QList<QPair<QString, QString> > items = uriQuery.queryItems();\n+#endif\n     for (QList<QPair<QString, QString> >::iterator i = items.begin(); i != items.end(); i++)\n     {\n         bool fShouldReturnFalse = false;\n@@ -139,7 +149,11 @@ bool parseBitcoinURI(QString uri, SendCoinsRecipient *out)\n \n QString HtmlEscape(const QString& str, bool fMultiLine)\n {\n+#if QT_VERSION < 0x050000\n     QString escaped = Qt::escape(str);\n+#else\n+    QString escaped = str.toHtmlEscaped();\n+#endif\n     if(fMultiLine)\n     {\n         escaped = escaped.replace(\"\\n\", \"<br>\\n\");\n@@ -176,7 +190,11 @@ QString getSaveFileName(QWidget *parent, const QString &caption,\n     QString myDir;\n     if(dir.isEmpty()) // Default to user documents location\n     {\n+#if QT_VERSION < 0x050000\n         myDir = QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation);\n+#else\n+        myDir = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);\n+#endif\n     }\n     else\n     {\n@@ -408,10 +426,61 @@ bool SetStartOnSystemStartup(bool fAutoStart)\n     }\n     return true;\n }\n-#else\n \n-// TODO: OSX startup stuff; see:\n-// https://developer.apple.com/library/mac/#documentation/MacOSX/Conceptual/BPSystemStartup/Articles/CustomLogin.html\n+\n+#elif defined(Q_OS_MAC)\n+// based on: https://github.com/Mozketo/LaunchAtLoginController/blob/master/LaunchAtLoginController.m\n+\n+#include <CoreFoundation/CoreFoundation.h>\n+#include <CoreServices/CoreServices.h>\n+\n+LSSharedFileListItemRef findStartupItemInList(LSSharedFileListRef list, CFURLRef findUrl);\n+LSSharedFileListItemRef findStartupItemInList(LSSharedFileListRef list, CFURLRef findUrl)\n+{\n+    // loop through the list of startup items and try to find the bitcoin app\n+    CFArrayRef listSnapshot = LSSharedFileListCopySnapshot(list, NULL);\n+    for(int i = 0; i < CFArrayGetCount(listSnapshot); i++) {\n+        LSSharedFileListItemRef item = (LSSharedFileListItemRef)CFArrayGetValueAtIndex(listSnapshot, i);\n+        UInt32 resolutionFlags = kLSSharedFileListNoUserInteraction | kLSSharedFileListDoNotMountVolumes;\n+        CFURLRef currentItemURL = NULL;\n+        LSSharedFileListItemResolve(item, resolutionFlags, &currentItemURL, NULL);\n+        if(currentItemURL && CFEqual(currentItemURL, findUrl)) {\n+            // found\n+            CFRelease(currentItemURL);\n+            return item;\n+        }\n+        if(currentItemURL) {\n+            CFRelease(currentItemURL);\n+        }\n+    }\n+    return NULL;\n+}\n+\n+bool GetStartOnSystemStartup()\n+{\n+    CFURLRef bitcoinAppUrl = CFBundleCopyBundleURL(CFBundleGetMainBundle());\n+    LSSharedFileListRef loginItems = LSSharedFileListCreate(NULL, kLSSharedFileListSessionLoginItems, NULL);\n+    LSSharedFileListItemRef foundItem = findStartupItemInList(loginItems, bitcoinAppUrl);\n+    return !!foundItem; // return boolified object\n+}\n+\n+bool SetStartOnSystemStartup(bool fAutoStart)\n+{\n+    CFURLRef bitcoinAppUrl = CFBundleCopyBundleURL(CFBundleGetMainBundle());\n+    LSSharedFileListRef loginItems = LSSharedFileListCreate(NULL, kLSSharedFileListSessionLoginItems, NULL);\n+    LSSharedFileListItemRef foundItem = findStartupItemInList(loginItems, bitcoinAppUrl);\n+\n+    if(fAutoStart && !foundItem) {\n+        // add bitcoin app to startup item list\n+        LSSharedFileListInsertItemURL(loginItems, kLSSharedFileListItemBeforeFirst, NULL, NULL, bitcoinAppUrl, NULL, NULL);\n+    }\n+    else if(!fAutoStart && foundItem) {\n+        // remove item\n+        LSSharedFileListItemRemove(loginItems, foundItem);\n+    }\n+    return true;\n+}\n+#else\n \n bool GetStartOnSystemStartup() { return false; }\n bool SetStartOnSystemStartup(bool fAutoStart) { return false; }"
+      },
+      {
+        "sha": "53b49c42e6b9856b756ecb02f0e1fecf203c2814",
+        "filename": "src/qt/macdockiconhandler.mm",
+        "status": "modified",
+        "additions": 22,
+        "deletions": 8,
+        "changes": 30,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/macdockiconhandler.mm",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/macdockiconhandler.mm",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/macdockiconhandler.mm?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -2,8 +2,8 @@\n \n #include <QMenu>\n #include <QWidget>\n-\n-extern void qt_mac_set_dock_menu(QMenu*);\n+#include <QTemporaryFile>\n+#include <QImageWriter>\n \n #undef slots\n #include <Cocoa/Cocoa.h>\n@@ -47,11 +47,11 @@ - (void)handleDockClickEvent:(NSAppleEventDescriptor*)event withReplyEvent:(NSAp\n MacDockIconHandler::MacDockIconHandler() : QObject()\n {\n     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];\n-    this->m_dockIconClickEventHandler = [[DockIconClickEventHandler alloc] initWithDockIconHandler:this];\n \n+    this->m_dockIconClickEventHandler = [[DockIconClickEventHandler alloc] initWithDockIconHandler:this];\n     this->m_dummyWidget = new QWidget();\n     this->m_dockMenu = new QMenu(this->m_dummyWidget);\n-    qt_mac_set_dock_menu(this->m_dockMenu);\n+\n     [pool release];\n }\n \n@@ -74,15 +74,29 @@ - (void)handleDockClickEvent:(NSAppleEventDescriptor*)event withReplyEvent:(NSAp\n void MacDockIconHandler::setIcon(const QIcon &icon)\n {\n     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];\n-    NSImage *image;\n+    NSImage *image = nil;\n     if (icon.isNull())\n         image = [[NSImage imageNamed:@\"NSApplicationIcon\"] retain];\n     else {\n+        // generate NSImage from QIcon and use this as dock icon.\n         QSize size = icon.actualSize(QSize(128, 128));\n         QPixmap pixmap = icon.pixmap(size);\n-        CGImageRef cgImage = pixmap.toMacCGImageRef();\n-        image = [[NSImage alloc] initWithCGImage:cgImage size:NSZeroSize];\n-        CFRelease(cgImage);\n+\n+        // write temp file hack (could also be done through QIODevice [memory])\n+        QTemporaryFile notificationIconFile;\n+        if (!pixmap.isNull() && notificationIconFile.open()) {\n+            QImageWriter writer(&notificationIconFile, \"PNG\");\n+            if (writer.write(pixmap.toImage())) {\n+                const char *cString = notificationIconFile.fileName().toUtf8().data();\n+                NSString *macString = [NSString stringWithCString:cString encoding:NSUTF8StringEncoding];\n+                image =  [[NSImage alloc] initWithContentsOfFile:macString];\n+            }\n+        }\n+\n+        if(!image) {\n+            // if testnet image could not be created, load std. app icon\n+            image = [[NSImage imageNamed:@\"NSApplicationIcon\"] retain];\n+        }\n     }\n \n     [NSApp setApplicationIconImage:image];"
+      },
+      {
+        "sha": "b2451aea31e873635b84e99e04ca9b63e8e07868",
+        "filename": "src/qt/optionsdialog.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 1,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/optionsdialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/optionsdialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/optionsdialog.cpp?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -45,7 +45,8 @@ OptionsDialog::OptionsDialog(QWidget *parent) :\n \n     /* Window elements init */\n #ifdef Q_OS_MAC\n-    ui->tabWindow->setVisible(false);\n+    /* remove Window tab on Mac */\n+    ui->tabWidget->removeTab(ui->tabWidget->indexOf(ui->tabWindow));\n #endif\n \n     /* Display elements init */"
+      },
+      {
+        "sha": "0b0bce55bb0284cf1eda1d01058897eddd59437f",
+        "filename": "src/qt/paymentserver.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/paymentserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/paymentserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.cpp?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -18,7 +18,9 @@\n #include <QLocalServer>\n #include <QLocalSocket>\n #include <QStringList>\n+#if QT_VERSION < 0x050000\n #include <QUrl>\n+#endif\n \n using namespace boost;\n "
+      },
+      {
+        "sha": "6ddcaaf5d9491ddd968d54a83ea26ca3c95a8c06",
+        "filename": "src/qt/qrcodedialog.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/qrcodedialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/qrcodedialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/qrcodedialog.cpp?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -7,7 +7,9 @@\n #include \"optionsmodel.h\"\n \n #include <QPixmap>\n+#if QT_VERSION < 0x050000\n #include <QUrl>\n+#endif\n \n #include <qrencode.h>\n "
+      },
+      {
+        "sha": "7f90f4a551d2c8d7f7d5b9a22dada95f04e01879",
+        "filename": "src/qt/rpcconsole.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/rpcconsole.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/rpcconsole.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/rpcconsole.cpp?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -8,7 +8,9 @@\n #include <QTime>\n #include <QThread>\n #include <QKeyEvent>\n+#if QT_VERSION < 0x050000\n #include <QUrl>\n+#endif\n #include <QScrollBar>\n \n #include <openssl/crypto.h>"
+      },
+      {
+        "sha": "2c7bab2045a040738e0261cd87bdea08ee72b7d5",
+        "filename": "src/qt/sendcoinsdialog.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 0,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/sendcoinsdialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/sendcoinsdialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/sendcoinsdialog.cpp?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -93,7 +93,11 @@ void SendCoinsDialog::on_sendButton_clicked()\n     QStringList formatted;\n     foreach(const SendCoinsRecipient &rcp, recipients)\n     {\n+#if QT_VERSION < 0x050000\n         formatted.append(tr(\"<b>%1</b> to %2 (%3)\").arg(BitcoinUnits::formatWithUnit(BitcoinUnits::BTC, rcp.amount), Qt::escape(rcp.label), rcp.address));\n+#else\n+        formatted.append(tr(\"<b>%1</b> to %2 (%3)\").arg(BitcoinUnits::formatWithUnit(BitcoinUnits::BTC, rcp.amount), rcp.label.toHtmlEscaped(), rcp.address));\n+#endif\n     }\n \n     fNewRecipientAllowed = false;"
+      },
+      {
+        "sha": "e40027812360c122bd73d58501f29fcab079f332",
+        "filename": "src/qt/splashscreen.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 1,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/splashscreen.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/splashscreen.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/splashscreen.cpp?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -3,6 +3,7 @@\n #include \"util.h\"\n \n #include <QPainter>\n+#undef loop /* ugh, remove this when the #define loop is gone from util.h */\n #include <QApplication>\n \n SplashScreen::SplashScreen(const QPixmap &pixmap, Qt::WindowFlags f) :\n@@ -26,7 +27,7 @@ SplashScreen::SplashScreen(const QPixmap &pixmap, Qt::WindowFlags f) :\n \n     // load the bitmap for writing some text over it\n     QPixmap newPixmap;\n-    if(GetBoolArg(\"-testnet\")) {\n+    if(GetBoolArg(\"-testnet\", false)) {\n         newPixmap     = QPixmap(\":/images/splash_testnet\");\n     }\n     else {"
+      },
+      {
+        "sha": "a43e29c4764c26e83ffa4b6e89d887d695de9614",
+        "filename": "src/qt/transactionview.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 0,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/transactionview.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/transactionview.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/transactionview.cpp?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -176,7 +176,11 @@ void TransactionView::setModel(WalletModel *model)\n         transactionView->horizontalHeader()->resizeSection(TransactionTableModel::Status, 23);\n         transactionView->horizontalHeader()->resizeSection(TransactionTableModel::Date, 120);\n         transactionView->horizontalHeader()->resizeSection(TransactionTableModel::Type, 120);\n+#if QT_VERSION < 0x050000\n         transactionView->horizontalHeader()->setResizeMode(TransactionTableModel::ToAddress, QHeaderView::Stretch);\n+#else\n+        transactionView->horizontalHeader()->setSectionResizeMode(TransactionTableModel::ToAddress, QHeaderView::Stretch);\n+#endif\n         transactionView->horizontalHeader()->resizeSection(TransactionTableModel::Amount, 100);\n     }\n }"
+      },
+      {
+        "sha": "50c03ac62d91e146c464b8d1ec21e3fb0e1effc0",
+        "filename": "src/qt/walletframe.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 3,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/walletframe.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/walletframe.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/walletframe.cpp?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -8,11 +8,9 @@\n #include \"bitcoingui.h\"\n #include \"walletstack.h\"\n \n-#include <QVBoxLayout>\n+#include <QHBoxLayout>\n #include <QMessageBox>\n \n-#include <stdio.h>\n-\n WalletFrame::WalletFrame(BitcoinGUI *_gui) :\n     QFrame(_gui),\n     gui(_gui),"
+      },
+      {
+        "sha": "d7092f9879456c70ca09ee66ac1b27ae23a8cfcc",
+        "filename": "src/qt/walletframe.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 1,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/walletframe.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/walletframe.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/walletframe.h?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -17,8 +17,9 @@ class WalletStack;\n class WalletFrame : public QFrame\n {\n     Q_OBJECT\n+\n public:\n-    explicit WalletFrame(BitcoinGUI *_gui);\n+    explicit WalletFrame(BitcoinGUI *_gui = 0);\n     ~WalletFrame();\n \n     void setClientModel(ClientModel *clientModel);"
+      },
+      {
+        "sha": "506d595c0fb383d9659089a1b4018e511f407e51",
+        "filename": "src/qt/walletstack.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/walletstack.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/walletstack.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/walletstack.h?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -40,6 +40,7 @@ QT_END_NAMESPACE\n class WalletStack : public QStackedWidget\n {\n     Q_OBJECT\n+\n public:\n     explicit WalletStack(QWidget *parent = 0);\n     ~WalletStack();"
+      },
+      {
+        "sha": "277c056693b26682153e4731c512cfb42027bd62",
+        "filename": "src/qt/walletview.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 0,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/walletview.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/qt/walletview.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/walletview.cpp?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -21,7 +21,11 @@\n #include <QHBoxLayout>\n #include <QVBoxLayout>\n #include <QAction>\n+#if QT_VERSION < 0x050000\n #include <QDesktopServices>\n+#else\n+#include <QStandardPaths>\n+#endif\n #include <QFileDialog>\n #include <QPushButton>\n \n@@ -232,7 +236,11 @@ void WalletView::encryptWallet(bool status)\n \n void WalletView::backupWallet()\n {\n+#if QT_VERSION < 0x050000\n     QString saveDir = QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation);\n+#else\n+    QString saveDir = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);\n+#endif\n     QString filename = QFileDialog::getSaveFileName(this, tr(\"Backup Wallet\"), saveDir, tr(\"Wallet Data (*.dat)\"));\n     if (!filename.isEmpty()) {\n         if (!walletModel->backupWallet(filename)) {"
+      },
+      {
+        "sha": "d2cac68706e79b8f24ec42d57397e153f787a016",
+        "filename": "src/rpcmining.cpp",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 11,
+        "changes": 22,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/rpcmining.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/rpcmining.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcmining.cpp?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -33,7 +33,7 @@ Value getgenerate(const Array& params, bool fHelp)\n             \"getgenerate\\n\"\n             \"Returns true or false.\");\n \n-    return GetBoolArg(\"-gen\");\n+    return GetBoolArg(\"-gen\", false);\n }\n \n \n@@ -84,16 +84,16 @@ Value getmininginfo(const Array& params, bool fHelp)\n             \"Returns an object containing mining-related information.\");\n \n     Object obj;\n-    obj.push_back(Pair(\"blocks\",        (int)nBestHeight));\n-    obj.push_back(Pair(\"currentblocksize\",(uint64_t)nLastBlockSize));\n-    obj.push_back(Pair(\"currentblocktx\",(uint64_t)nLastBlockTx));\n-    obj.push_back(Pair(\"difficulty\",    (double)GetDifficulty()));\n-    obj.push_back(Pair(\"errors\",        GetWarnings(\"statusbar\")));\n-    obj.push_back(Pair(\"generate\",      GetBoolArg(\"-gen\")));\n-    obj.push_back(Pair(\"genproclimit\",  (int)GetArg(\"-genproclimit\", -1)));\n-    obj.push_back(Pair(\"hashespersec\",  gethashespersec(params, false)));\n-    obj.push_back(Pair(\"pooledtx\",      (uint64_t)mempool.size()));\n-    obj.push_back(Pair(\"testnet\",       fTestNet));\n+    obj.push_back(Pair(\"blocks\",           (int)nBestHeight));\n+    obj.push_back(Pair(\"currentblocksize\", (uint64_t)nLastBlockSize));\n+    obj.push_back(Pair(\"currentblocktx\",   (uint64_t)nLastBlockTx));\n+    obj.push_back(Pair(\"difficulty\",       (double)GetDifficulty()));\n+    obj.push_back(Pair(\"errors\",           GetWarnings(\"statusbar\")));\n+    obj.push_back(Pair(\"generate\",         GetBoolArg(\"-gen\", false)));\n+    obj.push_back(Pair(\"genproclimit\",     (int)GetArg(\"-genproclimit\", -1)));\n+    obj.push_back(Pair(\"hashespersec\",     gethashespersec(params, false)));\n+    obj.push_back(Pair(\"pooledtx\",         (uint64_t)mempool.size()));\n+    obj.push_back(Pair(\"testnet\",          fTestNet));\n     return obj;\n }\n "
+      },
+      {
+        "sha": "8aeb30f35b83ef98aec6e36b991e41fd4ffc0b75",
+        "filename": "src/test/data/tx_valid.json",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 1,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/test/data/tx_valid.json",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/test/data/tx_valid.json",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/data/tx_valid.json?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -77,5 +77,11 @@\n [\"Same as above, but we change the sequence number of the first input to check that SIGHASH_ANYONECANPAY is being followed\"],\n [[[\"0000000000000000000000000000000000000000000000000000000000000100\", 0, \"0x21 0x035e7f0d4d0841bcd56c39337ed086b1a633ee770c1ffdd94ac552a95ac2ce0efc CHECKSIG\"],\n   [\"0000000000000000000000000000000000000000000000000000000000000200\", 0, \"0x21 0x035e7f0d4d0841bcd56c39337ed086b1a633ee770c1ffdd94ac552a95ac2ce0efc CHECKSIG\"]],\n- \"01000000020001000000000000000000000000000000000000000000000000000000000000000000004948304502203a0f5f0e1f2bdbcd04db3061d18f3af70e07f4f467cbc1b8116f267025f5360b022100c792b6e215afc5afc721a351ec413e714305cb749aae3d7fee76621313418df101010000000002000000000000000000000000000000000000000000000000000000000000000000004847304402205f7530653eea9b38699e476320ab135b74771e1c48b81a5d041e2ca84b9be7a802200ac8d1f40fb026674fe5a5edd3dea715c27baa9baca51ed45ea750ac9dc0a55e81ffffffff010100000000000000015100000000\", true]\n+ \"01000000020001000000000000000000000000000000000000000000000000000000000000000000004948304502203a0f5f0e1f2bdbcd04db3061d18f3af70e07f4f467cbc1b8116f267025f5360b022100c792b6e215afc5afc721a351ec413e714305cb749aae3d7fee76621313418df101010000000002000000000000000000000000000000000000000000000000000000000000000000004847304402205f7530653eea9b38699e476320ab135b74771e1c48b81a5d041e2ca84b9be7a802200ac8d1f40fb026674fe5a5edd3dea715c27baa9baca51ed45ea750ac9dc0a55e81ffffffff010100000000000000015100000000\", true],\n+\n+[\"afd9c17f8913577ec3509520bd6e5d63e9c0fd2a5f70c787993b097ba6ca9fae which has several SIGHASH_SINGLE signatures\"],\n+[[[\"63cfa5a09dc540bf63e53713b82d9ea3692ca97cd608c384f2aa88e51a0aac70\", 0, \"DUP HASH160 0x14 0xdcf72c4fd02f5a987cf9b02f2fabfcac3341a87d EQUALVERIFY CHECKSIG\"],\n+ [\"04e8d0fcf3846c6734477b98f0f3d4badfb78f020ee097a0be5fe347645b817d\", 1, \"DUP HASH160 0x14 0xdcf72c4fd02f5a987cf9b02f2fabfcac3341a87d EQUALVERIFY CHECKSIG\"],\n+ [\"ee1377aff5d0579909e11782e1d2f5f7b84d26537be7f5516dd4e43373091f3f\", 1, \"DUP HASH160 0x14 0xdcf72c4fd02f5a987cf9b02f2fabfcac3341a87d EQUALVERIFY CHECKSIG\"]],\n+ \"010000000370ac0a1ae588aaf284c308d67ca92c69a39e2db81337e563bf40c59da0a5cf63000000006a4730440220360d20baff382059040ba9be98947fd678fb08aab2bb0c172efa996fd8ece9b702201b4fb0de67f015c90e7ac8a193aeab486a1f587e0f54d0fb9552ef7f5ce6caec032103579ca2e6d107522f012cd00b52b9a65fb46f0c57b9b8b6e377c48f526a44741affffffff7d815b6447e35fbea097e00e028fb7dfbad4f3f0987b4734676c84f3fcd0e804010000006b483045022100c714310be1e3a9ff1c5f7cacc65c2d8e781fc3a88ceb063c6153bf950650802102200b2d0979c76e12bb480da635f192cc8dc6f905380dd4ac1ff35a4f68f462fffd032103579ca2e6d107522f012cd00b52b9a65fb46f0c57b9b8b6e377c48f526a44741affffffff3f1f097333e4d46d51f5e77b53264db8f7f5d2e18217e1099957d0f5af7713ee010000006c493046022100b663499ef73273a3788dea342717c2640ac43c5a1cf862c9e09b206fcb3f6bb8022100b09972e75972d9148f2bdd462e5cb69b57c1214b88fc55ca638676c07cfc10d8032103579ca2e6d107522f012cd00b52b9a65fb46f0c57b9b8b6e377c48f526a44741affffffff0380841e00000000001976a914bfb282c70c4191f45b5a6665cad1682f2c9cfdfb88ac80841e00000000001976a9149857cc07bed33a5cf12b9c5e0500b675d500c81188ace0fd1c00000000001976a91443c52850606c872403c0601e69fa34b26f62db4a88ac00000000\", true]\n ]"
+      },
+      {
+        "sha": "c89d218f80f1777250ff64f20de3c879d1c7898d",
+        "filename": "src/test/getarg_tests.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 20,
+        "changes": 26,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/test/getarg_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/test/getarg_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/getarg_tests.cpp?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -6,8 +6,7 @@\n \n BOOST_AUTO_TEST_SUITE(getarg_tests)\n \n-static void\n-ResetArgs(const std::string& strArg)\n+static void ResetArgs(const std::string& strArg)\n {\n     std::vector<std::string> vecArg;\n     boost::split(vecArg, strArg, boost::is_space(), boost::token_compress_on);\n@@ -26,62 +25,50 @@ ResetArgs(const std::string& strArg)\n BOOST_AUTO_TEST_CASE(boolarg)\n {\n     ResetArgs(\"-foo\");\n-    BOOST_CHECK(GetBoolArg(\"-foo\"));\n     BOOST_CHECK(GetBoolArg(\"-foo\", false));\n     BOOST_CHECK(GetBoolArg(\"-foo\", true));\n \n-    BOOST_CHECK(!GetBoolArg(\"-fo\"));\n     BOOST_CHECK(!GetBoolArg(\"-fo\", false));\n     BOOST_CHECK(GetBoolArg(\"-fo\", true));\n \n-    BOOST_CHECK(!GetBoolArg(\"-fooo\"));\n     BOOST_CHECK(!GetBoolArg(\"-fooo\", false));\n     BOOST_CHECK(GetBoolArg(\"-fooo\", true));\n \n     ResetArgs(\"-foo=0\");\n-    BOOST_CHECK(!GetBoolArg(\"-foo\"));\n     BOOST_CHECK(!GetBoolArg(\"-foo\", false));\n     BOOST_CHECK(!GetBoolArg(\"-foo\", true));\n \n     ResetArgs(\"-foo=1\");\n-    BOOST_CHECK(GetBoolArg(\"-foo\"));\n     BOOST_CHECK(GetBoolArg(\"-foo\", false));\n     BOOST_CHECK(GetBoolArg(\"-foo\", true));\n \n     // New 0.6 feature: auto-map -nosomething to !-something:\n     ResetArgs(\"-nofoo\");\n-    BOOST_CHECK(!GetBoolArg(\"-foo\"));\n     BOOST_CHECK(!GetBoolArg(\"-foo\", false));\n     BOOST_CHECK(!GetBoolArg(\"-foo\", true));\n \n     ResetArgs(\"-nofoo=1\");\n-    BOOST_CHECK(!GetBoolArg(\"-foo\"));\n     BOOST_CHECK(!GetBoolArg(\"-foo\", false));\n     BOOST_CHECK(!GetBoolArg(\"-foo\", true));\n \n     ResetArgs(\"-foo -nofoo\");  // -foo should win\n-    BOOST_CHECK(GetBoolArg(\"-foo\"));\n     BOOST_CHECK(GetBoolArg(\"-foo\", false));\n     BOOST_CHECK(GetBoolArg(\"-foo\", true));\n \n     ResetArgs(\"-foo=1 -nofoo=1\");  // -foo should win\n-    BOOST_CHECK(GetBoolArg(\"-foo\"));\n     BOOST_CHECK(GetBoolArg(\"-foo\", false));\n     BOOST_CHECK(GetBoolArg(\"-foo\", true));\n \n     ResetArgs(\"-foo=0 -nofoo=0\");  // -foo should win\n-    BOOST_CHECK(!GetBoolArg(\"-foo\"));\n     BOOST_CHECK(!GetBoolArg(\"-foo\", false));\n     BOOST_CHECK(!GetBoolArg(\"-foo\", true));\n \n     // New 0.6 feature: treat -- same as -:\n     ResetArgs(\"--foo=1\");\n-    BOOST_CHECK(GetBoolArg(\"-foo\"));\n     BOOST_CHECK(GetBoolArg(\"-foo\", false));\n     BOOST_CHECK(GetBoolArg(\"-foo\", true));\n \n     ResetArgs(\"--nofoo=1\");\n-    BOOST_CHECK(!GetBoolArg(\"-foo\"));\n     BOOST_CHECK(!GetBoolArg(\"-foo\", false));\n     BOOST_CHECK(!GetBoolArg(\"-foo\", true));\n \n@@ -133,7 +120,7 @@ BOOST_AUTO_TEST_CASE(intarg)\n BOOST_AUTO_TEST_CASE(doubledash)\n {\n     ResetArgs(\"--foo\");\n-    BOOST_CHECK_EQUAL(GetBoolArg(\"-foo\"), true);\n+    BOOST_CHECK_EQUAL(GetBoolArg(\"-foo\", false), true);\n \n     ResetArgs(\"--foo=verbose --bar=1\");\n     BOOST_CHECK_EQUAL(GetArg(\"-foo\", \"\"), \"verbose\");\n@@ -143,25 +130,24 @@ BOOST_AUTO_TEST_CASE(doubledash)\n BOOST_AUTO_TEST_CASE(boolargno)\n {\n     ResetArgs(\"-nofoo\");\n-    BOOST_CHECK(!GetBoolArg(\"-foo\"));\n     BOOST_CHECK(!GetBoolArg(\"-foo\", true));\n     BOOST_CHECK(!GetBoolArg(\"-foo\", false));\n \n     ResetArgs(\"-nofoo=1\");\n-    BOOST_CHECK(!GetBoolArg(\"-foo\"));\n     BOOST_CHECK(!GetBoolArg(\"-foo\", true));\n     BOOST_CHECK(!GetBoolArg(\"-foo\", false));\n \n     ResetArgs(\"-nofoo=0\");\n-    BOOST_CHECK(GetBoolArg(\"-foo\"));\n     BOOST_CHECK(GetBoolArg(\"-foo\", true));\n     BOOST_CHECK(GetBoolArg(\"-foo\", false));\n \n     ResetArgs(\"-foo --nofoo\");\n-    BOOST_CHECK(GetBoolArg(\"-foo\"));\n+    BOOST_CHECK(GetBoolArg(\"-foo\", true));\n+    BOOST_CHECK(GetBoolArg(\"-foo\", false));\n \n     ResetArgs(\"-nofoo -foo\"); // foo always wins:\n-    BOOST_CHECK(GetBoolArg(\"-foo\"));\n+    BOOST_CHECK(GetBoolArg(\"-foo\", true));\n+    BOOST_CHECK(GetBoolArg(\"-foo\", false));\n }\n \n BOOST_AUTO_TEST_SUITE_END()"
+      },
+      {
+        "sha": "64bd3a1b28d16154e5f21c2ce5ebf3d3bfe0468f",
+        "filename": "src/test/util_tests.cpp",
+        "status": "modified",
+        "additions": 12,
+        "deletions": 12,
+        "changes": 24,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/test/util_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/test/util_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/util_tests.cpp?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -31,7 +31,7 @@ BOOST_AUTO_TEST_CASE(util_criticalsection)\n }\n \n BOOST_AUTO_TEST_CASE(util_MedianFilter)\n-{    \n+{\n     CMedianFilter<int> filter(5, 15);\n \n     BOOST_CHECK_EQUAL(filter.median(), 15);\n@@ -56,10 +56,10 @@ BOOST_AUTO_TEST_CASE(util_MedianFilter)\n }\n \n static const unsigned char ParseHex_expected[65] = {\n-    0x04, 0x67, 0x8a, 0xfd, 0xb0, 0xfe, 0x55, 0x48, 0x27, 0x19, 0x67, 0xf1, 0xa6, 0x71, 0x30, 0xb7, \n-    0x10, 0x5c, 0xd6, 0xa8, 0x28, 0xe0, 0x39, 0x09, 0xa6, 0x79, 0x62, 0xe0, 0xea, 0x1f, 0x61, 0xde, \n-    0xb6, 0x49, 0xf6, 0xbc, 0x3f, 0x4c, 0xef, 0x38, 0xc4, 0xf3, 0x55, 0x04, 0xe5, 0x1e, 0xc1, 0x12, \n-    0xde, 0x5c, 0x38, 0x4d, 0xf7, 0xba, 0x0b, 0x8d, 0x57, 0x8a, 0x4c, 0x70, 0x2b, 0x6b, 0xf1, 0x1d, \n+    0x04, 0x67, 0x8a, 0xfd, 0xb0, 0xfe, 0x55, 0x48, 0x27, 0x19, 0x67, 0xf1, 0xa6, 0x71, 0x30, 0xb7,\n+    0x10, 0x5c, 0xd6, 0xa8, 0x28, 0xe0, 0x39, 0x09, 0xa6, 0x79, 0x62, 0xe0, 0xea, 0x1f, 0x61, 0xde,\n+    0xb6, 0x49, 0xf6, 0xbc, 0x3f, 0x4c, 0xef, 0x38, 0xc4, 0xf3, 0x55, 0x04, 0xe5, 0x1e, 0xc1, 0x12,\n+    0xde, 0x5c, 0x38, 0x4d, 0xf7, 0xba, 0x0b, 0x8d, 0x57, 0x8a, 0x4c, 0x70, 0x2b, 0x6b, 0xf1, 0x1d,\n     0x5f\n };\n BOOST_AUTO_TEST_CASE(util_ParseHex)\n@@ -123,13 +123,13 @@ BOOST_AUTO_TEST_CASE(util_ParseParameters)\n     BOOST_CHECK(mapArgs.empty() && mapMultiArgs.empty());\n \n     ParseParameters(5, (char**)argv_test);\n-    // expectation: -ignored is ignored (program name argument), \n+    // expectation: -ignored is ignored (program name argument),\n     // -a, -b and -ccc end up in map, -d ignored because it is after\n     // a non-option argument (non-GNU option parsing)\n     BOOST_CHECK(mapArgs.size() == 3 && mapMultiArgs.size() == 3);\n-    BOOST_CHECK(mapArgs.count(\"-a\") && mapArgs.count(\"-b\") && mapArgs.count(\"-ccc\") \n+    BOOST_CHECK(mapArgs.count(\"-a\") && mapArgs.count(\"-b\") && mapArgs.count(\"-ccc\")\n                 && !mapArgs.count(\"f\") && !mapArgs.count(\"-d\"));\n-    BOOST_CHECK(mapMultiArgs.count(\"-a\") && mapMultiArgs.count(\"-b\") && mapMultiArgs.count(\"-ccc\") \n+    BOOST_CHECK(mapMultiArgs.count(\"-a\") && mapMultiArgs.count(\"-b\") && mapMultiArgs.count(\"-ccc\")\n                 && !mapMultiArgs.count(\"f\") && !mapMultiArgs.count(\"-d\"));\n \n     BOOST_CHECK(mapArgs[\"-a\"] == \"\" && mapArgs[\"-ccc\"] == \"multiple\");\n@@ -154,10 +154,10 @@ BOOST_AUTO_TEST_CASE(util_GetArg)\n     BOOST_CHECK_EQUAL(GetArg(\"inttest1\", -1), 12345);\n     BOOST_CHECK_EQUAL(GetArg(\"inttest2\", -1), 81985529216486895LL);\n     BOOST_CHECK_EQUAL(GetArg(\"inttest3\", -1), -1);\n-    BOOST_CHECK_EQUAL(GetBoolArg(\"booltest1\"), true);\n-    BOOST_CHECK_EQUAL(GetBoolArg(\"booltest2\"), false);\n-    BOOST_CHECK_EQUAL(GetBoolArg(\"booltest3\"), false);\n-    BOOST_CHECK_EQUAL(GetBoolArg(\"booltest4\"), true);\n+    BOOST_CHECK_EQUAL(GetBoolArg(\"booltest1\", false), true);\n+    BOOST_CHECK_EQUAL(GetBoolArg(\"booltest2\", false), false);\n+    BOOST_CHECK_EQUAL(GetBoolArg(\"booltest3\", false), false);\n+    BOOST_CHECK_EQUAL(GetBoolArg(\"booltest4\", false), true);\n }\n \n BOOST_AUTO_TEST_CASE(util_WildcardMatch)"
+      },
+      {
+        "sha": "0bd29602333f7d44cb8c2d169024139027b21bd3",
+        "filename": "src/util.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 4,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/util.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/util.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/util.cpp?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -518,7 +518,7 @@ static void InterpretNegativeSetting(string name, map<string, string>& mapSettin\n         positive.append(name.begin()+3, name.end());\n         if (mapSettingsRet.count(positive) == 0)\n         {\n-            bool value = !GetBoolArg(name);\n+            bool value = !GetBoolArg(name, false);\n             mapSettingsRet[positive] = (value ? \"1\" : \"0\");\n         }\n     }\n@@ -1171,7 +1171,6 @@ bool TruncateFile(FILE *file, unsigned int length) {\n #endif\n }\n \n-\n // this function tries to raise the file descriptor limit to the requested number.\n // It returns the actual file descriptor limit (which may be more or less than nMinFD)\n int RaiseFileDescriptorLimit(int nMinFD) {\n@@ -1257,8 +1256,8 @@ void ShrinkDebugFile()\n             fclose(file);\n         }\n     }\n-    else if(file != NULL)\n-\t     fclose(file);\n+    else if (file != NULL)\n+        fclose(file);\n }\n \n "
+      },
+      {
+        "sha": "941e0d99ac5ed9fb05045940f37542ede8b6f6ba",
+        "filename": "src/util.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/util.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab139c964e32b3ec5279eea0e749e0fe4a31a2dd/src/util.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/util.h?ref=ab139c964e32b3ec5279eea0e749e0fe4a31a2dd",
+        "patch": "@@ -390,7 +390,7 @@ int64 GetArg(const std::string& strArg, int64 nDefault);\n  * @param default (true or false)\n  * @return command-line argument or default value\n  */\n-bool GetBoolArg(const std::string& strArg, bool fDefault=false);\n+bool GetBoolArg(const std::string& strArg, bool fDefault);\n \n /**\n  * Set an argument if it doesn't already have a value"
+      }
+    ]
+  }
+]

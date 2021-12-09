@@ -1,0 +1,98 @@
+[
+  {
+    "sha": "9d6cd04b3b73e5de10d6891dcdf151633e582de0",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5ZDZjZDA0YjNiNzNlNWRlMTBkNjg5MWRjZGYxNTE2MzNlNTgyZGUw",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-03-22T02:10:50Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-27T13:31:34Z"
+      },
+      "message": "Stop processing messages on full send buffer and dont disconnect.\n\nAlso decrease default send/receive buffer sizes from 10 to 5 mb\nas this patch makes it easy for a node to fill both instead of\nonly send.",
+      "tree": {
+        "sha": "eaebea0824ab7a2cbe7bd2c6793922893a2989eb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/eaebea0824ab7a2cbe7bd2c6793922893a2989eb"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/9d6cd04b3b73e5de10d6891dcdf151633e582de0",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9d6cd04b3b73e5de10d6891dcdf151633e582de0",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/9d6cd04b3b73e5de10d6891dcdf151633e582de0",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9d6cd04b3b73e5de10d6891dcdf151633e582de0/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "bcf0f4117124b2fc070472fb378d5115b7397ea4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/bcf0f4117124b2fc070472fb378d5115b7397ea4",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/bcf0f4117124b2fc070472fb378d5115b7397ea4"
+      }
+    ],
+    "stats": {
+      "total": 31,
+      "additions": 14,
+      "deletions": 17
+    },
+    "files": [
+      {
+        "sha": "b25d52200fbc118f25dde8f1bfd292fff2335a2f",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9d6cd04b3b73e5de10d6891dcdf151633e582de0/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9d6cd04b3b73e5de10d6891dcdf151633e582de0/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=9d6cd04b3b73e5de10d6891dcdf151633e582de0",
+        "patch": "@@ -238,8 +238,8 @@ std::string HelpMessage()\n         \"  -dnsseed               \" + _(\"Find peers using DNS lookup (default: 1 unless -connect)\") + \"\\n\" +\n         \"  -banscore=<n>          \" + _(\"Threshold for disconnecting misbehaving peers (default: 100)\") + \"\\n\" +\n         \"  -bantime=<n>           \" + _(\"Number of seconds to keep misbehaving peers from reconnecting (default: 86400)\") + \"\\n\" +\n-        \"  -maxreceivebuffer=<n>  \" + _(\"Maximum per-connection receive buffer, <n>*1000 bytes (default: 10000)\") + \"\\n\" +\n-        \"  -maxsendbuffer=<n>     \" + _(\"Maximum per-connection send buffer, <n>*1000 bytes (default: 10000)\") + \"\\n\" +\n+        \"  -maxreceivebuffer=<n>  \" + _(\"Maximum per-connection receive buffer, <n>*1000 bytes (default: 5000)\") + \"\\n\" +\n+        \"  -maxsendbuffer=<n>     \" + _(\"Maximum per-connection send buffer, <n>*1000 bytes (default: 5000)\") + \"\\n\" +\n #ifdef USE_UPNP\n #if USE_UPNP\n         \"  -upnp                  \" + _(\"Use UPnP to map the listening port (default: 1 when listening)\") + \"\\n\" +"
+      },
+      {
+        "sha": "f1398e9818d001c2d08e0cc2470f4218319caed8",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 8,
+        "changes": 16,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9d6cd04b3b73e5de10d6891dcdf151633e582de0/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9d6cd04b3b73e5de10d6891dcdf151633e582de0/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=9d6cd04b3b73e5de10d6891dcdf151633e582de0",
+        "patch": "@@ -2632,25 +2632,21 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n         // Send the rest of the chain\n         if (pindex)\n             pindex = pindex->pnext;\n-        int nLimit = 500 + locator.GetDistanceBack();\n-        unsigned int nBytes = 0;\n+        int nLimit = 500;\n         printf(\"getblocks %d to %s limit %d\\n\", (pindex ? pindex->nHeight : -1), hashStop.ToString().substr(0,20).c_str(), nLimit);\n         for (; pindex; pindex = pindex->pnext)\n         {\n             if (pindex->GetBlockHash() == hashStop)\n             {\n-                printf(\"  getblocks stopping at %d %s (%u bytes)\\n\", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str(), nBytes);\n+                printf(\"  getblocks stopping at %d %s\\n\", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());\n                 break;\n             }\n             pfrom->PushInventory(CInv(MSG_BLOCK, pindex->GetBlockHash()));\n-            CBlock block;\n-            block.ReadFromDisk(pindex, true);\n-            nBytes += block.GetSerializeSize(SER_NETWORK, PROTOCOL_VERSION);\n-            if (--nLimit <= 0 || nBytes >= SendBufferSize()/2)\n+            if (--nLimit <= 0)\n             {\n                 // When this block is requested, we'll send an inv that'll make them\n                 // getblocks the next batch of inventory.\n-                printf(\"  getblocks stopping at limit %d %s (%u bytes)\\n\", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str(), nBytes);\n+                printf(\"  getblocks stopping at limit %d %s\\n\", pindex->nHeight, pindex->GetBlockHash().ToString().substr(0,20).c_str());\n                 pfrom->hashContinue = pindex->GetBlockHash();\n                 break;\n             }\n@@ -2910,6 +2906,10 @@ bool ProcessMessages(CNode* pfrom)\n \n     loop\n     {\n+        // Don't bother if send buffer is too full to respond anyway\n+        if (pfrom->vSend.size() >= SendBufferSize())\n+            break;\n+\n         // Scan for message start\n         CDataStream::iterator pstart = search(vRecv.begin(), vRecv.end(), BEGIN(pchMessageStart), END(pchMessageStart));\n         int nHeaderSize = vRecv.GetSerializeSize(CMessageHeader());"
+      },
+      {
+        "sha": "f1073e0a3ed7800826a183393d80a86fd7d1100d",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 5,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9d6cd04b3b73e5de10d6891dcdf151633e582de0/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9d6cd04b3b73e5de10d6891dcdf151633e582de0/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=9d6cd04b3b73e5de10d6891dcdf151633e582de0",
+        "patch": "@@ -922,11 +922,8 @@ void ThreadSocketHandler2(void* parg)\n                                 pnode->CloseSocketDisconnect();\n                             }\n                         }\n-                        if (vSend.size() > SendBufferSize()) {\n-                            if (!pnode->fDisconnect)\n-                                printf(\"socket send flood control disconnect (%d bytes)\\n\", vSend.size());\n-                            pnode->CloseSocketDisconnect();\n-                        }\n+                        if (vSend.size() > SendBufferSize())\n+                            printf(\"socket send buffer full warning (%d bytes)\\n\", vSend.size());\n                     }\n                 }\n             }"
+      },
+      {
+        "sha": "fa6f70086793830e893cc3c6832279aa79145cd0",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9d6cd04b3b73e5de10d6891dcdf151633e582de0/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9d6cd04b3b73e5de10d6891dcdf151633e582de0/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=9d6cd04b3b73e5de10d6891dcdf151633e582de0",
+        "patch": "@@ -26,8 +26,8 @@ extern int nBestHeight;\n \n \n \n-inline unsigned int ReceiveBufferSize() { return 1000*GetArg(\"-maxreceivebuffer\", 10*1000); }\n-inline unsigned int SendBufferSize() { return 1000*GetArg(\"-maxsendbuffer\", 10*1000); }\n+inline unsigned int ReceiveBufferSize() { return 1000*GetArg(\"-maxreceivebuffer\", 5*1000); }\n+inline unsigned int SendBufferSize() { return 1000*GetArg(\"-maxsendbuffer\", 5*1000); }\n \n void AddOneShot(std::string strDest);\n bool RecvLine(SOCKET hSocket, std::string& strLine);"
+      }
+    ]
+  }
+]

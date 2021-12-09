@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "cdd51e8ee156f3bb3135be8aa51530a53734153e",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjZGQ1MWU4ZWUxNTZmM2JiMzEzNWJlOGFhNTE1MzBhNTM3MzQxNTNl",
+    "commit": {
+      "author": {
+        "name": "Adrian-Stefan Mares",
+        "email": "a.mares@student.tue.nl",
+        "date": "2021-06-20T11:09:28Z"
+      },
+      "committer": {
+        "name": "Adrian-Stefan Mares",
+        "email": "a.mares@student.tue.nl",
+        "date": "2021-06-27T17:27:25Z"
+      },
+      "message": "torcontrol: Resolve Tor control plane address",
+      "tree": {
+        "sha": "6a1754b87a0995409649a9069f6defe495107c37",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/6a1754b87a0995409649a9069f6defe495107c37"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/cdd51e8ee156f3bb3135be8aa51530a53734153e",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/cdd51e8ee156f3bb3135be8aa51530a53734153e",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/cdd51e8ee156f3bb3135be8aa51530a53734153e",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/cdd51e8ee156f3bb3135be8aa51530a53734153e/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "965e93743454112c0c3c66bf24852f63ee07b862",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/965e93743454112c0c3c66bf24852f63ee07b862",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/965e93743454112c0c3c66bf24852f63ee07b862"
+      }
+    ],
+    "stats": {
+      "total": 23,
+      "additions": 15,
+      "deletions": 8
+    },
+    "files": [
+      {
+        "sha": "bb296456bafc6fcd01545c2c33bf82381d357dc6",
+        "filename": "src/torcontrol.cpp",
+        "status": "modified",
+        "additions": 15,
+        "deletions": 8,
+        "changes": 23,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/cdd51e8ee156f3bb3135be8aa51530a53734153e/src/torcontrol.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/cdd51e8ee156f3bb3135be8aa51530a53734153e/src/torcontrol.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/torcontrol.cpp?ref=cdd51e8ee156f3bb3135be8aa51530a53734153e",
+        "patch": "@@ -132,28 +132,35 @@ void TorControlConnection::eventcb(struct bufferevent *bev, short what, void *ct\n \n bool TorControlConnection::Connect(const std::string& tor_control_center, const ConnectionCB& _connected, const ConnectionCB& _disconnected)\n {\n-    if (b_conn)\n+    if (b_conn) {\n         Disconnect();\n-    // Parse tor_control_center address:port\n-    struct sockaddr_storage connect_to_addr;\n-    int connect_to_addrlen = sizeof(connect_to_addr);\n-    if (evutil_parse_sockaddr_port(tor_control_center.c_str(),\n-        (struct sockaddr*)&connect_to_addr, &connect_to_addrlen)<0) {\n+    }\n+\n+    CService control_service;\n+    if (!Lookup(tor_control_center, control_service, 9051, fNameLookup)) {\n+        LogPrintf(\"tor: Failed to look up control center %s\\n\", tor_control_center);\n+        return false;\n+    }\n+\n+    struct sockaddr_storage control_address;\n+    socklen_t control_address_len = sizeof(control_address);\n+    if (!control_service.GetSockAddr(reinterpret_cast<struct sockaddr*>(&control_address), &control_address_len)) {\n         LogPrintf(\"tor: Error parsing socket address %s\\n\", tor_control_center);\n         return false;\n     }\n \n     // Create a new socket, set up callbacks and enable notification bits\n     b_conn = bufferevent_socket_new(base, -1, BEV_OPT_CLOSE_ON_FREE);\n-    if (!b_conn)\n+    if (!b_conn) {\n         return false;\n+    }\n     bufferevent_setcb(b_conn, TorControlConnection::readcb, nullptr, TorControlConnection::eventcb, this);\n     bufferevent_enable(b_conn, EV_READ|EV_WRITE);\n     this->connected = _connected;\n     this->disconnected = _disconnected;\n \n     // Finally, connect to tor_control_center\n-    if (bufferevent_socket_connect(b_conn, (struct sockaddr*)&connect_to_addr, connect_to_addrlen) < 0) {\n+    if (bufferevent_socket_connect(b_conn, reinterpret_cast<struct sockaddr*>(&control_address), control_address_len) < 0) {\n         LogPrintf(\"tor: Error connecting to address %s\\n\", tor_control_center);\n         return false;\n     }"
+      }
+    ]
+  }
+]

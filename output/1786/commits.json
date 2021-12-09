@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "2387944782fa61a3137afda91e9e8105d8cc5ddf",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyMzg3OTQ0NzgyZmE2MWEzMTM3YWZkYTkxZTllODEwNWQ4Y2M1ZGRm",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-09-05T20:01:28Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-09-05T20:01:28Z"
+      },
+      "message": "select(): Use precise fd presence check, rather than imprecise hSocketMax test",
+      "tree": {
+        "sha": "9d3df5c8332b935dcb4f3c8866a1b46580aea1a1",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/9d3df5c8332b935dcb4f3c8866a1b46580aea1a1"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/2387944782fa61a3137afda91e9e8105d8cc5ddf",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2387944782fa61a3137afda91e9e8105d8cc5ddf",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/2387944782fa61a3137afda91e9e8105d8cc5ddf",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2387944782fa61a3137afda91e9e8105d8cc5ddf/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "42613c97d5dd8581d8dfd2cbe443736f8c539973",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/42613c97d5dd8581d8dfd2cbe443736f8c539973",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/42613c97d5dd8581d8dfd2cbe443736f8c539973"
+      }
+    ],
+    "stats": {
+      "total": 10,
+      "additions": 7,
+      "deletions": 3
+    },
+    "files": [
+      {
+        "sha": "2c6efff63cce98e2ab4dce4a446d4655392e62f8",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 3,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/2387944782fa61a3137afda91e9e8105d8cc5ddf/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/2387944782fa61a3137afda91e9e8105d8cc5ddf/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=2387944782fa61a3137afda91e9e8105d8cc5ddf",
+        "patch": "@@ -752,10 +752,12 @@ void ThreadSocketHandler2(void* parg)\n         FD_ZERO(&fdsetSend);\n         FD_ZERO(&fdsetError);\n         SOCKET hSocketMax = 0;\n+        bool have_fds = false;\n \n         BOOST_FOREACH(SOCKET hListenSocket, vhListenSocket) {\n             FD_SET(hListenSocket, &fdsetRecv);\n             hSocketMax = max(hSocketMax, hListenSocket);\n+            have_fds = true;\n         }\n         {\n             LOCK(cs_vNodes);\n@@ -766,6 +768,7 @@ void ThreadSocketHandler2(void* parg)\n                 FD_SET(pnode->hSocket, &fdsetRecv);\n                 FD_SET(pnode->hSocket, &fdsetError);\n                 hSocketMax = max(hSocketMax, pnode->hSocket);\n+                have_fds = true;\n                 {\n                     TRY_LOCK(pnode->cs_vSend, lockSend);\n                     if (lockSend && !pnode->vSend.empty())\n@@ -775,15 +778,16 @@ void ThreadSocketHandler2(void* parg)\n         }\n \n         vnThreadsRunning[THREAD_SOCKETHANDLER]--;\n-        int nSelect = select(hSocketMax + 1, &fdsetRecv, &fdsetSend, &fdsetError, &timeout);\n+        int nSelect = select(have_fds ? hSocketMax + 1 : 0,\n+                             &fdsetRecv, &fdsetSend, &fdsetError, &timeout);\n         vnThreadsRunning[THREAD_SOCKETHANDLER]++;\n         if (fShutdown)\n             return;\n         if (nSelect == SOCKET_ERROR)\n         {\n-            int nErr = WSAGetLastError();\n-            if (hSocketMax != INVALID_SOCKET)\n+            if (have_fds)\n             {\n+                int nErr = WSAGetLastError();\n                 printf(\"socket select error %d\\n\", nErr);\n                 for (unsigned int i = 0; i <= hSocketMax; i++)\n                     FD_SET(i, &fdsetRecv);"
+      }
+    ]
+  }
+]

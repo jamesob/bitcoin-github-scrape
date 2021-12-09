@@ -1,0 +1,614 @@
+[
+  {
+    "sha": "93a34cfeecf51457151183aba7328026dab42dac",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5M2EzNGNmZWVjZjUxNDU3MTUxMTgzYWJhNzMyODAyNmRhYjQyZGFj",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-06-09T16:57:23Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-12-04T14:33:10Z"
+      },
+      "message": "Make DisconnectBlock unaware of where undo data resides on disk",
+      "tree": {
+        "sha": "17456ad068aea03fcb278ee39f5dd5b7efbb26c9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/17456ad068aea03fcb278ee39f5dd5b7efbb26c9"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/93a34cfeecf51457151183aba7328026dab42dac",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/93a34cfeecf51457151183aba7328026dab42dac",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/93a34cfeecf51457151183aba7328026dab42dac",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/93a34cfeecf51457151183aba7328026dab42dac/comments",
+    "author": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "00d25e90db06149fa456b0a8f15b7b68005ff9c5",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/00d25e90db06149fa456b0a8f15b7b68005ff9c5",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/00d25e90db06149fa456b0a8f15b7b68005ff9c5"
+      }
+    ],
+    "stats": {
+      "total": 22,
+      "additions": 11,
+      "deletions": 11
+    },
+    "files": [
+      {
+        "sha": "b7af8412793a7f94faa117615018ff682a9f14bf",
+        "filename": "src/validation.cpp",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 11,
+        "changes": 22,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/93a34cfeecf51457151183aba7328026dab42dac/src/validation.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/93a34cfeecf51457151183aba7328026dab42dac/src/validation.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.cpp?ref=93a34cfeecf51457151183aba7328026dab42dac",
+        "patch": "@@ -1380,8 +1380,13 @@ bool UndoWriteToDisk(const CBlockUndo& blockundo, CDiskBlockPos& pos, const uint\n     return true;\n }\n \n-bool UndoReadFromDisk(CBlockUndo& blockundo, const CDiskBlockPos& pos, const uint256& hashBlock)\n+static bool UndoReadFromDisk(CBlockUndo& blockundo, const CBlockIndex *pindex)\n {\n+    CDiskBlockPos pos = pindex->GetUndoPos();\n+    if (pos.IsNull()) {\n+        return error(\"%s: no undo data available\", __func__);\n+    }\n+\n     // Open history file to read\n     CAutoFile filein(OpenUndoFile(pos, true), SER_DISK, CLIENT_VERSION);\n     if (filein.IsNull())\n@@ -1391,7 +1396,7 @@ bool UndoReadFromDisk(CBlockUndo& blockundo, const CDiskBlockPos& pos, const uin\n     uint256 hashChecksum;\n     CHashVerifier<CAutoFile> verifier(&filein); // We need a CHashVerifier as reserializing may lose data\n     try {\n-        verifier << hashBlock;\n+        verifier << pindex->pprev->GetBlockHash();\n         verifier >> blockundo;\n         filein >> hashChecksum;\n     }\n@@ -1474,12 +1479,7 @@ static DisconnectResult DisconnectBlock(const CBlock& block, const CBlockIndex*\n     bool fClean = true;\n \n     CBlockUndo blockUndo;\n-    CDiskBlockPos pos = pindex->GetUndoPos();\n-    if (pos.IsNull()) {\n-        error(\"DisconnectBlock(): no undo data available\");\n-        return DISCONNECT_FAILED;\n-    }\n-    if (!UndoReadFromDisk(blockUndo, pos, pindex->pprev->GetBlockHash())) {\n+    if (!UndoReadFromDisk(blockUndo, pindex)) {\n         error(\"DisconnectBlock(): failure reading undo data\");\n         return DISCONNECT_FAILED;\n     }\n@@ -3723,10 +3723,10 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,\n         // check level 2: verify undo validity\n         if (nCheckLevel >= 2 && pindex) {\n             CBlockUndo undo;\n-            CDiskBlockPos pos = pindex->GetUndoPos();\n-            if (!pos.IsNull()) {\n-                if (!UndoReadFromDisk(undo, pos, pindex->pprev->GetBlockHash()))\n+            if (!pindex->GetUndoPos().IsNull()) {\n+                if (!UndoReadFromDisk(undo, pindex)) {\n                     return error(\"VerifyDB(): *** found bad undo data at %d, hash=%s\\n\", pindex->nHeight, pindex->GetBlockHash().ToString());\n+                }\n             }\n         }\n         // check level 3: check for inconsistencies during memory-only disconnect of tip blocks"
+      }
+    ]
+  },
+  {
+    "sha": "50701ba5fc6199ee5e95120d5b77bd13e3bbe65c",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1MDcwMWJhNWZjNjE5OWVlNWU5NTEyMGQ1Yjc3YmQxM2UzYmJlNjVj",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2016-12-03T00:54:15Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-12-04T14:33:10Z"
+      },
+      "message": "Move txindex/undo data disk location stuff out of ConnectBlock",
+      "tree": {
+        "sha": "45acc0250f98735efe2115eea553cf4e1877ba16",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/45acc0250f98735efe2115eea553cf4e1877ba16"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/50701ba5fc6199ee5e95120d5b77bd13e3bbe65c",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/50701ba5fc6199ee5e95120d5b77bd13e3bbe65c",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/50701ba5fc6199ee5e95120d5b77bd13e3bbe65c",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/50701ba5fc6199ee5e95120d5b77bd13e3bbe65c/comments",
+    "author": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "93a34cfeecf51457151183aba7328026dab42dac",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/93a34cfeecf51457151183aba7328026dab42dac",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/93a34cfeecf51457151183aba7328026dab42dac"
+      }
+    ],
+    "stats": {
+      "total": 65,
+      "additions": 42,
+      "deletions": 23
+    },
+    "files": [
+      {
+        "sha": "74e96718420a68e496085b1e6273b2035cba96b3",
+        "filename": "src/validation.cpp",
+        "status": "modified",
+        "additions": 42,
+        "deletions": 23,
+        "changes": 65,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/50701ba5fc6199ee5e95120d5b77bd13e3bbe65c/src/validation.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/50701ba5fc6199ee5e95120d5b77bd13e3bbe65c/src/validation.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.cpp?ref=50701ba5fc6199ee5e95120d5b77bd13e3bbe65c",
+        "patch": "@@ -1556,6 +1556,43 @@ void static FlushBlockFile(bool fFinalize = false)\n \n static bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, unsigned int nAddSize);\n \n+static bool WriteUndoDataForBlock(const CBlockUndo& blockundo, CValidationState& state, CBlockIndex* pindex, const CChainParams& chainparams)\n+{\n+    // Write undo information to disk\n+    if (pindex->GetUndoPos().IsNull()) {\n+        CDiskBlockPos _pos;\n+        if (!FindUndoPos(state, pindex->nFile, _pos, ::GetSerializeSize(blockundo, SER_DISK, CLIENT_VERSION) + 40))\n+            return error(\"ConnectBlock(): FindUndoPos failed\");\n+        if (!UndoWriteToDisk(blockundo, _pos, pindex->pprev->GetBlockHash(), chainparams.MessageStart()))\n+            return AbortNode(state, \"Failed to write undo data\");\n+\n+        // update nUndoPos in block index\n+        pindex->nUndoPos = _pos.nPos;\n+        pindex->nStatus |= BLOCK_HAVE_UNDO;\n+        setDirtyBlockIndex.insert(pindex);\n+    }\n+\n+    return true;\n+}\n+\n+static bool WriteTxIndexDataForBlock(const CBlock& block, CValidationState& state, CBlockIndex* pindex)\n+{\n+    CDiskTxPos pos(pindex->GetBlockPos(), GetSizeOfCompactSize(block.vtx.size()));\n+    std::vector<std::pair<uint256, CDiskTxPos> > vPos;\n+    vPos.reserve(block.vtx.size());\n+    for (const CTransactionRef& tx : block.vtx)\n+    {\n+        vPos.push_back(std::make_pair(tx->GetHash(), pos));\n+        pos.nTxOffset += ::GetSerializeSize(*tx, SER_DISK, CLIENT_VERSION);\n+    }\n+\n+    if (fTxIndex)\n+        if (!pblocktree->WriteTxIndex(vPos))\n+            return AbortNode(state, \"Failed to write transaction index\");\n+\n+    return true;\n+}\n+\n static CCheckQueue<CScriptCheck> scriptcheckqueue(128);\n \n void ThreadScriptCheck() {\n@@ -1783,9 +1820,6 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd\n     CAmount nFees = 0;\n     int nInputs = 0;\n     int64_t nSigOpsCost = 0;\n-    CDiskTxPos pos(pindex->GetBlockPos(), GetSizeOfCompactSize(block.vtx.size()));\n-    std::vector<std::pair<uint256, CDiskTxPos> > vPos;\n-    vPos.reserve(block.vtx.size());\n     blockundo.vtxundo.reserve(block.vtx.size() - 1);\n     std::vector<PrecomputedTransactionData> txdata;\n     txdata.reserve(block.vtx.size()); // Required so that pointers to individual PrecomputedTransactionData don't get invalidated\n@@ -1846,9 +1880,6 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd\n             blockundo.vtxundo.push_back(CTxUndo());\n         }\n         UpdateCoins(tx, view, i == 0 ? undoDummy : blockundo.vtxundo.back(), pindex->nHeight);\n-\n-        vPos.push_back(std::make_pair(tx.GetHash(), pos));\n-        pos.nTxOffset += ::GetSerializeSize(tx, SER_DISK, CLIENT_VERSION);\n     }\n     int64_t nTime3 = GetTimeMicros(); nTimeConnect += nTime3 - nTime2;\n     LogPrint(BCLog::BENCH, \"      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs (%.2fms/blk)]\\n\", (unsigned)block.vtx.size(), MILLI * (nTime3 - nTime2), MILLI * (nTime3 - nTime2) / block.vtx.size(), nInputs <= 1 ? 0 : MILLI * (nTime3 - nTime2) / (nInputs-1), nTimeConnect * MICRO, nTimeConnect * MILLI / nBlocksTotal);\n@@ -1868,28 +1899,16 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd\n     if (fJustCheck)\n         return true;\n \n-    // Write undo information to disk\n-    if (pindex->GetUndoPos().IsNull() || !pindex->IsValid(BLOCK_VALID_SCRIPTS))\n-    {\n-        if (pindex->GetUndoPos().IsNull()) {\n-            CDiskBlockPos _pos;\n-            if (!FindUndoPos(state, pindex->nFile, _pos, ::GetSerializeSize(blockundo, SER_DISK, CLIENT_VERSION) + 40))\n-                return error(\"ConnectBlock(): FindUndoPos failed\");\n-            if (!UndoWriteToDisk(blockundo, _pos, pindex->pprev->GetBlockHash(), chainparams.MessageStart()))\n-                return AbortNode(state, \"Failed to write undo data\");\n-\n-            // update nUndoPos in block index\n-            pindex->nUndoPos = _pos.nPos;\n-            pindex->nStatus |= BLOCK_HAVE_UNDO;\n-        }\n+    if (!WriteUndoDataForBlock(blockundo, state, pindex, chainparams))\n+        return false;\n \n+    if (!pindex->IsValid(BLOCK_VALID_SCRIPTS)) {\n         pindex->RaiseValidity(BLOCK_VALID_SCRIPTS);\n         setDirtyBlockIndex.insert(pindex);\n     }\n \n-    if (fTxIndex)\n-        if (!pblocktree->WriteTxIndex(vPos))\n-            return AbortNode(state, \"Failed to write transaction index\");\n+    if (!WriteTxIndexDataForBlock(block, state, pindex))\n+        return false;\n \n     assert(pindex->phashBlock);\n     // add this block to the view's block chain"
+      }
+    ]
+  },
+  {
+    "sha": "e104f0fb7e464f8cadb4cbc99e8329d22c35c36a",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplMTA0ZjBmYjdlNDY0ZjhjYWRiNGNiYzk5ZTgzMjlkMjJjMzVjMzZh",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-04-26T01:35:02Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-12-04T14:33:10Z"
+      },
+      "message": "Move block writing out of AcceptBlock",
+      "tree": {
+        "sha": "f1bc7864833b408b43483427a46e448cb1efb9dd",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f1bc7864833b408b43483427a46e448cb1efb9dd"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/e104f0fb7e464f8cadb4cbc99e8329d22c35c36a",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e104f0fb7e464f8cadb4cbc99e8329d22c35c36a",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/e104f0fb7e464f8cadb4cbc99e8329d22c35c36a",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e104f0fb7e464f8cadb4cbc99e8329d22c35c36a/comments",
+    "author": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "50701ba5fc6199ee5e95120d5b77bd13e3bbe65c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/50701ba5fc6199ee5e95120d5b77bd13e3bbe65c",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/50701ba5fc6199ee5e95120d5b77bd13e3bbe65c"
+      }
+    ],
+    "stats": {
+      "total": 49,
+      "additions": 29,
+      "deletions": 20
+    },
+    "files": [
+      {
+        "sha": "067e41495b89041f119d392aec8380e16f3524c6",
+        "filename": "src/validation.cpp",
+        "status": "modified",
+        "additions": 29,
+        "deletions": 20,
+        "changes": 49,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e104f0fb7e464f8cadb4cbc99e8329d22c35c36a/src/validation.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e104f0fb7e464f8cadb4cbc99e8329d22c35c36a/src/validation.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.cpp?ref=e104f0fb7e464f8cadb4cbc99e8329d22c35c36a",
+        "patch": "@@ -2759,7 +2759,7 @@ static bool ReceivedBlockTransactions(const CBlock &block, CValidationState& sta\n     return true;\n }\n \n-static bool FindBlockPos(CValidationState &state, CDiskBlockPos &pos, unsigned int nAddSize, unsigned int nHeight, uint64_t nTime, bool fKnown = false)\n+static bool FindBlockPos(CDiskBlockPos &pos, unsigned int nAddSize, unsigned int nHeight, uint64_t nTime, bool fKnown = false)\n {\n     LOCK(cs_LastBlockFile);\n \n@@ -2808,7 +2808,7 @@ static bool FindBlockPos(CValidationState &state, CDiskBlockPos &pos, unsigned i\n                 }\n             }\n             else\n-                return state.Error(\"out of disk space\");\n+                return error(\"out of disk space\");\n         }\n     }\n \n@@ -3196,6 +3196,25 @@ bool ProcessNewBlockHeaders(const std::vector<CBlockHeader>& headers, CValidatio\n     return true;\n }\n \n+/** Store block on disk. If dbp is non-nullptr, the file is known to already reside on disk */\n+static CDiskBlockPos SaveBlockToDisk(const CBlock& block, int nHeight, const CChainParams& chainparams, const CDiskBlockPos* dbp) {\n+    unsigned int nBlockSize = ::GetSerializeSize(block, SER_DISK, CLIENT_VERSION);\n+    CDiskBlockPos blockPos;\n+    if (dbp != nullptr)\n+        blockPos = *dbp;\n+    if (!FindBlockPos(blockPos, nBlockSize+8, nHeight, block.GetBlockTime(), dbp != nullptr)) {\n+        error(\"%s: FindBlockPos failed\", __func__);\n+        return CDiskBlockPos();\n+    }\n+    if (dbp == nullptr) {\n+        if (!WriteBlockToDisk(block, blockPos, chainparams.MessageStart())) {\n+            AbortNode(\"Failed to write block\");\n+            return CDiskBlockPos();\n+        }\n+    }\n+    return blockPos;\n+}\n+\n /** Store block on disk. If dbp is non-nullptr, the file is known to already reside on disk */\n static bool AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex, bool fRequested, const CDiskBlockPos* dbp, bool* fNewBlock)\n {\n@@ -3257,19 +3276,13 @@ static bool AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CValidation\n     if (!IsInitialBlockDownload() && chainActive.Tip() == pindex->pprev)\n         GetMainSignals().NewPoWValidBlock(pindex, pblock);\n \n-    int nHeight = pindex->nHeight;\n-\n     // Write block to history file\n     try {\n-        unsigned int nBlockSize = ::GetSerializeSize(block, SER_DISK, CLIENT_VERSION);\n-        CDiskBlockPos blockPos;\n-        if (dbp != nullptr)\n-            blockPos = *dbp;\n-        if (!FindBlockPos(state, blockPos, nBlockSize+8, nHeight, block.GetBlockTime(), dbp != nullptr))\n-            return error(\"AcceptBlock(): FindBlockPos failed\");\n-        if (dbp == nullptr)\n-            if (!WriteBlockToDisk(block, blockPos, chainparams.MessageStart()))\n-                AbortNode(state, \"Failed to write block\");\n+        CDiskBlockPos blockPos = SaveBlockToDisk(block, pindex->nHeight, chainparams, dbp);\n+        if (blockPos.IsNull()) {\n+            state.Error(strprintf(\"%s: Failed to find position to write new block to disk\", __func__));\n+            return false;\n+        }\n         if (!ReceivedBlockTransactions(block, state, pindex, blockPos, chainparams.GetConsensus()))\n             return error(\"AcceptBlock(): ReceivedBlockTransactions failed\");\n     } catch (const std::runtime_error& e) {\n@@ -4037,15 +4050,11 @@ bool LoadGenesisBlock(const CChainParams& chainparams)\n \n     try {\n         CBlock &block = const_cast<CBlock&>(chainparams.GenesisBlock());\n-        // Start new block file\n-        unsigned int nBlockSize = ::GetSerializeSize(block, SER_DISK, CLIENT_VERSION);\n-        CDiskBlockPos blockPos;\n-        CValidationState state;\n-        if (!FindBlockPos(state, blockPos, nBlockSize+8, 0, block.GetBlockTime()))\n-            return error(\"%s: FindBlockPos failed\", __func__);\n-        if (!WriteBlockToDisk(block, blockPos, chainparams.MessageStart()))\n+        CDiskBlockPos blockPos = SaveBlockToDisk(block, 0, chainparams, nullptr);\n+        if (blockPos.IsNull())\n             return error(\"%s: writing genesis block to disk failed\", __func__);\n         CBlockIndex *pindex = AddToBlockIndex(block);\n+        CValidationState state;\n         if (!ReceivedBlockTransactions(block, state, pindex, blockPos, chainparams.GetConsensus()))\n             return error(\"%s: genesis block not accepted\", __func__);\n     } catch (const std::runtime_error& e) {"
+      }
+    ]
+  },
+  {
+    "sha": "fd4d80a2f8d2ced8ffedf46e4a70ff4f7a05663f",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmZDRkODBhMmY4ZDJjZWQ4ZmZlZGY0NmU0YTcwZmY0ZjdhMDU2NjNm",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-12-04T14:34:46Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-12-04T14:34:46Z"
+      },
+      "message": "Create initial CChainState to hold chain state information",
+      "tree": {
+        "sha": "254249b24bca9724a582819f053639ae8a16b670",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/254249b24bca9724a582819f053639ae8a16b670"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/fd4d80a2f8d2ced8ffedf46e4a70ff4f7a05663f",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fd4d80a2f8d2ced8ffedf46e4a70ff4f7a05663f",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/fd4d80a2f8d2ced8ffedf46e4a70ff4f7a05663f",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fd4d80a2f8d2ced8ffedf46e4a70ff4f7a05663f/comments",
+    "author": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "e104f0fb7e464f8cadb4cbc99e8329d22c35c36a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e104f0fb7e464f8cadb4cbc99e8329d22c35c36a",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/e104f0fb7e464f8cadb4cbc99e8329d22c35c36a"
+      }
+    ],
+    "stats": {
+      "total": 278,
+      "additions": 195,
+      "deletions": 83
+    },
+    "files": [
+      {
+        "sha": "1e0653cef12ae21febf025933657f478c2d22c16",
+        "filename": "src/validation.cpp",
+        "status": "modified",
+        "additions": 193,
+        "deletions": 79,
+        "changes": 272,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fd4d80a2f8d2ced8ffedf46e4a70ff4f7a05663f/src/validation.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fd4d80a2f8d2ced8ffedf46e4a70ff4f7a05663f/src/validation.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.cpp?ref=fd4d80a2f8d2ced8ffedf46e4a70ff4f7a05663f",
+        "patch": "@@ -59,11 +59,117 @@\n /**\n  * Global state\n  */\n+namespace {\n+    struct CBlockIndexWorkComparator\n+    {\n+        bool operator()(const CBlockIndex *pa, const CBlockIndex *pb) const {\n+            // First sort by most total work, ...\n+            if (pa->nChainWork > pb->nChainWork) return false;\n+            if (pa->nChainWork < pb->nChainWork) return true;\n+\n+            // ... then by earliest time received, ...\n+            if (pa->nSequenceId < pb->nSequenceId) return false;\n+            if (pa->nSequenceId > pb->nSequenceId) return true;\n+\n+            // Use pointer address as tie breaker (should only happen with blocks\n+            // loaded from disk, as those all have id 0).\n+            if (pa < pb) return false;\n+            if (pa > pb) return true;\n+\n+            // Identical blocks.\n+            return false;\n+        }\n+    };\n+} // anon namespace\n+\n+enum DisconnectResult\n+{\n+    DISCONNECT_OK,      // All good.\n+    DISCONNECT_UNCLEAN, // Rolled back, but UTXO set was inconsistent with block.\n+    DISCONNECT_FAILED   // Something else went wrong.\n+};\n+\n+class ConnectTrace;\n+\n+/**\n+ * CChainState stores and provides an API to update our local knowledge of the\n+ * current best chain and header tree.\n+ *\n+ * It generally provides access to the current block tree, as well as functions\n+ * to provide new data, which it will appropriately validate and incorporate in\n+ * its state as necessary.\n+ *\n+ * Eventually, the API here is targeted at being exposed externally as a\n+ * consumable libconsensus library, so any functions added must only call\n+ * other class member functions, pure functions in other parts of the consensus\n+ * library, callbacks via the validation interface, or read/write-to-disk\n+ * functions (eventually this will also be via callbacks).\n+ */\n+class CChainState {\n+private:\n+    /**\n+     * The set of all CBlockIndex entries with BLOCK_VALID_TRANSACTIONS (for itself and all ancestors) and\n+     * as good as our current tip or better. Entries may be failed, though, and pruning nodes may be\n+     * missing the data for the block.\n+     */\n+    std::set<CBlockIndex*, CBlockIndexWorkComparator> setBlockIndexCandidates;\n+public:\n+    CChain chainActive;\n+    BlockMap mapBlockIndex;\n+    std::multimap<CBlockIndex*, CBlockIndex*> mapBlocksUnlinked;\n+    CBlockIndex *pindexBestInvalid = nullptr;\n+\n+    bool LoadBlockIndex(const Consensus::Params& consensus_params, CBlockTreeDB& blocktree);\n+\n+    bool ActivateBestChain(CValidationState &state, const CChainParams& chainparams, std::shared_ptr<const CBlock> pblock);\n+\n+    bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex);\n+    bool AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex, bool fRequested, const CDiskBlockPos* dbp, bool* fNewBlock);\n+\n+    // Block (dis)connection on a given view:\n+    DisconnectResult DisconnectBlock(const CBlock& block, const CBlockIndex* pindex, CCoinsViewCache& view);\n+    bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pindex,\n+                    CCoinsViewCache& view, const CChainParams& chainparams, bool fJustCheck = false);\n+\n+    // Block disconnection on our pcoinsTip:\n+    bool DisconnectTip(CValidationState& state, const CChainParams& chainparams, DisconnectedBlockTransactions *disconnectpool);\n+\n+    // Manual block validity manipulation:\n+    bool PreciousBlock(CValidationState& state, const CChainParams& params, CBlockIndex *pindex);\n+    bool InvalidateBlock(CValidationState& state, const CChainParams& chainparams, CBlockIndex *pindex);\n+    bool ResetBlockFailureFlags(CBlockIndex *pindex);\n+\n+    bool ReplayBlocks(const CChainParams& params, CCoinsView* view);\n+    bool RewindBlockIndex(const CChainParams& params);\n+    bool LoadGenesisBlock(const CChainParams& chainparams);\n+\n+    void PruneBlockIndexCandidates();\n+\n+    void UnloadBlockIndex();\n+\n+private:\n+    bool ActivateBestChainStep(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexMostWork, const std::shared_ptr<const CBlock>& pblock, bool& fInvalidFound, ConnectTrace& connectTrace);\n+    bool ConnectTip(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexNew, const std::shared_ptr<const CBlock>& pblock, ConnectTrace& connectTrace, DisconnectedBlockTransactions &disconnectpool);\n+\n+    CBlockIndex* AddToBlockIndex(const CBlockHeader& block);\n+    /** Create a new block index entry for a given block hash */\n+    CBlockIndex * InsertBlockIndex(const uint256& hash);\n+    void CheckBlockIndex(const Consensus::Params& consensusParams);\n+\n+    void InvalidBlockFound(CBlockIndex *pindex, const CValidationState &state);\n+    CBlockIndex* FindMostWorkChain();\n+    bool ReceivedBlockTransactions(const CBlock &block, CValidationState& state, CBlockIndex *pindexNew, const CDiskBlockPos& pos, const Consensus::Params& consensusParams);\n+\n+\n+    bool RollforwardBlock(const CBlockIndex* pindex, CCoinsViewCache& inputs, const CChainParams& params);\n+} g_chainstate;\n+\n+\n \n CCriticalSection cs_main;\n \n-BlockMap mapBlockIndex;\n-CChain chainActive;\n+BlockMap& mapBlockIndex = g_chainstate.mapBlockIndex;\n+CChain& chainActive = g_chainstate.chainActive;\n CBlockIndex *pindexBestHeader = nullptr;\n CWaitableCriticalSection csBestBlock;\n CConditionVariable cvBlockChange;\n@@ -91,49 +197,19 @@ CAmount maxTxFee = DEFAULT_TRANSACTION_MAXFEE;\n CBlockPolicyEstimator feeEstimator;\n CTxMemPool mempool(&feeEstimator);\n \n-static void CheckBlockIndex(const Consensus::Params& consensusParams);\n-\n /** Constant stuff for coinbase transactions we create: */\n CScript COINBASE_FLAGS;\n \n const std::string strMessageMagic = \"Bitcoin Signed Message:\\n\";\n \n // Internal stuff\n namespace {\n+    CBlockIndex *&pindexBestInvalid = g_chainstate.pindexBestInvalid;\n \n-    struct CBlockIndexWorkComparator\n-    {\n-        bool operator()(const CBlockIndex *pa, const CBlockIndex *pb) const {\n-            // First sort by most total work, ...\n-            if (pa->nChainWork > pb->nChainWork) return false;\n-            if (pa->nChainWork < pb->nChainWork) return true;\n-\n-            // ... then by earliest time received, ...\n-            if (pa->nSequenceId < pb->nSequenceId) return false;\n-            if (pa->nSequenceId > pb->nSequenceId) return true;\n-\n-            // Use pointer address as tie breaker (should only happen with blocks\n-            // loaded from disk, as those all have id 0).\n-            if (pa < pb) return false;\n-            if (pa > pb) return true;\n-\n-            // Identical blocks.\n-            return false;\n-        }\n-    };\n-\n-    CBlockIndex *pindexBestInvalid;\n-\n-    /**\n-     * The set of all CBlockIndex entries with BLOCK_VALID_TRANSACTIONS (for itself and all ancestors) and\n-     * as good as our current tip or better. Entries may be failed, though, and pruning nodes may be\n-     * missing the data for the block.\n-     */\n-    std::set<CBlockIndex*, CBlockIndexWorkComparator> setBlockIndexCandidates;\n     /** All pairs A->B, where A (or one of its ancestors) misses transactions, but B has transactions.\n      * Pruned nodes may have entries where B is missing data.\n      */\n-    std::multimap<CBlockIndex*, CBlockIndex*> mapBlocksUnlinked;\n+    std::multimap<CBlockIndex*, CBlockIndex*>& mapBlocksUnlinked = g_chainstate.mapBlocksUnlinked;\n \n     CCriticalSection cs_LastBlockFile;\n     std::vector<CBlockFileInfo> vinfoBlockFile;\n@@ -1197,7 +1273,7 @@ void static InvalidChainFound(CBlockIndex* pindexNew)\n     CheckForkWarningConditions();\n }\n \n-void static InvalidBlockFound(CBlockIndex *pindex, const CValidationState &state) {\n+void CChainState::InvalidBlockFound(CBlockIndex *pindex, const CValidationState &state) {\n     if (!state.CorruptionPossible()) {\n         pindex->nStatus |= BLOCK_FAILED_VALID;\n         g_failed_blocks.insert(pindex);\n@@ -1431,13 +1507,6 @@ bool AbortNode(CValidationState& state, const std::string& strMessage, const std\n \n } // namespace\n \n-enum DisconnectResult\n-{\n-    DISCONNECT_OK,      // All good.\n-    DISCONNECT_UNCLEAN, // Rolled back, but UTXO set was inconsistent with block.\n-    DISCONNECT_FAILED   // Something else went wrong.\n-};\n-\n /**\n  * Restore the UTXO in a Coin at a given COutPoint\n  * @param undo The Coin to be restored.\n@@ -1474,7 +1543,7 @@ int ApplyTxInUndo(Coin&& undo, CCoinsViewCache& view, const COutPoint& out)\n \n /** Undo the effects of this block (with given index) on the UTXO set represented by coins.\n  *  When FAILED is returned, view is left in an indeterminate state. */\n-static DisconnectResult DisconnectBlock(const CBlock& block, const CBlockIndex* pindex, CCoinsViewCache& view)\n+DisconnectResult CChainState::DisconnectBlock(const CBlock& block, const CBlockIndex* pindex, CCoinsViewCache& view)\n {\n     bool fClean = true;\n \n@@ -1693,8 +1762,8 @@ static int64_t nBlocksTotal = 0;\n /** Apply the effects of this block (with given index) on the UTXO set represented by coins.\n  *  Validity checks that depend on the UTXO set are also done; ConnectBlock()\n  *  can fail if those validity checks fail (among other reasons). */\n-static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pindex,\n-                  CCoinsViewCache& view, const CChainParams& chainparams, bool fJustCheck = false)\n+bool CChainState::ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pindex,\n+                  CCoinsViewCache& view, const CChainParams& chainparams, bool fJustCheck)\n {\n     AssertLockHeld(cs_main);\n     assert(pindex);\n@@ -2124,7 +2193,7 @@ void static UpdateTip(CBlockIndex *pindexNew, const CChainParams& chainParams) {\n   * disconnectpool (note that the caller is responsible for mempool consistency\n   * in any case).\n   */\n-bool static DisconnectTip(CValidationState& state, const CChainParams& chainparams, DisconnectedBlockTransactions *disconnectpool)\n+bool CChainState::DisconnectTip(CValidationState& state, const CChainParams& chainparams, DisconnectedBlockTransactions *disconnectpool)\n {\n     CBlockIndex *pindexDelete = chainActive.Tip();\n     assert(pindexDelete);\n@@ -2246,7 +2315,7 @@ class ConnectTrace {\n  *\n  * The block is added to connectTrace if connection succeeds.\n  */\n-bool static ConnectTip(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexNew, const std::shared_ptr<const CBlock>& pblock, ConnectTrace& connectTrace, DisconnectedBlockTransactions &disconnectpool)\n+bool CChainState::ConnectTip(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexNew, const std::shared_ptr<const CBlock>& pblock, ConnectTrace& connectTrace, DisconnectedBlockTransactions &disconnectpool)\n {\n     assert(pindexNew->pprev == chainActive.Tip());\n     // Read block from disk.\n@@ -2304,7 +2373,7 @@ bool static ConnectTip(CValidationState& state, const CChainParams& chainparams,\n  * Return the tip of the chain with the most work in it, that isn't\n  * known to be invalid (it's however far from certain to be valid).\n  */\n-static CBlockIndex* FindMostWorkChain() {\n+CBlockIndex* CChainState::FindMostWorkChain() {\n     do {\n         CBlockIndex *pindexNew = nullptr;\n \n@@ -2359,7 +2428,7 @@ static CBlockIndex* FindMostWorkChain() {\n }\n \n /** Delete all entries in setBlockIndexCandidates that are worse than the current tip. */\n-static void PruneBlockIndexCandidates() {\n+void CChainState::PruneBlockIndexCandidates() {\n     // Note that we can't delete the current block itself, as we may need to return to it later in case a\n     // reorganization to a better block fails.\n     std::set<CBlockIndex*, CBlockIndexWorkComparator>::iterator it = setBlockIndexCandidates.begin();\n@@ -2374,7 +2443,7 @@ static void PruneBlockIndexCandidates() {\n  * Try to make some progress towards making pindexMostWork the active block.\n  * pblock is either nullptr or a pointer to a CBlock corresponding to pindexMostWork.\n  */\n-static bool ActivateBestChainStep(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexMostWork, const std::shared_ptr<const CBlock>& pblock, bool& fInvalidFound, ConnectTrace& connectTrace)\n+bool CChainState::ActivateBestChainStep(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexMostWork, const std::shared_ptr<const CBlock>& pblock, bool& fInvalidFound, ConnectTrace& connectTrace)\n {\n     AssertLockHeld(cs_main);\n     const CBlockIndex *pindexOldTip = chainActive.Tip();\n@@ -2481,7 +2550,7 @@ static void NotifyHeaderTip() {\n  * or an activated best chain. pblock is either nullptr or a pointer to a block\n  * that is already loaded (to avoid loading it again from disk).\n  */\n-bool ActivateBestChain(CValidationState &state, const CChainParams& chainparams, std::shared_ptr<const CBlock> pblock) {\n+bool CChainState::ActivateBestChain(CValidationState &state, const CChainParams& chainparams, std::shared_ptr<const CBlock> pblock) {\n     // Note that while we're often called here from ProcessNewBlock, this is\n     // far from a guarantee. Things in the P2P/RPC will often end up calling\n     // us in the middle of ProcessNewBlock - do not assume pblock is set\n@@ -2551,9 +2620,11 @@ bool ActivateBestChain(CValidationState &state, const CChainParams& chainparams,\n \n     return true;\n }\n+bool ActivateBestChain(CValidationState &state, const CChainParams& chainparams, std::shared_ptr<const CBlock> pblock) {\n+    return g_chainstate.ActivateBestChain(state, chainparams, std::move(pblock));\n+}\n \n-\n-bool PreciousBlock(CValidationState& state, const CChainParams& params, CBlockIndex *pindex)\n+bool CChainState::PreciousBlock(CValidationState& state, const CChainParams& params, CBlockIndex *pindex)\n {\n     {\n         LOCK(cs_main);\n@@ -2579,10 +2650,13 @@ bool PreciousBlock(CValidationState& state, const CChainParams& params, CBlockIn\n         }\n     }\n \n-    return ActivateBestChain(state, params);\n+    return ActivateBestChain(state, params, std::shared_ptr<const CBlock>());\n+}\n+bool PreciousBlock(CValidationState& state, const CChainParams& params, CBlockIndex *pindex) {\n+    return g_chainstate.PreciousBlock(state, params, pindex);\n }\n \n-bool InvalidateBlock(CValidationState& state, const CChainParams& chainparams, CBlockIndex *pindex)\n+bool CChainState::InvalidateBlock(CValidationState& state, const CChainParams& chainparams, CBlockIndex *pindex)\n {\n     AssertLockHeld(cs_main);\n \n@@ -2641,8 +2715,11 @@ bool InvalidateBlock(CValidationState& state, const CChainParams& chainparams, C\n     uiInterface.NotifyBlockTip(IsInitialBlockDownload(), pindex->pprev);\n     return true;\n }\n+bool InvalidateBlock(CValidationState& state, const CChainParams& chainparams, CBlockIndex *pindex) {\n+    return g_chainstate.InvalidateBlock(state, chainparams, pindex);\n+}\n \n-bool ResetBlockFailureFlags(CBlockIndex *pindex) {\n+bool CChainState::ResetBlockFailureFlags(CBlockIndex *pindex) {\n     AssertLockHeld(cs_main);\n \n     int nHeight = pindex->nHeight;\n@@ -2675,8 +2752,11 @@ bool ResetBlockFailureFlags(CBlockIndex *pindex) {\n     }\n     return true;\n }\n+bool ResetBlockFailureFlags(CBlockIndex *pindex) {\n+    return g_chainstate.ResetBlockFailureFlags(pindex);\n+}\n \n-static CBlockIndex* AddToBlockIndex(const CBlockHeader& block)\n+CBlockIndex* CChainState::AddToBlockIndex(const CBlockHeader& block)\n {\n     // Check for duplicate\n     uint256 hash = block.GetHash();\n@@ -2711,7 +2791,7 @@ static CBlockIndex* AddToBlockIndex(const CBlockHeader& block)\n }\n \n /** Mark a block as having its data received and checked (up to BLOCK_VALID_TRANSACTIONS). */\n-static bool ReceivedBlockTransactions(const CBlock &block, CValidationState& state, CBlockIndex *pindexNew, const CDiskBlockPos& pos, const Consensus::Params& consensusParams)\n+bool CChainState::ReceivedBlockTransactions(const CBlock &block, CValidationState& state, CBlockIndex *pindexNew, const CDiskBlockPos& pos, const Consensus::Params& consensusParams)\n {\n     pindexNew->nTx = block.vtx.size();\n     pindexNew->nChainTx = 0;\n@@ -3116,7 +3196,7 @@ static bool ContextualCheckBlock(const CBlock& block, CValidationState& state, c\n     return true;\n }\n \n-static bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex)\n+bool CChainState::AcceptBlockHeader(const CBlockHeader& block, CValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex)\n {\n     AssertLockHeld(cs_main);\n     // Check for duplicate\n@@ -3183,7 +3263,7 @@ bool ProcessNewBlockHeaders(const std::vector<CBlockHeader>& headers, CValidatio\n         LOCK(cs_main);\n         for (const CBlockHeader& header : headers) {\n             CBlockIndex *pindex = nullptr; // Use a temp pindex instead of ppindex to avoid a const_cast\n-            if (!AcceptBlockHeader(header, state, chainparams, &pindex)) {\n+            if (!g_chainstate.AcceptBlockHeader(header, state, chainparams, &pindex)) {\n                 if (first_invalid) *first_invalid = header;\n                 return false;\n             }\n@@ -3216,7 +3296,7 @@ static CDiskBlockPos SaveBlockToDisk(const CBlock& block, int nHeight, const CCh\n }\n \n /** Store block on disk. If dbp is non-nullptr, the file is known to already reside on disk */\n-static bool AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex, bool fRequested, const CDiskBlockPos* dbp, bool* fNewBlock)\n+bool CChainState::AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CValidationState& state, const CChainParams& chainparams, CBlockIndex** ppindex, bool fRequested, const CDiskBlockPos* dbp, bool* fNewBlock)\n {\n     const CBlock& block = *pblock;\n \n@@ -3292,6 +3372,8 @@ static bool AcceptBlock(const std::shared_ptr<const CBlock>& pblock, CValidation\n     if (fCheckForPruning)\n         FlushStateToDisk(chainparams, state, FLUSH_STATE_NONE); // we just allocated more disk space for block files\n \n+    CheckBlockIndex(chainparams.GetConsensus());\n+\n     return true;\n }\n \n@@ -3309,9 +3391,8 @@ bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<cons\n \n         if (ret) {\n             // Store to disk\n-            ret = AcceptBlock(pblock, state, chainparams, &pindex, fForceProcessing, nullptr, fNewBlock);\n+            ret = g_chainstate.AcceptBlock(pblock, state, chainparams, &pindex, fForceProcessing, nullptr, fNewBlock);\n         }\n-        CheckBlockIndex(chainparams.GetConsensus());\n         if (!ret) {\n             GetMainSignals().BlockChecked(*pblock, state);\n             return error(\"%s: AcceptBlock FAILED (%s)\", __func__, state.GetDebugMessage());\n@@ -3321,7 +3402,7 @@ bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<cons\n     NotifyHeaderTip();\n \n     CValidationState state; // Only used to report errors, not invalidity - ignore it\n-    if (!ActivateBestChain(state, chainparams, pblock))\n+    if (!g_chainstate.ActivateBestChain(state, chainparams, pblock))\n         return error(\"%s: ActivateBestChain failed\", __func__);\n \n     return true;\n@@ -3343,7 +3424,7 @@ bool TestBlockValidity(CValidationState& state, const CChainParams& chainparams,\n         return error(\"%s: Consensus::CheckBlock: %s\", __func__, FormatStateMessage(state));\n     if (!ContextualCheckBlock(block, state, chainparams.GetConsensus(), pindexPrev))\n         return error(\"%s: Consensus::ContextualCheckBlock: %s\", __func__, FormatStateMessage(state));\n-    if (!ConnectBlock(block, state, &indexDummy, viewNew, chainparams, true))\n+    if (!g_chainstate.ConnectBlock(block, state, &indexDummy, viewNew, chainparams, true))\n         return false;\n     assert(state.IsValid());\n \n@@ -3551,7 +3632,7 @@ fs::path GetBlockPosFilename(const CDiskBlockPos &pos, const char *prefix)\n     return GetDataDir() / \"blocks\" / strprintf(\"%s%05u.dat\", prefix, pos.nFile);\n }\n \n-CBlockIndex * InsertBlockIndex(uint256 hash)\n+CBlockIndex * CChainState::InsertBlockIndex(const uint256& hash)\n {\n     if (hash.IsNull())\n         return nullptr;\n@@ -3569,9 +3650,9 @@ CBlockIndex * InsertBlockIndex(uint256 hash)\n     return pindexNew;\n }\n \n-bool static LoadBlockIndexDB(const CChainParams& chainparams)\n+bool CChainState::LoadBlockIndex(const Consensus::Params& consensus_params, CBlockTreeDB& blocktree)\n {\n-    if (!pblocktree->LoadBlockIndexGuts(chainparams.GetConsensus(), InsertBlockIndex))\n+    if (!blocktree.LoadBlockIndexGuts(consensus_params, [this](const uint256& hash){ return this->InsertBlockIndex(hash); }))\n         return false;\n \n     boost::this_thread::interruption_point();\n@@ -3618,6 +3699,14 @@ bool static LoadBlockIndexDB(const CChainParams& chainparams)\n             pindexBestHeader = pindex;\n     }\n \n+    return true;\n+}\n+\n+bool static LoadBlockIndexDB(const CChainParams& chainparams)\n+{\n+    if (!g_chainstate.LoadBlockIndex(chainparams.GetConsensus(), *pblocktree))\n+        return false;\n+\n     // Load block file info\n     pblocktree->ReadLastBlockFile(nLastBlockFile);\n     vinfoBlockFile.resize(nLastBlockFile + 1);\n@@ -3690,7 +3779,7 @@ bool LoadChainTip(const CChainParams& chainparams)\n         return false;\n     chainActive.SetTip(it->second);\n \n-    PruneBlockIndexCandidates();\n+    g_chainstate.PruneBlockIndexCandidates();\n \n     LogPrintf(\"Loaded best chain: hashBestChain=%s height=%d date=%s progress=%f\\n\",\n         chainActive.Tip()->GetBlockHash().ToString(), chainActive.Height(),\n@@ -3764,7 +3853,7 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,\n         // check level 3: check for inconsistencies during memory-only disconnect of tip blocks\n         if (nCheckLevel >= 3 && pindex == pindexState && (coins.DynamicMemoryUsage() + pcoinsTip->DynamicMemoryUsage()) <= nCoinCacheUsage) {\n             assert(coins.GetBestBlock() == pindex->GetBlockHash());\n-            DisconnectResult res = DisconnectBlock(block, pindex, coins);\n+            DisconnectResult res = g_chainstate.DisconnectBlock(block, pindex, coins);\n             if (res == DISCONNECT_FAILED) {\n                 return error(\"VerifyDB(): *** irrecoverable inconsistency in block data at %d, hash=%s\", pindex->nHeight, pindex->GetBlockHash().ToString());\n             }\n@@ -3792,7 +3881,7 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,\n             CBlock block;\n             if (!ReadBlockFromDisk(block, pindex, chainparams.GetConsensus()))\n                 return error(\"VerifyDB(): *** ReadBlockFromDisk failed at %d, hash=%s\", pindex->nHeight, pindex->GetBlockHash().ToString());\n-            if (!ConnectBlock(block, state, pindex, coins, chainparams))\n+            if (!g_chainstate.ConnectBlock(block, state, pindex, coins, chainparams))\n                 return error(\"VerifyDB(): *** found unconnectable block at %d, hash=%s\", pindex->nHeight, pindex->GetBlockHash().ToString());\n         }\n     }\n@@ -3804,7 +3893,7 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,\n }\n \n /** Apply the effects of a block on the utxo cache, ignoring that it may already have been applied. */\n-static bool RollforwardBlock(const CBlockIndex* pindex, CCoinsViewCache& inputs, const CChainParams& params)\n+bool CChainState::RollforwardBlock(const CBlockIndex* pindex, CCoinsViewCache& inputs, const CChainParams& params)\n {\n     // TODO: merge with ConnectBlock\n     CBlock block;\n@@ -3824,7 +3913,7 @@ static bool RollforwardBlock(const CBlockIndex* pindex, CCoinsViewCache& inputs,\n     return true;\n }\n \n-bool ReplayBlocks(const CChainParams& params, CCoinsView* view)\n+bool CChainState::ReplayBlocks(const CChainParams& params, CCoinsView* view)\n {\n     LOCK(cs_main);\n \n@@ -3889,7 +3978,11 @@ bool ReplayBlocks(const CChainParams& params, CCoinsView* view)\n     return true;\n }\n \n-bool RewindBlockIndex(const CChainParams& params)\n+bool ReplayBlocks(const CChainParams& params, CCoinsView* view) {\n+    return g_chainstate.ReplayBlocks(params, view);\n+}\n+\n+bool CChainState::RewindBlockIndex(const CChainParams& params)\n {\n     LOCK(cs_main);\n \n@@ -3970,10 +4063,21 @@ bool RewindBlockIndex(const CChainParams& params)\n         PruneBlockIndexCandidates();\n \n         CheckBlockIndex(params.GetConsensus());\n+    }\n+\n+    return true;\n+}\n+\n+bool RewindBlockIndex(const CChainParams& params) {\n+    if (!g_chainstate.RewindBlockIndex(params)) {\n+        return false;\n+    }\n \n+    if (chainActive.Tip() != nullptr) {\n         // FlushStateToDisk can possibly read chainActive. Be conservative\n         // and skip it here, we're about to -reindex-chainstate anyway, so\n         // it'll get called a bunch real soon.\n+        CValidationState state;\n         if (!FlushStateToDisk(params, state, FLUSH_STATE_ALWAYS)) {\n             return false;\n         }\n@@ -3982,13 +4086,16 @@ bool RewindBlockIndex(const CChainParams& params)\n     return true;\n }\n \n+void CChainState::UnloadBlockIndex() {\n+    setBlockIndexCandidates.clear();\n+}\n+\n // May NOT be used after any connections are up as much\n // of the peer-processing logic assumes a consistent\n // block index state\n void UnloadBlockIndex()\n {\n     LOCK(cs_main);\n-    setBlockIndexCandidates.clear();\n     chainActive.SetTip(nullptr);\n     pindexBestInvalid = nullptr;\n     pindexBestHeader = nullptr;\n@@ -4010,6 +4117,8 @@ void UnloadBlockIndex()\n     }\n     mapBlockIndex.clear();\n     fHavePruned = false;\n+\n+    g_chainstate.UnloadBlockIndex();\n }\n \n bool LoadBlockIndex(const CChainParams& chainparams)\n@@ -4037,7 +4146,7 @@ bool LoadBlockIndex(const CChainParams& chainparams)\n     return true;\n }\n \n-bool LoadGenesisBlock(const CChainParams& chainparams)\n+bool CChainState::LoadGenesisBlock(const CChainParams& chainparams)\n {\n     LOCK(cs_main);\n \n@@ -4064,6 +4173,11 @@ bool LoadGenesisBlock(const CChainParams& chainparams)\n     return true;\n }\n \n+bool LoadGenesisBlock(const CChainParams& chainparams)\n+{\n+    return g_chainstate.LoadGenesisBlock(chainparams);\n+}\n+\n bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskBlockPos *dbp)\n {\n     // Map of disk positions for blocks with unknown parent (only used for reindex)\n@@ -4124,7 +4238,7 @@ bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskB\n                 if (mapBlockIndex.count(hash) == 0 || (mapBlockIndex[hash]->nStatus & BLOCK_HAVE_DATA) == 0) {\n                     LOCK(cs_main);\n                     CValidationState state;\n-                    if (AcceptBlock(pblock, state, chainparams, nullptr, true, dbp, nullptr))\n+                    if (g_chainstate.AcceptBlock(pblock, state, chainparams, nullptr, true, dbp, nullptr))\n                         nLoaded++;\n                     if (state.IsError())\n                         break;\n@@ -4158,7 +4272,7 @@ bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskB\n                                     head.ToString());\n                             LOCK(cs_main);\n                             CValidationState dummy;\n-                            if (AcceptBlock(pblockrecursive, dummy, chainparams, nullptr, true, &it->second, nullptr))\n+                            if (g_chainstate.AcceptBlock(pblockrecursive, dummy, chainparams, nullptr, true, &it->second, nullptr))\n                             {\n                                 nLoaded++;\n                                 queue.push_back(pblockrecursive->GetHash());\n@@ -4181,7 +4295,7 @@ bool LoadExternalBlockFile(const CChainParams& chainparams, FILE* fileIn, CDiskB\n     return nLoaded > 0;\n }\n \n-void static CheckBlockIndex(const Consensus::Params& consensusParams)\n+void CChainState::CheckBlockIndex(const Consensus::Params& consensusParams)\n {\n     if (!fCheckBlockIndex) {\n         return;"
+      },
+      {
+        "sha": "0ddeb97aa68c4eb16b2fb457b0edfce173dcc00f",
+        "filename": "src/validation.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 4,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fd4d80a2f8d2ced8ffedf46e4a70ff4f7a05663f/src/validation.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fd4d80a2f8d2ced8ffedf46e4a70ff4f7a05663f/src/validation.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.h?ref=fd4d80a2f8d2ced8ffedf46e4a70ff4f7a05663f",
+        "patch": "@@ -159,7 +159,7 @@ extern CCriticalSection cs_main;\n extern CBlockPolicyEstimator feeEstimator;\n extern CTxMemPool mempool;\n typedef std::unordered_map<uint256, CBlockIndex*, BlockHasher> BlockMap;\n-extern BlockMap mapBlockIndex;\n+extern BlockMap& mapBlockIndex;\n extern uint64_t nLastBlockTx;\n extern uint64_t nLastBlockWeight;\n extern const std::string strMessageMagic;\n@@ -294,8 +294,6 @@ void PruneOneBlockFile(const int fileNumber);\n  */\n void UnlinkPrunedFiles(const std::set<int>& setFilesToPrune);\n \n-/** Create a new block index entry for a given block hash */\n-CBlockIndex * InsertBlockIndex(uint256 hash);\n /** Flush all state, indexes and buffers to disk. */\n void FlushStateToDisk();\n /** Prune block files and flush state to disk. */\n@@ -441,7 +439,7 @@ bool InvalidateBlock(CValidationState& state, const CChainParams& chainparams, C\n bool ResetBlockFailureFlags(CBlockIndex *pindex);\n \n /** The currently-connected chain of blocks (protected by cs_main). */\n-extern CChain chainActive;\n+extern CChain& chainActive;\n \n /** Global variable that points to the coins database (protected by cs_main) */\n extern std::unique_ptr<CCoinsViewDB> pcoinsdbview;"
+      }
+    ]
+  },
+  {
+    "sha": "2862aca40f24acc48d3052d5ba3f639e3fc0a621",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyODYyYWNhNDBmMjRhY2M0OGQzMDUyZDViYTNmNjM5ZTNmYzBhNjIx",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-04-26T01:31:08Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-12-04T14:39:20Z"
+      },
+      "message": "Move some additional variables into CChainState private",
+      "tree": {
+        "sha": "0605ff04eefde43ff62a5cc127b26fb610c2c4d0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/0605ff04eefde43ff62a5cc127b26fb610c2c4d0"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/2862aca40f24acc48d3052d5ba3f639e3fc0a621",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2862aca40f24acc48d3052d5ba3f639e3fc0a621",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/2862aca40f24acc48d3052d5ba3f639e3fc0a621",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2862aca40f24acc48d3052d5ba3f639e3fc0a621/comments",
+    "author": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "fd4d80a2f8d2ced8ffedf46e4a70ff4f7a05663f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fd4d80a2f8d2ced8ffedf46e4a70ff4f7a05663f",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/fd4d80a2f8d2ced8ffedf46e4a70ff4f7a05663f"
+      }
+    ],
+    "stats": {
+      "total": 93,
+      "additions": 47,
+      "deletions": 46
+    },
+    "files": [
+      {
+        "sha": "f6b77b6c38c75efdf21401c0b67a38f76fa28f2c",
+        "filename": "src/validation.cpp",
+        "status": "modified",
+        "additions": 46,
+        "deletions": 45,
+        "changes": 91,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/2862aca40f24acc48d3052d5ba3f639e3fc0a621/src/validation.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/2862aca40f24acc48d3052d5ba3f639e3fc0a621/src/validation.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.cpp?ref=2862aca40f24acc48d3052d5ba3f639e3fc0a621",
+        "patch": "@@ -113,6 +113,39 @@ class CChainState {\n      * missing the data for the block.\n      */\n     std::set<CBlockIndex*, CBlockIndexWorkComparator> setBlockIndexCandidates;\n+\n+    /**\n+     * Every received block is assigned a unique and increasing identifier, so we\n+     * know which one to give priority in case of a fork.\n+     */\n+    CCriticalSection cs_nBlockSequenceId;\n+    /** Blocks loaded from disk are assigned id 0, so start the counter at 1. */\n+    int32_t nBlockSequenceId = 1;\n+    /** Decreasing counter (used by subsequent preciousblock calls). */\n+    int32_t nBlockReverseSequenceId = -1;\n+    /** chainwork for the last block that preciousblock has been applied to. */\n+    arith_uint256 nLastPreciousChainwork = 0;\n+\n+    /** In order to efficiently track invalidity of headers, we keep the set of\n+      * blocks which we tried to connect and found to be invalid here (ie which\n+      * were set to BLOCK_FAILED_VALID since the last restart). We can then\n+      * walk this set and check if a new header is a descendant of something in\n+      * this set, preventing us from having to walk mapBlockIndex when we try\n+      * to connect a bad block and fail.\n+      *\n+      * While this is more complicated than marking everything which descends\n+      * from an invalid block as invalid at the time we discover it to be\n+      * invalid, doing so would require walking all of mapBlockIndex to find all\n+      * descendants. Since this case should be very rare, keeping track of all\n+      * BLOCK_FAILED_VALID blocks in a set should be just fine and work just as\n+      * well.\n+      *\n+      * Because we already walk mapBlockIndex in height-order at startup, we go\n+      * ahead and mark descendants of invalid blocks as FAILED_CHILD at that time,\n+      * instead of putting things in this set.\n+      */\n+    std::set<CBlockIndex*> g_failed_blocks;\n+\n public:\n     CChain chainActive;\n     BlockMap mapBlockIndex;\n@@ -220,38 +253,6 @@ namespace {\n      */\n     bool fCheckForPruning = false;\n \n-    /**\n-     * Every received block is assigned a unique and increasing identifier, so we\n-     * know which one to give priority in case of a fork.\n-     */\n-    CCriticalSection cs_nBlockSequenceId;\n-    /** Blocks loaded from disk are assigned id 0, so start the counter at 1. */\n-    int32_t nBlockSequenceId = 1;\n-    /** Decreasing counter (used by subsequent preciousblock calls). */\n-    int32_t nBlockReverseSequenceId = -1;\n-    /** chainwork for the last block that preciousblock has been applied to. */\n-    arith_uint256 nLastPreciousChainwork = 0;\n-\n-    /** In order to efficiently track invalidity of headers, we keep the set of\n-      * blocks which we tried to connect and found to be invalid here (ie which\n-      * were set to BLOCK_FAILED_VALID since the last restart). We can then\n-      * walk this set and check if a new header is a descendant of something in\n-      * this set, preventing us from having to walk mapBlockIndex when we try\n-      * to connect a bad block and fail.\n-      *\n-      * While this is more complicated than marking everything which descends\n-      * from an invalid block as invalid at the time we discover it to be\n-      * invalid, doing so would require walking all of mapBlockIndex to find all\n-      * descendants. Since this case should be very rare, keeping track of all\n-      * BLOCK_FAILED_VALID blocks in a set should be just fine and work just as\n-      * well.\n-      *\n-      * Because we already walk mapBlockIndex in height-order at startup, we go\n-      * ahead and mark descendants of invalid blocks as FAILED_CHILD at that time,\n-      * instead of putting things in this set.\n-      */\n-    std::set<CBlockIndex*> g_failed_blocks;\n-\n     /** Dirty block index entries. */\n     std::set<CBlockIndex*> setDirtyBlockIndex;\n \n@@ -2129,10 +2130,8 @@ static void DoWarning(const std::string& strWarning)\n     }\n }\n \n-/** Update chainActive and related internal data structures. */\n-void static UpdateTip(CBlockIndex *pindexNew, const CChainParams& chainParams) {\n-    chainActive.SetTip(pindexNew);\n-\n+/** Check warning conditions and do some notifications on new chain tip set. */\n+void static UpdateTip(const CBlockIndex *pindexNew, const CChainParams& chainParams) {\n     // New best block\n     mempool.AddTransactionsUpdated(1);\n \n@@ -2142,7 +2141,7 @@ void static UpdateTip(CBlockIndex *pindexNew, const CChainParams& chainParams) {\n     if (!IsInitialBlockDownload())\n     {\n         int nUpgraded = 0;\n-        const CBlockIndex* pindex = chainActive.Tip();\n+        const CBlockIndex* pindex = pindexNew;\n         for (int bit = 0; bit < VERSIONBITS_NUM_BITS; bit++) {\n             WarningBitsConditionChecker checker(bit);\n             ThresholdState state = checker.GetStateFor(pindex, chainParams.GetConsensus(), warningcache[bit]);\n@@ -2173,10 +2172,10 @@ void static UpdateTip(CBlockIndex *pindexNew, const CChainParams& chainParams) {\n         }\n     }\n     LogPrintf(\"%s: new best=%s height=%d version=0x%08x log2_work=%.8g tx=%lu date='%s' progress=%f cache=%.1fMiB(%utxo)\", __func__,\n-      chainActive.Tip()->GetBlockHash().ToString(), chainActive.Height(), chainActive.Tip()->nVersion,\n-      log(chainActive.Tip()->nChainWork.getdouble())/log(2.0), (unsigned long)chainActive.Tip()->nChainTx,\n-      DateTimeStrFormat(\"%Y-%m-%d %H:%M:%S\", chainActive.Tip()->GetBlockTime()),\n-      GuessVerificationProgress(chainParams.TxData(), chainActive.Tip()), pcoinsTip->DynamicMemoryUsage() * (1.0 / (1<<20)), pcoinsTip->GetCacheSize());\n+      pindexNew->GetBlockHash().ToString(), pindexNew->nHeight, pindexNew->nVersion,\n+      log(pindexNew->nChainWork.getdouble())/log(2.0), (unsigned long)pindexNew->nChainTx,\n+      DateTimeStrFormat(\"%Y-%m-%d %H:%M:%S\", pindexNew->GetBlockTime()),\n+      GuessVerificationProgress(chainParams.TxData(), pindexNew), pcoinsTip->DynamicMemoryUsage() * (1.0 / (1<<20)), pcoinsTip->GetCacheSize());\n     if (!warningMessages.empty())\n         LogPrintf(\" warning='%s'\", boost::algorithm::join(warningMessages, \", \"));\n     LogPrintf(\"\\n\");\n@@ -2230,7 +2229,8 @@ bool CChainState::DisconnectTip(CValidationState& state, const CChainParams& cha\n         }\n     }\n \n-    // Update chainActive and related variables.\n+    chainActive.SetTip(pindexDelete->pprev);\n+\n     UpdateTip(pindexDelete->pprev, chainparams);\n     // Let wallets know transactions went from 1-confirmed to\n     // 0-confirmed or conflicted:\n@@ -2359,6 +2359,7 @@ bool CChainState::ConnectTip(CValidationState& state, const CChainParams& chainp\n     mempool.removeForBlock(blockConnecting.vtx, pindexNew->nHeight);\n     disconnectpool.removeForBlock(blockConnecting.vtx);\n     // Update chainActive & related variables.\n+    chainActive.SetTip(pindexNew);\n     UpdateTip(pindexNew, chainparams);\n \n     int64_t nTime6 = GetTimeMicros(); nTimePostConnect += nTime6 - nTime5; nTimeTotal += nTime6 - nTime1;\n@@ -4087,6 +4088,8 @@ bool RewindBlockIndex(const CChainParams& params) {\n }\n \n void CChainState::UnloadBlockIndex() {\n+    nBlockSequenceId = 1;\n+    g_failed_blocks.clear();\n     setBlockIndexCandidates.clear();\n }\n \n@@ -4103,9 +4106,7 @@ void UnloadBlockIndex()\n     mapBlocksUnlinked.clear();\n     vinfoBlockFile.clear();\n     nLastBlockFile = 0;\n-    nBlockSequenceId = 1;\n     setDirtyBlockIndex.clear();\n-    g_failed_blocks.clear();\n     setDirtyFileInfo.clear();\n     versionbitscache.Clear();\n     for (int b = 0; b < VERSIONBITS_NUM_BITS; b++) {\n@@ -4637,7 +4638,7 @@ bool DumpMempool(void)\n }\n \n //! Guess how far we are in the verification process at the given block index\n-double GuessVerificationProgress(const ChainTxData& data, CBlockIndex *pindex) {\n+double GuessVerificationProgress(const ChainTxData& data, const CBlockIndex *pindex) {\n     if (pindex == nullptr)\n         return 0.0;\n "
+      },
+      {
+        "sha": "eae129b28f0a7c8fe49399aff44c6907be020947",
+        "filename": "src/validation.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/2862aca40f24acc48d3052d5ba3f639e3fc0a621/src/validation.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/2862aca40f24acc48d3052d5ba3f639e3fc0a621/src/validation.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.h?ref=2862aca40f24acc48d3052d5ba3f639e3fc0a621",
+        "patch": "@@ -279,7 +279,7 @@ bool ActivateBestChain(CValidationState& state, const CChainParams& chainparams,\n CAmount GetBlockSubsidy(int nHeight, const Consensus::Params& consensusParams);\n \n /** Guess verification progress (as a fraction between 0.0=genesis and 1.0=current tip). */\n-double GuessVerificationProgress(const ChainTxData& data, CBlockIndex* pindex);\n+double GuessVerificationProgress(const ChainTxData& data, const CBlockIndex* pindex);\n \n /** Calculate the amount of disk space the block & undo files currently use */\n uint64_t CalculateCurrentUsage();"
+      }
+    ]
+  },
+  {
+    "sha": "22fdddeabb17881af2004c45538f91514837d363",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyMmZkZGRlYWJiMTc4ODFhZjIwMDRjNDU1MzhmOTE1MTQ4MzdkMzYz",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-04-27T15:31:53Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-12-04T14:39:21Z"
+      },
+      "message": "Avoid calling GetSerializeSize on each tx in a block if !fTxIndex",
+      "tree": {
+        "sha": "0434b725bfdf14daffab46b620008d0c3cf82eb6",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/0434b725bfdf14daffab46b620008d0c3cf82eb6"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/22fdddeabb17881af2004c45538f91514837d363",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/22fdddeabb17881af2004c45538f91514837d363",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/22fdddeabb17881af2004c45538f91514837d363",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/22fdddeabb17881af2004c45538f91514837d363/comments",
+    "author": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "2862aca40f24acc48d3052d5ba3f639e3fc0a621",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2862aca40f24acc48d3052d5ba3f639e3fc0a621",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/2862aca40f24acc48d3052d5ba3f639e3fc0a621"
+      }
+    ],
+    "stats": {
+      "total": 8,
+      "additions": 5,
+      "deletions": 3
+    },
+    "files": [
+      {
+        "sha": "af303df73a74fbc0fc2306bfbc7a41e932d007c9",
+        "filename": "src/validation.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 3,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/22fdddeabb17881af2004c45538f91514837d363/src/validation.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/22fdddeabb17881af2004c45538f91514837d363/src/validation.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.cpp?ref=22fdddeabb17881af2004c45538f91514837d363",
+        "patch": "@@ -1647,6 +1647,8 @@ static bool WriteUndoDataForBlock(const CBlockUndo& blockundo, CValidationState&\n \n static bool WriteTxIndexDataForBlock(const CBlock& block, CValidationState& state, CBlockIndex* pindex)\n {\n+    if (!fTxIndex) return true;\n+\n     CDiskTxPos pos(pindex->GetBlockPos(), GetSizeOfCompactSize(block.vtx.size()));\n     std::vector<std::pair<uint256, CDiskTxPos> > vPos;\n     vPos.reserve(block.vtx.size());\n@@ -1656,9 +1658,9 @@ static bool WriteTxIndexDataForBlock(const CBlock& block, CValidationState& stat\n         pos.nTxOffset += ::GetSerializeSize(*tx, SER_DISK, CLIENT_VERSION);\n     }\n \n-    if (fTxIndex)\n-        if (!pblocktree->WriteTxIndex(vPos))\n-            return AbortNode(state, \"Failed to write transaction index\");\n+    if (!pblocktree->WriteTxIndex(vPos)) {\n+        return AbortNode(state, \"Failed to write transaction index\");\n+    }\n \n     return true;\n }"
+      }
+    ]
+  }
+]

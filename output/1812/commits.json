@@ -1,0 +1,134 @@
+[
+  {
+    "sha": "76970091f16891cba54dfebf8202b164ab6cc315",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3Njk3MDA5MWYxNjg5MWNiYTU0ZGZlYmY4MjAyYjE2NGFiNmNjMzE1",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-09-09T20:39:45Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-09-09T21:01:18Z"
+      },
+      "message": "Cosmetic: move CTransaction::GetMinFee out of header file",
+      "tree": {
+        "sha": "1455d4f4502ed579851c7ff6e53a629f3d9a2c83",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/1455d4f4502ed579851c7ff6e53a629f3d9a2c83"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/76970091f16891cba54dfebf8202b164ab6cc315",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/76970091f16891cba54dfebf8202b164ab6cc315",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/76970091f16891cba54dfebf8202b164ab6cc315",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/76970091f16891cba54dfebf8202b164ab6cc315/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "0e08efc54a6be7f0228d0a3410b305772ac5a8fd",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0e08efc54a6be7f0228d0a3410b305772ac5a8fd",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/0e08efc54a6be7f0228d0a3410b305772ac5a8fd"
+      }
+    ],
+    "stats": {
+      "total": 97,
+      "additions": 50,
+      "deletions": 47
+    },
+    "files": [
+      {
+        "sha": "70ffe7343a40c6169f93c00b3841f7248ebe65d4",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 49,
+        "deletions": 0,
+        "changes": 49,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/76970091f16891cba54dfebf8202b164ab6cc315/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/76970091f16891cba54dfebf8202b164ab6cc315/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=76970091f16891cba54dfebf8202b164ab6cc315",
+        "patch": "@@ -477,6 +477,55 @@ bool CTransaction::CheckTransaction() const\n     return true;\n }\n \n+int64 CTransaction::GetMinFee(unsigned int nBlockSize, bool fAllowFree,\n+                              enum GetMinFee_mode mode) const\n+{\n+    // Base fee is either MIN_TX_FEE or MIN_RELAY_TX_FEE\n+    int64 nBaseFee = (mode == GMF_RELAY) ? MIN_RELAY_TX_FEE : MIN_TX_FEE;\n+\n+    unsigned int nBytes = ::GetSerializeSize(*this, SER_NETWORK, PROTOCOL_VERSION);\n+    unsigned int nNewBlockSize = nBlockSize + nBytes;\n+    int64 nMinFee = (1 + (int64)nBytes / 1000) * nBaseFee;\n+\n+    if (fAllowFree)\n+    {\n+        if (nBlockSize == 1)\n+        {\n+            // Transactions under 10K are free\n+            // (about 4500 BTC if made of 50 BTC inputs)\n+            if (nBytes < 10000)\n+                nMinFee = 0;\n+        }\n+        else\n+        {\n+            // Free transaction area\n+            if (nNewBlockSize < 27000)\n+                nMinFee = 0;\n+        }\n+    }\n+\n+    // To limit dust spam, require MIN_TX_FEE/MIN_RELAY_TX_FEE if any output is less than 0.01\n+    if (nMinFee < nBaseFee)\n+    {\n+        BOOST_FOREACH(const CTxOut& txout, vout)\n+            if (txout.nValue < CENT)\n+                nMinFee = nBaseFee;\n+    }\n+\n+    // Raise the price as the block approaches full\n+    if (nBlockSize != 1 && nNewBlockSize >= MAX_BLOCK_SIZE_GEN/2)\n+    {\n+        if (nNewBlockSize >= MAX_BLOCK_SIZE_GEN)\n+            return MAX_MONEY;\n+        nMinFee *= MAX_BLOCK_SIZE_GEN / (MAX_BLOCK_SIZE_GEN - nNewBlockSize);\n+    }\n+\n+    if (!MoneyRange(nMinFee))\n+        nMinFee = MAX_MONEY;\n+    return nMinFee;\n+}\n+\n+\n bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,\n                         bool* pfMissingInputs)\n {"
+      },
+      {
+        "sha": "c01aba10e0192abb23758d8f715021632ce0873f",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 47,
+        "changes": 48,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/76970091f16891cba54dfebf8202b164ab6cc315/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/76970091f16891cba54dfebf8202b164ab6cc315/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=76970091f16891cba54dfebf8202b164ab6cc315",
+        "patch": "@@ -540,53 +540,7 @@ class CTransaction\n         return dPriority > COIN * 144 / 250;\n     }\n \n-    int64 GetMinFee(unsigned int nBlockSize=1, bool fAllowFree=true, enum GetMinFee_mode mode=GMF_BLOCK) const\n-    {\n-        // Base fee is either MIN_TX_FEE or MIN_RELAY_TX_FEE\n-        int64 nBaseFee = (mode == GMF_RELAY) ? MIN_RELAY_TX_FEE : MIN_TX_FEE;\n-\n-        unsigned int nBytes = ::GetSerializeSize(*this, SER_NETWORK, PROTOCOL_VERSION);\n-        unsigned int nNewBlockSize = nBlockSize + nBytes;\n-        int64 nMinFee = (1 + (int64)nBytes / 1000) * nBaseFee;\n-\n-        if (fAllowFree)\n-        {\n-            if (nBlockSize == 1)\n-            {\n-                // Transactions under 10K are free\n-                // (about 4500 BTC if made of 50 BTC inputs)\n-                if (nBytes < 10000)\n-                    nMinFee = 0;\n-            }\n-            else\n-            {\n-                // Free transaction area\n-                if (nNewBlockSize < 27000)\n-                    nMinFee = 0;\n-            }\n-        }\n-\n-        // To limit dust spam, require MIN_TX_FEE/MIN_RELAY_TX_FEE if any output is less than 0.01\n-        if (nMinFee < nBaseFee)\n-        {\n-            BOOST_FOREACH(const CTxOut& txout, vout)\n-                if (txout.nValue < CENT)\n-                    nMinFee = nBaseFee;\n-        }\n-\n-        // Raise the price as the block approaches full\n-        if (nBlockSize != 1 && nNewBlockSize >= MAX_BLOCK_SIZE_GEN/2)\n-        {\n-            if (nNewBlockSize >= MAX_BLOCK_SIZE_GEN)\n-                return MAX_MONEY;\n-            nMinFee *= MAX_BLOCK_SIZE_GEN / (MAX_BLOCK_SIZE_GEN - nNewBlockSize);\n-        }\n-\n-        if (!MoneyRange(nMinFee))\n-            nMinFee = MAX_MONEY;\n-        return nMinFee;\n-    }\n-\n+    int64 GetMinFee(unsigned int nBlockSize=1, bool fAllowFree=true, enum GetMinFee_mode mode=GMF_BLOCK) const;\n \n     bool ReadFromDisk(CDiskTxPos pos, FILE** pfileRet=NULL)\n     {"
+      }
+    ]
+  },
+  {
+    "sha": "17f8d6e4001afa81a3e481d24c869cd14301f964",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxN2Y4ZDZlNDAwMWFmYTgxYTNlNDgxZDI0Yzg2OWNkMTQzMDFmOTY0",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-09-09T21:05:26Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-09-09T21:05:26Z"
+      },
+      "message": "Improve debug logging, for mempool TXs that do not include sufficient fees",
+      "tree": {
+        "sha": "e20350a19c55fac83bddfd03ef3f8efbb647a287",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/e20350a19c55fac83bddfd03ef3f8efbb647a287"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/17f8d6e4001afa81a3e481d24c869cd14301f964",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/17f8d6e4001afa81a3e481d24c869cd14301f964",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/17f8d6e4001afa81a3e481d24c869cd14301f964",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/17f8d6e4001afa81a3e481d24c869cd14301f964/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "76970091f16891cba54dfebf8202b164ab6cc315",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/76970091f16891cba54dfebf8202b164ab6cc315",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/76970091f16891cba54dfebf8202b164ab6cc315"
+      }
+    ],
+    "stats": {
+      "total": 7,
+      "additions": 5,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "35b666beb488b0109fc6b27706972b5aa806e0db",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 2,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/17f8d6e4001afa81a3e481d24c869cd14301f964/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/17f8d6e4001afa81a3e481d24c869cd14301f964/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=17f8d6e4001afa81a3e481d24c869cd14301f964",
+        "patch": "@@ -612,8 +612,11 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,\n         unsigned int nSize = ::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION);\n \n         // Don't accept it if it can't get into a block\n-        if (nFees < tx.GetMinFee(1000, true, GMF_RELAY))\n-            return error(\"CTxMemPool::accept() : not enough fees\");\n+        int64 txMinFee = tx.GetMinFee(1000, true, GMF_RELAY);\n+        if (nFees < txMinFee)\n+            return error(\"CTxMemPool::accept() : not enough fees %s, %\"PRI64d\" < %\"PRI64d,\n+                         hash.ToString().substr(0,10).c_str(),\n+                         nFees, txMinFee);\n \n         // Continuously rate-limit free transactions\n         // This mitigates 'penny-flooding' -- sending thousands of free transactions just to"
+      }
+    ]
+  }
+]

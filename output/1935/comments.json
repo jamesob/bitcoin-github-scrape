@@ -1,0 +1,448 @@
+[
+  {
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/issues/comments/9589625",
+    "html_url": "https://github.com/bitcoin/bitcoin/pull/1935#issuecomment-9589625",
+    "issue_url": "https://api.github.com/repos/bitcoin/bitcoin/issues/1935",
+    "id": 9589625,
+    "node_id": "MDEyOklzc3VlQ29tbWVudDk1ODk2MjU=",
+    "user": {
+      "login": "BitcoinPullTester",
+      "id": 2110907,
+      "node_id": "MDQ6VXNlcjIxMTA5MDc=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/2110907?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/BitcoinPullTester",
+      "html_url": "https://github.com/BitcoinPullTester",
+      "followers_url": "https://api.github.com/users/BitcoinPullTester/followers",
+      "following_url": "https://api.github.com/users/BitcoinPullTester/following{/other_user}",
+      "gists_url": "https://api.github.com/users/BitcoinPullTester/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/BitcoinPullTester/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/BitcoinPullTester/subscriptions",
+      "organizations_url": "https://api.github.com/users/BitcoinPullTester/orgs",
+      "repos_url": "https://api.github.com/users/BitcoinPullTester/repos",
+      "events_url": "https://api.github.com/users/BitcoinPullTester/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/BitcoinPullTester/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "created_at": "2012-10-19T04:33:46Z",
+    "updated_at": "2012-10-19T04:33:46Z",
+    "author_association": "NONE",
+    "body": "Automatic sanity-testing: PASSED, see http://jenkins.bluematt.me/pull-tester/de91ea0c0c2fead60bfe9a531558cbe1c562346e for binaries and test log.\n",
+    "reactions": {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/issues/comments/9589625/reactions",
+      "total_count": 0,
+      "+1": 0,
+      "-1": 0,
+      "laugh": 0,
+      "hooray": 0,
+      "confused": 0,
+      "heart": 0,
+      "rocket": 0,
+      "eyes": 0
+    },
+    "performed_via_github_app": null
+  },
+  {
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/1847335",
+    "pull_request_review_id": null,
+    "id": 1847335,
+    "node_id": "MDI0OlB1bGxSZXF1ZXN0UmV2aWV3Q29tbWVudDE4NDczMzU=",
+    "diff_hunk": "@@ -0,0 +1,119 @@\n+#!/bin/bash\n+\n+###   This script attempts to download the signature file SHA256SUMS.asc from SourceForge\n+###   It first checks if the signature passes, and then downloads the files specified in\n+###   the file, and checks if the hashes of these files match those that are specified\n+###   in the signature file.\n+###   The script returns 0 if everything passes the checks. It returns 1 if either the\n+###   signature check or the hash check doesn't pass. If an error occurs the return value is 2\n+\n+function clean_up {\n+   for file in $*\n+   do\n+      rm \"$file\" 2> /dev/null\n+   done\n+}\n+\n+WORKINGDIR=\"/tmp/bitcoin\"\n+TMPFILE=\"hashes.tmp\"\n+\n+#this URL is used if a version number is not specified as an argument to the script\n+SIGNATUREFILE=\"http://downloads.sourceforge.net/project/bitcoin/Bitcoin/bitcoin-0.7.1/test/SHA256SUMS.asc\"\n+\n+SIGNATUREFILENAME=\"SHA256SUMS.asc\"\n+RCSUBDIR=\"test/\"\n+BASEDIR=\"http://downloads.sourceforge.net/project/bitcoin/Bitcoin/\"\n+VERSIONPREFIX=\"bitcoin-\"\n+RCVERSIONSTRING=\"rc\"\n+\n+if [ ! -d \"$WORKINGDIR\" ]; then\n+   mkdir \"$WORKINGDIR\"\n+fi\n+\n+cd \"$WORKINGDIR\"\n+\n+#test if a version number has been passed as an argument\n+if [ -n \"$1\" ]; then\n+   #let's also check if the version number includes the prefix 'bitcoin-',\n+   #  and add this prefix if it doesn't\n+   if [[ $1 == \"$VERSIONPREFIX\"* ]]; then\n+      VERSION=\"$1\"\n+   else\n+      VERSION=\"$VERSIONPREFIX$1\"\n+   fi\n+\n+   #now let's see if the version string contains \"rc\", and strip it off if it does\n+   #  and simultaneously add RCSUBDIR to BASEDIR, where we will look for SIGNATUREFILENAME\n+   if [[ $VERSION == *\"$RCVERSIONSTRING\"* ]]; then\n+      BASEDIR=\"$BASEDIR${VERSION/%-$RCVERSIONSTRING*}/\"\n+      BASEDIR=\"$BASEDIR$RCSUBDIR\"\n+   else\n+      BASEDIR=\"$BASEDIR$VERSION/\"\n+   fi\n+\n+   SIGNATUREFILE=\"$BASEDIR$SIGNATUREFILENAME\"\n+else\n+   BASEDIR=\"${SIGNATUREFILE%/*}/\"\n+fi\n+\n+#first we fetch the file containing the signature\n+WGETOUT=$(wget -N \"$BASEDIR$SIGNATUREFILENAME\" 2>&1)\n+\n+#and then see if wget completed successfully\n+if [ $? -ne 0 ]; then\n+   echo \"Error: couldn't fetch signature file. Have you specified the version number in the following format?\"\n+   echo \"[bitcoin-]<version>-[rc[0-9]] (example: bitcoin-0.7.1-rc1)\"\n+   echo \"wget output:\"\n+   echo \"$WGETOUT\"|sed 's/^/\\t/g'\n+   exit 2\n+fi\n+\n+#then we check it\n+GPGOUT=$(gpg --yes --decrypt --output \"$TMPFILE\" \"$SIGNATUREFILENAME\" 2>&1)\n+\n+#return value 0: good signature\n+#return value 1: bad signature\n+#return value 2: gpg error\n+\n+RET=\"$?\"\n+if [ $RET -ne 0 ]; then\n+   if [ $RET -eq 1 ]; then\n+      #and notify the user if it's bad\n+      echo \"Bad signature.\"\n+   elif [ $RET -eq 2 ]; then\n+      #or if a gpg error has occured\n+      echo \"gpg error. Do you have Gavin's code signing key installed?\"",
+    "path": "contrib/verifysfbinaries/verify.sh",
+    "position": 85,
+    "original_position": 85,
+    "commit_id": "de91ea0c0c2fead60bfe9a531558cbe1c562346e",
+    "original_commit_id": "de91ea0c0c2fead60bfe9a531558cbe1c562346e",
+    "user": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "body": "Not all releases are signed by Gavin (notably stable/backport releases are not), and users probably shouldn't be expected to setup the key themselves anyway. There are a bunch of PGP keys in git already for verifying against - any way to use those easily?\n",
+    "created_at": "2012-10-15T21:06:29Z",
+    "updated_at": "2012-10-15T21:06:29Z",
+    "html_url": "https://github.com/bitcoin/bitcoin/pull/1935#discussion_r1847335",
+    "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/1935",
+    "author_association": "MEMBER",
+    "_links": {
+      "self": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/1847335"
+      },
+      "html": {
+        "href": "https://github.com/bitcoin/bitcoin/pull/1935#discussion_r1847335"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/1935"
+      }
+    },
+    "reactions": {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/1847335/reactions",
+      "total_count": 0,
+      "+1": 0,
+      "-1": 0,
+      "laugh": 0,
+      "hooray": 0,
+      "confused": 0,
+      "heart": 0,
+      "rocket": 0,
+      "eyes": 0
+    },
+    "start_line": null,
+    "original_start_line": null,
+    "start_side": null,
+    "line": 85,
+    "original_line": 85,
+    "side": "RIGHT"
+  },
+  {
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/1848136",
+    "pull_request_review_id": null,
+    "id": 1848136,
+    "node_id": "MDI0OlB1bGxSZXF1ZXN0UmV2aWV3Q29tbWVudDE4NDgxMzY=",
+    "diff_hunk": "@@ -0,0 +1,119 @@\n+#!/bin/bash\n+\n+###   This script attempts to download the signature file SHA256SUMS.asc from SourceForge\n+###   It first checks if the signature passes, and then downloads the files specified in\n+###   the file, and checks if the hashes of these files match those that are specified\n+###   in the signature file.\n+###   The script returns 0 if everything passes the checks. It returns 1 if either the\n+###   signature check or the hash check doesn't pass. If an error occurs the return value is 2\n+\n+function clean_up {\n+   for file in $*\n+   do\n+      rm \"$file\" 2> /dev/null\n+   done\n+}\n+\n+WORKINGDIR=\"/tmp/bitcoin\"\n+TMPFILE=\"hashes.tmp\"\n+\n+#this URL is used if a version number is not specified as an argument to the script\n+SIGNATUREFILE=\"http://downloads.sourceforge.net/project/bitcoin/Bitcoin/bitcoin-0.7.1/test/SHA256SUMS.asc\"\n+\n+SIGNATUREFILENAME=\"SHA256SUMS.asc\"\n+RCSUBDIR=\"test/\"\n+BASEDIR=\"http://downloads.sourceforge.net/project/bitcoin/Bitcoin/\"\n+VERSIONPREFIX=\"bitcoin-\"\n+RCVERSIONSTRING=\"rc\"\n+\n+if [ ! -d \"$WORKINGDIR\" ]; then\n+   mkdir \"$WORKINGDIR\"\n+fi\n+\n+cd \"$WORKINGDIR\"\n+\n+#test if a version number has been passed as an argument\n+if [ -n \"$1\" ]; then\n+   #let's also check if the version number includes the prefix 'bitcoin-',\n+   #  and add this prefix if it doesn't\n+   if [[ $1 == \"$VERSIONPREFIX\"* ]]; then\n+      VERSION=\"$1\"\n+   else\n+      VERSION=\"$VERSIONPREFIX$1\"\n+   fi\n+\n+   #now let's see if the version string contains \"rc\", and strip it off if it does\n+   #  and simultaneously add RCSUBDIR to BASEDIR, where we will look for SIGNATUREFILENAME\n+   if [[ $VERSION == *\"$RCVERSIONSTRING\"* ]]; then\n+      BASEDIR=\"$BASEDIR${VERSION/%-$RCVERSIONSTRING*}/\"\n+      BASEDIR=\"$BASEDIR$RCSUBDIR\"\n+   else\n+      BASEDIR=\"$BASEDIR$VERSION/\"\n+   fi\n+\n+   SIGNATUREFILE=\"$BASEDIR$SIGNATUREFILENAME\"\n+else\n+   BASEDIR=\"${SIGNATUREFILE%/*}/\"\n+fi\n+\n+#first we fetch the file containing the signature\n+WGETOUT=$(wget -N \"$BASEDIR$SIGNATUREFILENAME\" 2>&1)\n+\n+#and then see if wget completed successfully\n+if [ $? -ne 0 ]; then\n+   echo \"Error: couldn't fetch signature file. Have you specified the version number in the following format?\"\n+   echo \"[bitcoin-]<version>-[rc[0-9]] (example: bitcoin-0.7.1-rc1)\"\n+   echo \"wget output:\"\n+   echo \"$WGETOUT\"|sed 's/^/\\t/g'\n+   exit 2\n+fi\n+\n+#then we check it\n+GPGOUT=$(gpg --yes --decrypt --output \"$TMPFILE\" \"$SIGNATUREFILENAME\" 2>&1)\n+\n+#return value 0: good signature\n+#return value 1: bad signature\n+#return value 2: gpg error\n+\n+RET=\"$?\"\n+if [ $RET -ne 0 ]; then\n+   if [ $RET -eq 1 ]; then\n+      #and notify the user if it's bad\n+      echo \"Bad signature.\"\n+   elif [ $RET -eq 2 ]; then\n+      #or if a gpg error has occured\n+      echo \"gpg error. Do you have Gavin's code signing key installed?\"",
+    "path": "contrib/verifysfbinaries/verify.sh",
+    "position": 85,
+    "original_position": 85,
+    "commit_id": "de91ea0c0c2fead60bfe9a531558cbe1c562346e",
+    "original_commit_id": "de91ea0c0c2fead60bfe9a531558cbe1c562346e",
+    "user": {
+      "login": "runeksvendsen",
+      "id": 1069247,
+      "node_id": "MDQ6VXNlcjEwNjkyNDc=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1069247?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/runeksvendsen",
+      "html_url": "https://github.com/runeksvendsen",
+      "followers_url": "https://api.github.com/users/runeksvendsen/followers",
+      "following_url": "https://api.github.com/users/runeksvendsen/following{/other_user}",
+      "gists_url": "https://api.github.com/users/runeksvendsen/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/runeksvendsen/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/runeksvendsen/subscriptions",
+      "organizations_url": "https://api.github.com/users/runeksvendsen/orgs",
+      "repos_url": "https://api.github.com/users/runeksvendsen/repos",
+      "events_url": "https://api.github.com/users/runeksvendsen/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/runeksvendsen/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "body": "0.7.0 is signed by Gavin. Is that not a stable release?\nI considered including installation of the key in the script, but I figured it was preferable to let the users install these by themselves. But now that you point it out, I'm not sure why the script shouldn't just install if it reaches the line above.\n\nWhere are those PGP keys in git that you mention? Also, I'd have to know who signs what with which keys in order to know how to use them.\n\nIt would be better if all the heavily involved developers sign the executables. That way it'd be even harder for an attacker to somehow get past this (by getting hold of Gavin's key, for example).\n",
+    "created_at": "2012-10-15T22:10:28Z",
+    "updated_at": "2012-10-15T22:10:28Z",
+    "html_url": "https://github.com/bitcoin/bitcoin/pull/1935#discussion_r1848136",
+    "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/1935",
+    "author_association": "CONTRIBUTOR",
+    "_links": {
+      "self": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/1848136"
+      },
+      "html": {
+        "href": "https://github.com/bitcoin/bitcoin/pull/1935#discussion_r1848136"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/1935"
+      }
+    },
+    "reactions": {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/1848136/reactions",
+      "total_count": 0,
+      "+1": 0,
+      "-1": 0,
+      "laugh": 0,
+      "hooray": 0,
+      "confused": 0,
+      "heart": 0,
+      "rocket": 0,
+      "eyes": 0
+    },
+    "start_line": null,
+    "original_start_line": null,
+    "start_side": null,
+    "line": 85,
+    "original_line": 85,
+    "side": "RIGHT"
+  },
+  {
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/1848920",
+    "pull_request_review_id": null,
+    "id": 1848920,
+    "node_id": "MDI0OlB1bGxSZXF1ZXN0UmV2aWV3Q29tbWVudDE4NDg5MjA=",
+    "diff_hunk": "@@ -0,0 +1,119 @@\n+#!/bin/bash\n+\n+###   This script attempts to download the signature file SHA256SUMS.asc from SourceForge\n+###   It first checks if the signature passes, and then downloads the files specified in\n+###   the file, and checks if the hashes of these files match those that are specified\n+###   in the signature file.\n+###   The script returns 0 if everything passes the checks. It returns 1 if either the\n+###   signature check or the hash check doesn't pass. If an error occurs the return value is 2\n+\n+function clean_up {\n+   for file in $*\n+   do\n+      rm \"$file\" 2> /dev/null\n+   done\n+}\n+\n+WORKINGDIR=\"/tmp/bitcoin\"\n+TMPFILE=\"hashes.tmp\"\n+\n+#this URL is used if a version number is not specified as an argument to the script\n+SIGNATUREFILE=\"http://downloads.sourceforge.net/project/bitcoin/Bitcoin/bitcoin-0.7.1/test/SHA256SUMS.asc\"\n+\n+SIGNATUREFILENAME=\"SHA256SUMS.asc\"\n+RCSUBDIR=\"test/\"\n+BASEDIR=\"http://downloads.sourceforge.net/project/bitcoin/Bitcoin/\"\n+VERSIONPREFIX=\"bitcoin-\"\n+RCVERSIONSTRING=\"rc\"\n+\n+if [ ! -d \"$WORKINGDIR\" ]; then\n+   mkdir \"$WORKINGDIR\"\n+fi\n+\n+cd \"$WORKINGDIR\"\n+\n+#test if a version number has been passed as an argument\n+if [ -n \"$1\" ]; then\n+   #let's also check if the version number includes the prefix 'bitcoin-',\n+   #  and add this prefix if it doesn't\n+   if [[ $1 == \"$VERSIONPREFIX\"* ]]; then\n+      VERSION=\"$1\"\n+   else\n+      VERSION=\"$VERSIONPREFIX$1\"\n+   fi\n+\n+   #now let's see if the version string contains \"rc\", and strip it off if it does\n+   #  and simultaneously add RCSUBDIR to BASEDIR, where we will look for SIGNATUREFILENAME\n+   if [[ $VERSION == *\"$RCVERSIONSTRING\"* ]]; then\n+      BASEDIR=\"$BASEDIR${VERSION/%-$RCVERSIONSTRING*}/\"\n+      BASEDIR=\"$BASEDIR$RCSUBDIR\"\n+   else\n+      BASEDIR=\"$BASEDIR$VERSION/\"\n+   fi\n+\n+   SIGNATUREFILE=\"$BASEDIR$SIGNATUREFILENAME\"\n+else\n+   BASEDIR=\"${SIGNATUREFILE%/*}/\"\n+fi\n+\n+#first we fetch the file containing the signature\n+WGETOUT=$(wget -N \"$BASEDIR$SIGNATUREFILENAME\" 2>&1)\n+\n+#and then see if wget completed successfully\n+if [ $? -ne 0 ]; then\n+   echo \"Error: couldn't fetch signature file. Have you specified the version number in the following format?\"\n+   echo \"[bitcoin-]<version>-[rc[0-9]] (example: bitcoin-0.7.1-rc1)\"\n+   echo \"wget output:\"\n+   echo \"$WGETOUT\"|sed 's/^/\\t/g'\n+   exit 2\n+fi\n+\n+#then we check it\n+GPGOUT=$(gpg --yes --decrypt --output \"$TMPFILE\" \"$SIGNATUREFILENAME\" 2>&1)\n+\n+#return value 0: good signature\n+#return value 1: bad signature\n+#return value 2: gpg error\n+\n+RET=\"$?\"\n+if [ $RET -ne 0 ]; then\n+   if [ $RET -eq 1 ]; then\n+      #and notify the user if it's bad\n+      echo \"Bad signature.\"\n+   elif [ $RET -eq 2 ]; then\n+      #or if a gpg error has occured\n+      echo \"gpg error. Do you have Gavin's code signing key installed?\"",
+    "path": "contrib/verifysfbinaries/verify.sh",
+    "position": 85,
+    "original_position": 85,
+    "commit_id": "de91ea0c0c2fead60bfe9a531558cbe1c562346e",
+    "original_commit_id": "de91ea0c0c2fead60bfe9a531558cbe1c562346e",
+    "user": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "body": "0.7.0 is a first-time stable release: it's built off master, not a stable branch.\n\nI wouldn't suggest touching the user's PGP setup, but verifying without touching it. If GPG really needs to keep keys somewhere, ~/.bitcoin/.gnupg or similar makes sense.\n\ncontrib/gitian-downloader contains PGP keys. There's also a git repository here on GitHub with signatures of multiple developers for most releases which would be better to use than the SHA256SUMS file (which can only have one signature).\n",
+    "created_at": "2012-10-15T23:21:27Z",
+    "updated_at": "2012-10-15T23:21:39Z",
+    "html_url": "https://github.com/bitcoin/bitcoin/pull/1935#discussion_r1848920",
+    "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/1935",
+    "author_association": "MEMBER",
+    "_links": {
+      "self": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/1848920"
+      },
+      "html": {
+        "href": "https://github.com/bitcoin/bitcoin/pull/1935#discussion_r1848920"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/1935"
+      }
+    },
+    "reactions": {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/1848920/reactions",
+      "total_count": 0,
+      "+1": 0,
+      "-1": 0,
+      "laugh": 0,
+      "hooray": 0,
+      "confused": 0,
+      "heart": 0,
+      "rocket": 0,
+      "eyes": 0
+    },
+    "start_line": null,
+    "original_start_line": null,
+    "start_side": null,
+    "line": 85,
+    "original_line": 85,
+    "side": "RIGHT"
+  },
+  {
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/1849014",
+    "pull_request_review_id": null,
+    "id": 1849014,
+    "node_id": "MDI0OlB1bGxSZXF1ZXN0UmV2aWV3Q29tbWVudDE4NDkwMTQ=",
+    "diff_hunk": "@@ -0,0 +1,119 @@\n+#!/bin/bash\n+\n+###   This script attempts to download the signature file SHA256SUMS.asc from SourceForge\n+###   It first checks if the signature passes, and then downloads the files specified in\n+###   the file, and checks if the hashes of these files match those that are specified\n+###   in the signature file.\n+###   The script returns 0 if everything passes the checks. It returns 1 if either the\n+###   signature check or the hash check doesn't pass. If an error occurs the return value is 2\n+\n+function clean_up {\n+   for file in $*\n+   do\n+      rm \"$file\" 2> /dev/null\n+   done\n+}\n+\n+WORKINGDIR=\"/tmp/bitcoin\"\n+TMPFILE=\"hashes.tmp\"\n+\n+#this URL is used if a version number is not specified as an argument to the script\n+SIGNATUREFILE=\"http://downloads.sourceforge.net/project/bitcoin/Bitcoin/bitcoin-0.7.1/test/SHA256SUMS.asc\"\n+\n+SIGNATUREFILENAME=\"SHA256SUMS.asc\"\n+RCSUBDIR=\"test/\"\n+BASEDIR=\"http://downloads.sourceforge.net/project/bitcoin/Bitcoin/\"\n+VERSIONPREFIX=\"bitcoin-\"\n+RCVERSIONSTRING=\"rc\"\n+\n+if [ ! -d \"$WORKINGDIR\" ]; then\n+   mkdir \"$WORKINGDIR\"\n+fi\n+\n+cd \"$WORKINGDIR\"\n+\n+#test if a version number has been passed as an argument\n+if [ -n \"$1\" ]; then\n+   #let's also check if the version number includes the prefix 'bitcoin-',\n+   #  and add this prefix if it doesn't\n+   if [[ $1 == \"$VERSIONPREFIX\"* ]]; then\n+      VERSION=\"$1\"\n+   else\n+      VERSION=\"$VERSIONPREFIX$1\"\n+   fi\n+\n+   #now let's see if the version string contains \"rc\", and strip it off if it does\n+   #  and simultaneously add RCSUBDIR to BASEDIR, where we will look for SIGNATUREFILENAME\n+   if [[ $VERSION == *\"$RCVERSIONSTRING\"* ]]; then\n+      BASEDIR=\"$BASEDIR${VERSION/%-$RCVERSIONSTRING*}/\"\n+      BASEDIR=\"$BASEDIR$RCSUBDIR\"\n+   else\n+      BASEDIR=\"$BASEDIR$VERSION/\"\n+   fi\n+\n+   SIGNATUREFILE=\"$BASEDIR$SIGNATUREFILENAME\"\n+else\n+   BASEDIR=\"${SIGNATUREFILE%/*}/\"\n+fi\n+\n+#first we fetch the file containing the signature\n+WGETOUT=$(wget -N \"$BASEDIR$SIGNATUREFILENAME\" 2>&1)\n+\n+#and then see if wget completed successfully\n+if [ $? -ne 0 ]; then\n+   echo \"Error: couldn't fetch signature file. Have you specified the version number in the following format?\"\n+   echo \"[bitcoin-]<version>-[rc[0-9]] (example: bitcoin-0.7.1-rc1)\"\n+   echo \"wget output:\"\n+   echo \"$WGETOUT\"|sed 's/^/\\t/g'\n+   exit 2\n+fi\n+\n+#then we check it\n+GPGOUT=$(gpg --yes --decrypt --output \"$TMPFILE\" \"$SIGNATUREFILENAME\" 2>&1)\n+\n+#return value 0: good signature\n+#return value 1: bad signature\n+#return value 2: gpg error\n+\n+RET=\"$?\"\n+if [ $RET -ne 0 ]; then\n+   if [ $RET -eq 1 ]; then\n+      #and notify the user if it's bad\n+      echo \"Bad signature.\"\n+   elif [ $RET -eq 2 ]; then\n+      #or if a gpg error has occured\n+      echo \"gpg error. Do you have Gavin's code signing key installed?\"",
+    "path": "contrib/verifysfbinaries/verify.sh",
+    "position": 85,
+    "original_position": 85,
+    "commit_id": "de91ea0c0c2fead60bfe9a531558cbe1c562346e",
+    "original_commit_id": "de91ea0c0c2fead60bfe9a531558cbe1c562346e",
+    "user": {
+      "login": "gavinandresen",
+      "id": 331997,
+      "node_id": "MDQ6VXNlcjMzMTk5Nw==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/331997?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/gavinandresen",
+      "html_url": "https://github.com/gavinandresen",
+      "followers_url": "https://api.github.com/users/gavinandresen/followers",
+      "following_url": "https://api.github.com/users/gavinandresen/following{/other_user}",
+      "gists_url": "https://api.github.com/users/gavinandresen/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/gavinandresen/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/gavinandresen/subscriptions",
+      "organizations_url": "https://api.github.com/users/gavinandresen/orgs",
+      "repos_url": "https://api.github.com/users/gavinandresen/repos",
+      "events_url": "https://api.github.com/users/gavinandresen/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/gavinandresen/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "body": "... but we don't want Runek to end up reinventing gitian-downloader, and I hate making 'perfect the enemy of the good'.\n\nSo I vote this gets pulled as-is, because it is much better than the nothing we have now.\n",
+    "created_at": "2012-10-15T23:32:28Z",
+    "updated_at": "2012-10-15T23:32:28Z",
+    "html_url": "https://github.com/bitcoin/bitcoin/pull/1935#discussion_r1849014",
+    "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/1935",
+    "author_association": "CONTRIBUTOR",
+    "_links": {
+      "self": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/1849014"
+      },
+      "html": {
+        "href": "https://github.com/bitcoin/bitcoin/pull/1935#discussion_r1849014"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/1935"
+      }
+    },
+    "reactions": {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/1849014/reactions",
+      "total_count": 0,
+      "+1": 0,
+      "-1": 0,
+      "laugh": 0,
+      "hooray": 0,
+      "confused": 0,
+      "heart": 0,
+      "rocket": 0,
+      "eyes": 0
+    },
+    "start_line": null,
+    "original_start_line": null,
+    "start_side": null,
+    "line": 85,
+    "original_line": 85,
+    "side": "RIGHT"
+  },
+  {
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/1849040",
+    "pull_request_review_id": null,
+    "id": 1849040,
+    "node_id": "MDI0OlB1bGxSZXF1ZXN0UmV2aWV3Q29tbWVudDE4NDkwNDA=",
+    "diff_hunk": "@@ -0,0 +1,119 @@\n+#!/bin/bash\n+\n+###   This script attempts to download the signature file SHA256SUMS.asc from SourceForge\n+###   It first checks if the signature passes, and then downloads the files specified in\n+###   the file, and checks if the hashes of these files match those that are specified\n+###   in the signature file.\n+###   The script returns 0 if everything passes the checks. It returns 1 if either the\n+###   signature check or the hash check doesn't pass. If an error occurs the return value is 2\n+\n+function clean_up {\n+   for file in $*\n+   do\n+      rm \"$file\" 2> /dev/null\n+   done\n+}\n+\n+WORKINGDIR=\"/tmp/bitcoin\"\n+TMPFILE=\"hashes.tmp\"\n+\n+#this URL is used if a version number is not specified as an argument to the script\n+SIGNATUREFILE=\"http://downloads.sourceforge.net/project/bitcoin/Bitcoin/bitcoin-0.7.1/test/SHA256SUMS.asc\"\n+\n+SIGNATUREFILENAME=\"SHA256SUMS.asc\"\n+RCSUBDIR=\"test/\"\n+BASEDIR=\"http://downloads.sourceforge.net/project/bitcoin/Bitcoin/\"\n+VERSIONPREFIX=\"bitcoin-\"\n+RCVERSIONSTRING=\"rc\"\n+\n+if [ ! -d \"$WORKINGDIR\" ]; then\n+   mkdir \"$WORKINGDIR\"\n+fi\n+\n+cd \"$WORKINGDIR\"\n+\n+#test if a version number has been passed as an argument\n+if [ -n \"$1\" ]; then\n+   #let's also check if the version number includes the prefix 'bitcoin-',\n+   #  and add this prefix if it doesn't\n+   if [[ $1 == \"$VERSIONPREFIX\"* ]]; then\n+      VERSION=\"$1\"\n+   else\n+      VERSION=\"$VERSIONPREFIX$1\"\n+   fi\n+\n+   #now let's see if the version string contains \"rc\", and strip it off if it does\n+   #  and simultaneously add RCSUBDIR to BASEDIR, where we will look for SIGNATUREFILENAME\n+   if [[ $VERSION == *\"$RCVERSIONSTRING\"* ]]; then\n+      BASEDIR=\"$BASEDIR${VERSION/%-$RCVERSIONSTRING*}/\"\n+      BASEDIR=\"$BASEDIR$RCSUBDIR\"\n+   else\n+      BASEDIR=\"$BASEDIR$VERSION/\"\n+   fi\n+\n+   SIGNATUREFILE=\"$BASEDIR$SIGNATUREFILENAME\"\n+else\n+   BASEDIR=\"${SIGNATUREFILE%/*}/\"\n+fi\n+\n+#first we fetch the file containing the signature\n+WGETOUT=$(wget -N \"$BASEDIR$SIGNATUREFILENAME\" 2>&1)\n+\n+#and then see if wget completed successfully\n+if [ $? -ne 0 ]; then\n+   echo \"Error: couldn't fetch signature file. Have you specified the version number in the following format?\"\n+   echo \"[bitcoin-]<version>-[rc[0-9]] (example: bitcoin-0.7.1-rc1)\"\n+   echo \"wget output:\"\n+   echo \"$WGETOUT\"|sed 's/^/\\t/g'\n+   exit 2\n+fi\n+\n+#then we check it\n+GPGOUT=$(gpg --yes --decrypt --output \"$TMPFILE\" \"$SIGNATUREFILENAME\" 2>&1)\n+\n+#return value 0: good signature\n+#return value 1: bad signature\n+#return value 2: gpg error\n+\n+RET=\"$?\"\n+if [ $RET -ne 0 ]; then\n+   if [ $RET -eq 1 ]; then\n+      #and notify the user if it's bad\n+      echo \"Bad signature.\"\n+   elif [ $RET -eq 2 ]; then\n+      #or if a gpg error has occured\n+      echo \"gpg error. Do you have Gavin's code signing key installed?\"",
+    "path": "contrib/verifysfbinaries/verify.sh",
+    "position": 85,
+    "original_position": 85,
+    "commit_id": "de91ea0c0c2fead60bfe9a531558cbe1c562346e",
+    "original_commit_id": "de91ea0c0c2fead60bfe9a531558cbe1c562346e",
+    "user": {
+      "login": "runeksvendsen",
+      "id": 1069247,
+      "node_id": "MDQ6VXNlcjEwNjkyNDc=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1069247?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/runeksvendsen",
+      "html_url": "https://github.com/runeksvendsen",
+      "followers_url": "https://api.github.com/users/runeksvendsen/followers",
+      "following_url": "https://api.github.com/users/runeksvendsen/following{/other_user}",
+      "gists_url": "https://api.github.com/users/runeksvendsen/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/runeksvendsen/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/runeksvendsen/subscriptions",
+      "organizations_url": "https://api.github.com/users/runeksvendsen/orgs",
+      "repos_url": "https://api.github.com/users/runeksvendsen/repos",
+      "events_url": "https://api.github.com/users/runeksvendsen/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/runeksvendsen/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "body": "> I wouldn't suggest touching the user's PGP setup, but verifying without touching it. If GPG really needs to keep keys somewhere, ~/.bitcoin/.gnupg or similar makes sense.\n\nOK. Then I misunderstood you. So you're saying the script should pull in a public key from a remote location and use that to verify? That makes sense.\nThis would create another point of attack though. I figured the best way was to let the users who run the script store the keys themselves, so these can't be modified easily by an adversary.\n\n> contrib/gitian-downloader contains PGP keys. There's also a git repository here on GitHub with signatures of multiple developers for most releases which would be better to use than the SHA256SUMS file (which can only have one signature).\n\nThe threat that this script tries to mitigate is that of an adversary replacing the binaries on SourceForge (I made it after reading this thread: https://bitcointalk.org/index.php?topic=113018.0). So the devs in question need to sign the binaries that are linked to on bitcoin.org. Is this the case wrt. to the git repo you're referencing?\nAs far as I can see, this is not what is signed in this repo at least: https://github.com/bitcoin/gitian.sigs/ - is this the repository you're talking about?\n",
+    "created_at": "2012-10-15T23:35:09Z",
+    "updated_at": "2012-10-15T23:35:09Z",
+    "html_url": "https://github.com/bitcoin/bitcoin/pull/1935#discussion_r1849040",
+    "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/1935",
+    "author_association": "CONTRIBUTOR",
+    "_links": {
+      "self": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/1849040"
+      },
+      "html": {
+        "href": "https://github.com/bitcoin/bitcoin/pull/1935#discussion_r1849040"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/1935"
+      }
+    },
+    "reactions": {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/1849040/reactions",
+      "total_count": 0,
+      "+1": 0,
+      "-1": 0,
+      "laugh": 0,
+      "hooray": 0,
+      "confused": 0,
+      "heart": 0,
+      "rocket": 0,
+      "eyes": 0
+    },
+    "start_line": null,
+    "original_start_line": null,
+    "start_side": null,
+    "line": 85,
+    "original_line": 85,
+    "side": "RIGHT"
+  },
+  {
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/1849114",
+    "pull_request_review_id": null,
+    "id": 1849114,
+    "node_id": "MDI0OlB1bGxSZXF1ZXN0UmV2aWV3Q29tbWVudDE4NDkxMTQ=",
+    "diff_hunk": "@@ -0,0 +1,119 @@\n+#!/bin/bash\n+\n+###   This script attempts to download the signature file SHA256SUMS.asc from SourceForge\n+###   It first checks if the signature passes, and then downloads the files specified in\n+###   the file, and checks if the hashes of these files match those that are specified\n+###   in the signature file.\n+###   The script returns 0 if everything passes the checks. It returns 1 if either the\n+###   signature check or the hash check doesn't pass. If an error occurs the return value is 2\n+\n+function clean_up {\n+   for file in $*\n+   do\n+      rm \"$file\" 2> /dev/null\n+   done\n+}\n+\n+WORKINGDIR=\"/tmp/bitcoin\"\n+TMPFILE=\"hashes.tmp\"\n+\n+#this URL is used if a version number is not specified as an argument to the script\n+SIGNATUREFILE=\"http://downloads.sourceforge.net/project/bitcoin/Bitcoin/bitcoin-0.7.1/test/SHA256SUMS.asc\"\n+\n+SIGNATUREFILENAME=\"SHA256SUMS.asc\"\n+RCSUBDIR=\"test/\"\n+BASEDIR=\"http://downloads.sourceforge.net/project/bitcoin/Bitcoin/\"\n+VERSIONPREFIX=\"bitcoin-\"\n+RCVERSIONSTRING=\"rc\"\n+\n+if [ ! -d \"$WORKINGDIR\" ]; then\n+   mkdir \"$WORKINGDIR\"\n+fi\n+\n+cd \"$WORKINGDIR\"\n+\n+#test if a version number has been passed as an argument\n+if [ -n \"$1\" ]; then\n+   #let's also check if the version number includes the prefix 'bitcoin-',\n+   #  and add this prefix if it doesn't\n+   if [[ $1 == \"$VERSIONPREFIX\"* ]]; then\n+      VERSION=\"$1\"\n+   else\n+      VERSION=\"$VERSIONPREFIX$1\"\n+   fi\n+\n+   #now let's see if the version string contains \"rc\", and strip it off if it does\n+   #  and simultaneously add RCSUBDIR to BASEDIR, where we will look for SIGNATUREFILENAME\n+   if [[ $VERSION == *\"$RCVERSIONSTRING\"* ]]; then\n+      BASEDIR=\"$BASEDIR${VERSION/%-$RCVERSIONSTRING*}/\"\n+      BASEDIR=\"$BASEDIR$RCSUBDIR\"\n+   else\n+      BASEDIR=\"$BASEDIR$VERSION/\"\n+   fi\n+\n+   SIGNATUREFILE=\"$BASEDIR$SIGNATUREFILENAME\"\n+else\n+   BASEDIR=\"${SIGNATUREFILE%/*}/\"\n+fi\n+\n+#first we fetch the file containing the signature\n+WGETOUT=$(wget -N \"$BASEDIR$SIGNATUREFILENAME\" 2>&1)\n+\n+#and then see if wget completed successfully\n+if [ $? -ne 0 ]; then\n+   echo \"Error: couldn't fetch signature file. Have you specified the version number in the following format?\"\n+   echo \"[bitcoin-]<version>-[rc[0-9]] (example: bitcoin-0.7.1-rc1)\"\n+   echo \"wget output:\"\n+   echo \"$WGETOUT\"|sed 's/^/\\t/g'\n+   exit 2\n+fi\n+\n+#then we check it\n+GPGOUT=$(gpg --yes --decrypt --output \"$TMPFILE\" \"$SIGNATUREFILENAME\" 2>&1)\n+\n+#return value 0: good signature\n+#return value 1: bad signature\n+#return value 2: gpg error\n+\n+RET=\"$?\"\n+if [ $RET -ne 0 ]; then\n+   if [ $RET -eq 1 ]; then\n+      #and notify the user if it's bad\n+      echo \"Bad signature.\"\n+   elif [ $RET -eq 2 ]; then\n+      #or if a gpg error has occured\n+      echo \"gpg error. Do you have Gavin's code signing key installed?\"",
+    "path": "contrib/verifysfbinaries/verify.sh",
+    "position": 85,
+    "original_position": 85,
+    "commit_id": "de91ea0c0c2fead60bfe9a531558cbe1c562346e",
+    "original_commit_id": "de91ea0c0c2fead60bfe9a531558cbe1c562346e",
+    "user": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "body": "No, since this script is going into the git repository, it should be able to assume it has the PGP keys in that directory already. I just mean touching the user's personal PGP key library is probably a bad idea.\n\nhttps://github.com/bitcoin/gitian.sigs should match the binaries on SF: the installers as-is, and the contents of the ZIP files and tarballs.\n\n@gavinandresen ACK, you're right this would probably end up equivalent and doesn't do any harm to pull as-is.\n",
+    "created_at": "2012-10-15T23:44:35Z",
+    "updated_at": "2012-10-15T23:44:35Z",
+    "html_url": "https://github.com/bitcoin/bitcoin/pull/1935#discussion_r1849114",
+    "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/1935",
+    "author_association": "MEMBER",
+    "_links": {
+      "self": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/1849114"
+      },
+      "html": {
+        "href": "https://github.com/bitcoin/bitcoin/pull/1935#discussion_r1849114"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/1935"
+      }
+    },
+    "reactions": {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/1849114/reactions",
+      "total_count": 0,
+      "+1": 0,
+      "-1": 0,
+      "laugh": 0,
+      "hooray": 0,
+      "confused": 0,
+      "heart": 0,
+      "rocket": 0,
+      "eyes": 0
+    },
+    "start_line": null,
+    "original_start_line": null,
+    "start_side": null,
+    "line": 85,
+    "original_line": 85,
+    "side": "RIGHT"
+  }
+]

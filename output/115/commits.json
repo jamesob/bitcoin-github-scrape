@@ -1,0 +1,535 @@
+[
+  {
+    "sha": "dda48ccd0f7c7dd13486a580880390a43382d340",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkZGE0OGNjZDBmN2M3ZGQxMzQ4NmE1ODA4ODAzOTBhNDMzODJkMzQw",
+    "commit": {
+      "author": {
+        "name": "tcatm",
+        "email": "tcatm@gawab.com",
+        "date": "2011-03-03T21:26:00Z"
+      },
+      "committer": {
+        "name": "tcatm",
+        "email": "tcatm@gawab.com",
+        "date": "2011-03-03T21:26:00Z"
+      },
+      "message": "fix -daemon switch",
+      "tree": {
+        "sha": "cb4360682f05a1fdce7201640c885a3693d02689",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/cb4360682f05a1fdce7201640c885a3693d02689"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/dda48ccd0f7c7dd13486a580880390a43382d340",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/dda48ccd0f7c7dd13486a580880390a43382d340",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/dda48ccd0f7c7dd13486a580880390a43382d340",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/dda48ccd0f7c7dd13486a580880390a43382d340/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "411493b1f70d1493b1203bce847baa9f41e79f91",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/411493b1f70d1493b1203bce847baa9f41e79f91",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/411493b1f70d1493b1203bce847baa9f41e79f91"
+      }
+    ],
+    "stats": {
+      "total": 66,
+      "additions": 39,
+      "deletions": 27
+    },
+    "files": [
+      {
+        "sha": "a9b7a7d2f96437d81ff4b2394c0bbd9e646b3557",
+        "filename": "init.cpp",
+        "status": "modified",
+        "additions": 37,
+        "deletions": 27,
+        "changes": 64,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/dda48ccd0f7c7dd13486a580880390a43382d340/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/dda48ccd0f7c7dd13486a580880390a43382d340/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/init.cpp?ref=dda48ccd0f7c7dd13486a580880390a43382d340",
+        "patch": "@@ -74,32 +74,11 @@ void HandleSIGTERM(int)\n #ifndef GUI\n int main(int argc, char* argv[])\n {\n-    for (int i = 1; i < argc; i++)\n-        if (!IsSwitchChar(argv[i][0]))\n-            fCommandLine = true;\n-    fDaemon = !fCommandLine;\n-\n-#ifdef __WXGTK__\n-    if (!fCommandLine)\n-    {\n-        // Daemonize\n-        pid_t pid = fork();\n-        if (pid < 0)\n-        {\n-            fprintf(stderr, \"Error: fork() returned %d errno %d\\n\", pid, errno);\n-            return 1;\n-        }\n-        if (pid > 0)\n-            pthread_exit((void*)0);\n-    }\n-#endif\n-\n-    if (!AppInit(argc, argv))\n-        return 1;\n+    bool fRet = false;\n+    fRet = AppInit(argc, argv);\n \n-    while (!fShutdown)\n-        Sleep(1000000);\n-    return 0;\n+    if (fRet && fDaemon)\n+        pthread_exit((void*)0);\n }\n #endif\n \n@@ -113,7 +92,7 @@ bool AppInit(int argc, char* argv[])\n     catch (std::exception& e) {\n         PrintException(&e, \"AppInit()\");\n     } catch (...) {\n-        PrintException(NULL, \"AppInit()\");\n+\t    PrintException(NULL, \"AppInit()\");\n     }\n     if (!fRet)\n         Shutdown(NULL);\n@@ -213,19 +192,50 @@ bool AppInit2(int argc, char* argv[])\n \n     fDebug = GetBoolArg(\"-debug\");\n \n+    fDaemon = GetBoolArg(\"-daemon\");\n+\n+    if (fDaemon)\n+        fServer = true;\n+    else\n+        fServer = GetBoolArg(\"-server\");\n+\n+    /* force fServer when running without GUI */\n+#ifndef GUI\n+    fServer = true;\n+#endif\n+\n     fPrintToConsole = GetBoolArg(\"-printtoconsole\");\n     fPrintToDebugger = GetBoolArg(\"-printtodebugger\");\n \n     fTestNet = GetBoolArg(\"-testnet\");\n     \n     fNoListen = GetBoolArg(\"-nolisten\");\n \n+    for (int i = 1; i < argc; i++)\n+        if (!IsSwitchChar(argv[i][0]))\n+            fCommandLine = true;\n+\n     if (fCommandLine)\n     {\n         int ret = CommandLineRPC(argc, argv);\n         exit(ret);\n     }\n \n+#ifndef GUI\n+    if (fDaemon)\n+    {\n+        // Daemonize\n+        pid_t pid = fork();\n+        if (pid < 0)\n+        {\n+            fprintf(stderr, \"Error: fork() returned %d errno %d\\n\", pid, errno);\n+            return false;\n+        }\n+        if (pid > 0)\n+            return true;\n+    }\n+#endif\n+\n     if (!fDebug && !pszSetDataDir[0])\n         ShrinkDebugFile();\n     printf(\"\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\");\n@@ -443,7 +453,7 @@ bool AppInit2(int argc, char* argv[])\n     if (!CreateThread(StartNode, NULL))\n         wxMessageBox(\"Error: CreateThread(StartNode) failed\", \"Bitcoin\");\n \n-    if (GetBoolArg(\"-server\") || fDaemon)\n+    if (fServer)\n         CreateThread(ThreadRPCServer, NULL);\n \n #if defined(__WXMSW__) && defined(GUI)"
+      },
+      {
+        "sha": "124174bd9da84184602d603836892d7e2e402b18",
+        "filename": "util.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/dda48ccd0f7c7dd13486a580880390a43382d340/util.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/dda48ccd0f7c7dd13486a580880390a43382d340/util.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/util.cpp?ref=dda48ccd0f7c7dd13486a580880390a43382d340",
+        "patch": "@@ -14,6 +14,7 @@ char pszSetDataDir[MAX_PATH] = \"\";\n bool fRequestShutdown = false;\n bool fShutdown = false;\n bool fDaemon = false;\n+bool fServer = false;\n bool fCommandLine = false;\n string strMiscWarning;\n bool fTestNet = false;"
+      },
+      {
+        "sha": "1b780d552087591fa00595c54b9d093184309785",
+        "filename": "util.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/dda48ccd0f7c7dd13486a580880390a43382d340/util.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/dda48ccd0f7c7dd13486a580880390a43382d340/util.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/util.h?ref=dda48ccd0f7c7dd13486a580880390a43382d340",
+        "patch": "@@ -143,6 +143,7 @@ extern char pszSetDataDir[MAX_PATH];\n extern bool fRequestShutdown;\n extern bool fShutdown;\n extern bool fDaemon;\n+extern bool fServer;\n extern bool fCommandLine;\n extern string strMiscWarning;\n extern bool fTestNet;"
+      }
+    ]
+  },
+  {
+    "sha": "a79409afa9c552eb5117d3474ba8dde1a649ce08",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphNzk0MDlhZmE5YzU1MmViNTExN2QzNDc0YmE4ZGRlMWE2NDljZTA4",
+    "commit": {
+      "author": {
+        "name": "tcatm",
+        "email": "tcatm@gawab.com",
+        "date": "2011-03-03T21:27:20Z"
+      },
+      "committer": {
+        "name": "tcatm",
+        "email": "tcatm@gawab.com",
+        "date": "2011-03-03T21:27:20Z"
+      },
+      "message": "fix whitespace",
+      "tree": {
+        "sha": "eb24fc9320c3745ca709dc35e1a3e22e0fe06e2e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/eb24fc9320c3745ca709dc35e1a3e22e0fe06e2e"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a79409afa9c552eb5117d3474ba8dde1a649ce08",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a79409afa9c552eb5117d3474ba8dde1a649ce08",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a79409afa9c552eb5117d3474ba8dde1a649ce08",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a79409afa9c552eb5117d3474ba8dde1a649ce08/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "dda48ccd0f7c7dd13486a580880390a43382d340",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/dda48ccd0f7c7dd13486a580880390a43382d340",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/dda48ccd0f7c7dd13486a580880390a43382d340"
+      }
+    ],
+    "stats": {
+      "total": 2,
+      "additions": 1,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "0548accb058d6bd00de160eb0246be2c9626bc70",
+        "filename": "init.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a79409afa9c552eb5117d3474ba8dde1a649ce08/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a79409afa9c552eb5117d3474ba8dde1a649ce08/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/init.cpp?ref=a79409afa9c552eb5117d3474ba8dde1a649ce08",
+        "patch": "@@ -92,7 +92,7 @@ bool AppInit(int argc, char* argv[])\n     catch (std::exception& e) {\n         PrintException(&e, \"AppInit()\");\n     } catch (...) {\n-\t    PrintException(NULL, \"AppInit()\");\n+        PrintException(NULL, \"AppInit()\");\n     }\n     if (!fRet)\n         Shutdown(NULL);"
+      }
+    ]
+  },
+  {
+    "sha": "ea7cd317516a6ec911e6a29bc0407a42a2534251",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplYTdjZDMxNzUxNmE2ZWM5MTFlNmEyOWJjMDQwN2E0MmEyNTM0MjUx",
+    "commit": {
+      "author": {
+        "name": "tcatm",
+        "email": "tcatm@gawab.com",
+        "date": "2011-03-03T21:31:44Z"
+      },
+      "committer": {
+        "name": "tcatm",
+        "email": "tcatm@gawab.com",
+        "date": "2011-03-03T21:31:44Z"
+      },
+      "message": "force fDaemon in bitcoind",
+      "tree": {
+        "sha": "44e91984912caca2dd7cf4b02c7cc318e25a5de5",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/44e91984912caca2dd7cf4b02c7cc318e25a5de5"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/ea7cd317516a6ec911e6a29bc0407a42a2534251",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ea7cd317516a6ec911e6a29bc0407a42a2534251",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/ea7cd317516a6ec911e6a29bc0407a42a2534251",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ea7cd317516a6ec911e6a29bc0407a42a2534251/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "a79409afa9c552eb5117d3474ba8dde1a649ce08",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a79409afa9c552eb5117d3474ba8dde1a649ce08",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/a79409afa9c552eb5117d3474ba8dde1a649ce08"
+      }
+    ],
+    "stats": {
+      "total": 3,
+      "additions": 2,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "f3ec28ba3d9ebdbaa8c4f6f25bfb8f16295fe7d0",
+        "filename": "init.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 1,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ea7cd317516a6ec911e6a29bc0407a42a2534251/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ea7cd317516a6ec911e6a29bc0407a42a2534251/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/init.cpp?ref=ea7cd317516a6ec911e6a29bc0407a42a2534251",
+        "patch": "@@ -199,9 +199,10 @@ bool AppInit2(int argc, char* argv[])\n     else\n         fServer = GetBoolArg(\"-server\");\n \n-    /* force fServer when running without GUI */\n+    /* force fServer and fDaemon when running without GUI */\n #ifndef GUI\n     fServer = true;\n+    fDaemon = true;\n #endif\n \n     fPrintToConsole = GetBoolArg(\"-printtoconsole\");"
+      }
+    ]
+  },
+  {
+    "sha": "e1205e4d15403fdbb9b8d081aa7a9c3190529262",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplMTIwNWU0ZDE1NDAzZmRiYjliOGQwODFhYTdhOWMzMTkwNTI5MjYy",
+    "commit": {
+      "author": {
+        "name": "tcatm",
+        "email": "tcatm@gawab.com",
+        "date": "2011-03-03T21:34:13Z"
+      },
+      "committer": {
+        "name": "tcatm",
+        "email": "tcatm@gawab.com",
+        "date": "2011-03-03T21:34:13Z"
+      },
+      "message": "-help: do not show -server and -daemon in bitcoind",
+      "tree": {
+        "sha": "d5cb78a86ca6b47d787ccb7c0a19a7514d22beed",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/d5cb78a86ca6b47d787ccb7c0a19a7514d22beed"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/e1205e4d15403fdbb9b8d081aa7a9c3190529262",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e1205e4d15403fdbb9b8d081aa7a9c3190529262",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/e1205e4d15403fdbb9b8d081aa7a9c3190529262",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e1205e4d15403fdbb9b8d081aa7a9c3190529262/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "ea7cd317516a6ec911e6a29bc0407a42a2534251",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ea7cd317516a6ec911e6a29bc0407a42a2534251",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/ea7cd317516a6ec911e6a29bc0407a42a2534251"
+      }
+    ],
+    "stats": {
+      "total": 2,
+      "additions": 2,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "ac2721db63fcd1df1cb57c9e07916a271902e4da",
+        "filename": "init.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e1205e4d15403fdbb9b8d081aa7a9c3190529262/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e1205e4d15403fdbb9b8d081aa7a9c3190529262/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/init.cpp?ref=e1205e4d15403fdbb9b8d081aa7a9c3190529262",
+        "patch": "@@ -156,8 +156,10 @@ bool AppInit2(int argc, char* argv[])\n             \"  -connect=<ip>    \\t\\t  \" + _(\"Connect only to the specified node\\n\") +\n             \"  -nolisten        \\t  \"   + _(\"Don't accept connections from outside\\n\") +\n             \"  -paytxfee=<amt>  \\t  \"   + _(\"Fee per KB to add to transactions you send\\n\") +\n+#ifdef GUI\n             \"  -server          \\t\\t  \" + _(\"Accept command line and JSON-RPC commands\\n\") +\n             \"  -daemon          \\t\\t  \" + _(\"Run in the background as a daemon and accept commands\\n\") +\n+#endif\n             \"  -testnet         \\t\\t  \" + _(\"Use the test network\\n\") +\n             \"  -rpcuser=<user>  \\t  \"   + _(\"Username for JSON-RPC connections\\n\") +\n             \"  -rpcpassword=<pw>\\t  \"   + _(\"Password for JSON-RPC connections\\n\") +"
+      }
+    ]
+  },
+  {
+    "sha": "e9757210f3e9932b620a90ebf13f841737356fdd",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplOTc1NzIxMGYzZTk5MzJiNjIwYTkwZWJmMTNmODQxNzM3MzU2ZmRk",
+    "commit": {
+      "author": {
+        "name": "genjix",
+        "email": "genjix@l.(none)",
+        "date": "2011-03-06T23:38:13Z"
+      },
+      "committer": {
+        "name": "genjix",
+        "email": "genjix@l.(none)",
+        "date": "2011-03-06T23:38:13Z"
+      },
+      "message": "intelligent run script which selects correct architecture.\nShould be placed in the top level dir during release.",
+      "tree": {
+        "sha": "a479fcaea85d6846b41ba61e414a03a025432466",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/a479fcaea85d6846b41ba61e414a03a025432466"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/e9757210f3e9932b620a90ebf13f841737356fdd",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e9757210f3e9932b620a90ebf13f841737356fdd",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/e9757210f3e9932b620a90ebf13f841737356fdd",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e9757210f3e9932b620a90ebf13f841737356fdd/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "b104df742d1acfcccb35e35c5427ef221296db73",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b104df742d1acfcccb35e35c5427ef221296db73",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b104df742d1acfcccb35e35c5427ef221296db73"
+      }
+    ],
+    "stats": {
+      "total": 13,
+      "additions": 13,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "f34f9dd86fa5647fafc39d805d5ede3f4778beea",
+        "filename": "scripts/bitcoin.sh",
+        "status": "added",
+        "additions": 13,
+        "deletions": 0,
+        "changes": 13,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e9757210f3e9932b620a90ebf13f841737356fdd/scripts/bitcoin.sh",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e9757210f3e9932b620a90ebf13f841737356fdd/scripts/bitcoin.sh",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/scripts/bitcoin.sh?ref=e9757210f3e9932b620a90ebf13f841737356fdd",
+        "patch": "@@ -0,0 +1,13 @@\n+#!/bin/bash\n+# Intelligently run the correct version of Bitcoin\n+echo \"Starting Bitcoin...\"\n+echo \"This may take a while...\"\n+MACHINE_TYPE=`uname -m`\n+WORKING_DIR=`dirname $0`\n+if [ ${MACHINE_TYPE} == 'x86_64' ]; then\n+  # run 64-bit bitcoin\n+  $WORKING_DIR/bin/64/bitcoin\n+else\n+  # run 32-bit bitcoin\n+  $WORKING_DIR/bin/32/bitcoin\n+fi"
+      }
+    ]
+  },
+  {
+    "sha": "2057a959ded9a296d356b133483ab69779badd84",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyMDU3YTk1OWRlZDlhMjk2ZDM1NmIxMzM0ODNhYjY5Nzc5YmFkZDg0",
+    "commit": {
+      "author": {
+        "name": "genjix",
+        "email": "genjix@l.(none)",
+        "date": "2011-03-08T05:42:04Z"
+      },
+      "committer": {
+        "name": "genjix",
+        "email": "genjix@l.(none)",
+        "date": "2011-03-08T05:42:04Z"
+      },
+      "message": "Added argument passing.",
+      "tree": {
+        "sha": "fe57a188fd06fb0ed04ccba5df77c86b72c27ad9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/fe57a188fd06fb0ed04ccba5df77c86b72c27ad9"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/2057a959ded9a296d356b133483ab69779badd84",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2057a959ded9a296d356b133483ab69779badd84",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/2057a959ded9a296d356b133483ab69779badd84",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2057a959ded9a296d356b133483ab69779badd84/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "e9757210f3e9932b620a90ebf13f841737356fdd",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e9757210f3e9932b620a90ebf13f841737356fdd",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/e9757210f3e9932b620a90ebf13f841737356fdd"
+      }
+    ],
+    "stats": {
+      "total": 4,
+      "additions": 2,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "9353aa131ab6893b20f7227e53c2488f99a4d8aa",
+        "filename": "scripts/bitcoin.sh",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/2057a959ded9a296d356b133483ab69779badd84/scripts/bitcoin.sh",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/2057a959ded9a296d356b133483ab69779badd84/scripts/bitcoin.sh",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/scripts/bitcoin.sh?ref=2057a959ded9a296d356b133483ab69779badd84",
+        "patch": "@@ -6,8 +6,8 @@ MACHINE_TYPE=`uname -m`\n WORKING_DIR=`dirname $0`\n if [ ${MACHINE_TYPE} == 'x86_64' ]; then\n   # run 64-bit bitcoin\n-  $WORKING_DIR/bin/64/bitcoin\n+  $WORKING_DIR/bin/64/bitcoin $@\n else\n   # run 32-bit bitcoin\n-  $WORKING_DIR/bin/32/bitcoin\n+  $WORKING_DIR/bin/32/bitcoin $@\n fi"
+      }
+    ]
+  },
+  {
+    "sha": "131686498e21e2ece74ed36b38430413b7741c60",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxMzE2ODY0OThlMjFlMmVjZTc0ZWQzNmIzODQzMDQxM2I3NzQxYzYw",
+    "commit": {
+      "author": {
+        "name": "genjix",
+        "email": "fake@lol.u",
+        "date": "2011-03-08T14:28:31Z"
+      },
+      "committer": {
+        "name": "genjix",
+        "email": "fake@lol.u",
+        "date": "2011-03-08T14:28:31Z"
+      },
+      "message": "Merge branch 'daemon'",
+      "tree": {
+        "sha": "f495f6267a097803fa395c61719aba36b153df53",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f495f6267a097803fa395c61719aba36b153df53"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/131686498e21e2ece74ed36b38430413b7741c60",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/131686498e21e2ece74ed36b38430413b7741c60",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/131686498e21e2ece74ed36b38430413b7741c60",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/131686498e21e2ece74ed36b38430413b7741c60/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "2057a959ded9a296d356b133483ab69779badd84",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2057a959ded9a296d356b133483ab69779badd84",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/2057a959ded9a296d356b133483ab69779badd84"
+      },
+      {
+        "sha": "e1205e4d15403fdbb9b8d081aa7a9c3190529262",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e1205e4d15403fdbb9b8d081aa7a9c3190529262",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/e1205e4d15403fdbb9b8d081aa7a9c3190529262"
+      }
+    ],
+    "stats": {
+      "total": 67,
+      "additions": 41,
+      "deletions": 26
+    },
+    "files": [
+      {
+        "sha": "ac2721db63fcd1df1cb57c9e07916a271902e4da",
+        "filename": "init.cpp",
+        "status": "modified",
+        "additions": 39,
+        "deletions": 26,
+        "changes": 65,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/131686498e21e2ece74ed36b38430413b7741c60/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/131686498e21e2ece74ed36b38430413b7741c60/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/init.cpp?ref=131686498e21e2ece74ed36b38430413b7741c60",
+        "patch": "@@ -74,32 +74,11 @@ void HandleSIGTERM(int)\n #ifndef GUI\n int main(int argc, char* argv[])\n {\n-    for (int i = 1; i < argc; i++)\n-        if (!IsSwitchChar(argv[i][0]))\n-            fCommandLine = true;\n-    fDaemon = !fCommandLine;\n-\n-#ifdef __WXGTK__\n-    if (!fCommandLine)\n-    {\n-        // Daemonize\n-        pid_t pid = fork();\n-        if (pid < 0)\n-        {\n-            fprintf(stderr, \"Error: fork() returned %d errno %d\\n\", pid, errno);\n-            return 1;\n-        }\n-        if (pid > 0)\n-            pthread_exit((void*)0);\n-    }\n-#endif\n-\n-    if (!AppInit(argc, argv))\n-        return 1;\n+    bool fRet = false;\n+    fRet = AppInit(argc, argv);\n \n-    while (!fShutdown)\n-        Sleep(1000000);\n-    return 0;\n+    if (fRet && fDaemon)\n+        pthread_exit((void*)0);\n }\n #endif\n \n@@ -177,8 +156,10 @@ bool AppInit2(int argc, char* argv[])\n             \"  -connect=<ip>    \\t\\t  \" + _(\"Connect only to the specified node\\n\") +\n             \"  -nolisten        \\t  \"   + _(\"Don't accept connections from outside\\n\") +\n             \"  -paytxfee=<amt>  \\t  \"   + _(\"Fee per KB to add to transactions you send\\n\") +\n+#ifdef GUI\n             \"  -server          \\t\\t  \" + _(\"Accept command line and JSON-RPC commands\\n\") +\n             \"  -daemon          \\t\\t  \" + _(\"Run in the background as a daemon and accept commands\\n\") +\n+#endif\n             \"  -testnet         \\t\\t  \" + _(\"Use the test network\\n\") +\n             \"  -rpcuser=<user>  \\t  \"   + _(\"Username for JSON-RPC connections\\n\") +\n             \"  -rpcpassword=<pw>\\t  \"   + _(\"Password for JSON-RPC connections\\n\") +\n@@ -213,19 +194,51 @@ bool AppInit2(int argc, char* argv[])\n \n     fDebug = GetBoolArg(\"-debug\");\n \n+    fDaemon = GetBoolArg(\"-daemon\");\n+\n+    if (fDaemon)\n+        fServer = true;\n+    else\n+        fServer = GetBoolArg(\"-server\");\n+\n+    /* force fServer and fDaemon when running without GUI */\n+#ifndef GUI\n+    fServer = true;\n+    fDaemon = true;\n+#endif\n+\n     fPrintToConsole = GetBoolArg(\"-printtoconsole\");\n     fPrintToDebugger = GetBoolArg(\"-printtodebugger\");\n \n     fTestNet = GetBoolArg(\"-testnet\");\n     \n     fNoListen = GetBoolArg(\"-nolisten\");\n \n+    for (int i = 1; i < argc; i++)\n+        if (!IsSwitchChar(argv[i][0]))\n+            fCommandLine = true;\n+\n     if (fCommandLine)\n     {\n         int ret = CommandLineRPC(argc, argv);\n         exit(ret);\n     }\n \n+#ifndef GUI\n+    if (fDaemon)\n+    {\n+        // Daemonize\n+        pid_t pid = fork();\n+        if (pid < 0)\n+        {\n+            fprintf(stderr, \"Error: fork() returned %d errno %d\\n\", pid, errno);\n+            return false;\n+        }\n+        if (pid > 0)\n+            return true;\n+    }\n+#endif\n+\n     if (!fDebug && !pszSetDataDir[0])\n         ShrinkDebugFile();\n     printf(\"\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\");\n@@ -443,7 +456,7 @@ bool AppInit2(int argc, char* argv[])\n     if (!CreateThread(StartNode, NULL))\n         wxMessageBox(\"Error: CreateThread(StartNode) failed\", \"Bitcoin\");\n \n-    if (GetBoolArg(\"-server\") || fDaemon)\n+    if (fServer)\n         CreateThread(ThreadRPCServer, NULL);\n \n #if defined(__WXMSW__) && defined(GUI)"
+      },
+      {
+        "sha": "124174bd9da84184602d603836892d7e2e402b18",
+        "filename": "util.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/131686498e21e2ece74ed36b38430413b7741c60/util.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/131686498e21e2ece74ed36b38430413b7741c60/util.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/util.cpp?ref=131686498e21e2ece74ed36b38430413b7741c60",
+        "patch": "@@ -14,6 +14,7 @@ char pszSetDataDir[MAX_PATH] = \"\";\n bool fRequestShutdown = false;\n bool fShutdown = false;\n bool fDaemon = false;\n+bool fServer = false;\n bool fCommandLine = false;\n string strMiscWarning;\n bool fTestNet = false;"
+      },
+      {
+        "sha": "1b780d552087591fa00595c54b9d093184309785",
+        "filename": "util.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/131686498e21e2ece74ed36b38430413b7741c60/util.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/131686498e21e2ece74ed36b38430413b7741c60/util.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/util.h?ref=131686498e21e2ece74ed36b38430413b7741c60",
+        "patch": "@@ -143,6 +143,7 @@ extern char pszSetDataDir[MAX_PATH];\n extern bool fRequestShutdown;\n extern bool fShutdown;\n extern bool fDaemon;\n+extern bool fServer;\n extern bool fCommandLine;\n extern string strMiscWarning;\n extern bool fTestNet;"
+      }
+    ]
+  },
+  {
+    "sha": "9d069f6c6e06bff39bbac7a292f24b167ee683cd",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5ZDA2OWY2YzZlMDZiZmYzOWJiYWM3YTI5MmYyNGIxNjdlZTY4M2Nk",
+    "commit": {
+      "author": {
+        "name": "genjix",
+        "email": "fake@lol.u",
+        "date": "2011-03-12T06:11:49Z"
+      },
+      "committer": {
+        "name": "genjix",
+        "email": "fake@lol.u",
+        "date": "2011-03-12T06:11:49Z"
+      },
+      "message": "removed redundant double check.",
+      "tree": {
+        "sha": "7404fc051d7f02f3bf0caa9150d0b6eb15369ae6",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/7404fc051d7f02f3bf0caa9150d0b6eb15369ae6"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/9d069f6c6e06bff39bbac7a292f24b167ee683cd",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9d069f6c6e06bff39bbac7a292f24b167ee683cd",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/9d069f6c6e06bff39bbac7a292f24b167ee683cd",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9d069f6c6e06bff39bbac7a292f24b167ee683cd/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "131686498e21e2ece74ed36b38430413b7741c60",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/131686498e21e2ece74ed36b38430413b7741c60",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/131686498e21e2ece74ed36b38430413b7741c60"
+      }
+    ],
+    "stats": {
+      "total": 5,
+      "additions": 1,
+      "deletions": 4
+    },
+    "files": [
+      {
+        "sha": "3a4dcee3a7727127b857cb80adc46951c7001792",
+        "filename": "rpc.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 4,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9d069f6c6e06bff39bbac7a292f24b167ee683cd/rpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9d069f6c6e06bff39bbac7a292f24b167ee683cd/rpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/rpc.cpp?ref=9d069f6c6e06bff39bbac7a292f24b167ee683cd",
+        "patch": "@@ -62,10 +62,7 @@ void PrintConsole(const char* format, ...)\n \n int64 AmountFromValue(const Value& value)\n {\n-    double dAmount = value.get_real();\n-    if (dAmount <= 0.0 || dAmount > 21000000.0)\n-        throw JSONRPCError(-3, \"Invalid amount\");\n-    int64 nAmount = roundint64(dAmount * COIN);\n+    int64 nAmount = roundint64(value.get_real() * COIN);\n     if (!MoneyRange(nAmount))\n         throw JSONRPCError(-3, \"Invalid amount\");\n     return nAmount;"
+      }
+    ]
+  }
+]

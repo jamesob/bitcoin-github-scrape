@@ -1,0 +1,206 @@
+[
+  {
+    "sha": "f55882fb41d34bd43c358f0a81e1c776c44cff43",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmNTU4ODJmYjQxZDM0YmQ0M2MzNThmMGE4MWUxYzc3NmM0NGNmZjQz",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-02-26T22:19:36Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-08-14T16:07:20Z"
+      },
+      "message": "mempool janitor: periodic sweep and clean of not-confirming transactions\n\nThe mempool janitor (\"poolman\") is a thread that runs every -janitorinterval\nseconds.  The janitor scans and removes memory pool transactions\nolder than current time minus -janitorexpire seconds.\n\nBy default, janitor runs every 24 hrs, expiring TXs older than 72 hrs.\n\nIsMine() transactions are not touched.",
+      "tree": {
+        "sha": "473bef41f88c79890ac85a0b69a1c16803e4956a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/473bef41f88c79890ac85a0b69a1c16803e4956a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/f55882fb41d34bd43c358f0a81e1c776c44cff43",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f55882fb41d34bd43c358f0a81e1c776c44cff43",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/f55882fb41d34bd43c358f0a81e1c776c44cff43",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f55882fb41d34bd43c358f0a81e1c776c44cff43/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "7accb7dbad6bef0c98dc436d164f27189294eaf5",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7accb7dbad6bef0c98dc436d164f27189294eaf5",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/7accb7dbad6bef0c98dc436d164f27189294eaf5"
+      }
+    ],
+    "stats": {
+      "total": 120,
+      "additions": 118,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "a33c1c73f69d452f9bd358a629e4d2eaccc7e2c8",
+        "filename": "src/Makefile.am",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f55882fb41d34bd43c358f0a81e1c776c44cff43/src/Makefile.am",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f55882fb41d34bd43c358f0a81e1c776c44cff43/src/Makefile.am",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/Makefile.am?ref=f55882fb41d34bd43c358f0a81e1c776c44cff43",
+        "patch": "@@ -96,6 +96,7 @@ BITCOIN_CORE_H = \\\n   net.h \\\n   noui.h \\\n   pow.h \\\n+  poolman.h \\\n   protocol.h \\\n   random.h \\\n   rpcclient.h \\\n@@ -204,6 +205,7 @@ libbitcoin_common_a_SOURCES = \\\n   key.cpp \\\n   keystore.cpp \\\n   netbase.cpp \\\n+  poolman.cpp \\\n   protocol.cpp \\\n   script.cpp \\\n   $(BITCOIN_CORE_H)"
+      },
+      {
+        "sha": "c382f623b246376c3fc4c9759323171531b1b715",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 17,
+        "deletions": 0,
+        "changes": 17,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f55882fb41d34bd43c358f0a81e1c776c44cff43/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f55882fb41d34bd43c358f0a81e1c776c44cff43/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=f55882fb41d34bd43c358f0a81e1c776c44cff43",
+        "patch": "@@ -19,6 +19,7 @@\n #include \"txdb.h\"\n #include \"ui_interface.h\"\n #include \"util.h\"\n+#include \"poolman.h\"\n #ifdef ENABLE_WALLET\n #include \"db.h\"\n #include \"wallet.h\"\n@@ -253,6 +254,8 @@ std::string HelpMessage(HelpMessageMode mode)\n     strUsage += \"  -proxy=<ip:port>       \" + _(\"Connect through SOCKS5 proxy\") + \"\\n\";\n     strUsage += \"  -seednode=<ip>         \" + _(\"Connect to a node to retrieve peer addresses, and disconnect\") + \"\\n\";\n     strUsage += \"  -timeout=<n>           \" + _(\"Specify connection timeout in milliseconds (default: 5000)\") + \"\\n\";\n+    strUsage += \"  -janitorinterval=<n>   \" + _(\"Number of seconds between each mempool janitor run (default: 1 day)\") + \"\\n\";\n+    strUsage += \"  -janitorexpire=<n>     \" + _(\"Number of seconds transactions live in memory pool, before removal (default: 3 days)\") + \"\\n\";\n #ifdef USE_UPNP\n #if USE_UPNP\n     strUsage += \"  -upnp                  \" + _(\"Use UPnP to map the listening port (default: 1 when listening)\") + \"\\n\";\n@@ -724,6 +727,16 @@ bool AppInit2(boost::thread_group& threadGroup)\n             threadGroup.create_thread(&ThreadScriptCheck);\n     }\n \n+    // mempool janitor execution interval.  default interval: 1 day\n+    int janitorInterval = GetArg(\"-janitorinterval\", (60 * 60 * 24 * 1));\n+\n+    // mempool janitor TX expiration threshold.  default: 3 days\n+    janitorExpire = GetArg(\"-janitorexpire\", (60 * 60 * 24 * 3));\n+    if (janitorExpire < 0) {\n+        janitorExpire = 0;\n+        janitorInterval = 0;\n+    }\n+\n     int64_t nStart;\n \n     // ********************************************************* Step 5: verify wallet database integrity\n@@ -1241,6 +1254,10 @@ bool AppInit2(boost::thread_group& threadGroup)\n         GenerateBitcoins(GetBoolArg(\"-gen\", false), pwalletMain, GetArg(\"-genproclimit\", -1));\n #endif\n \n+    // start mempool janitor, if interval above sane safety margin\n+    if (janitorInterval > 60)\n+        threadGroup.create_thread(boost::bind(&LoopForever<void (*)()>, \"poolman\", &TxMempoolJanitor, janitorInterval * 1000));\n+\n     // ********************************************************* Step 12: finished\n \n     uiInterface.InitMessage(_(\"Done loading\"));"
+      },
+      {
+        "sha": "4f5ab55833a50b8701cb1a7cfed94a4aa5ba76d1",
+        "filename": "src/poolman.cpp",
+        "status": "added",
+        "additions": 58,
+        "deletions": 0,
+        "changes": 58,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f55882fb41d34bd43c358f0a81e1c776c44cff43/src/poolman.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f55882fb41d34bd43c358f0a81e1c776c44cff43/src/poolman.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/poolman.cpp?ref=f55882fb41d34bd43c358f0a81e1c776c44cff43",
+        "patch": "@@ -0,0 +1,58 @@\n+\n+#include \"poolman.h\"\n+#include \"core.h\"\n+#include \"main.h\"\n+#include \"wallet.h\"\n+#include \"init.h\"\n+\n+using namespace std;\n+\n+int64_t janitorExpire; // global; expire TXs n seconds older than this\n+\n+static unsigned int IgnoreWalletTransactions(vector<CTransaction>& vtx)\n+{\n+    unsigned int nMine = 0;\n+\n+#ifdef ENABLE_WALLET\n+    if (!pwalletMain)\n+        return 0;\n+\n+    vector<CTransaction> vtxTmp;\n+    BOOST_FOREACH(const CTransaction& tx, vtx) {\n+        if (pwalletMain->IsMine(tx))\n+            nMine++;\n+        else\n+            vtxTmp.push_back(tx);\n+    }\n+\n+    if (nMine > 0)\n+        vtx = vtxTmp;\n+#endif // ENABLE_WALLET\n+\n+    return nMine;\n+}\n+\n+void TxMempoolJanitor()\n+{\n+    int64_t nStart = GetTimeMillis();\n+    int64_t expireTime = GetTime() - janitorExpire;\n+\n+    // pass 1: get matching transactions\n+    vector<CTransaction> vtx;\n+    mempool.queryOld(vtx, expireTime);\n+    unsigned int nOld = vtx.size();\n+\n+    // pass 2: ignore wallet transactions (remove from vtx)\n+    unsigned int nMine = IgnoreWalletTransactions(vtx);\n+\n+    // pass 3: remove old transactions from mempool\n+    bool fRecursive = false;\n+    std::list<CTransaction> removed;\n+    mempool.removeBatch(vtx, removed, fRecursive);\n+\n+    LogPrint(\"mempool\", \"mempool janitor run complete,  %dms\\n\",\n+             GetTimeMillis() - nStart);\n+    LogPrint(\"mempool\", \"    %u old, %u old wallet, %u removed\\n\",\n+             nOld, nMine, removed.size());\n+}\n+"
+      },
+      {
+        "sha": "f47e4723f498dbbb52388dc9783a1573ed19fcd6",
+        "filename": "src/poolman.h",
+        "status": "added",
+        "additions": 9,
+        "deletions": 0,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f55882fb41d34bd43c358f0a81e1c776c44cff43/src/poolman.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f55882fb41d34bd43c358f0a81e1c776c44cff43/src/poolman.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/poolman.h?ref=f55882fb41d34bd43c358f0a81e1c776c44cff43",
+        "patch": "@@ -0,0 +1,9 @@\n+#ifndef __BITCOIN_POOLMAN_H__\n+#define __BITCOIN_POOLMAN_H__\n+\n+#include <stdint.h>\n+\n+extern void TxMempoolJanitor();\n+extern int64_t janitorExpire;\n+\n+#endif // __BITCOIN_POOLMAN_H__"
+      },
+      {
+        "sha": "8a43195560b531bca5ed19a01b6d619efca02e40",
+        "filename": "src/txmempool.cpp",
+        "status": "modified",
+        "additions": 28,
+        "deletions": 2,
+        "changes": 30,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f55882fb41d34bd43c358f0a81e1c776c44cff43/src/txmempool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f55882fb41d34bd43c358f0a81e1c776c44cff43/src/txmempool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.cpp?ref=f55882fb41d34bd43c358f0a81e1c776c44cff43",
+        "patch": "@@ -407,11 +407,10 @@ bool CTxMemPool::addUnchecked(const uint256& hash, const CTxMemPoolEntry &entry)\n }\n \n \n-void CTxMemPool::remove(const CTransaction &tx, std::list<CTransaction>& removed, bool fRecursive)\n+void CTxMemPool::removeUnlocked(const CTransaction &tx, std::list<CTransaction>& removed, bool fRecursive)\n {\n     // Remove transaction from memory pool\n     {\n-        LOCK(cs);\n         uint256 hash = tx.GetHash();\n         if (fRecursive) {\n             for (unsigned int i = 0; i < tx.vout.size(); i++) {\n@@ -432,6 +431,22 @@ void CTxMemPool::remove(const CTransaction &tx, std::list<CTransaction>& removed\n     }\n }\n \n+void CTxMemPool::remove(const CTransaction &tx, std::list<CTransaction>& removed, bool fRecursive)\n+{\n+    LOCK(cs);\n+    removeUnlocked(tx, removed, fRecursive);\n+}\n+\n+void CTxMemPool::removeBatch(vector<CTransaction>& vtx, std::list<CTransaction>& removed, bool fRecursive)\n+{\n+    LOCK(cs);\n+    BOOST_FOREACH(const CTransaction& tx, vtx) {\n+        uint256 hash = tx.GetHash();\n+        if (mapTx.count(hash))\n+            removeUnlocked(tx, removed, fRecursive);\n+    }\n+}\n+\n void CTxMemPool::removeConflicts(const CTransaction &tx, std::list<CTransaction>& removed)\n {\n     // Remove transactions which depend on inputs of tx, recursively\n@@ -530,6 +545,17 @@ void CTxMemPool::queryHashes(vector<uint256>& vtxid)\n         vtxid.push_back((*mi).first);\n }\n \n+void CTxMemPool::queryOld(vector<CTransaction>& vtx, int64_t matchTime)\n+{\n+    LOCK(cs);\n+\n+    for (map<uint256, CTxMemPoolEntry>::iterator mi = mapTx.begin(); mi != mapTx.end(); ++mi) {\n+        CTxMemPoolEntry& mpe = (*mi).second;\n+        if (mpe.GetTime() <= matchTime)\n+            vtx.push_back(mpe.GetTx());\n+    }\n+}\n+\n bool CTxMemPool::lookup(uint256 hash, CTransaction& result) const\n {\n     LOCK(cs);"
+      },
+      {
+        "sha": "a2b3a6c8f405fec875a53ae63d3537d68c73a663",
+        "filename": "src/txmempool.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 0,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f55882fb41d34bd43c358f0a81e1c776c44cff43/src/txmempool.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f55882fb41d34bd43c358f0a81e1c776c44cff43/src/txmempool.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.h?ref=f55882fb41d34bd43c358f0a81e1c776c44cff43",
+        "patch": "@@ -69,6 +69,8 @@ class CTxMemPool\n \n     CFeeRate minRelayFee; // Passed to constructor to avoid dependency on main\n \n+    void removeUnlocked(const CTransaction &tx, std::list<CTransaction>& removed, bool fRecursive = false);\n+\n public:\n     mutable CCriticalSection cs;\n     std::map<uint256, CTxMemPoolEntry> mapTx;\n@@ -92,8 +94,10 @@ class CTxMemPool\n     void removeConflicts(const CTransaction &tx, std::list<CTransaction>& removed);\n     void removeForBlock(const std::vector<CTransaction>& vtx, unsigned int nBlockHeight,\n                         std::list<CTransaction>& conflicts);\n+    void removeBatch(std::vector<CTransaction>& vtx, std::list<CTransaction>& removed, bool fRecursive = false);\n     void clear();\n     void queryHashes(std::vector<uint256>& vtxid);\n+    void queryOld(std::vector<CTransaction>& vtx, int64_t matchTime);\n     void pruneSpent(const uint256& hash, CCoins &coins);\n     unsigned int GetTransactionsUpdated() const;\n     void AddTransactionsUpdated(unsigned int n);"
+      }
+    ]
+  },
+  {
+    "sha": "b5d216a7b3dd68b784601973ff95e15cdfd13ebf",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiNWQyMTZhN2IzZGQ2OGI3ODQ2MDE5NzNmZjk1ZTE1Y2RmZDEzZWJm",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-02-26T22:36:35Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-08-14T16:08:38Z"
+      },
+      "message": "RPC: Add 'sweepmempool' method, to manually initiate poolman",
+      "tree": {
+        "sha": "cb3835b3894dae6d0c957b105a680e15b65c8231",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/cb3835b3894dae6d0c957b105a680e15b65c8231"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/b5d216a7b3dd68b784601973ff95e15cdfd13ebf",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b5d216a7b3dd68b784601973ff95e15cdfd13ebf",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/b5d216a7b3dd68b784601973ff95e15cdfd13ebf",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b5d216a7b3dd68b784601973ff95e15cdfd13ebf/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "f55882fb41d34bd43c358f0a81e1c776c44cff43",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f55882fb41d34bd43c358f0a81e1c776c44cff43",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/f55882fb41d34bd43c358f0a81e1c776c44cff43"
+      }
+    ],
+    "stats": {
+      "total": 21,
+      "additions": 21,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "21caa188f0cac4527c8ae77df4b1551b44872a04",
+        "filename": "src/rpcblockchain.cpp",
+        "status": "modified",
+        "additions": 19,
+        "deletions": 0,
+        "changes": 19,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b5d216a7b3dd68b784601973ff95e15cdfd13ebf/src/rpcblockchain.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b5d216a7b3dd68b784601973ff95e15cdfd13ebf/src/rpcblockchain.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcblockchain.cpp?ref=b5d216a7b3dd68b784601973ff95e15cdfd13ebf",
+        "patch": "@@ -7,6 +7,7 @@\n #include \"main.h\"\n #include \"rpcserver.h\"\n #include \"sync.h\"\n+#include \"poolman.h\"\n \n #include <stdint.h>\n \n@@ -406,6 +407,24 @@ Value gettxout(const Array& params, bool fHelp)\n     return ret;\n }\n \n+Value sweepmempool(const Array& params, bool fHelp)\n+{\n+    if (fHelp || params.size() != 0)\n+        throw runtime_error(\n+            \"sweepmempool\\n\"\n+            \"\\nRemoves old, unconfirmed transactions from mempool\\n\"\n+            \"\\nResult:\\n\"\n+            \"n    (bool) true\\n\"\n+            \"\\nExamples:\\n\"\n+            + HelpExampleCli(\"sweepmempool\", \"\")\n+            + HelpExampleRpc(\"sweepmempool\", \"\")\n+        );\n+\n+    TxMempoolJanitor();\n+\n+    return true;\n+}\n+\n Value verifychain(const Array& params, bool fHelp)\n {\n     if (fHelp || params.size() > 2)"
+      },
+      {
+        "sha": "08b34f37d0917d6c901af7ffbf28dbd15a8072a2",
+        "filename": "src/rpcserver.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b5d216a7b3dd68b784601973ff95e15cdfd13ebf/src/rpcserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b5d216a7b3dd68b784601973ff95e15cdfd13ebf/src/rpcserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcserver.cpp?ref=b5d216a7b3dd68b784601973ff95e15cdfd13ebf",
+        "patch": "@@ -259,6 +259,7 @@ static const CRPCCommand vRPCCommands[] =\n     { \"blockchain\",         \"getrawmempool\",          &getrawmempool,          true,      false,      false },\n     { \"blockchain\",         \"gettxout\",               &gettxout,               true,      false,      false },\n     { \"blockchain\",         \"gettxoutsetinfo\",        &gettxoutsetinfo,        true,      false,      false },\n+    { \"blockchain\",         \"sweepmempool\",           &sweepmempool,           true,      true,       false },\n     { \"blockchain\",         \"verifychain\",            &verifychain,            true,      false,      false },\n \n     /* Mining */"
+      },
+      {
+        "sha": "bd3f4a4e633b4731c07a3c704463478ce0510130",
+        "filename": "src/rpcserver.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b5d216a7b3dd68b784601973ff95e15cdfd13ebf/src/rpcserver.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b5d216a7b3dd68b784601973ff95e15cdfd13ebf/src/rpcserver.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcserver.h?ref=b5d216a7b3dd68b784601973ff95e15cdfd13ebf",
+        "patch": "@@ -205,6 +205,7 @@ extern json_spirit::Value getblockhash(const json_spirit::Array& params, bool fH\n extern json_spirit::Value getblock(const json_spirit::Array& params, bool fHelp);\n extern json_spirit::Value gettxoutsetinfo(const json_spirit::Array& params, bool fHelp);\n extern json_spirit::Value gettxout(const json_spirit::Array& params, bool fHelp);\n+extern json_spirit::Value sweepmempool(const json_spirit::Array& params, bool fHelp);\n extern json_spirit::Value verifychain(const json_spirit::Array& params, bool fHelp);\n extern json_spirit::Value getchaintips(const json_spirit::Array& params, bool fHelp);\n "
+      }
+    ]
+  }
+]

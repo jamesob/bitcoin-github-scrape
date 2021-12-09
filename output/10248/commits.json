@@ -1,0 +1,112 @@
+[
+  {
+    "sha": "cf68a488a4cc78d711ca6e5e3236c6d89d689079",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjZjY4YTQ4OGE0Y2M3OGQ3MTFjYTZlNWUzMjM2YzZkODlkNjg5MDc5",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2017-04-21T11:50:55Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2017-06-01T23:42:07Z"
+      },
+      "message": "Deduplicate addrdb.cpp and use CHashWriter/Verifier",
+      "tree": {
+        "sha": "7f8c867443aae1d68b6e127dd9cd94145e7652b8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/7f8c867443aae1d68b6e127dd9cd94145e7652b8"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/cf68a488a4cc78d711ca6e5e3236c6d89d689079",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/cf68a488a4cc78d711ca6e5e3236c6d89d689079",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/cf68a488a4cc78d711ca6e5e3236c6d89d689079",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/cf68a488a4cc78d711ca6e5e3236c6d89d689079/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "7cc2c670e3d7cf26454ac8547a94ec2c8ca90b34",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7cc2c670e3d7cf26454ac8547a94ec2c8ca90b34",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/7cc2c670e3d7cf26454ac8547a94ec2c8ca90b34"
+      }
+    ],
+    "stats": {
+      "total": 216,
+      "additions": 72,
+      "deletions": 144
+    },
+    "files": [
+      {
+        "sha": "7f85c16585aa28b471d16c15b689ba23da6391a8",
+        "filename": "src/addrdb.cpp",
+        "status": "modified",
+        "additions": 71,
+        "deletions": 143,
+        "changes": 214,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/cf68a488a4cc78d711ca6e5e3236c6d89d689079/src/addrdb.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/cf68a488a4cc78d711ca6e5e3236c6d89d689079/src/addrdb.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/addrdb.cpp?ref=cf68a488a4cc78d711ca6e5e3236c6d89d689079",
+        "patch": "@@ -15,25 +15,31 @@\n #include \"tinyformat.h\"\n #include \"util.h\"\n \n+namespace {\n \n-CBanDB::CBanDB()\n+template <typename Stream, typename Data>\n+bool SerializeDB(Stream& stream, const Data& data)\n {\n-    pathBanlist = GetDataDir() / \"banlist.dat\";\n+    // Write and commit header, data\n+    try {\n+        CHashWriter hasher(SER_DISK, CLIENT_VERSION);\n+        stream << FLATDATA(Params().MessageStart()) << data;\n+        hasher << FLATDATA(Params().MessageStart()) << data;\n+        stream << hasher.GetHash();\n+    } catch (const std::exception& e) {\n+        return error(\"%s: Serialize or I/O error - %s\", __func__, e.what());\n+    }\n+\n+    return true;\n }\n \n-bool CBanDB::Write(const banmap_t& banSet)\n+template <typename Data>\n+bool SerializeFileDB(const std::string& prefix, const fs::path& path, const Data& data)\n {\n     // Generate random temporary filename\n     unsigned short randv = 0;\n     GetRandBytes((unsigned char*)&randv, sizeof(randv));\n-    std::string tmpfn = strprintf(\"banlist.dat.%04x\", randv);\n-\n-    // serialize banlist, checksum data up to that point, then append csum\n-    CDataStream ssBanlist(SER_DISK, CLIENT_VERSION);\n-    ssBanlist << FLATDATA(Params().MessageStart());\n-    ssBanlist << banSet;\n-    uint256 hash = Hash(ssBanlist.begin(), ssBanlist.end());\n-    ssBanlist << hash;\n+    std::string tmpfn = strprintf(\"%s.%04x\", prefix, randv);\n \n     // open temp output file, and associate with CAutoFile\n     fs::path pathTmp = GetDataDir() / tmpfn;\n@@ -42,69 +48,41 @@ bool CBanDB::Write(const banmap_t& banSet)\n     if (fileout.IsNull())\n         return error(\"%s: Failed to open file %s\", __func__, pathTmp.string());\n \n-    // Write and commit header, data\n-    try {\n-        fileout << ssBanlist;\n-    }\n-    catch (const std::exception& e) {\n-        return error(\"%s: Serialize or I/O error - %s\", __func__, e.what());\n-    }\n+    // Serialize\n+    if (!SerializeDB(fileout, data)) return false;\n     FileCommit(fileout.Get());\n     fileout.fclose();\n \n-    // replace existing banlist.dat, if any, with new banlist.dat.XXXX\n-    if (!RenameOver(pathTmp, pathBanlist))\n+    // replace existing file, if any, with new file\n+    if (!RenameOver(pathTmp, path))\n         return error(\"%s: Rename-into-place failed\", __func__);\n \n     return true;\n }\n \n-bool CBanDB::Read(banmap_t& banSet)\n+template <typename Stream, typename Data>\n+bool DeserializeDB(Stream& stream, Data& data, bool fCheckSum = true)\n {\n-    // open input file, and associate with CAutoFile\n-    FILE *file = fsbridge::fopen(pathBanlist, \"rb\");\n-    CAutoFile filein(file, SER_DISK, CLIENT_VERSION);\n-    if (filein.IsNull())\n-        return error(\"%s: Failed to open file %s\", __func__, pathBanlist.string());\n-\n-    // use file size to size memory buffer\n-    uint64_t fileSize = fs::file_size(pathBanlist);\n-    uint64_t dataSize = 0;\n-    // Don't try to resize to a negative number if file is small\n-    if (fileSize >= sizeof(uint256))\n-        dataSize = fileSize - sizeof(uint256);\n-    std::vector<unsigned char> vchData;\n-    vchData.resize(dataSize);\n-    uint256 hashIn;\n-\n-    // read data and checksum from file\n-    try {\n-        filein.read((char *)&vchData[0], dataSize);\n-        filein >> hashIn;\n-    }\n-    catch (const std::exception& e) {\n-        return error(\"%s: Deserialize or I/O error - %s\", __func__, e.what());\n-    }\n-    filein.fclose();\n-\n-    CDataStream ssBanlist(vchData, SER_DISK, CLIENT_VERSION);\n-\n-    // verify stored checksum matches input data\n-    uint256 hashTmp = Hash(ssBanlist.begin(), ssBanlist.end());\n-    if (hashIn != hashTmp)\n-        return error(\"%s: Checksum mismatch, data corrupted\", __func__);\n-\n-    unsigned char pchMsgTmp[4];\n     try {\n+        CHashVerifier<Stream> verifier(&stream);\n         // de-serialize file header (network specific magic number) and ..\n-        ssBanlist >> FLATDATA(pchMsgTmp);\n-\n+        unsigned char pchMsgTmp[4];\n+        verifier >> FLATDATA(pchMsgTmp);\n         // ... verify the network matches ours\n         if (memcmp(pchMsgTmp, Params().MessageStart(), sizeof(pchMsgTmp)))\n             return error(\"%s: Invalid network magic number\", __func__);\n \n-        // de-serialize ban data\n-        ssBanlist >> banSet;\n+        // de-serialize data\n+        verifier >> data;\n+\n+        // verify checksum\n+        if (fCheckSum) {\n+            uint256 hashTmp;\n+            stream >> hashTmp;\n+            if (hashTmp != verifier.GetHash()) {\n+                return error(\"%s: Checksum mismatch, data corrupted\", __func__);\n+            }\n+        }\n     }\n     catch (const std::exception& e) {\n         return error(\"%s: Deserialize or I/O error - %s\", __func__, e.what());\n@@ -113,106 +91,56 @@ bool CBanDB::Read(banmap_t& banSet)\n     return true;\n }\n \n-CAddrDB::CAddrDB()\n+template <typename Data>\n+bool DeserializeFileDB(const fs::path& path, Data& data)\n {\n-    pathAddr = GetDataDir() / \"peers.dat\";\n+    // open input file, and associate with CAutoFile\n+    FILE *file = fsbridge::fopen(path, \"rb\");\n+    CAutoFile filein(file, SER_DISK, CLIENT_VERSION);\n+    if (filein.IsNull())\n+        return error(\"%s: Failed to open file %s\", __func__, path.string());\n+\n+    return DeserializeDB(filein, data);\n }\n \n-bool CAddrDB::Write(const CAddrMan& addr)\n-{\n-    // Generate random temporary filename\n-    unsigned short randv = 0;\n-    GetRandBytes((unsigned char*)&randv, sizeof(randv));\n-    std::string tmpfn = strprintf(\"peers.dat.%04x\", randv);\n+}\n \n-    // serialize addresses, checksum data up to that point, then append csum\n-    CDataStream ssPeers(SER_DISK, CLIENT_VERSION);\n-    ssPeers << FLATDATA(Params().MessageStart());\n-    ssPeers << addr;\n-    uint256 hash = Hash(ssPeers.begin(), ssPeers.end());\n-    ssPeers << hash;\n+CBanDB::CBanDB()\n+{\n+    pathBanlist = GetDataDir() / \"banlist.dat\";\n+}\n \n-    // open temp output file, and associate with CAutoFile\n-    fs::path pathTmp = GetDataDir() / tmpfn;\n-    FILE *file = fsbridge::fopen(pathTmp, \"wb\");\n-    CAutoFile fileout(file, SER_DISK, CLIENT_VERSION);\n-    if (fileout.IsNull())\n-        return error(\"%s: Failed to open file %s\", __func__, pathTmp.string());\n+bool CBanDB::Write(const banmap_t& banSet)\n+{\n+    return SerializeFileDB(\"banlist\", pathBanlist, banSet);\n+}\n \n-    // Write and commit header, data\n-    try {\n-        fileout << ssPeers;\n-    }\n-    catch (const std::exception& e) {\n-        return error(\"%s: Serialize or I/O error - %s\", __func__, e.what());\n-    }\n-    FileCommit(fileout.Get());\n-    fileout.fclose();\n+bool CBanDB::Read(banmap_t& banSet)\n+{\n+    return DeserializeFileDB(pathBanlist, banSet);\n+}\n \n-    // replace existing peers.dat, if any, with new peers.dat.XXXX\n-    if (!RenameOver(pathTmp, pathAddr))\n-        return error(\"%s: Rename-into-place failed\", __func__);\n+CAddrDB::CAddrDB()\n+{\n+    pathAddr = GetDataDir() / \"peers.dat\";\n+}\n \n-    return true;\n+bool CAddrDB::Write(const CAddrMan& addr)\n+{\n+    return SerializeFileDB(\"peers\", pathAddr, addr);\n }\n \n bool CAddrDB::Read(CAddrMan& addr)\n {\n-    // open input file, and associate with CAutoFile\n-    FILE *file = fsbridge::fopen(pathAddr, \"rb\");\n-    CAutoFile filein(file, SER_DISK, CLIENT_VERSION);\n-    if (filein.IsNull())\n-        return error(\"%s: Failed to open file %s\", __func__, pathAddr.string());\n-\n-    // use file size to size memory buffer\n-    uint64_t fileSize = fs::file_size(pathAddr);\n-    uint64_t dataSize = 0;\n-    // Don't try to resize to a negative number if file is small\n-    if (fileSize >= sizeof(uint256))\n-        dataSize = fileSize - sizeof(uint256);\n-    std::vector<unsigned char> vchData;\n-    vchData.resize(dataSize);\n-    uint256 hashIn;\n-\n-    // read data and checksum from file\n-    try {\n-        filein.read((char *)&vchData[0], dataSize);\n-        filein >> hashIn;\n-    }\n-    catch (const std::exception& e) {\n-        return error(\"%s: Deserialize or I/O error - %s\", __func__, e.what());\n-    }\n-    filein.fclose();\n-\n-    CDataStream ssPeers(vchData, SER_DISK, CLIENT_VERSION);\n-\n-    // verify stored checksum matches input data\n-    uint256 hashTmp = Hash(ssPeers.begin(), ssPeers.end());\n-    if (hashIn != hashTmp)\n-        return error(\"%s: Checksum mismatch, data corrupted\", __func__);\n-\n-    return Read(addr, ssPeers);\n+    return DeserializeFileDB(pathAddr, addr);\n }\n \n bool CAddrDB::Read(CAddrMan& addr, CDataStream& ssPeers)\n {\n-    unsigned char pchMsgTmp[4];\n-    try {\n-        // de-serialize file header (network specific magic number) and ..\n-        ssPeers >> FLATDATA(pchMsgTmp);\n-\n-        // ... verify the network matches ours\n-        if (memcmp(pchMsgTmp, Params().MessageStart(), sizeof(pchMsgTmp)))\n-            return error(\"%s: Invalid network magic number\", __func__);\n-\n-        // de-serialize address data into one CAddrMan object\n-        ssPeers >> addr;\n-    }\n-    catch (const std::exception& e) {\n-        // de-serialization has failed, ensure addrman is left in a clean state\n+    bool ret = DeserializeDB(ssPeers, addr, false);\n+    if (!ret) {\n+        // Ensure addrman is left in a clean state\n         addr.Clear();\n-        return error(\"%s: Deserialize or I/O error - %s\", __func__, e.what());\n     }\n-\n-    return true;\n+    return ret;\n }"
+      },
+      {
+        "sha": "6cb36dfac4e60ee8512f8dfdac28101aa6ecc48c",
+        "filename": "src/addrdb.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/cf68a488a4cc78d711ca6e5e3236c6d89d689079/src/addrdb.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/cf68a488a4cc78d711ca6e5e3236c6d89d689079/src/addrdb.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/addrdb.h?ref=cf68a488a4cc78d711ca6e5e3236c6d89d689079",
+        "patch": "@@ -85,7 +85,7 @@ class CAddrDB\n     CAddrDB();\n     bool Write(const CAddrMan& addr);\n     bool Read(CAddrMan& addr);\n-    bool Read(CAddrMan& addr, CDataStream& ssPeers);\n+    static bool Read(CAddrMan& addr, CDataStream& ssPeers);\n };\n \n /** Access to the banlist database (banlist.dat) */"
+      }
+    ]
+  }
+]

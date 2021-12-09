@@ -1,0 +1,146 @@
+[
+  {
+    "sha": "30fffe51bc6573033333efbda1c42d7c730812e1",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozMGZmZmU1MWJjNjU3MzAzMzMzM2VmYmRhMWM0MmQ3YzczMDgxMmUx",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2013-06-06T21:09:35Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2013-06-06T21:09:35Z"
+      },
+      "message": "Move block size parameter setting from main.cpp to init.cpp.",
+      "tree": {
+        "sha": "e18843519a2f61533aaf06e3d28ced0b9f8e77ea",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/e18843519a2f61533aaf06e3d28ced0b9f8e77ea"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/30fffe51bc6573033333efbda1c42d7c730812e1",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/30fffe51bc6573033333efbda1c42d7c730812e1",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/30fffe51bc6573033333efbda1c42d7c730812e1",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/30fffe51bc6573033333efbda1c42d7c730812e1/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "c94bd68547df9ba7645305f9813e02d548e8a981",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c94bd68547df9ba7645305f9813e02d548e8a981",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c94bd68547df9ba7645305f9813e02d548e8a981"
+      }
+    ],
+    "stats": {
+      "total": 37,
+      "additions": 22,
+      "deletions": 15
+    },
+    "files": [
+      {
+        "sha": "6c6a36d94a301f28ec64a0039dc37098356c5d9f",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 15,
+        "deletions": 0,
+        "changes": 15,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/30fffe51bc6573033333efbda1c42d7c730812e1/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/30fffe51bc6573033333efbda1c42d7c730812e1/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=30fffe51bc6573033333efbda1c42d7c730812e1",
+        "patch": "@@ -484,6 +484,21 @@ bool AppInit2(boost::thread_group& threadGroup)\n             InitWarning(_(\"Warning: -paytxfee is set very high! This is the transaction fee you will pay if you send a transaction.\"));\n     }\n \n+    // Largest block you're willing to create:\n+    nBlockMaxSize = GetArg(\"-blockmaxsize\", MAX_BLOCK_SIZE_GEN/2);\n+    // Limit to betweeen 1K and MAX_BLOCK_SIZE-1K for sanity:\n+    nBlockMaxSize = std::max((unsigned int)1000, std::min((unsigned int)(MAX_BLOCK_SIZE-1000), nBlockMaxSize));\n+\n+    // How much of the block should be dedicated to high-priority transactions,\n+    // included regardless of the fees they pay\n+    nBlockPrioritySize = GetArg(\"-blockprioritysize\", 27000);\n+    nBlockPrioritySize = std::min(nBlockMaxSize, nBlockPrioritySize);\n+\n+    // Minimum block size you want to create; block will be filled with free transactions\n+    // until there are no more or the block reaches this size:\n+    nBlockMinSize = GetArg(\"-blockminsize\", 0);\n+    nBlockMinSize = std::min(nBlockMaxSize, nBlockMinSize);\n+\n     // ********************************************************* Step 4: application initialization: dir lock, daemonize, pidfile, debug log\n \n     std::string strDataDir = GetDataDir().string();"
+      },
+      {
+        "sha": "784e7062436fafc22e63a72538b2408c603a65c6",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 15,
+        "changes": 19,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/30fffe51bc6573033333efbda1c42d7c730812e1/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/30fffe51bc6573033333efbda1c42d7c730812e1/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=30fffe51bc6573033333efbda1c42d7c730812e1",
+        "patch": "@@ -55,6 +55,10 @@ int64 CTransaction::nMinTxFee = 10000;  // Override with -mintxfee\n /** Fees smaller than this (in satoshi) are considered zero fee (for relaying) */\n int64 CTransaction::nMinRelayTxFee = 10000;\n \n+unsigned int nBlockMaxSize = MAX_BLOCK_SIZE_GEN/2;\n+unsigned int nBlockMinSize = 0;\n+unsigned int nBlockPrioritySize = 27000;\n+\n CMedianFilter<int> cPeerBlockCounts(8, 0); // Amount of blocks that other nodes claim to have\n \n map<uint256, CBlock*> mapOrphanBlocks;\n@@ -4151,21 +4155,6 @@ CBlockTemplate* CreateNewBlock(CReserveKey& reservekey)\n     pblocktemplate->vTxFees.push_back(-1); // updated at end\n     pblocktemplate->vTxSigOps.push_back(-1); // updated at end\n \n-    // Largest block you're willing to create:\n-    unsigned int nBlockMaxSize = GetArg(\"-blockmaxsize\", MAX_BLOCK_SIZE_GEN/2);\n-    // Limit to betweeen 1K and MAX_BLOCK_SIZE-1K for sanity:\n-    nBlockMaxSize = std::max((unsigned int)1000, std::min((unsigned int)(MAX_BLOCK_SIZE-1000), nBlockMaxSize));\n-\n-    // How much of the block should be dedicated to high-priority transactions,\n-    // included regardless of the fees they pay\n-    unsigned int nBlockPrioritySize = GetArg(\"-blockprioritysize\", 27000);\n-    nBlockPrioritySize = std::min(nBlockMaxSize, nBlockPrioritySize);\n-\n-    // Minimum block size you want to create; block will be filled with free transactions\n-    // until there are no more or the block reaches this size:\n-    unsigned int nBlockMinSize = GetArg(\"-blockminsize\", 0);\n-    nBlockMinSize = std::min(nBlockMaxSize, nBlockMinSize);\n-\n     // Collect memory pool transactions into the block\n     int64 nFees = 0;\n     {"
+      },
+      {
+        "sha": "d2cb6a7800208b4b94432955f4d1b0980be5cd4e",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/30fffe51bc6573033333efbda1c42d7c730812e1/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/30fffe51bc6573033333efbda1c42d7c730812e1/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=30fffe51bc6573033333efbda1c42d7c730812e1",
+        "patch": "@@ -102,6 +102,9 @@ extern int64 nTransactionFee;\n // Minimum disk space required - used in CheckDiskSpace()\n static const uint64 nMinDiskSpace = 52428800;\n \n+extern unsigned int nBlockMaxSize;\n+extern unsigned int nBlockMinSize;\n+extern unsigned int nBlockPrioritySize;\n \n class CReserveKey;\n class CCoinsDB;"
+      }
+    ]
+  },
+  {
+    "sha": "9309a8edfc7e0d8946792839b8dfc11b7c9d08c4",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5MzA5YThlZGZjN2UwZDg5NDY3OTI4MzliOGRmYzExYjdjOWQwOGM0",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2013-06-06T21:14:07Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2013-06-06T21:14:07Z"
+      },
+      "message": "GetMinFee now notices configurable size of free TX area.",
+      "tree": {
+        "sha": "c5318bbba953d5e44dbba3e5d911f32df0c5fe7c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/c5318bbba953d5e44dbba3e5d911f32df0c5fe7c"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/9309a8edfc7e0d8946792839b8dfc11b7c9d08c4",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9309a8edfc7e0d8946792839b8dfc11b7c9d08c4",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/9309a8edfc7e0d8946792839b8dfc11b7c9d08c4",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9309a8edfc7e0d8946792839b8dfc11b7c9d08c4/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "30fffe51bc6573033333efbda1c42d7c730812e1",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/30fffe51bc6573033333efbda1c42d7c730812e1",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/30fffe51bc6573033333efbda1c42d7c730812e1"
+      }
+    ],
+    "stats": {
+      "total": 4,
+      "additions": 2,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "1c4edaa80595b11a7f975421e291a6338e103f4f",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9309a8edfc7e0d8946792839b8dfc11b7c9d08c4/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9309a8edfc7e0d8946792839b8dfc11b7c9d08c4/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=9309a8edfc7e0d8946792839b8dfc11b7c9d08c4",
+        "patch": "@@ -616,8 +616,8 @@ int64 CTransaction::GetMinFee(unsigned int nBlockSize, bool fAllowFree,\n         }\n         else\n         {\n-            // Free transaction area\n-            if (nNewBlockSize < 27000)\n+            // High priority (low-or-no-fee) transaction area\n+            if (nNewBlockSize < nBlockPrioritySize)\n                 nMinFee = 0;\n         }\n     }"
+      }
+    ]
+  }
+]

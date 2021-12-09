@@ -1,0 +1,100 @@
+[
+  {
+    "sha": "45f09618f22f0a59d872818f28fc2a938cc98311",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0NWYwOTYxOGYyMmYwYTU5ZDg3MjgxOGYyOGZjMmE5MzhjYzk4MzEx",
+    "commit": {
+      "author": {
+        "name": "Gregory Maxwell",
+        "email": "greg@xiph.org",
+        "date": "2017-02-06T02:52:27Z"
+      },
+      "committer": {
+        "name": "Gregory Maxwell",
+        "email": "greg@xiph.org",
+        "date": "2017-02-06T02:52:27Z"
+      },
+      "message": "Prevent integer overflow in ReadVarInt.\n\nWe don't normally use ReadVarInt from untrusted inputs, but we might\n see this in the case of corruption.\n\nThis is exposed in test_bitcoin_fuzzy.",
+      "tree": {
+        "sha": "fd1f094b1d3476bd1908413f5c94d96f33f1d349",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/fd1f094b1d3476bd1908413f5c94d96f33f1d349"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/45f09618f22f0a59d872818f28fc2a938cc98311",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/45f09618f22f0a59d872818f28fc2a938cc98311",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/45f09618f22f0a59d872818f28fc2a938cc98311",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/45f09618f22f0a59d872818f28fc2a938cc98311/comments",
+    "author": {
+      "login": "gmaxwell",
+      "id": 858454,
+      "node_id": "MDQ6VXNlcjg1ODQ1NA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/858454?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/gmaxwell",
+      "html_url": "https://github.com/gmaxwell",
+      "followers_url": "https://api.github.com/users/gmaxwell/followers",
+      "following_url": "https://api.github.com/users/gmaxwell/following{/other_user}",
+      "gists_url": "https://api.github.com/users/gmaxwell/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/gmaxwell/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/gmaxwell/subscriptions",
+      "organizations_url": "https://api.github.com/users/gmaxwell/orgs",
+      "repos_url": "https://api.github.com/users/gmaxwell/repos",
+      "events_url": "https://api.github.com/users/gmaxwell/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/gmaxwell/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "gmaxwell",
+      "id": 858454,
+      "node_id": "MDQ6VXNlcjg1ODQ1NA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/858454?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/gmaxwell",
+      "html_url": "https://github.com/gmaxwell",
+      "followers_url": "https://api.github.com/users/gmaxwell/followers",
+      "following_url": "https://api.github.com/users/gmaxwell/following{/other_user}",
+      "gists_url": "https://api.github.com/users/gmaxwell/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/gmaxwell/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/gmaxwell/subscriptions",
+      "organizations_url": "https://api.github.com/users/gmaxwell/orgs",
+      "repos_url": "https://api.github.com/users/gmaxwell/repos",
+      "events_url": "https://api.github.com/users/gmaxwell/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/gmaxwell/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "923dc447eaa8e017985b2afbbb12dd1283fbea0e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/923dc447eaa8e017985b2afbbb12dd1283fbea0e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/923dc447eaa8e017985b2afbbb12dd1283fbea0e"
+      }
+    ],
+    "stats": {
+      "total": 11,
+      "additions": 9,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "e82ddf2c5a7bbacf018ba8b13b907b58fdff93be",
+        "filename": "src/serialize.h",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 2,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/45f09618f22f0a59d872818f28fc2a938cc98311/src/serialize.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/45f09618f22f0a59d872818f28fc2a938cc98311/src/serialize.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/serialize.h?ref=45f09618f22f0a59d872818f28fc2a938cc98311",
+        "patch": "@@ -336,11 +336,18 @@ I ReadVarInt(Stream& is)\n     I n = 0;\n     while(true) {\n         unsigned char chData = ser_readdata8(is);\n+        if (n > (std::numeric_limits<I>::max() >> 7)) {\n+           throw std::ios_base::failure(\"ReadVarInt(): size too large\");\n+        }\n         n = (n << 7) | (chData & 0x7F);\n-        if (chData & 0x80)\n+        if (chData & 0x80) {\n+            if (n == std::numeric_limits<I>::max()) {\n+                throw std::ios_base::failure(\"ReadVarInt(): size too large\");\n+            }\n             n++;\n-        else\n+        } else {\n             return n;\n+        }\n     }\n }\n "
+      }
+    ]
+  }
+]

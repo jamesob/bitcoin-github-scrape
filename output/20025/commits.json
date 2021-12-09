@@ -1,0 +1,708 @@
+[
+  {
+    "sha": "b1ea8a00f9fc2ea4b36eef68084c7e45cea54940",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiMWVhOGEwMGY5ZmMyZWE0YjM2ZWVmNjgwODRjN2U0NWNlYTU0OTQw",
+    "commit": {
+      "author": {
+        "name": "gzhao408",
+        "email": "gzhao408@berkeley.edu",
+        "date": "2020-07-25T17:05:15Z"
+      },
+      "committer": {
+        "name": "gzhao408",
+        "email": "gzhao408@berkeley.edu",
+        "date": "2020-09-24T22:19:28Z"
+      },
+      "message": "[rpc/node] check for high fee before ATMP in clients\n\nCheck absurd fee in BroadcastTransaction and RPC,\nreturn TransactionError::MAX_FEE_EXCEEDED instead\nof TxValidationResult::TX_NOT_STANDARD because this\nis client preference, not a node-wide policy.",
+      "tree": {
+        "sha": "986bdf78810378711f5e5261d7b72fdf318e4b75",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/986bdf78810378711f5e5261d7b72fdf318e4b75"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/b1ea8a00f9fc2ea4b36eef68084c7e45cea54940",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b1ea8a00f9fc2ea4b36eef68084c7e45cea54940",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/b1ea8a00f9fc2ea4b36eef68084c7e45cea54940",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b1ea8a00f9fc2ea4b36eef68084c7e45cea54940/comments",
+    "author": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "8c5f68118cd03ff0b9babee351fee83117fb7afa",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8c5f68118cd03ff0b9babee351fee83117fb7afa",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/8c5f68118cd03ff0b9babee351fee83117fb7afa"
+      }
+    ],
+    "stats": {
+      "total": 56,
+      "additions": 40,
+      "deletions": 16
+    },
+    "files": [
+      {
+        "sha": "7098afea6aa18f5ebff56636a06e135877fcf090",
+        "filename": "src/node/transaction.cpp",
+        "status": "modified",
+        "additions": 27,
+        "deletions": 11,
+        "changes": 38,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b1ea8a00f9fc2ea4b36eef68084c7e45cea54940/src/node/transaction.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b1ea8a00f9fc2ea4b36eef68084c7e45cea54940/src/node/transaction.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/node/transaction.cpp?ref=b1ea8a00f9fc2ea4b36eef68084c7e45cea54940",
+        "patch": "@@ -13,6 +13,18 @@\n \n #include <future>\n \n+TransactionError HandleATMPError(TxValidationState state, std::string& err_string) {\n+    err_string = state.ToString();\n+    if (state.IsInvalid()) {\n+        if (state.GetResult() == TxValidationResult::TX_MISSING_INPUTS) {\n+            return TransactionError::MISSING_INPUTS;\n+        }\n+        return TransactionError::MEMPOOL_REJECTED;\n+    } else {\n+        return TransactionError::MEMPOOL_ERROR;\n+    }\n+}\n+\n TransactionError BroadcastTransaction(NodeContext& node, const CTransactionRef tx, std::string& err_string, const CAmount& max_tx_fee, bool relay, bool wait_callback)\n {\n     // BroadcastTransaction can be called by either sendrawtransaction RPC or wallet RPCs.\n@@ -36,20 +48,24 @@ TransactionError BroadcastTransaction(NodeContext& node, const CTransactionRef t\n         if (!existingCoin.IsSpent()) return TransactionError::ALREADY_IN_CHAIN;\n     }\n     if (!node.mempool->exists(hashTx)) {\n-        // Transaction is not already in the mempool. Submit it.\n+        // Transaction is not already in the mempool.\n         TxValidationState state;\n-        if (!AcceptToMemoryPool(*node.mempool, state, tx,\n-                                nullptr /* plTxnReplaced */, false /* bypass_limits */, max_tx_fee)) {\n-            err_string = state.ToString();\n-            if (state.IsInvalid()) {\n-                if (state.GetResult() == TxValidationResult::TX_MISSING_INPUTS) {\n-                    return TransactionError::MISSING_INPUTS;\n-                }\n-                return TransactionError::MEMPOOL_REJECTED;\n-            } else {\n-                return TransactionError::MEMPOOL_ERROR;\n+        CAmount fee{0};\n+        if (max_tx_fee) {\n+            // First, call ATMP with test_accept and check the fee. If ATMP\n+            // fails here, return error immediately.\n+            if (!AcceptToMemoryPool(*node.mempool, state, tx,\n+                nullptr /* plTxnReplaced */, false /* bypass_limits */, /* absurdfee*/ 0, /* test_accept */ true, &fee)) {\n+                return HandleATMPError(state, err_string);\n+            } else if (fee > max_tx_fee) {\n+                return TransactionError::MAX_FEE_EXCEEDED;\n             }\n         }\n+        // Try to submit the transaction to the mempool.\n+        if (!AcceptToMemoryPool(*node.mempool, state, tx,\n+                nullptr /* plTxnReplaced */, false /* bypass_limits */, max_tx_fee)) {\n+            return HandleATMPError(state, err_string);\n+        }\n \n         // Transaction was accepted to the mempool.\n "
+      },
+      {
+        "sha": "b1c8606e857d6f49a505d25e6214734c902edbf3",
+        "filename": "src/rpc/rawtransaction.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 1,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b1ea8a00f9fc2ea4b36eef68084c7e45cea54940/src/rpc/rawtransaction.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b1ea8a00f9fc2ea4b36eef68084c7e45cea54940/src/rpc/rawtransaction.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/rawtransaction.cpp?ref=b1ea8a00f9fc2ea4b36eef68084c7e45cea54940",
+        "patch": "@@ -929,12 +929,20 @@ static UniValue testmempoolaccept(const JSONRPCRequest& request)\n \n     TxValidationState state;\n     bool test_accept_res;\n-    CAmount fee;\n+    CAmount fee{0}; // To return transaction fee from AcceptToMemoryPool\n     {\n         LOCK(cs_main);\n         test_accept_res = AcceptToMemoryPool(mempool, state, std::move(tx),\n             nullptr /* plTxnReplaced */, false /* bypass_limits */, max_raw_tx_fee, /* test_accept */ true, &fee);\n     }\n+\n+    // TODO: move ATMP absurdFee check to here\n+    if (state.GetRejectReason().find(\"absurdly-high-fee\") != std::string::npos) {\n+        result_0.pushKV(\"allowed\", test_accept_res);\n+        result_0.pushKV(\"reject-reason\", \"max-fee-exceeded\");\n+        result.push_back(std::move(result_0));\n+        return result;\n+    }\n     result_0.pushKV(\"allowed\", test_accept_res);\n \n     // Only return the fee and vsize if the transaction would pass ATMP."
+      },
+      {
+        "sha": "cf7b639da601c1501b1c42a9d06e4247340d7b04",
+        "filename": "test/functional/rpc_rawtransaction.py",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 4,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b1ea8a00f9fc2ea4b36eef68084c7e45cea54940/test/functional/rpc_rawtransaction.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b1ea8a00f9fc2ea4b36eef68084c7e45cea54940/test/functional/rpc_rawtransaction.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/rpc_rawtransaction.py?ref=b1ea8a00f9fc2ea4b36eef68084c7e45cea54940",
+        "patch": "@@ -456,9 +456,9 @@ def run_test(self):\n         # Thus, testmempoolaccept should reject\n         testres = self.nodes[2].testmempoolaccept([rawTxSigned['hex']], 0.00001000)[0]\n         assert_equal(testres['allowed'], False)\n-        assert_equal(testres['reject-reason'], 'absurdly-high-fee')\n+        assert_equal(testres['reject-reason'], 'max-fee-exceeded')\n         # and sendrawtransaction should throw\n-        assert_raises_rpc_error(-26, \"absurdly-high-fee\", self.nodes[2].sendrawtransaction, rawTxSigned['hex'], 0.00001000)\n+        assert_raises_rpc_error(-25, 'Fee exceeds maximum configured by -maxtxfee', self.nodes[2].sendrawtransaction, rawTxSigned['hex'], 0.00001000)\n         # and the following calls should both succeed\n         testres = self.nodes[2].testmempoolaccept(rawtxs=[rawTxSigned['hex']])[0]\n         assert_equal(testres['allowed'], True)\n@@ -480,9 +480,9 @@ def run_test(self):\n         # Thus, testmempoolaccept should reject\n         testres = self.nodes[2].testmempoolaccept([rawTxSigned['hex']])[0]\n         assert_equal(testres['allowed'], False)\n-        assert_equal(testres['reject-reason'], 'absurdly-high-fee')\n+        assert_equal(testres['reject-reason'], 'max-fee-exceeded')\n         # and sendrawtransaction should throw\n-        assert_raises_rpc_error(-26, \"absurdly-high-fee\", self.nodes[2].sendrawtransaction, rawTxSigned['hex'])\n+        assert_raises_rpc_error(-25, 'Fee exceeds maximum configured by -maxtxfee', self.nodes[2].sendrawtransaction, rawTxSigned['hex'])\n         # and the following calls should both succeed\n         testres = self.nodes[2].testmempoolaccept(rawtxs=[rawTxSigned['hex']], maxfeerate='0.20000000')[0]\n         assert_equal(testres['allowed'], True)"
+      }
+    ]
+  },
+  {
+    "sha": "4568fa37f703244b9331b9cf82ceac0257658d38",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0NTY4ZmEzN2Y3MDMyNDRiOTMzMWI5Y2Y4MmNlYWMwMjU3NjU4ZDM4",
+    "commit": {
+      "author": {
+        "name": "gzhao408",
+        "email": "gzhao408@berkeley.edu",
+        "date": "2020-08-25T14:00:38Z"
+      },
+      "committer": {
+        "name": "gzhao408",
+        "email": "gzhao408@berkeley.edu",
+        "date": "2020-09-24T22:19:32Z"
+      },
+      "message": "scripted-diff: update max-fee-exceeded error message to include RPC\n\n-BEGIN VERIFY SCRIPT-\nsed -i 's/Fee exceeds maximum configured by \\-\\maxtxfee/Fee exceeds maximum configured by user (e.g. -maxtxfee, maxfeerate)/g' src/util/error.cpp test/functional/rpc_fundrawtransaction.py test/functional/rpc_psbt.py test/functional/rpc_rawtransaction.py test/functional/wallet_bumpfee.py test/functional/wallet_create_tx.py\n-END VERIFY SCRIPT-",
+      "tree": {
+        "sha": "a08efa2846c110d44c644de64d5ad464325fc642",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/a08efa2846c110d44c644de64d5ad464325fc642"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/4568fa37f703244b9331b9cf82ceac0257658d38",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4568fa37f703244b9331b9cf82ceac0257658d38",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/4568fa37f703244b9331b9cf82ceac0257658d38",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4568fa37f703244b9331b9cf82ceac0257658d38/comments",
+    "author": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "b1ea8a00f9fc2ea4b36eef68084c7e45cea54940",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b1ea8a00f9fc2ea4b36eef68084c7e45cea54940",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b1ea8a00f9fc2ea4b36eef68084c7e45cea54940"
+      }
+    ],
+    "stats": {
+      "total": 22,
+      "additions": 11,
+      "deletions": 11
+    },
+    "files": [
+      {
+        "sha": "6c94b806837a6379f3124988c73b0b719b90d95c",
+        "filename": "src/util/error.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4568fa37f703244b9331b9cf82ceac0257658d38/src/util/error.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4568fa37f703244b9331b9cf82ceac0257658d38/src/util/error.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/util/error.cpp?ref=4568fa37f703244b9331b9cf82ceac0257658d38",
+        "patch": "@@ -30,7 +30,7 @@ bilingual_str TransactionErrorString(const TransactionError err)\n         case TransactionError::SIGHASH_MISMATCH:\n             return Untranslated(\"Specified sighash value does not match value stored in PSBT\");\n         case TransactionError::MAX_FEE_EXCEEDED:\n-            return Untranslated(\"Fee exceeds maximum configured by -maxtxfee\");\n+            return Untranslated(\"Fee exceeds maximum configured by user (e.g. -maxtxfee, maxfeerate)\");\n         // no default case, so the compiler can warn about missing cases\n     }\n     assert(false);"
+      },
+      {
+        "sha": "7a729f7bc153c1a4fb194030f9bbc936547b7ded",
+        "filename": "test/functional/rpc_fundrawtransaction.py",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4568fa37f703244b9331b9cf82ceac0257658d38/test/functional/rpc_fundrawtransaction.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4568fa37f703244b9331b9cf82ceac0257658d38/test/functional/rpc_fundrawtransaction.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/rpc_fundrawtransaction.py?ref=4568fa37f703244b9331b9cf82ceac0257658d38",
+        "patch": "@@ -667,7 +667,7 @@ def test_option_feerate(self):\n         result = self.nodes[3].fundrawtransaction(rawtx)  # uses self.min_relay_tx_fee (set by settxfee)\n         result2 = self.nodes[3].fundrawtransaction(rawtx, {\"feeRate\": 2 * self.min_relay_tx_fee})\n         result3 = self.nodes[3].fundrawtransaction(rawtx, {\"feeRate\": 10 * self.min_relay_tx_fee})\n-        assert_raises_rpc_error(-4, \"Fee exceeds maximum configured by -maxtxfee\", self.nodes[3].fundrawtransaction, rawtx, {\"feeRate\": 1})\n+        assert_raises_rpc_error(-4, \"Fee exceeds maximum configured by user (e.g. -maxtxfee, maxfeerate)\", self.nodes[3].fundrawtransaction, rawtx, {\"feeRate\": 1})\n         result_fee_rate = result['fee'] * 1000 / count_bytes(result['hex'])\n         assert_fee_amount(result2['fee'], count_bytes(result2['hex']), 2 * result_fee_rate)\n         assert_fee_amount(result3['fee'], count_bytes(result3['hex']), 10 * result_fee_rate)"
+      },
+      {
+        "sha": "ea461e1b23e6fdab3652464ee76f51dda628dade",
+        "filename": "test/functional/rpc_psbt.py",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4568fa37f703244b9331b9cf82ceac0257658d38/test/functional/rpc_psbt.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4568fa37f703244b9331b9cf82ceac0257658d38/test/functional/rpc_psbt.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/rpc_psbt.py?ref=4568fa37f703244b9331b9cf82ceac0257658d38",
+        "patch": "@@ -184,8 +184,8 @@ def run_test(self):\n \n         # feeRate of 10 BTC / KB produces a total fee well above -maxtxfee\n         # previously this was silently capped at -maxtxfee\n-        assert_raises_rpc_error(-4, \"Fee exceeds maximum configured by -maxtxfee\", self.nodes[1].walletcreatefundedpsbt, [{\"txid\":txid,\"vout\":p2wpkh_pos},{\"txid\":txid,\"vout\":p2sh_p2wpkh_pos},{\"txid\":txid,\"vout\":p2pkh_pos}], {self.nodes[1].getnewaddress():29.99}, 0, {\"feeRate\": 10, \"add_inputs\": True})\n-        assert_raises_rpc_error(-4, \"Fee exceeds maximum configured by -maxtxfee\", self.nodes[1].walletcreatefundedpsbt, [{\"txid\":txid,\"vout\":p2wpkh_pos},{\"txid\":txid,\"vout\":p2sh_p2wpkh_pos},{\"txid\":txid,\"vout\":p2pkh_pos}], {self.nodes[1].getnewaddress():1}, 0, {\"feeRate\": 10, \"add_inputs\": False})\n+        assert_raises_rpc_error(-4, \"Fee exceeds maximum configured by user (e.g. -maxtxfee, maxfeerate)\", self.nodes[1].walletcreatefundedpsbt, [{\"txid\":txid,\"vout\":p2wpkh_pos},{\"txid\":txid,\"vout\":p2sh_p2wpkh_pos},{\"txid\":txid,\"vout\":p2pkh_pos}], {self.nodes[1].getnewaddress():29.99}, 0, {\"feeRate\": 10, \"add_inputs\": True})\n+        assert_raises_rpc_error(-4, \"Fee exceeds maximum configured by user (e.g. -maxtxfee, maxfeerate)\", self.nodes[1].walletcreatefundedpsbt, [{\"txid\":txid,\"vout\":p2wpkh_pos},{\"txid\":txid,\"vout\":p2sh_p2wpkh_pos},{\"txid\":txid,\"vout\":p2pkh_pos}], {self.nodes[1].getnewaddress():1}, 0, {\"feeRate\": 10, \"add_inputs\": False})\n \n         # partially sign multisig things with node 1\n         psbtx = wmulti.walletcreatefundedpsbt(inputs=[{\"txid\":txid,\"vout\":p2wsh_pos},{\"txid\":txid,\"vout\":p2sh_pos},{\"txid\":txid,\"vout\":p2sh_p2wsh_pos}], outputs={self.nodes[1].getnewaddress():29.99}, options={'changeAddress': self.nodes[1].getrawchangeaddress()})['psbt']"
+      },
+      {
+        "sha": "31a38319586b61d82a539a19da71f0ab972d13f4",
+        "filename": "test/functional/rpc_rawtransaction.py",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4568fa37f703244b9331b9cf82ceac0257658d38/test/functional/rpc_rawtransaction.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4568fa37f703244b9331b9cf82ceac0257658d38/test/functional/rpc_rawtransaction.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/rpc_rawtransaction.py?ref=4568fa37f703244b9331b9cf82ceac0257658d38",
+        "patch": "@@ -458,7 +458,7 @@ def run_test(self):\n         assert_equal(testres['allowed'], False)\n         assert_equal(testres['reject-reason'], 'max-fee-exceeded')\n         # and sendrawtransaction should throw\n-        assert_raises_rpc_error(-25, 'Fee exceeds maximum configured by -maxtxfee', self.nodes[2].sendrawtransaction, rawTxSigned['hex'], 0.00001000)\n+        assert_raises_rpc_error(-25, 'Fee exceeds maximum configured by user (e.g. -maxtxfee, maxfeerate)', self.nodes[2].sendrawtransaction, rawTxSigned['hex'], 0.00001000)\n         # and the following calls should both succeed\n         testres = self.nodes[2].testmempoolaccept(rawtxs=[rawTxSigned['hex']])[0]\n         assert_equal(testres['allowed'], True)\n@@ -482,7 +482,7 @@ def run_test(self):\n         assert_equal(testres['allowed'], False)\n         assert_equal(testres['reject-reason'], 'max-fee-exceeded')\n         # and sendrawtransaction should throw\n-        assert_raises_rpc_error(-25, 'Fee exceeds maximum configured by -maxtxfee', self.nodes[2].sendrawtransaction, rawTxSigned['hex'])\n+        assert_raises_rpc_error(-25, 'Fee exceeds maximum configured by user (e.g. -maxtxfee, maxfeerate)', self.nodes[2].sendrawtransaction, rawTxSigned['hex'])\n         # and the following calls should both succeed\n         testres = self.nodes[2].testmempoolaccept(rawtxs=[rawTxSigned['hex']], maxfeerate='0.20000000')[0]\n         assert_equal(testres['allowed'], True)"
+      },
+      {
+        "sha": "4b29e65b0985e6afac1290f1be696e72e07ac9a9",
+        "filename": "test/functional/wallet_bumpfee.py",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4568fa37f703244b9331b9cf82ceac0257658d38/test/functional/wallet_bumpfee.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4568fa37f703244b9331b9cf82ceac0257658d38/test/functional/wallet_bumpfee.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/wallet_bumpfee.py?ref=4568fa37f703244b9331b9cf82ceac0257658d38",
+        "patch": "@@ -348,7 +348,7 @@ def test_maxtxfee_fails(self, rbf_node, dest_address):\n     self.restart_node(1, ['-maxtxfee=0.000025'] + self.extra_args[1])\n     rbf_node.walletpassphrase(WALLET_PASSPHRASE, WALLET_PASSPHRASE_TIMEOUT)\n     rbfid = spend_one_input(rbf_node, dest_address)\n-    assert_raises_rpc_error(-4, \"Unable to create transaction. Fee exceeds maximum configured by -maxtxfee\", rbf_node.bumpfee, rbfid)\n+    assert_raises_rpc_error(-4, \"Unable to create transaction. Fee exceeds maximum configured by user (e.g. -maxtxfee, maxfeerate)\", rbf_node.bumpfee, rbfid)\n     self.restart_node(1, self.extra_args[1])\n     rbf_node.walletpassphrase(WALLET_PASSPHRASE, WALLET_PASSPHRASE_TIMEOUT)\n     self.connect_nodes(1, 0)"
+      },
+      {
+        "sha": "0f11aca525e696631113f5a99b706f19cdba7dfd",
+        "filename": "test/functional/wallet_create_tx.py",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 4,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4568fa37f703244b9331b9cf82ceac0257658d38/test/functional/wallet_create_tx.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4568fa37f703244b9331b9cf82ceac0257658d38/test/functional/wallet_create_tx.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/wallet_create_tx.py?ref=4568fa37f703244b9331b9cf82ceac0257658d38",
+        "patch": "@@ -53,12 +53,12 @@ def test_tx_size_too_large(self):\n             self.restart_node(0, extra_args=[fee_setting])\n             assert_raises_rpc_error(\n                 -6,\n-                \"Fee exceeds maximum configured by -maxtxfee\",\n+                \"Fee exceeds maximum configured by user (e.g. -maxtxfee, maxfeerate)\",\n                 lambda: self.nodes[0].sendmany(dummy=\"\", amounts=outputs),\n             )\n             assert_raises_rpc_error(\n                 -4,\n-                \"Fee exceeds maximum configured by -maxtxfee\",\n+                \"Fee exceeds maximum configured by user (e.g. -maxtxfee, maxfeerate)\",\n                 lambda: self.nodes[0].fundrawtransaction(hexstring=raw_tx),\n             )\n \n@@ -67,12 +67,12 @@ def test_tx_size_too_large(self):\n         self.nodes[0].settxfee(0.01)\n         assert_raises_rpc_error(\n             -6,\n-            \"Fee exceeds maximum configured by -maxtxfee\",\n+            \"Fee exceeds maximum configured by user (e.g. -maxtxfee, maxfeerate)\",\n             lambda: self.nodes[0].sendmany(dummy=\"\", amounts=outputs),\n         )\n         assert_raises_rpc_error(\n             -4,\n-            \"Fee exceeds maximum configured by -maxtxfee\",\n+            \"Fee exceeds maximum configured by user (e.g. -maxtxfee, maxfeerate)\",\n             lambda: self.nodes[0].fundrawtransaction(hexstring=raw_tx),\n         )\n         self.nodes[0].settxfee(0)"
+      }
+    ]
+  },
+  {
+    "sha": "b635b5d51d1b518000cdc73620dbcd439104abf8",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiNjM1YjVkNTFkMWI1MTgwMDBjZGM3MzYyMGRiY2Q0MzkxMDRhYmY4",
+    "commit": {
+      "author": {
+        "name": "gzhao408",
+        "email": "gzhao408@berkeley.edu",
+        "date": "2020-07-25T19:37:20Z"
+      },
+      "committer": {
+        "name": "gzhao408",
+        "email": "gzhao408@berkeley.edu",
+        "date": "2020-09-24T22:19:32Z"
+      },
+      "message": "[validation] ignore absurdfee arg in ATMP",
+      "tree": {
+        "sha": "9d3dacbd9bbb74b2fda8c0d2a567613d1f493ab9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/9d3dacbd9bbb74b2fda8c0d2a567613d1f493ab9"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/b635b5d51d1b518000cdc73620dbcd439104abf8",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b635b5d51d1b518000cdc73620dbcd439104abf8",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/b635b5d51d1b518000cdc73620dbcd439104abf8",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b635b5d51d1b518000cdc73620dbcd439104abf8/comments",
+    "author": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "4568fa37f703244b9331b9cf82ceac0257658d38",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4568fa37f703244b9331b9cf82ceac0257658d38",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/4568fa37f703244b9331b9cf82ceac0257658d38"
+      }
+    ],
+    "stats": {
+      "total": 9,
+      "additions": 4,
+      "deletions": 5
+    },
+    "files": [
+      {
+        "sha": "3bf258f1b2f7d3557dc2183463bfacdd98703e05",
+        "filename": "src/rpc/rawtransaction.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 3,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b635b5d51d1b518000cdc73620dbcd439104abf8/src/rpc/rawtransaction.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b635b5d51d1b518000cdc73620dbcd439104abf8/src/rpc/rawtransaction.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/rawtransaction.cpp?ref=b635b5d51d1b518000cdc73620dbcd439104abf8",
+        "patch": "@@ -936,9 +936,9 @@ static UniValue testmempoolaccept(const JSONRPCRequest& request)\n             nullptr /* plTxnReplaced */, false /* bypass_limits */, max_raw_tx_fee, /* test_accept */ true, &fee);\n     }\n \n-    // TODO: move ATMP absurdFee check to here\n-    if (state.GetRejectReason().find(\"absurdly-high-fee\") != std::string::npos) {\n-        result_0.pushKV(\"allowed\", test_accept_res);\n+    // Check that fee does not exceed maxfee\n+    if (test_accept_res && max_raw_tx_fee && fee > max_raw_tx_fee) {\n+        result_0.pushKV(\"allowed\", false);\n         result_0.pushKV(\"reject-reason\", \"max-fee-exceeded\");\n         result.push_back(std::move(result_0));\n         return result;"
+      },
+      {
+        "sha": "b9384823418aa8e74d61dc712db5196dc5cdb5d4",
+        "filename": "src/validation.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 2,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b635b5d51d1b518000cdc73620dbcd439104abf8/src/validation.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b635b5d51d1b518000cdc73620dbcd439104abf8/src/validation.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.cpp?ref=b635b5d51d1b518000cdc73620dbcd439104abf8",
+        "patch": "@@ -733,8 +733,7 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)\n     if (!bypass_limits && !CheckFeeRate(nSize, nModifiedFees, state)) return false;\n \n     if (nAbsurdFee && nFees > nAbsurdFee)\n-        return state.Invalid(TxValidationResult::TX_NOT_STANDARD,\n-                \"absurdly-high-fee\", strprintf(\"%d > %d\", nFees, nAbsurdFee));\n+        LogPrintf(\"Ignoring Absurdfee\\n\");\n \n     const CTxMemPool::setEntries setIterConflicting = m_pool.GetIterSet(setConflicts);\n     // Calculate in-mempool ancestors, up to a limit."
+      }
+    ]
+  },
+  {
+    "sha": "22ebb7fda03fd18361066b4ce92eeed009542976",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyMmViYjdmZGEwM2ZkMTgzNjEwNjZiNGNlOTJlZWVkMDA5NTQyOTc2",
+    "commit": {
+      "author": {
+        "name": "John Newbery",
+        "email": "john@johnnewbery.com",
+        "date": "2019-04-12T20:22:12Z"
+      },
+      "committer": {
+        "name": "gzhao408",
+        "email": "gzhao408@berkeley.edu",
+        "date": "2020-09-24T22:19:32Z"
+      },
+      "message": "[validation] Remove absurdfee from accepttomempool\n\nMempool behavior should not be user-specific.\nChecking that txfee is acceptable should be\nthe responsibility of the wallet or client, not\nthe mempool.",
+      "tree": {
+        "sha": "074e26ca52c339fbba1eb0a6ec8db581535d4727",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/074e26ca52c339fbba1eb0a6ec8db581535d4727"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/22ebb7fda03fd18361066b4ce92eeed009542976",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/22ebb7fda03fd18361066b4ce92eeed009542976",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/22ebb7fda03fd18361066b4ce92eeed009542976",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/22ebb7fda03fd18361066b4ce92eeed009542976/comments",
+    "author": {
+      "login": "jnewbery",
+      "id": 1063656,
+      "node_id": "MDQ6VXNlcjEwNjM2NTY=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1063656?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jnewbery",
+      "html_url": "https://github.com/jnewbery",
+      "followers_url": "https://api.github.com/users/jnewbery/followers",
+      "following_url": "https://api.github.com/users/jnewbery/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jnewbery/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jnewbery/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jnewbery/subscriptions",
+      "organizations_url": "https://api.github.com/users/jnewbery/orgs",
+      "repos_url": "https://api.github.com/users/jnewbery/repos",
+      "events_url": "https://api.github.com/users/jnewbery/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jnewbery/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "b635b5d51d1b518000cdc73620dbcd439104abf8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b635b5d51d1b518000cdc73620dbcd439104abf8",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b635b5d51d1b518000cdc73620dbcd439104abf8"
+      }
+    ],
+    "stats": {
+      "total": 39,
+      "additions": 16,
+      "deletions": 23
+    },
+    "files": [
+      {
+        "sha": "99a7ad237b6e981cf4a74b782a5f53b656692396",
+        "filename": "src/bench/block_assemble.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/22ebb7fda03fd18361066b4ce92eeed009542976/src/bench/block_assemble.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/22ebb7fda03fd18361066b4ce92eeed009542976/src/bench/block_assemble.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bench/block_assemble.cpp?ref=22ebb7fda03fd18361066b4ce92eeed009542976",
+        "patch": "@@ -49,7 +49,7 @@ static void AssembleBlock(benchmark::Bench& bench)\n \n         for (const auto& txr : txs) {\n             TxValidationState state;\n-            bool ret{::AcceptToMemoryPool(*test_setup.m_node.mempool, state, txr, nullptr /* plTxnReplaced */, false /* bypass_limits */, /* nAbsurdFee */ 0)};\n+            bool ret{::AcceptToMemoryPool(*test_setup.m_node.mempool, state, txr, nullptr /* plTxnReplaced */, false /* bypass_limits */)};\n             assert(ret);\n         }\n     }"
+      },
+      {
+        "sha": "42e2a9ddc2bf2f3db8615665fdedd91a8685c38b",
+        "filename": "src/net_processing.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/22ebb7fda03fd18361066b4ce92eeed009542976/src/net_processing.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/22ebb7fda03fd18361066b4ce92eeed009542976/src/net_processing.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.cpp?ref=22ebb7fda03fd18361066b4ce92eeed009542976",
+        "patch": "@@ -2044,7 +2044,7 @@ void PeerManager::ProcessOrphanTx(std::set<uint256>& orphan_work_set, std::list<\n         TxValidationState orphan_state;\n \n         if (setMisbehaving.count(fromPeer)) continue;\n-        if (AcceptToMemoryPool(m_mempool, orphan_state, porphanTx, &removed_txn, false /* bypass_limits */, 0 /* nAbsurdFee */)) {\n+        if (AcceptToMemoryPool(m_mempool, orphan_state, porphanTx, &removed_txn, false /* bypass_limits */)) {\n             LogPrint(BCLog::MEMPOOL, \"   accepted orphan tx %s\\n\", orphanHash.ToString());\n             RelayTransaction(orphanHash, porphanTx->GetWitnessHash(), m_connman);\n             for (unsigned int i = 0; i < orphanTx.vout.size(); i++) {\n@@ -3002,7 +3002,7 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat\n         // (older than our recency filter) if trying to DoS us, without any need\n         // for witness malleation.\n         if (!AlreadyHaveTx(GenTxid(/* is_wtxid=*/true, wtxid), m_mempool) &&\n-            AcceptToMemoryPool(m_mempool, state, ptx, &lRemovedTxn, false /* bypass_limits */, 0 /* nAbsurdFee */)) {\n+            AcceptToMemoryPool(m_mempool, state, ptx, &lRemovedTxn, false /* bypass_limits */)) {\n             m_mempool.check(&::ChainstateActive().CoinsTip());\n             RelayTransaction(tx.GetHash(), tx.GetWitnessHash(), m_connman);\n             for (unsigned int i = 0; i < tx.vout.size(); i++) {"
+      },
+      {
+        "sha": "ba2291ac26dfb280263e038dbae2dec5d4998c70",
+        "filename": "src/node/transaction.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/22ebb7fda03fd18361066b4ce92eeed009542976/src/node/transaction.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/22ebb7fda03fd18361066b4ce92eeed009542976/src/node/transaction.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/node/transaction.cpp?ref=22ebb7fda03fd18361066b4ce92eeed009542976",
+        "patch": "@@ -55,15 +55,15 @@ TransactionError BroadcastTransaction(NodeContext& node, const CTransactionRef t\n             // First, call ATMP with test_accept and check the fee. If ATMP\n             // fails here, return error immediately.\n             if (!AcceptToMemoryPool(*node.mempool, state, tx,\n-                nullptr /* plTxnReplaced */, false /* bypass_limits */, /* absurdfee*/ 0, /* test_accept */ true, &fee)) {\n+                nullptr /* plTxnReplaced */, false /* bypass_limits */, /* test_accept */ true, &fee)) {\n                 return HandleATMPError(state, err_string);\n             } else if (fee > max_tx_fee) {\n                 return TransactionError::MAX_FEE_EXCEEDED;\n             }\n         }\n         // Try to submit the transaction to the mempool.\n         if (!AcceptToMemoryPool(*node.mempool, state, tx,\n-                nullptr /* plTxnReplaced */, false /* bypass_limits */, max_tx_fee)) {\n+                nullptr /* plTxnReplaced */, false /* bypass_limits */)) {\n             return HandleATMPError(state, err_string);\n         }\n "
+      },
+      {
+        "sha": "cfc83961af400bae6af3909b20803f92bdf4458f",
+        "filename": "src/rpc/rawtransaction.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/22ebb7fda03fd18361066b4ce92eeed009542976/src/rpc/rawtransaction.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/22ebb7fda03fd18361066b4ce92eeed009542976/src/rpc/rawtransaction.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/rawtransaction.cpp?ref=22ebb7fda03fd18361066b4ce92eeed009542976",
+        "patch": "@@ -933,7 +933,7 @@ static UniValue testmempoolaccept(const JSONRPCRequest& request)\n     {\n         LOCK(cs_main);\n         test_accept_res = AcceptToMemoryPool(mempool, state, std::move(tx),\n-            nullptr /* plTxnReplaced */, false /* bypass_limits */, max_raw_tx_fee, /* test_accept */ true, &fee);\n+            nullptr /* plTxnReplaced */, false /* bypass_limits */, /* test_accept */ true, &fee);\n     }\n \n     // Check that fee does not exceed maxfee"
+      },
+      {
+        "sha": "7e6246d68f8817b9c20b7910009c9144ef54b685",
+        "filename": "src/test/txvalidation_tests.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 2,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/22ebb7fda03fd18361066b4ce92eeed009542976/src/test/txvalidation_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/22ebb7fda03fd18361066b4ce92eeed009542976/src/test/txvalidation_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/txvalidation_tests.cpp?ref=22ebb7fda03fd18361066b4ce92eeed009542976",
+        "patch": "@@ -40,8 +40,7 @@ BOOST_FIXTURE_TEST_CASE(tx_mempool_reject_coinbase, TestChain100Setup)\n             false,\n             AcceptToMemoryPool(*m_node.mempool, state, MakeTransactionRef(coinbaseTx),\n                 nullptr /* plTxnReplaced */,\n-                true /* bypass_limits */,\n-                0 /* nAbsurdFee */));\n+                true /* bypass_limits */));\n \n     // Check that the transaction hasn't been added to mempool.\n     BOOST_CHECK_EQUAL(m_node.mempool->size(), initialPoolSize);"
+      },
+      {
+        "sha": "bed2ba3608740cdfd110d833b72cc0123afe6a1c",
+        "filename": "src/test/txvalidationcache_tests.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/22ebb7fda03fd18361066b4ce92eeed009542976/src/test/txvalidationcache_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/22ebb7fda03fd18361066b4ce92eeed009542976/src/test/txvalidationcache_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/txvalidationcache_tests.cpp?ref=22ebb7fda03fd18361066b4ce92eeed009542976",
+        "patch": "@@ -30,7 +30,7 @@ BOOST_FIXTURE_TEST_CASE(tx_mempool_block_doublespend, TestChain100Setup)\n \n         TxValidationState state;\n         return AcceptToMemoryPool(*m_node.mempool, state, MakeTransactionRef(tx),\n-            nullptr /* plTxnReplaced */, true /* bypass_limits */, 0 /* nAbsurdFee */);\n+            nullptr /* plTxnReplaced */, true /* bypass_limits */);\n     };\n \n     // Create a double-spend of mature coinbase txn:"
+      },
+      {
+        "sha": "ea17cb50f10395a9025df70dd4460da3371e949a",
+        "filename": "src/test/validation_block_tests.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 2,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/22ebb7fda03fd18361066b4ce92eeed009542976/src/test/validation_block_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/22ebb7fda03fd18361066b4ce92eeed009542976/src/test/validation_block_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/validation_block_tests.cpp?ref=22ebb7fda03fd18361066b4ce92eeed009542976",
+        "patch": "@@ -291,8 +291,7 @@ BOOST_AUTO_TEST_CASE(mempool_locks_reorg)\n                     state,\n                     tx,\n                     &plTxnReplaced,\n-                    /* bypass_limits */ false,\n-                    /* nAbsurdFee */ 0));\n+                    /* bypass_limits */ false));\n             }\n         }\n "
+      },
+      {
+        "sha": "96b5360f0d5d39ebb179e4034a029e2edefb89f7",
+        "filename": "src/validation.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 11,
+        "changes": 17,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/22ebb7fda03fd18361066b4ce92eeed009542976/src/validation.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/22ebb7fda03fd18361066b4ce92eeed009542976/src/validation.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.cpp?ref=22ebb7fda03fd18361066b4ce92eeed009542976",
+        "patch": "@@ -387,7 +387,7 @@ static void UpdateMempoolForReorg(CTxMemPool& mempool, DisconnectedBlockTransact\n         TxValidationState stateDummy;\n         if (!fAddToMempool || (*it)->IsCoinBase() ||\n             !AcceptToMemoryPool(mempool, stateDummy, *it,\n-                                nullptr /* plTxnReplaced */, true /* bypass_limits */, 0 /* nAbsurdFee */)) {\n+                                nullptr /* plTxnReplaced */, true /* bypass_limits */)) {\n             // If the transaction doesn't make it in to the mempool, remove any\n             // transactions that depend on it (which would now be orphans).\n             mempool.removeRecursive(**it, MemPoolRemovalReason::REORG);\n@@ -466,7 +466,6 @@ class MemPoolAccept\n         const int64_t m_accept_time;\n         std::list<CTransactionRef>* m_replaced_transactions;\n         const bool m_bypass_limits;\n-        const CAmount& m_absurd_fee;\n         /*\n          * Return any outpoints which were not previously present in the coins\n          * cache, but were added as a result of validating the tx for mempool\n@@ -561,7 +560,6 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)\n     TxValidationState &state = args.m_state;\n     const int64_t nAcceptTime = args.m_accept_time;\n     const bool bypass_limits = args.m_bypass_limits;\n-    const CAmount& nAbsurdFee = args.m_absurd_fee;\n     std::vector<COutPoint>& coins_to_uncache = args.m_coins_to_uncache;\n \n     // Alias what we need out of ws\n@@ -732,9 +730,6 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)\n     // blocks\n     if (!bypass_limits && !CheckFeeRate(nSize, nModifiedFees, state)) return false;\n \n-    if (nAbsurdFee && nFees > nAbsurdFee)\n-        LogPrintf(\"Ignoring Absurdfee\\n\");\n-\n     const CTxMemPool::setEntries setIterConflicting = m_pool.GetIterSet(setConflicts);\n     // Calculate in-mempool ancestors, up to a limit.\n     if (setConflicts.size() == 1) {\n@@ -1067,10 +1062,10 @@ bool MemPoolAccept::AcceptSingleTransaction(const CTransactionRef& ptx, ATMPArgs\n /** (try to) add transaction to memory pool with a specified acceptance time **/\n static bool AcceptToMemoryPoolWithTime(const CChainParams& chainparams, CTxMemPool& pool, TxValidationState &state, const CTransactionRef &tx,\n                         int64_t nAcceptTime, std::list<CTransactionRef>* plTxnReplaced,\n-                        bool bypass_limits, const CAmount nAbsurdFee, bool test_accept, CAmount* fee_out=nullptr) EXCLUSIVE_LOCKS_REQUIRED(cs_main)\n+                        bool bypass_limits, bool test_accept, CAmount* fee_out=nullptr) EXCLUSIVE_LOCKS_REQUIRED(cs_main)\n {\n     std::vector<COutPoint> coins_to_uncache;\n-    MemPoolAccept::ATMPArgs args { chainparams, state, nAcceptTime, plTxnReplaced, bypass_limits, nAbsurdFee, coins_to_uncache, test_accept, fee_out };\n+    MemPoolAccept::ATMPArgs args { chainparams, state, nAcceptTime, plTxnReplaced, bypass_limits, coins_to_uncache, test_accept, fee_out };\n     bool res = MemPoolAccept(pool).AcceptSingleTransaction(tx, args);\n     if (!res) {\n         // Remove coins that were not present in the coins cache before calling ATMPW;\n@@ -1089,10 +1084,10 @@ static bool AcceptToMemoryPoolWithTime(const CChainParams& chainparams, CTxMemPo\n \n bool AcceptToMemoryPool(CTxMemPool& pool, TxValidationState &state, const CTransactionRef &tx,\n                         std::list<CTransactionRef>* plTxnReplaced,\n-                        bool bypass_limits, const CAmount nAbsurdFee, bool test_accept, CAmount* fee_out)\n+                        bool bypass_limits, bool test_accept, CAmount* fee_out)\n {\n     const CChainParams& chainparams = Params();\n-    return AcceptToMemoryPoolWithTime(chainparams, pool, state, tx, GetTime(), plTxnReplaced, bypass_limits, nAbsurdFee, test_accept, fee_out);\n+    return AcceptToMemoryPoolWithTime(chainparams, pool, state, tx, GetTime(), plTxnReplaced, bypass_limits, test_accept, fee_out);\n }\n \n CTransactionRef GetTransaction(const CBlockIndex* const block_index, const CTxMemPool* const mempool, const uint256& hash, const Consensus::Params& consensusParams, uint256& hashBlock)\n@@ -5090,7 +5085,7 @@ bool LoadMempool(CTxMemPool& pool)\n             if (nTime + nExpiryTimeout > nNow) {\n                 LOCK(cs_main);\n                 AcceptToMemoryPoolWithTime(chainparams, pool, state, tx, nTime,\n-                                           nullptr /* plTxnReplaced */, false /* bypass_limits */, 0 /* nAbsurdFee */,\n+                                           nullptr /* plTxnReplaced */, false /* bypass_limits */,\n                                            false /* test_accept */);\n                 if (state.IsValid()) {\n                     ++count;"
+      },
+      {
+        "sha": "99b3118e845e0a1b4e005783a4a1bdb4706c0524",
+        "filename": "src/validation.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/22ebb7fda03fd18361066b4ce92eeed009542976/src/validation.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/22ebb7fda03fd18361066b4ce92eeed009542976/src/validation.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.h?ref=22ebb7fda03fd18361066b4ce92eeed009542976",
+        "patch": "@@ -201,7 +201,7 @@ void PruneBlockFilesManual(int nManualPruneHeight);\n  * @param[out] fee_out optional argument to return tx fee to the caller **/\n bool AcceptToMemoryPool(CTxMemPool& pool, TxValidationState &state, const CTransactionRef &tx,\n                         std::list<CTransactionRef>* plTxnReplaced,\n-                        bool bypass_limits, const CAmount nAbsurdFee, bool test_accept=false, CAmount* fee_out=nullptr) EXCLUSIVE_LOCKS_REQUIRED(cs_main);\n+                        bool bypass_limits, bool test_accept=false, CAmount* fee_out=nullptr) EXCLUSIVE_LOCKS_REQUIRED(cs_main);\n \n /** Get the BIP9 state for a given deployment at the current tip. */\n ThresholdState VersionBitsTipState(const Consensus::Params& params, Consensus::DeploymentPos pos);"
+      }
+    ]
+  },
+  {
+    "sha": "6831972c09837c1a06034eaf63dfc4f3a6f0db6b",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2ODMxOTcyYzA5ODM3YzFhMDYwMzRlYWY2M2RmYzRmM2E2ZjBkYjZi",
+    "commit": {
+      "author": {
+        "name": "gzhao408",
+        "email": "gzhao408@berkeley.edu",
+        "date": "2020-09-18T16:37:16Z"
+      },
+      "committer": {
+        "name": "gzhao408",
+        "email": "gzhao408@berkeley.edu",
+        "date": "2020-09-26T15:43:47Z"
+      },
+      "message": "[validation] add GetTransactionFee\n\nCo-authored-by: Suhas Daftuar <sdaftuar@gmail.com>",
+      "tree": {
+        "sha": "e6b01647e907be3c7b1b1d17220da9e984a6e8a3",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/e6b01647e907be3c7b1b1d17220da9e984a6e8a3"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/6831972c09837c1a06034eaf63dfc4f3a6f0db6b",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6831972c09837c1a06034eaf63dfc4f3a6f0db6b",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/6831972c09837c1a06034eaf63dfc4f3a6f0db6b",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6831972c09837c1a06034eaf63dfc4f3a6f0db6b/comments",
+    "author": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "22ebb7fda03fd18361066b4ce92eeed009542976",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/22ebb7fda03fd18361066b4ce92eeed009542976",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/22ebb7fda03fd18361066b4ce92eeed009542976"
+      }
+    ],
+    "stats": {
+      "total": 42,
+      "additions": 37,
+      "deletions": 5
+    },
+    "files": [
+      {
+        "sha": "47b7992f1cc01b158ecdfdbf81ce91dcdccb6d4d",
+        "filename": "src/node/transaction.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 5,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6831972c09837c1a06034eaf63dfc4f3a6f0db6b/src/node/transaction.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6831972c09837c1a06034eaf63dfc4f3a6f0db6b/src/node/transaction.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/node/transaction.cpp?ref=6831972c09837c1a06034eaf63dfc4f3a6f0db6b",
+        "patch": "@@ -50,12 +50,14 @@ TransactionError BroadcastTransaction(NodeContext& node, const CTransactionRef t\n     if (!node.mempool->exists(hashTx)) {\n         // Transaction is not already in the mempool.\n         TxValidationState state;\n-        CAmount fee{0};\n         if (max_tx_fee) {\n-            // First, call ATMP with test_accept and check the fee. If ATMP\n-            // fails here, return error immediately.\n-            if (!AcceptToMemoryPool(*node.mempool, state, tx,\n-                nullptr /* plTxnReplaced */, false /* bypass_limits */, /* test_accept */ true, &fee)) {\n+            // First, check that transaction fee does not exceed max_tx_fee.\n+            Optional<CAmount> fee = GetTransactionFee(*node.mempool, state, *tx);\n+            if (fee == nullopt) {\n+                // Failed GetTransactionFee indicates a validation failure.\n+                // Use ATMP with test_accept to return the validation error.\n+                AcceptToMemoryPool(*node.mempool, state, tx,\n+                    nullptr /* plTxnReplaced */, false /* bypass_limits */, true /* test_accept */);\n                 return HandleATMPError(state, err_string);\n             } else if (fee > max_tx_fee) {\n                 return TransactionError::MAX_FEE_EXCEEDED;"
+      },
+      {
+        "sha": "be2d53023a718abe47dc76ea3ce9d2430c8edb6b",
+        "filename": "src/validation.cpp",
+        "status": "modified",
+        "additions": 22,
+        "deletions": 0,
+        "changes": 22,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6831972c09837c1a06034eaf63dfc4f3a6f0db6b/src/validation.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6831972c09837c1a06034eaf63dfc4f3a6f0db6b/src/validation.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.cpp?ref=6831972c09837c1a06034eaf63dfc4f3a6f0db6b",
+        "patch": "@@ -1090,6 +1090,28 @@ bool AcceptToMemoryPool(CTxMemPool& pool, TxValidationState &state, const CTrans\n     return AcceptToMemoryPoolWithTime(chainparams, pool, state, tx, GetTime(), plTxnReplaced, bypass_limits, test_accept, fee_out);\n }\n \n+Optional<CAmount> GetTransactionFee(CTxMemPool& pool, TxValidationState& state, const CTransaction& tx)\n+{\n+    AssertLockHeld(cs_main);\n+    LOCK(pool.cs);\n+\n+    CCoinsViewMemPool viewmempool(&::ChainstateActive().CoinsTip(), pool);\n+    CCoinsViewCache view(&viewmempool);\n+\n+    CAmount fee_out = 0;\n+\n+    // Fees don't make sense for coinbase transactions\n+    if (tx.IsCoinBase()) {\n+        return nullopt;\n+    }\n+    // Re-use the fee calculation in CheckTxInputs, which also validates that\n+    // the fee calculation is correct (i.e. that we don't overflow)\n+    if (!Consensus::CheckTxInputs(tx, state, view, GetSpendHeight(view), fee_out)) {\n+        return nullopt;\n+    }\n+    return fee_out;\n+}\n+\n CTransactionRef GetTransaction(const CBlockIndex* const block_index, const CTxMemPool* const mempool, const uint256& hash, const Consensus::Params& consensusParams, uint256& hashBlock)\n {\n     LOCK(cs_main);"
+      },
+      {
+        "sha": "b7a4c983180055eed7639e05d92c6f4a7881313d",
+        "filename": "src/validation.h",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 0,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6831972c09837c1a06034eaf63dfc4f3a6f0db6b/src/validation.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6831972c09837c1a06034eaf63dfc4f3a6f0db6b/src/validation.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.h?ref=6831972c09837c1a06034eaf63dfc4f3a6f0db6b",
+        "patch": "@@ -212,6 +212,14 @@ BIP9Stats VersionBitsTipStatistics(const Consensus::Params& params, Consensus::D\n /** Get the block height at which the BIP9 deployment switched into the state for the block building on the current tip. */\n int VersionBitsTipStateSinceHeight(const Consensus::Params& params, Consensus::DeploymentPos pos);\n \n+/**\n+* Calculate the fee of a transaction by looking up inputs from the mempool if\n+* necessary. Return true if the fee was successfully calculated, or false if\n+* an error with the transaction was discovered.\n+* If the transaction is valid, then the fee returned is correct.\n+* However, success does not imply that the transaction is valid.\n+*/\n+Optional<CAmount> GetTransactionFee(CTxMemPool& pool, TxValidationState& state, const CTransaction& tx);\n \n /** Apply the effects of this transaction on the UTXO set represented by view */\n void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight);"
+      }
+    ]
+  }
+]

@@ -1,0 +1,482 @@
+[
+  {
+    "sha": "de41b63e3f6b26055995acac4db7b8c633fae43e",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkZTQxYjYzZTNmNmIyNjA1NTk5NWFjYWM0ZGI3YjhjNjMzZmFlNDNl",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-08-08T15:05:45Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-08-25T19:13:16Z"
+      },
+      "message": "Encapsulate class CAddress public members.",
+      "tree": {
+        "sha": "3f078f108dffa80182283b72b9543d55f8480c51",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/3f078f108dffa80182283b72b9543d55f8480c51"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/de41b63e3f6b26055995acac4db7b8c633fae43e",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/de41b63e3f6b26055995acac4db7b8c633fae43e",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/de41b63e3f6b26055995acac4db7b8c633fae43e",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/de41b63e3f6b26055995acac4db7b8c633fae43e/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "49f954f154e3576a6a8270e00ab95f52dd02c667",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/49f954f154e3576a6a8270e00ab95f52dd02c667",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/49f954f154e3576a6a8270e00ab95f52dd02c667"
+      }
+    ],
+    "stats": {
+      "total": 46,
+      "additions": 26,
+      "deletions": 20
+    },
+    "files": [
+      {
+        "sha": "3cd6e5db93ec1cbfa99dd3b6792e87cf59d4517b",
+        "filename": "src/addrman.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 9,
+        "changes": 18,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/de41b63e3f6b26055995acac4db7b8c633fae43e/src/addrman.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/de41b63e3f6b26055995acac4db7b8c633fae43e/src/addrman.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/addrman.cpp?ref=de41b63e3f6b26055995acac4db7b8c633fae43e",
+        "patch": "@@ -279,7 +279,7 @@ void CAddrMan::Good_(const CService &addr, int64_t nTime)\n     // update info\n     info.nLastSuccess = nTime;\n     info.nLastTry = nTime;\n-    info.nTime = nTime;\n+    info.SetTime(nTime);\n     info.nAttempts = 0;\n \n     // if it is already in the tried set, don't do anything else\n@@ -322,16 +322,16 @@ bool CAddrMan::Add_(const CAddress &addr, const CNetAddr& source, int64_t nTimeP\n     if (pinfo)\n     {\n         // periodically update nTime\n-        bool fCurrentlyOnline = (GetAdjustedTime() - addr.nTime < 24 * 60 * 60);\n+        bool fCurrentlyOnline = (GetAdjustedTime() - addr.GetTime() < 24 * 60 * 60);\n         int64_t nUpdateInterval = (fCurrentlyOnline ? 60 * 60 : 24 * 60 * 60);\n-        if (addr.nTime && (!pinfo->nTime || pinfo->nTime < addr.nTime - nUpdateInterval - nTimePenalty))\n-            pinfo->nTime = max((int64_t)0, addr.nTime - nTimePenalty);\n+        if (addr.GetTime() && (!pinfo->GetTime() || pinfo->GetTime() < addr.GetTime() - nUpdateInterval - nTimePenalty))\n+            pinfo->SetTime(max((int64_t)0, addr.GetTime() - nTimePenalty));\n \n         // add services\n-        pinfo->nServices |= addr.nServices;\n+        pinfo->AddServices(addr.GetServices());\n \n         // do not update if no new information is present\n-        if (!addr.nTime || (pinfo->nTime && addr.nTime <= pinfo->nTime))\n+        if (!addr.GetTime() || (pinfo->GetTime() && addr.GetTime() <= pinfo->GetTime()))\n             return false;\n \n         // do not update if the entry was already in the \"tried\" table\n@@ -350,7 +350,7 @@ bool CAddrMan::Add_(const CAddress &addr, const CNetAddr& source, int64_t nTimeP\n             return false;\n     } else {\n         pinfo = Create(addr, source, &nId);\n-        pinfo->nTime = max((int64_t)0, (int64_t)pinfo->nTime - nTimePenalty);\n+        pinfo->SetTime(max((int64_t)0, (int64_t)pinfo->GetTime() - nTimePenalty));\n         nNew++;\n         fNew = true;\n     }\n@@ -528,6 +528,6 @@ void CAddrMan::Connected_(const CService &addr, int64_t nTime)\n \n     // update info\n     int64_t nUpdateInterval = 20 * 60;\n-    if (nTime - info.nTime > nUpdateInterval)\n-        info.nTime = nTime;\n+    if (nTime - info.GetTime() > nUpdateInterval)\n+        info.SetTime(nTime);\n }"
+      },
+      {
+        "sha": "b6f6aa7c5bc354920669d1a4c2ed8200d993f441",
+        "filename": "src/chainparams.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/de41b63e3f6b26055995acac4db7b8c633fae43e/src/chainparams.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/de41b63e3f6b26055995acac4db7b8c633fae43e/src/chainparams.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/chainparams.cpp?ref=de41b63e3f6b26055995acac4db7b8c633fae43e",
+        "patch": "@@ -38,7 +38,7 @@ static void convertSeed6(std::vector<CAddress> &vSeedsOut, const SeedSpec6 *data\n         struct in6_addr ip;\n         memcpy(&ip, data[i].addr, sizeof(ip));\n         CAddress addr(CService(ip, data[i].port));\n-        addr.nTime = GetTime() - GetRand(nOneWeek) - nOneWeek;\n+        addr.SetTime(GetTime() - GetRand(nOneWeek) - nOneWeek);\n         vSeedsOut.push_back(addr);\n     }\n }"
+      },
+      {
+        "sha": "9916f889fec235f2f45bc203a2074be486c4020a",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 3,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/de41b63e3f6b26055995acac4db7b8c633fae43e/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/de41b63e3f6b26055995acac4db7b8c633fae43e/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=de41b63e3f6b26055995acac4db7b8c633fae43e",
+        "patch": "@@ -3752,11 +3752,11 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv,\n         {\n             boost::this_thread::interruption_point();\n \n-            if (addr.nTime <= 100000000 || addr.nTime > nNow + 10 * 60)\n-                addr.nTime = nNow - 5 * 24 * 60 * 60;\n+            if (addr.GetTime() <= 100000000 || addr.GetTime() > nNow + 10 * 60)\n+                addr.SetTime(nNow - 5 * 24 * 60 * 60);\n             pfrom->AddAddressKnown(addr);\n             bool fReachable = IsReachable(addr);\n-            if (addr.nTime > nSince && !pfrom->fGetAddr && vAddr.size() <= 10 && addr.IsRoutable())\n+            if (addr.GetTime() > nSince && !pfrom->fGetAddr && vAddr.size() <= 10 && addr.IsRoutable())\n             {\n                 // Relay to a limited number of other nodes\n                 {"
+      },
+      {
+        "sha": "d15225c1a2d66fb79e68a0754c59099619244dd3",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 5,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/de41b63e3f6b26055995acac4db7b8c633fae43e/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/de41b63e3f6b26055995acac4db7b8c633fae43e/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=de41b63e3f6b26055995acac4db7b8c633fae43e",
+        "patch": "@@ -147,8 +147,8 @@ CAddress GetLocalAddress(const CNetAddr *paddrPeer)\n     if (GetLocal(addr, paddrPeer))\n     {\n         ret = CAddress(addr);\n-        ret.nServices = nLocalServices;\n-        ret.nTime = GetAdjustedTime();\n+        ret.SetServices(nLocalServices);\n+        ret.SetTime(GetAdjustedTime());\n     }\n     return ret;\n }\n@@ -479,7 +479,7 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest)\n     /// debug print\n     LogPrint(\"net\", \"trying connection %s lastseen=%.1fhrs\\n\",\n         pszDest ? pszDest : addrConnect.ToString(),\n-        pszDest ? 0.0 : (double)(GetAdjustedTime() - addrConnect.nTime)/3600.0);\n+        pszDest ? 0.0 : (double)(GetAdjustedTime() - addrConnect.GetTime())/3600.0);\n \n     // Connect\n     SOCKET hSocket;\n@@ -1237,7 +1237,7 @@ void ThreadDNSAddressSeed()\n                 {\n                     int nOneDay = 24*3600;\n                     CAddress addr = CAddress(CService(ip, Params().GetDefaultPort()));\n-                    addr.nTime = GetTime() - 3*nOneDay - GetRand(4*nOneDay); // use a random age between 3 and 7 days old\n+                    addr.SetTime(GetTime() - 3*nOneDay - GetRand(4*nOneDay)); // use a random age between 3 and 7 days old\n                     vAdd.push_back(addr);\n                     found++;\n                 }\n@@ -1373,7 +1373,7 @@ void ThreadOpenConnections()\n                 continue;\n \n             // only consider very recently tried nodes after 30 failed attempts\n-            if (nANow - addr.nLastTry < 600 && nTries < 30)\n+            if (nANow - addr.GetLastTry() < 600 && nTries < 30)\n                 continue;\n \n             // do not allow non-default ports, unless after 50 invalid addresses selected already"
+      },
+      {
+        "sha": "bf07319fb3251acec074a90f2b9e24f032fd2af8",
+        "filename": "src/protocol.h",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 2,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/de41b63e3f6b26055995acac4db7b8c633fae43e/src/protocol.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/de41b63e3f6b26055995acac4db7b8c633fae43e/src/protocol.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/protocol.h?ref=de41b63e3f6b26055995acac4db7b8c633fae43e",
+        "patch": "@@ -99,8 +99,14 @@ class CAddress : public CService\n              READWRITE(*pip);\n             )\n \n-    // TODO: make private (improves encapsulation)\n-    public:\n+        uint64_t GetServices() const { return nServices; }\n+        void SetServices(uint64_t mask) { nServices = mask; }\n+        void AddServices(uint64_t mask) { nServices |= mask; }\n+        unsigned int GetTime() const { return nTime; }\n+        void SetTime(unsigned int nTime_) { nTime = nTime_; }\n+        int64_t GetLastTry() const { return nLastTry; }\n+\n+    protected:\n         uint64_t nServices;\n \n         // disk and network only"
+      }
+    ]
+  },
+  {
+    "sha": "077edc3cd9fdc14e9bba127f30aaf8e37d6bb5da",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowNzdlZGMzY2Q5ZmRjMTRlOWJiYTEyN2YzMGFhZjhlMzdkNmJiNWRh",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-08-08T15:43:58Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-08-25T19:13:16Z"
+      },
+      "message": "Encapsulate accesses to CMessageHeader\n\nAlso, improve GetCommand()",
+      "tree": {
+        "sha": "0fa5a61d58bea707249b409ca23af97954f09bf4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/0fa5a61d58bea707249b409ca23af97954f09bf4"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/077edc3cd9fdc14e9bba127f30aaf8e37d6bb5da",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/077edc3cd9fdc14e9bba127f30aaf8e37d6bb5da",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/077edc3cd9fdc14e9bba127f30aaf8e37d6bb5da",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/077edc3cd9fdc14e9bba127f30aaf8e37d6bb5da/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "de41b63e3f6b26055995acac4db7b8c633fae43e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/de41b63e3f6b26055995acac4db7b8c633fae43e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/de41b63e3f6b26055995acac4db7b8c633fae43e"
+      }
+    ],
+    "stats": {
+      "total": 30,
+      "additions": 14,
+      "deletions": 16
+    },
+    "files": [
+      {
+        "sha": "db527909d05ed0cfa7b99b962a1bfc3907845c9f",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 3,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/077edc3cd9fdc14e9bba127f30aaf8e37d6bb5da/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/077edc3cd9fdc14e9bba127f30aaf8e37d6bb5da/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=077edc3cd9fdc14e9bba127f30aaf8e37d6bb5da",
+        "patch": "@@ -4364,17 +4364,17 @@ bool ProcessMessages(CNode* pfrom)\n         string strCommand = hdr.GetCommand();\n \n         // Message size\n-        unsigned int nMessageSize = hdr.nMessageSize;\n+        unsigned int nMessageSize = hdr.GetSize();\n \n         // Checksum\n         CDataStream& vRecv = msg.vRecv;\n         uint256 hash = Hash(vRecv.begin(), vRecv.begin() + nMessageSize);\n         unsigned int nChecksum = 0;\n         memcpy(&nChecksum, &hash, sizeof(nChecksum));\n-        if (nChecksum != hdr.nChecksum)\n+        if (nChecksum != hdr.GetChecksum())\n         {\n             LogPrintf(\"ProcessMessages(%s, %u bytes) : CHECKSUM ERROR nChecksum=%08x hdr.nChecksum=%08x\\n\",\n-               strCommand, nMessageSize, nChecksum, hdr.nChecksum);\n+               strCommand, nMessageSize, nChecksum, hdr.GetChecksum());\n             continue;\n         }\n "
+      },
+      {
+        "sha": "ed547adf2b4354778d5ed6a5cfc1850a98492252",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 3,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/077edc3cd9fdc14e9bba127f30aaf8e37d6bb5da/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/077edc3cd9fdc14e9bba127f30aaf8e37d6bb5da/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=077edc3cd9fdc14e9bba127f30aaf8e37d6bb5da",
+        "patch": "@@ -693,7 +693,7 @@ int CNetMessage::readHeader(const char *pch, unsigned int nBytes)\n     }\n \n     // reject messages larger than MAX_SIZE\n-    if (hdr.nMessageSize > MAX_SIZE)\n+    if (hdr.GetSize() > MAX_SIZE)\n             return -1;\n \n     // switch state to reading message data\n@@ -704,12 +704,12 @@ int CNetMessage::readHeader(const char *pch, unsigned int nBytes)\n \n int CNetMessage::readData(const char *pch, unsigned int nBytes)\n {\n-    unsigned int nRemaining = hdr.nMessageSize - nDataPos;\n+    unsigned int nRemaining = hdr.GetSize() - nDataPos;\n     unsigned int nCopy = std::min(nRemaining, nBytes);\n \n     if (vRecv.size() < nDataPos + nCopy) {\n         // Allocate up to 256 KiB ahead, but never more than the total message size.\n-        vRecv.resize(std::min(hdr.nMessageSize, nDataPos + nCopy + 256 * 1024));\n+        vRecv.resize(std::min(hdr.GetSize(), nDataPos + nCopy + 256 * 1024));\n     }\n \n     memcpy(&vRecv[nDataPos], pch, nCopy);"
+      },
+      {
+        "sha": "acd26f9d89783b0d1bc6167bbbe9b89f6e90a578",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/077edc3cd9fdc14e9bba127f30aaf8e37d6bb5da/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/077edc3cd9fdc14e9bba127f30aaf8e37d6bb5da/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=077edc3cd9fdc14e9bba127f30aaf8e37d6bb5da",
+        "patch": "@@ -190,7 +190,7 @@ class CNetMessage {\n     {\n         if (!in_data)\n             return false;\n-        return (hdr.nMessageSize == nDataPos);\n+        return (hdr.GetSize() == nDataPos);\n     }\n \n     void SetVersion(int nVersionIn)"
+      },
+      {
+        "sha": "b8e1340f23018bd95074d4d30e8b927be156dc38",
+        "filename": "src/protocol.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 8,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/077edc3cd9fdc14e9bba127f30aaf8e37d6bb5da/src/protocol.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/077edc3cd9fdc14e9bba127f30aaf8e37d6bb5da/src/protocol.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/protocol.cpp?ref=077edc3cd9fdc14e9bba127f30aaf8e37d6bb5da",
+        "patch": "@@ -37,14 +37,6 @@ CMessageHeader::CMessageHeader(const char* pszCommand, unsigned int nMessageSize\n     nChecksum = 0;\n }\n \n-std::string CMessageHeader::GetCommand() const\n-{\n-    if (pchCommand[COMMAND_SIZE-1] == 0)\n-        return std::string(pchCommand, pchCommand + strlen(pchCommand));\n-    else\n-        return std::string(pchCommand, pchCommand + COMMAND_SIZE);\n-}\n-\n bool CMessageHeader::IsValid() const\n {\n     // Check start string"
+      },
+      {
+        "sha": "2d3bb9af7d72a3559158e45d04077b3408212036",
+        "filename": "src/protocol.h",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 1,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/077edc3cd9fdc14e9bba127f30aaf8e37d6bb5da/src/protocol.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/077edc3cd9fdc14e9bba127f30aaf8e37d6bb5da/src/protocol.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/protocol.h?ref=077edc3cd9fdc14e9bba127f30aaf8e37d6bb5da",
+        "patch": "@@ -32,7 +32,6 @@ class CMessageHeader\n         CMessageHeader();\n         CMessageHeader(const char* pszCommand, unsigned int nMessageSizeIn);\n \n-        std::string GetCommand() const;\n         bool IsValid() const;\n \n         IMPLEMENT_SERIALIZE\n@@ -58,6 +57,13 @@ class CMessageHeader\n         char pchCommand[COMMAND_SIZE];\n         unsigned int nMessageSize;\n         unsigned int nChecksum;\n+\n+        unsigned int GetSize() const { return nMessageSize; }\n+        unsigned int GetChecksum() const { return nChecksum; }\n+        std::string GetCommand() const {\n+            size_t cmdLen = strnlen(pchCommand, COMMAND_SIZE);\n+            return std::string(pchCommand, cmdLen);\n+        }\n };\n \n /** nServices flags */"
+      }
+    ]
+  },
+  {
+    "sha": "7f361f2d186140df3c9b1caff9dc7823ec257f31",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3ZjM2MWYyZDE4NjE0MGRmM2M5YjFjYWZmOWRjNzgyM2VjMjU3ZjMx",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-08-08T16:06:14Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-08-25T19:13:37Z"
+      },
+      "message": "Encapsulate members of class CInv",
+      "tree": {
+        "sha": "634647c84417214558f2aabdebeaff3f3d588b3a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/634647c84417214558f2aabdebeaff3f3d588b3a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/7f361f2d186140df3c9b1caff9dc7823ec257f31",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7f361f2d186140df3c9b1caff9dc7823ec257f31",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/7f361f2d186140df3c9b1caff9dc7823ec257f31",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7f361f2d186140df3c9b1caff9dc7823ec257f31/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "077edc3cd9fdc14e9bba127f30aaf8e37d6bb5da",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/077edc3cd9fdc14e9bba127f30aaf8e37d6bb5da",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/077edc3cd9fdc14e9bba127f30aaf8e37d6bb5da"
+      }
+    ],
+    "stats": {
+      "total": 67,
+      "additions": 34,
+      "deletions": 33
+    },
+    "files": [
+      {
+        "sha": "f7116de641d4c85a8d9138adc4de5c195afdd3d9",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 30,
+        "deletions": 30,
+        "changes": 60,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7f361f2d186140df3c9b1caff9dc7823ec257f31/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7f361f2d186140df3c9b1caff9dc7823ec257f31/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=7f361f2d186140df3c9b1caff9dc7823ec257f31",
+        "patch": "@@ -1996,7 +1996,7 @@ bool static ConnectTip(CValidationState &state, CBlockIndex *pindexNew) {\n                 InvalidBlockFound(pindexNew, state);\n             return error(\"ConnectTip() : ConnectBlock %s failed\", pindexNew->GetBlockHash().ToString());\n         }\n-        mapBlockSource.erase(inv.hash);\n+        mapBlockSource.erase(inv.GetHash());\n         nTime3 = GetTimeMicros(); nTimeConnectTotal += nTime3 - nTime2;\n         LogPrint(\"bench\", \"  - Connect total: %.2fms [%.2fs]\\n\", (nTime3 - nTime2) * 0.001, nTimeConnectTotal * 0.000001);\n         assert(view.Flush());\n@@ -3369,18 +3369,18 @@ string GetWarnings(string strFor)\n \n bool static AlreadyHave(const CInv& inv)\n {\n-    switch (inv.type)\n+    switch (inv.GetType())\n     {\n     case MSG_TX:\n         {\n             bool txInMap = false;\n-            txInMap = mempool.exists(inv.hash);\n-            return txInMap || mapOrphanTransactions.count(inv.hash) ||\n-                pcoinsTip->HaveCoins(inv.hash);\n+            txInMap = mempool.exists(inv.GetHash());\n+            return txInMap || mapOrphanTransactions.count(inv.GetHash()) ||\n+                pcoinsTip->HaveCoins(inv.GetHash());\n         }\n     case MSG_BLOCK:\n-        return mapBlockIndex.count(inv.hash) ||\n-               mapOrphanBlocks.count(inv.hash);\n+        return mapBlockIndex.count(inv.GetHash()) ||\n+               mapOrphanBlocks.count(inv.GetHash());\n     }\n     // Don't know what it is, just say we already got one\n     return true;\n@@ -3405,10 +3405,10 @@ void static ProcessGetData(CNode* pfrom)\n             boost::this_thread::interruption_point();\n             it++;\n \n-            if (inv.type == MSG_BLOCK || inv.type == MSG_FILTERED_BLOCK)\n+            if (inv.GetType() == MSG_BLOCK || inv.GetType() == MSG_FILTERED_BLOCK)\n             {\n                 bool send = false;\n-                map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(inv.hash);\n+                map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(inv.GetHash());\n                 if (mi != mapBlockIndex.end())\n                 {\n                     // If the requested block is at a height below our last\n@@ -3432,7 +3432,7 @@ void static ProcessGetData(CNode* pfrom)\n                     CBlock block;\n                     if (!ReadBlockFromDisk(block, (*mi).second))\n                         assert(!\"cannot load block from disk\");\n-                    if (inv.type == MSG_BLOCK)\n+                    if (inv.GetType() == MSG_BLOCK)\n                         pfrom->PushMessage(\"block\", block);\n                     else // MSG_FILTERED_BLOCK)\n                     {\n@@ -3457,7 +3457,7 @@ void static ProcessGetData(CNode* pfrom)\n                     }\n \n                     // Trigger them to send a getblocks request for the next batch of inventory\n-                    if (inv.hash == pfrom->hashContinue)\n+                    if (inv.GetHash() == pfrom->hashContinue)\n                     {\n                         // Bypass PushInventory, this must send even if redundant,\n                         // and we want it right after the last block so they don't\n@@ -3481,9 +3481,9 @@ void static ProcessGetData(CNode* pfrom)\n                         pushed = true;\n                     }\n                 }\n-                if (!pushed && inv.type == MSG_TX) {\n+                if (!pushed && inv.GetType() == MSG_TX) {\n                     CTransaction tx;\n-                    if (mempool.lookup(inv.hash, tx)) {\n+                    if (mempool.lookup(inv.GetHash(), tx)) {\n                         CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);\n                         ss.reserve(1000);\n                         ss << tx;\n@@ -3497,9 +3497,9 @@ void static ProcessGetData(CNode* pfrom)\n             }\n \n             // Track requests for our stuff.\n-            g_signals.Inventory(inv.hash);\n+            g_signals.Inventory(inv.GetHash());\n \n-            if (inv.type == MSG_BLOCK || inv.type == MSG_FILTERED_BLOCK)\n+            if (inv.GetType() == MSG_BLOCK || inv.GetType() == MSG_FILTERED_BLOCK)\n                 break;\n         }\n     }\n@@ -3821,20 +3821,20 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv,\n \n             if (!fAlreadyHave) {\n                 if (!fImporting && !fReindex) {\n-                    if (inv.type == MSG_BLOCK)\n-                        AddBlockToQueue(pfrom->GetId(), inv.hash);\n+                    if (inv.GetType() == MSG_BLOCK)\n+                        AddBlockToQueue(pfrom->GetId(), inv.GetHash());\n                     else\n                         pfrom->AskFor(inv);\n                 }\n-            } else if (inv.type == MSG_BLOCK && mapOrphanBlocks.count(inv.hash)) {\n-                PushGetBlocks(pfrom, chainActive.Tip(), GetOrphanRoot(inv.hash));\n+            } else if (inv.GetType() == MSG_BLOCK && mapOrphanBlocks.count(inv.GetHash())) {\n+                PushGetBlocks(pfrom, chainActive.Tip(), GetOrphanRoot(inv.GetHash()));\n             }\n \n-            if (inv.type == MSG_BLOCK)\n-                UpdateBlockAvailability(pfrom->GetId(), inv.hash);\n+            if (inv.GetType() == MSG_BLOCK)\n+                UpdateBlockAvailability(pfrom->GetId(), inv.GetHash());\n \n             // Track requests for our stuff\n-            g_signals.Inventory(inv.hash);\n+            g_signals.Inventory(inv.GetHash());\n         }\n     }\n \n@@ -3970,8 +3970,8 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv,\n             mempool.check(pcoinsTip);\n             RelayTransaction(tx);\n             mapAlreadyAskedFor.erase(inv);\n-            vWorkQueue.push_back(inv.hash);\n-            vEraseQueue.push_back(inv.hash);\n+            vWorkQueue.push_back(inv.GetHash());\n+            vEraseQueue.push_back(inv.GetHash());\n \n \n             LogPrint(\"mempool\", \"AcceptToMemoryPool: peer=%d %s : accepted %s (poolsz %u)\\n\",\n@@ -4037,7 +4037,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv,\n                 pfrom->id, pfrom->cleanSubVer,\n                 state.GetRejectReason());\n             pfrom->PushMessage(\"reject\", strCommand, state.GetRejectCode(),\n-                               state.GetRejectReason(), inv.hash);\n+                               state.GetRejectReason(), inv.GetHash());\n             if (nDoS > 0)\n                 Misbehaving(pfrom->GetId(), nDoS);\n         }\n@@ -4057,16 +4057,16 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv,\n         {\n             LOCK(cs_main);\n             // Remember who we got this block from.\n-            mapBlockSource[inv.hash] = pfrom->GetId();\n-            MarkBlockAsReceived(inv.hash, pfrom->GetId());\n+            mapBlockSource[inv.GetHash()] = pfrom->GetId();\n+            MarkBlockAsReceived(inv.GetHash(), pfrom->GetId());\n         }\n \n         CValidationState state;\n         ProcessBlock(state, pfrom, &block);\n         int nDoS;\n         if (state.IsInvalid(nDoS)) {\n             pfrom->PushMessage(\"reject\", strCommand, state.GetRejectCode(),\n-                               state.GetRejectReason(), inv.hash);\n+                               state.GetRejectReason(), inv.GetHash());\n             if (nDoS > 0) {\n                 LOCK(cs_main);\n                 Misbehaving(pfrom->GetId(), nDoS);\n@@ -4563,13 +4563,13 @@ bool SendMessages(CNode* pto, bool fSendTrickle)\n                     continue;\n \n                 // trickle out tx inv to protect privacy\n-                if (inv.type == MSG_TX && !fSendTrickle)\n+                if (inv.GetType() == MSG_TX && !fSendTrickle)\n                 {\n                     // 1/4 of tx invs blast to all immediately\n                     static uint256 hashSalt;\n                     if (hashSalt == 0)\n                         hashSalt = GetRandHash();\n-                    uint256 hashRand = inv.hash ^ hashSalt;\n+                    uint256 hashRand = inv.GetHash() ^ hashSalt;\n                     hashRand = Hash(BEGIN(hashRand), END(hashRand));\n                     bool fTrickleWait = ((hashRand & 3) != 0);\n "
+      },
+      {
+        "sha": "cbf9a43e7ff1aa8a8704bc1fcba7e1aa3fd88c85",
+        "filename": "src/protocol.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 3,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7f361f2d186140df3c9b1caff9dc7823ec257f31/src/protocol.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7f361f2d186140df3c9b1caff9dc7823ec257f31/src/protocol.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/protocol.h?ref=7f361f2d186140df3c9b1caff9dc7823ec257f31",
+        "patch": "@@ -42,7 +42,7 @@ class CMessageHeader\n              READWRITE(nChecksum);\n             )\n \n-    // TODO: make private (improves encapsulation)\n+    // TODO: make protected (improves encapsulation)\n     public:\n         enum {\n             COMMAND_SIZE=12,\n@@ -141,9 +141,10 @@ class CInv\n         bool IsKnownType() const;\n         const char* GetCommand() const;\n         std::string ToString() const;\n+        int GetType() const { return type; }\n+        uint256 GetHash() const { return hash; }\n \n-    // TODO: make private (improves encapsulation)\n-    public:\n+    protected:\n         int type;\n         uint256 hash;\n };"
+      }
+    ]
+  },
+  {
+    "sha": "e132d27070675201e4f4b872faa5d2df43fc0e19",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplMTMyZDI3MDcwNjc1MjAxZTRmNGI4NzJmYWE1ZDJkZjQzZmMwZTE5",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-08-08T17:06:59Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-08-25T19:13:37Z"
+      },
+      "message": "protocol.h: include string.h for strnlen(3)",
+      "tree": {
+        "sha": "974250e919f52a0dffbe26f0446d883ad7a7ce4b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/974250e919f52a0dffbe26f0446d883ad7a7ce4b"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/e132d27070675201e4f4b872faa5d2df43fc0e19",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e132d27070675201e4f4b872faa5d2df43fc0e19",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/e132d27070675201e4f4b872faa5d2df43fc0e19",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e132d27070675201e4f4b872faa5d2df43fc0e19/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "7f361f2d186140df3c9b1caff9dc7823ec257f31",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7f361f2d186140df3c9b1caff9dc7823ec257f31",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/7f361f2d186140df3c9b1caff9dc7823ec257f31"
+      }
+    ],
+    "stats": {
+      "total": 1,
+      "additions": 1,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "12375a50767310e2060b18218c6f2c707235f3f7",
+        "filename": "src/protocol.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e132d27070675201e4f4b872faa5d2df43fc0e19/src/protocol.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e132d27070675201e4f4b872faa5d2df43fc0e19/src/protocol.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/protocol.h?ref=e132d27070675201e4f4b872faa5d2df43fc0e19",
+        "patch": "@@ -16,6 +16,7 @@\n #include \"version.h\"\n \n #include <stdint.h>\n+#include <string.h>\n #include <string>\n \n #define MESSAGE_START_SIZE 4"
+      }
+    ]
+  },
+  {
+    "sha": "ef17fbc4dfe39b3ea88faca213e2293dbda22a07",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplZjE3ZmJjNGRmZTM5YjNlYTg4ZmFjYTIxM2UyMjkzZGJkYTIyYTA3",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-08-08T17:26:56Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-08-25T19:13:38Z"
+      },
+      "message": "Back out improved GetCommand()   Windows does not support strnlen()",
+      "tree": {
+        "sha": "b98274042a83486dd8cc92824f3d9cc0259a9183",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/b98274042a83486dd8cc92824f3d9cc0259a9183"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/ef17fbc4dfe39b3ea88faca213e2293dbda22a07",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ef17fbc4dfe39b3ea88faca213e2293dbda22a07",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/ef17fbc4dfe39b3ea88faca213e2293dbda22a07",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ef17fbc4dfe39b3ea88faca213e2293dbda22a07/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "e132d27070675201e4f4b872faa5d2df43fc0e19",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e132d27070675201e4f4b872faa5d2df43fc0e19",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/e132d27070675201e4f4b872faa5d2df43fc0e19"
+      }
+    ],
+    "stats": {
+      "total": 14,
+      "additions": 9,
+      "deletions": 5
+    },
+    "files": [
+      {
+        "sha": "341de0602ae3fd3db609a04ce238cedccd04045f",
+        "filename": "src/protocol.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 0,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ef17fbc4dfe39b3ea88faca213e2293dbda22a07/src/protocol.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ef17fbc4dfe39b3ea88faca213e2293dbda22a07/src/protocol.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/protocol.cpp?ref=ef17fbc4dfe39b3ea88faca213e2293dbda22a07",
+        "patch": "@@ -37,6 +37,14 @@ CMessageHeader::CMessageHeader(const char* pszCommand, unsigned int nMessageSize\n     nChecksum = 0;\n }\n \n+std::string CMessageHeader::GetCommand() const\n+{\n+    if (pchCommand[COMMAND_SIZE-1] == 0)\n+        return std::string(pchCommand, pchCommand + strlen(pchCommand));\n+    else\n+        return std::string(pchCommand, pchCommand + COMMAND_SIZE);\n+}\n+\n bool CMessageHeader::IsValid() const\n {\n     // Check start string"
+      },
+      {
+        "sha": "72e5114589f90befa3fde87afc7376f0b800d7b6",
+        "filename": "src/protocol.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 5,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ef17fbc4dfe39b3ea88faca213e2293dbda22a07/src/protocol.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ef17fbc4dfe39b3ea88faca213e2293dbda22a07/src/protocol.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/protocol.h?ref=ef17fbc4dfe39b3ea88faca213e2293dbda22a07",
+        "patch": "@@ -16,7 +16,6 @@\n #include \"version.h\"\n \n #include <stdint.h>\n-#include <string.h>\n #include <string>\n \n #define MESSAGE_START_SIZE 4\n@@ -33,6 +32,7 @@ class CMessageHeader\n         CMessageHeader();\n         CMessageHeader(const char* pszCommand, unsigned int nMessageSizeIn);\n \n+        std::string GetCommand() const;\n         bool IsValid() const;\n \n         IMPLEMENT_SERIALIZE\n@@ -61,10 +61,6 @@ class CMessageHeader\n \n         unsigned int GetSize() const { return nMessageSize; }\n         unsigned int GetChecksum() const { return nChecksum; }\n-        std::string GetCommand() const {\n-            size_t cmdLen = strnlen(pchCommand, COMMAND_SIZE);\n-            return std::string(pchCommand, cmdLen);\n-        }\n };\n \n /** nServices flags */"
+      }
+    ]
+  },
+  {
+    "sha": "9803b7a4b18c9f9f94a98ec2389ebccd3263d8f3",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5ODAzYjdhNGIxOGM5ZjlmOTRhOThlYzIzODllYmNjZDMyNjNkOGYz",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-08-25T19:08:37Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-08-25T19:13:38Z"
+      },
+      "message": "CInv: return const hash ref to av oid copy",
+      "tree": {
+        "sha": "77d32fb475993bbd434a05a6adab3e3f1a21ecea",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/77d32fb475993bbd434a05a6adab3e3f1a21ecea"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/9803b7a4b18c9f9f94a98ec2389ebccd3263d8f3",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9803b7a4b18c9f9f94a98ec2389ebccd3263d8f3",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/9803b7a4b18c9f9f94a98ec2389ebccd3263d8f3",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9803b7a4b18c9f9f94a98ec2389ebccd3263d8f3/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "ef17fbc4dfe39b3ea88faca213e2293dbda22a07",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ef17fbc4dfe39b3ea88faca213e2293dbda22a07",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/ef17fbc4dfe39b3ea88faca213e2293dbda22a07"
+      }
+    ],
+    "stats": {
+      "total": 2,
+      "additions": 1,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "42acc24793cd5b7c11ab436a4d3d3ee67cb4c962",
+        "filename": "src/protocol.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9803b7a4b18c9f9f94a98ec2389ebccd3263d8f3/src/protocol.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9803b7a4b18c9f9f94a98ec2389ebccd3263d8f3/src/protocol.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/protocol.h?ref=9803b7a4b18c9f9f94a98ec2389ebccd3263d8f3",
+        "patch": "@@ -139,7 +139,7 @@ class CInv\n         const char* GetCommand() const;\n         std::string ToString() const;\n         int GetType() const { return type; }\n-        uint256 GetHash() const { return hash; }\n+        const uint256& GetHash() const { return hash; }\n \n     protected:\n         int type;"
+      }
+    ]
+  }
+]

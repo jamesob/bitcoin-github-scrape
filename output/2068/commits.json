@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "fa45c26a0e5d3597814cef5ebd64e3db1b3b017d",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmYTQ1YzI2YTBlNWQzNTk3ODE0Y2VmNWViZDY0ZTNkYjFiM2IwMTdk",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-12-04T06:48:57Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-12-05T13:39:09Z"
+      },
+      "message": "call CheckDiskSpace() before pre-allocating space\n\n- even if we are allowed to fail pre-allocating, it's better to check\n  for sufficient space before calling AllocateFileRange() and if we\n  are out of disk space return with error()\n- the above change allows us to remove the CheckDiskSpace() check\n  in CBlock::AcceptBlock()",
+      "tree": {
+        "sha": "74ea53f01b9d3594a587f8836a9b63161ecb0de2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/74ea53f01b9d3594a587f8836a9b63161ecb0de2"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/fa45c26a0e5d3597814cef5ebd64e3db1b3b017d",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fa45c26a0e5d3597814cef5ebd64e3db1b3b017d",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/fa45c26a0e5d3597814cef5ebd64e3db1b3b017d",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fa45c26a0e5d3597814cef5ebd64e3db1b3b017d/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "85887020dc6080e5707632a4ea68232f66d51d69",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/85887020dc6080e5707632a4ea68232f66d51d69",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/85887020dc6080e5707632a4ea68232f66d51d69"
+      }
+    ],
+    "stats": {
+      "total": 34,
+      "additions": 19,
+      "deletions": 15
+    },
+    "files": [
+      {
+        "sha": "ce2b56b6a5067a5da4c13655f79cf6b04de5bbb4",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 19,
+        "deletions": 15,
+        "changes": 34,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fa45c26a0e5d3597814cef5ebd64e3db1b3b017d/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fa45c26a0e5d3597814cef5ebd64e3db1b3b017d/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=fa45c26a0e5d3597814cef5ebd64e3db1b3b017d",
+        "patch": "@@ -1914,12 +1914,16 @@ bool FindBlockPos(CDiskBlockPos &pos, unsigned int nAddSize, unsigned int nHeigh\n         unsigned int nOldChunks = (pos.nPos + BLOCKFILE_CHUNK_SIZE - 1) / BLOCKFILE_CHUNK_SIZE;\n         unsigned int nNewChunks = (infoLastBlockFile.nSize + BLOCKFILE_CHUNK_SIZE - 1) / BLOCKFILE_CHUNK_SIZE;\n         if (nNewChunks > nOldChunks) {\n-            FILE *file = OpenBlockFile(pos);\n-            if (file) {\n-                printf(\"Pre-allocating up to position 0x%x in blk%05u.dat\\n\", nNewChunks * BLOCKFILE_CHUNK_SIZE, pos.nFile);\n-                AllocateFileRange(file, pos.nPos, nNewChunks * BLOCKFILE_CHUNK_SIZE - pos.nPos);\n-                fclose(file);\n+            if (CheckDiskSpace(nNewChunks * BLOCKFILE_CHUNK_SIZE - pos.nPos)) {\n+                FILE *file = OpenBlockFile(pos);\n+                if (file) {\n+                    printf(\"Pre-allocating up to position 0x%x in blk%05u.dat\\n\", nNewChunks * BLOCKFILE_CHUNK_SIZE, pos.nFile);\n+                    AllocateFileRange(file, pos.nPos, nNewChunks * BLOCKFILE_CHUNK_SIZE - pos.nPos);\n+                    fclose(file);\n+                }\n             }\n+            else\n+                return error(\"FindBlockPos() : out of disk space\");\n         }\n     }\n \n@@ -1956,12 +1960,16 @@ bool FindUndoPos(int nFile, CDiskBlockPos &pos, unsigned int nAddSize)\n     unsigned int nOldChunks = (pos.nPos + UNDOFILE_CHUNK_SIZE - 1) / UNDOFILE_CHUNK_SIZE;\n     unsigned int nNewChunks = (nNewSize + UNDOFILE_CHUNK_SIZE - 1) / UNDOFILE_CHUNK_SIZE;\n     if (nNewChunks > nOldChunks) {\n-        FILE *file = OpenUndoFile(pos);\n-        if (file) {\n-            printf(\"Pre-allocating up to position 0x%x in rev%05u.dat\\n\", nNewChunks * UNDOFILE_CHUNK_SIZE, pos.nFile);\n-            AllocateFileRange(file, pos.nPos, nNewChunks * UNDOFILE_CHUNK_SIZE - pos.nPos);\n-            fclose(file);\n+        if (CheckDiskSpace(nNewChunks * UNDOFILE_CHUNK_SIZE - pos.nPos)) {\n+            FILE *file = OpenUndoFile(pos);\n+            if (file) {\n+                printf(\"Pre-allocating up to position 0x%x in rev%05u.dat\\n\", nNewChunks * UNDOFILE_CHUNK_SIZE, pos.nFile);\n+                AllocateFileRange(file, pos.nPos, nNewChunks * UNDOFILE_CHUNK_SIZE - pos.nPos);\n+                fclose(file);\n+            }\n         }\n+        else\n+            return error(\"FindUndoPos() : out of disk space\");\n     }\n \n     return true;\n@@ -2086,12 +2094,8 @@ bool CBlock::AcceptBlock(CDiskBlockPos *dbp)\n     // Write block to history file\n     unsigned int nBlockSize = ::GetSerializeSize(*this, SER_DISK, CLIENT_VERSION);\n     CDiskBlockPos blockPos;\n-    if (dbp == NULL) {\n-        if (!CheckDiskSpace(::GetSerializeSize(*this, SER_DISK, CLIENT_VERSION)))\n-            return error(\"AcceptBlock() : out of disk space\");\n-    } else {\n+    if (dbp != NULL)\n         blockPos = *dbp;\n-    }\n     if (!FindBlockPos(blockPos, nBlockSize+8, nHeight, nTime, dbp != NULL))\n         return error(\"AcceptBlock() : FindBlockPos failed\");\n     if (dbp == NULL)"
+      }
+    ]
+  }
+]

@@ -1,0 +1,124 @@
+[
+  {
+    "sha": "86029e72c96436605f47153c1f09e151e1847c28",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4NjAyOWU3MmM5NjQzNjYwNWY0NzE1M2MxZjA5ZTE1MWUxODQ3YzI4",
+    "commit": {
+      "author": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2016-09-28T15:57:25Z"
+      },
+      "committer": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2016-10-30T09:15:49Z"
+      },
+      "message": "Move CWalletDB::ReorderTransactions to CWallet",
+      "tree": {
+        "sha": "8e0df2b519a2d1d19936690f9dcbf1c53e053783",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/8e0df2b519a2d1d19936690f9dcbf1c53e053783"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/86029e72c96436605f47153c1f09e151e1847c28",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/86029e72c96436605f47153c1f09e151e1847c28",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/86029e72c96436605f47153c1f09e151e1847c28",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/86029e72c96436605f47153c1f09e151e1847c28/comments",
+    "author": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "d2143dc937e3fc93fd35def25a9c0461f26ccd4f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d2143dc937e3fc93fd35def25a9c0461f26ccd4f",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/d2143dc937e3fc93fd35def25a9c0461f26ccd4f"
+      }
+    ],
+    "stats": {
+      "total": 154,
+      "additions": 74,
+      "deletions": 80
+    },
+    "files": [
+      {
+        "sha": "9e19138099eb6d6de79f0fa15730377f54c18873",
+        "filename": "src/wallet/wallet.cpp",
+        "status": "modified",
+        "additions": 72,
+        "deletions": 1,
+        "changes": 73,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/86029e72c96436605f47153c1f09e151e1847c28/src/wallet/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/86029e72c96436605f47153c1f09e151e1847c28/src/wallet/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.cpp?ref=86029e72c96436605f47153c1f09e151e1847c28",
+        "patch": "@@ -658,8 +658,79 @@ bool CWallet::EncryptWallet(const SecureString& strWalletPassphrase)\n \n DBErrors CWallet::ReorderTransactions()\n {\n+    LOCK(cs_wallet);\n     CWalletDB walletdb(strWalletFile);\n-    return walletdb.ReorderTransactions(this);\n+\n+    // Old wallets didn't have any defined order for transactions\n+    // Probably a bad idea to change the output of this\n+\n+    // First: get all CWalletTx and CAccountingEntry into a sorted-by-time multimap.\n+    typedef pair<CWalletTx*, CAccountingEntry*> TxPair;\n+    typedef multimap<int64_t, TxPair > TxItems;\n+    TxItems txByTime;\n+\n+    for (map<uint256, CWalletTx>::iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)\n+    {\n+        CWalletTx* wtx = &((*it).second);\n+        txByTime.insert(make_pair(wtx->nTimeReceived, TxPair(wtx, (CAccountingEntry*)0)));\n+    }\n+    list<CAccountingEntry> acentries;\n+    walletdb.ListAccountCreditDebit(\"\", acentries);\n+    BOOST_FOREACH(CAccountingEntry& entry, acentries)\n+    {\n+        txByTime.insert(make_pair(entry.nTime, TxPair((CWalletTx*)0, &entry)));\n+    }\n+\n+    nOrderPosNext = 0;\n+    std::vector<int64_t> nOrderPosOffsets;\n+    for (TxItems::iterator it = txByTime.begin(); it != txByTime.end(); ++it)\n+    {\n+        CWalletTx *const pwtx = (*it).second.first;\n+        CAccountingEntry *const pacentry = (*it).second.second;\n+        int64_t& nOrderPos = (pwtx != 0) ? pwtx->nOrderPos : pacentry->nOrderPos;\n+\n+        if (nOrderPos == -1)\n+        {\n+            nOrderPos = nOrderPosNext++;\n+            nOrderPosOffsets.push_back(nOrderPos);\n+\n+            if (pwtx)\n+            {\n+                if (!walletdb.WriteTx(*pwtx))\n+                    return DB_LOAD_FAIL;\n+            }\n+            else\n+                if (!walletdb.WriteAccountingEntry(pacentry->nEntryNo, *pacentry))\n+                    return DB_LOAD_FAIL;\n+        }\n+        else\n+        {\n+            int64_t nOrderPosOff = 0;\n+            BOOST_FOREACH(const int64_t& nOffsetStart, nOrderPosOffsets)\n+            {\n+                if (nOrderPos >= nOffsetStart)\n+                    ++nOrderPosOff;\n+            }\n+            nOrderPos += nOrderPosOff;\n+            nOrderPosNext = std::max(nOrderPosNext, nOrderPos + 1);\n+\n+            if (!nOrderPosOff)\n+                continue;\n+\n+            // Since we're changing the order, write it back\n+            if (pwtx)\n+            {\n+                if (!walletdb.WriteTx(*pwtx))\n+                    return DB_LOAD_FAIL;\n+            }\n+            else\n+                if (!walletdb.WriteAccountingEntry(pacentry->nEntryNo, *pacentry))\n+                    return DB_LOAD_FAIL;\n+        }\n+    }\n+    walletdb.WriteOrderPosNext(nOrderPosNext);\n+\n+    return DB_LOAD_OK;\n }\n \n int64_t CWallet::IncOrderPosNext(CWalletDB *pwalletdb)"
+      },
+      {
+        "sha": "43fd6a20adc819b639a9a08a8487908c28d1adae",
+        "filename": "src/wallet/walletdb.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 77,
+        "changes": 78,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/86029e72c96436605f47153c1f09e151e1847c28/src/wallet/walletdb.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/86029e72c96436605f47153c1f09e151e1847c28/src/wallet/walletdb.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/walletdb.cpp?ref=86029e72c96436605f47153c1f09e151e1847c28",
+        "patch": "@@ -251,82 +251,6 @@ void CWalletDB::ListAccountCreditDebit(const string& strAccount, list<CAccountin\n     pcursor->close();\n }\n \n-DBErrors CWalletDB::ReorderTransactions(CWallet* pwallet)\n-{\n-    LOCK(pwallet->cs_wallet);\n-    // Old wallets didn't have any defined order for transactions\n-    // Probably a bad idea to change the output of this\n-\n-    // First: get all CWalletTx and CAccountingEntry into a sorted-by-time multimap.\n-    typedef pair<CWalletTx*, CAccountingEntry*> TxPair;\n-    typedef multimap<int64_t, TxPair > TxItems;\n-    TxItems txByTime;\n-\n-    for (map<uint256, CWalletTx>::iterator it = pwallet->mapWallet.begin(); it != pwallet->mapWallet.end(); ++it)\n-    {\n-        CWalletTx* wtx = &((*it).second);\n-        txByTime.insert(make_pair(wtx->nTimeReceived, TxPair(wtx, (CAccountingEntry*)0)));\n-    }\n-    list<CAccountingEntry> acentries;\n-    ListAccountCreditDebit(\"\", acentries);\n-    BOOST_FOREACH(CAccountingEntry& entry, acentries)\n-    {\n-        txByTime.insert(make_pair(entry.nTime, TxPair((CWalletTx*)0, &entry)));\n-    }\n-\n-    int64_t& nOrderPosNext = pwallet->nOrderPosNext;\n-    nOrderPosNext = 0;\n-    std::vector<int64_t> nOrderPosOffsets;\n-    for (TxItems::iterator it = txByTime.begin(); it != txByTime.end(); ++it)\n-    {\n-        CWalletTx *const pwtx = (*it).second.first;\n-        CAccountingEntry *const pacentry = (*it).second.second;\n-        int64_t& nOrderPos = (pwtx != 0) ? pwtx->nOrderPos : pacentry->nOrderPos;\n-\n-        if (nOrderPos == -1)\n-        {\n-            nOrderPos = nOrderPosNext++;\n-            nOrderPosOffsets.push_back(nOrderPos);\n-\n-            if (pwtx)\n-            {\n-                if (!WriteTx(*pwtx))\n-                    return DB_LOAD_FAIL;\n-            }\n-            else\n-                if (!WriteAccountingEntry(pacentry->nEntryNo, *pacentry))\n-                    return DB_LOAD_FAIL;\n-        }\n-        else\n-        {\n-            int64_t nOrderPosOff = 0;\n-            BOOST_FOREACH(const int64_t& nOffsetStart, nOrderPosOffsets)\n-            {\n-                if (nOrderPos >= nOffsetStart)\n-                    ++nOrderPosOff;\n-            }\n-            nOrderPos += nOrderPosOff;\n-            nOrderPosNext = std::max(nOrderPosNext, nOrderPos + 1);\n-\n-            if (!nOrderPosOff)\n-                continue;\n-\n-            // Since we're changing the order, write it back\n-            if (pwtx)\n-            {\n-                if (!WriteTx(*pwtx))\n-                    return DB_LOAD_FAIL;\n-            }\n-            else\n-                if (!WriteAccountingEntry(pacentry->nEntryNo, *pacentry))\n-                    return DB_LOAD_FAIL;\n-        }\n-    }\n-    WriteOrderPosNext(nOrderPosNext);\n-\n-    return DB_LOAD_OK;\n-}\n-\n class CWalletScanState {\n public:\n     unsigned int nKeys;\n@@ -711,7 +635,7 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)\n         WriteVersion(CLIENT_VERSION);\n \n     if (wss.fAnyUnordered)\n-        result = ReorderTransactions(pwallet);\n+        result = pwallet->ReorderTransactions();\n \n     pwallet->laccentries.clear();\n     ListAccountCreditDebit(\"*\", pwallet->laccentries);"
+      },
+      {
+        "sha": "a0525bd9a7ce8d99b29ff7b18950815e3ff89f6c",
+        "filename": "src/wallet/walletdb.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 2,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/86029e72c96436605f47153c1f09e151e1847c28/src/wallet/walletdb.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/86029e72c96436605f47153c1f09e151e1847c28/src/wallet/walletdb.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/walletdb.h?ref=86029e72c96436605f47153c1f09e151e1847c28",
+        "patch": "@@ -153,6 +153,7 @@ class CWalletDB : public CDB\n \n     /// This writes directly to the database, and will not update the CWallet's cached accounting entries!\n     /// Use wallet.AddAccountingEntry instead, to write *and* update its caches.\n+    bool WriteAccountingEntry(const uint64_t nAccEntryNum, const CAccountingEntry& acentry);\n     bool WriteAccountingEntry_Backend(const CAccountingEntry& acentry);\n     bool ReadAccount(const std::string& strAccount, CAccount& account);\n     bool WriteAccount(const std::string& strAccount, const CAccount& account);\n@@ -165,7 +166,6 @@ class CWalletDB : public CDB\n     CAmount GetAccountCreditDebit(const std::string& strAccount);\n     void ListAccountCreditDebit(const std::string& strAccount, std::list<CAccountingEntry>& acentries);\n \n-    DBErrors ReorderTransactions(CWallet* pwallet);\n     DBErrors LoadWallet(CWallet* pwallet);\n     DBErrors FindWalletTx(CWallet* pwallet, std::vector<uint256>& vTxHash, std::vector<CWalletTx>& vWtx);\n     DBErrors ZapWalletTx(CWallet* pwallet, std::vector<CWalletTx>& vWtx);\n@@ -180,7 +180,6 @@ class CWalletDB : public CDB\n     CWalletDB(const CWalletDB&);\n     void operator=(const CWalletDB&);\n \n-    bool WriteAccountingEntry(const uint64_t nAccEntryNum, const CAccountingEntry& acentry);\n };\n \n void ThreadFlushWalletDB(const std::string& strFile);"
+      }
+    ]
+  }
+]

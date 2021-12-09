@@ -1,0 +1,332 @@
+[
+  {
+    "sha": "c9aa069f149ecab554b20d4cd97b08da9fc37028",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjOWFhMDY5ZjE0OWVjYWI1NTRiMjBkNGNkOTdiMDhkYTlmYzM3MDI4",
+    "commit": {
+      "author": {
+        "name": "Anthony Towns",
+        "email": "aj@erisian.com.au",
+        "date": "2019-09-23T10:22:33Z"
+      },
+      "committer": {
+        "name": "Anthony Towns",
+        "email": "aj@erisian.com.au",
+        "date": "2019-09-23T10:34:07Z"
+      },
+      "message": "DNS seeds: wait for 5m instead of 11s if 1000+ peers are known\n\nAlso check every 25s whether we've got enough active outbounds that DNS\nseeds aren't worth querying, and exit the thread early if so.",
+      "tree": {
+        "sha": "f91b2447e32ac18c35ec2152b3ad0058fb49f93e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f91b2447e32ac18c35ec2152b3ad0058fb49f93e"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/c9aa069f149ecab554b20d4cd97b08da9fc37028",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c9aa069f149ecab554b20d4cd97b08da9fc37028",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/c9aa069f149ecab554b20d4cd97b08da9fc37028",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c9aa069f149ecab554b20d4cd97b08da9fc37028/comments",
+    "author": {
+      "login": "ajtowns",
+      "id": 127186,
+      "node_id": "MDQ6VXNlcjEyNzE4Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/127186?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ajtowns",
+      "html_url": "https://github.com/ajtowns",
+      "followers_url": "https://api.github.com/users/ajtowns/followers",
+      "following_url": "https://api.github.com/users/ajtowns/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ajtowns/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ajtowns/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ajtowns/subscriptions",
+      "organizations_url": "https://api.github.com/users/ajtowns/orgs",
+      "repos_url": "https://api.github.com/users/ajtowns/repos",
+      "events_url": "https://api.github.com/users/ajtowns/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ajtowns/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "ajtowns",
+      "id": 127186,
+      "node_id": "MDQ6VXNlcjEyNzE4Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/127186?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ajtowns",
+      "html_url": "https://github.com/ajtowns",
+      "followers_url": "https://api.github.com/users/ajtowns/followers",
+      "following_url": "https://api.github.com/users/ajtowns/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ajtowns/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ajtowns/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ajtowns/subscriptions",
+      "organizations_url": "https://api.github.com/users/ajtowns/orgs",
+      "repos_url": "https://api.github.com/users/ajtowns/repos",
+      "events_url": "https://api.github.com/users/ajtowns/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ajtowns/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "3ce829888861a6dc6a29da669584ada961d965fa",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3ce829888861a6dc6a29da669584ada961d965fa",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/3ce829888861a6dc6a29da669584ada961d965fa"
+      }
+    ],
+    "stats": {
+      "total": 30,
+      "additions": 20,
+      "deletions": 10
+    },
+    "files": [
+      {
+        "sha": "854535002873fc5e4b9b16d8b90b53a09f356966",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 20,
+        "deletions": 10,
+        "changes": 30,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c9aa069f149ecab554b20d4cd97b08da9fc37028/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c9aa069f149ecab554b20d4cd97b08da9fc37028/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=c9aa069f149ecab554b20d4cd97b08da9fc37028",
+        "patch": "@@ -1543,6 +1543,8 @@ void CConnman::ThreadDNSAddressSeed()\n     Shuffle(seeds.begin(), seeds.end(), rng);\n     int seeds_right_now = 0; // Number of seeds left before testing if we have enough connections\n     int found = 0;\n+    std::chrono::seconds seeds_wait_time{11};\n+    if (addrman.size() >= 1000) seeds_wait_time = std::chrono::seconds{300};\n \n     if (gArgs.GetBoolArg(\"-forcednsseed\", DEFAULT_FORCEDNSSEED)) {\n         // When -forcednsseed is provided, query all.\n@@ -1555,16 +1557,24 @@ void CConnman::ThreadDNSAddressSeed()\n         // creating fewer identifying DNS requests, reduces trust by giving seeds\n         // less influence on the network topology, and reduces traffic to the seeds.\n         if (addrman.size() > 0 && seeds_right_now == 0) {\n-            if (!interruptNet.sleep_for(std::chrono::seconds(11))) return;\n-\n-            LOCK(cs_vNodes);\n-            int nRelevant = 0;\n-            for (const CNode* pnode : vNodes) {\n-                nRelevant += pnode->fSuccessfullyConnected && !pnode->fFeeler && !pnode->fOneShot && !pnode->m_manual_connection && !pnode->fInbound;\n-            }\n-            if (nRelevant >= 2) {\n-                LogPrintf(\"P2P peers available. Skipped DNS seeding.\\n\");\n-                return;\n+            LogPrintf(\"Waiting %d seconds before falling back to DNS seeds.\\n\", seeds_wait_time.count());\n+            while (seeds_wait_time.count() > 0) {\n+                std::chrono::seconds w{25};\n+                if (w > seeds_wait_time) w = seeds_wait_time;\n+                if (!interruptNet.sleep_for(w)) return;\n+                seeds_wait_time -= w;\n+\n+                int nRelevant = 0;\n+                {\n+                    LOCK(cs_vNodes);\n+                    for (const CNode* pnode : vNodes) {\n+                        nRelevant += pnode->fSuccessfullyConnected && !pnode->fFeeler && !pnode->fOneShot && !pnode->m_manual_connection && !pnode->fInbound;\n+                    }\n+                }\n+                if (nRelevant >= 2) {\n+                    LogPrintf(\"P2P peers available. Skipped DNS seeding.\\n\");\n+                    return;\n+                }\n             }\n             seeds_right_now += DNSSEEDS_TO_QUERY_AT_ONCE;\n         }"
+      }
+    ]
+  },
+  {
+    "sha": "abc5b5765634ba829269b33ba15b585d61f5f350",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphYmM1YjU3NjU2MzRiYTgyOTI2OWIzM2JhMTViNTg1ZDYxZjVmMzUw",
+    "commit": {
+      "author": {
+        "name": "Anthony Towns",
+        "email": "aj@erisian.com.au",
+        "date": "2019-02-28T07:34:54Z"
+      },
+      "committer": {
+        "name": "Anthony Towns",
+        "email": "aj@erisian.com.au",
+        "date": "2019-09-23T10:34:47Z"
+      },
+      "message": "NOMERGE: debug logging of successful/total connection attempts",
+      "tree": {
+        "sha": "1accd580e7eba1571e9bf33629a894ba134e9565",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/1accd580e7eba1571e9bf33629a894ba134e9565"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/abc5b5765634ba829269b33ba15b585d61f5f350",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/abc5b5765634ba829269b33ba15b585d61f5f350",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/abc5b5765634ba829269b33ba15b585d61f5f350",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/abc5b5765634ba829269b33ba15b585d61f5f350/comments",
+    "author": {
+      "login": "ajtowns",
+      "id": 127186,
+      "node_id": "MDQ6VXNlcjEyNzE4Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/127186?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ajtowns",
+      "html_url": "https://github.com/ajtowns",
+      "followers_url": "https://api.github.com/users/ajtowns/followers",
+      "following_url": "https://api.github.com/users/ajtowns/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ajtowns/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ajtowns/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ajtowns/subscriptions",
+      "organizations_url": "https://api.github.com/users/ajtowns/orgs",
+      "repos_url": "https://api.github.com/users/ajtowns/repos",
+      "events_url": "https://api.github.com/users/ajtowns/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ajtowns/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "ajtowns",
+      "id": 127186,
+      "node_id": "MDQ6VXNlcjEyNzE4Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/127186?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ajtowns",
+      "html_url": "https://github.com/ajtowns",
+      "followers_url": "https://api.github.com/users/ajtowns/followers",
+      "following_url": "https://api.github.com/users/ajtowns/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ajtowns/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ajtowns/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ajtowns/subscriptions",
+      "organizations_url": "https://api.github.com/users/ajtowns/orgs",
+      "repos_url": "https://api.github.com/users/ajtowns/repos",
+      "events_url": "https://api.github.com/users/ajtowns/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ajtowns/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "c9aa069f149ecab554b20d4cd97b08da9fc37028",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c9aa069f149ecab554b20d4cd97b08da9fc37028",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c9aa069f149ecab554b20d4cd97b08da9fc37028"
+      }
+    ],
+    "stats": {
+      "total": 6,
+      "additions": 6,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "1675cc23b4960eba84ec14e2834495b81765acc7",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 0,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/abc5b5765634ba829269b33ba15b585d61f5f350/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/abc5b5765634ba829269b33ba15b585d61f5f350/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=abc5b5765634ba829269b33ba15b585d61f5f350",
+        "patch": "@@ -1965,6 +1965,8 @@ void CConnman::OpenNetworkConnection(const CAddress& addrConnect, bool fCountFai\n     } else if (FindNode(std::string(pszDest)))\n         return;\n \n+    { LOCK(cs_vNodes); ++conn_attempts; }\n+\n     CNode* pnode = ConnectNode(addrConnect, pszDest, fCountFailure, manual_connection, block_relay_only);\n \n     if (!pnode)\n@@ -1981,6 +1983,8 @@ void CConnman::OpenNetworkConnection(const CAddress& addrConnect, bool fCountFai\n     m_msgproc->InitializeNode(pnode);\n     {\n         LOCK(cs_vNodes);\n+        ++conn_success;\n+        LogPrintf(\"Successful connection; %ld of %ld (%.1f%%)\\n\", conn_success, conn_attempts, conn_success*100.0/conn_attempts);\n         vNodes.push_back(pnode);\n     }\n }"
+      },
+      {
+        "sha": "5691178360062bb4c62cfa21c1d74143b5d93541",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/abc5b5765634ba829269b33ba15b585d61f5f350/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/abc5b5765634ba829269b33ba15b585d61f5f350/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=abc5b5765634ba829269b33ba15b585d61f5f350",
+        "patch": "@@ -414,6 +414,8 @@ class CConnman\n     std::vector<std::string> vAddedNodes GUARDED_BY(cs_vAddedNodes);\n     CCriticalSection cs_vAddedNodes;\n     std::vector<CNode*> vNodes GUARDED_BY(cs_vNodes);\n+    uint64_t conn_attempts GUARDED_BY(cs_vNodes) = 0;\n+    uint64_t conn_success GUARDED_BY(cs_vNodes) = 0;\n     std::list<CNode*> vNodesDisconnected;\n     mutable CCriticalSection cs_vNodes;\n     std::atomic<NodeId> nLastNodeId{0};"
+      }
+    ]
+  },
+  {
+    "sha": "62686dcaf2050257204797a68a00be12d7d316e8",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2MjY4NmRjYWYyMDUwMjU3MjA0Nzk3YTY4YTAwYmUxMmQ3ZDMxNmU4",
+    "commit": {
+      "author": {
+        "name": "Anthony Towns",
+        "email": "aj@erisian.com.au",
+        "date": "2019-02-28T07:34:23Z"
+      },
+      "committer": {
+        "name": "Anthony Towns",
+        "email": "aj@erisian.com.au",
+        "date": "2019-09-23T10:34:47Z"
+      },
+      "message": "speed up initial reconnection to p2p network",
+      "tree": {
+        "sha": "144a01a49f5ed0e6228631134e8e849a3620fe76",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/144a01a49f5ed0e6228631134e8e849a3620fe76"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/62686dcaf2050257204797a68a00be12d7d316e8",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/62686dcaf2050257204797a68a00be12d7d316e8",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/62686dcaf2050257204797a68a00be12d7d316e8",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/62686dcaf2050257204797a68a00be12d7d316e8/comments",
+    "author": {
+      "login": "ajtowns",
+      "id": 127186,
+      "node_id": "MDQ6VXNlcjEyNzE4Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/127186?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ajtowns",
+      "html_url": "https://github.com/ajtowns",
+      "followers_url": "https://api.github.com/users/ajtowns/followers",
+      "following_url": "https://api.github.com/users/ajtowns/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ajtowns/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ajtowns/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ajtowns/subscriptions",
+      "organizations_url": "https://api.github.com/users/ajtowns/orgs",
+      "repos_url": "https://api.github.com/users/ajtowns/repos",
+      "events_url": "https://api.github.com/users/ajtowns/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ajtowns/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "ajtowns",
+      "id": 127186,
+      "node_id": "MDQ6VXNlcjEyNzE4Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/127186?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ajtowns",
+      "html_url": "https://github.com/ajtowns",
+      "followers_url": "https://api.github.com/users/ajtowns/followers",
+      "following_url": "https://api.github.com/users/ajtowns/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ajtowns/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ajtowns/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ajtowns/subscriptions",
+      "organizations_url": "https://api.github.com/users/ajtowns/orgs",
+      "repos_url": "https://api.github.com/users/ajtowns/repos",
+      "events_url": "https://api.github.com/users/ajtowns/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ajtowns/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "abc5b5765634ba829269b33ba15b585d61f5f350",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/abc5b5765634ba829269b33ba15b585d61f5f350",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/abc5b5765634ba829269b33ba15b585d61f5f350"
+      }
+    ],
+    "stats": {
+      "total": 120,
+      "additions": 119,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "cbc752c843bcea9730a4a992e1a461585574fb93",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 105,
+        "deletions": 1,
+        "changes": 106,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/62686dcaf2050257204797a68a00be12d7d316e8/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/62686dcaf2050257204797a68a00be12d7d316e8/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=62686dcaf2050257204797a68a00be12d7d316e8",
+        "patch": "@@ -1685,6 +1685,46 @@ int CConnman::GetExtraOutboundCount()\n     return std::max(nOutbound - m_max_outbound_full_relay - m_max_outbound_block_relay, 0);\n }\n \n+void CConnman::ThreadOpenPeerConnectionsFast(size_t i)\n+{\n+    while (!interruptNet)\n+    {\n+        CSemaphoreGrant grant(*semOutbound);\n+\n+        if (!interruptNet.sleep_for(std::chrono::milliseconds(100)))\n+            return;\n+\n+        //\n+        // Choose an address to connect to from main thread\n+        //\n+        CAddress addrConnect;\n+\n+        {\n+            LOCK(cs_vNodes);\n+            // Finished already?\n+\n+            if (fFastFinished) return;\n+\n+            if (vFastConnect.size() <= i) continue;\n+\n+            auto& vc = vFastConnect.at(i);\n+            if (!vc.first) continue;\n+            addrConnect = vc.second;\n+        }\n+\n+        if (interruptNet) return;\n+\n+        LogPrintf(\"Trying connection in thread fastcon%d\\n\", i);\n+        OpenNetworkConnection(addrConnect, false, &grant, nullptr, false, false);\n+\n+        {\n+           LOCK(cs_vNodes);\n+           if (vFastConnect.size() <= i) continue;\n+           vFastConnect.at(i).first = false;\n+        }\n+    }\n+}\n+\n void CConnman::ThreadOpenConnections(const std::vector<std::string> connect)\n {\n     // Connect to specific addresses\n@@ -1710,6 +1750,7 @@ void CConnman::ThreadOpenConnections(const std::vector<std::string> connect)\n \n     // Initiate network connections\n     int64_t nStart = GetTime();\n+    bool fFastStartup = true;\n \n     // Minimum time before next feeler connection (in microseconds).\n     int64_t nNextFeeler = PoissonNextSend(nStart*1000*1000, FEELER_INTERVAL);\n@@ -1762,6 +1803,13 @@ void CConnman::ThreadOpenConnections(const std::vector<std::string> connect)\n                     }\n                 }\n             }\n+            if (fFastStartup) {\n+                for (auto& i : vFastConnect) {\n+                    if (i.first) {\n+                        setConnected.insert(i.second.GetGroup());\n+                    }\n+                }\n+            }\n         }\n \n         // Feeler Connections\n@@ -1843,13 +1891,57 @@ void CConnman::ThreadOpenConnections(const std::vector<std::string> connect)\n         }\n \n         if (addrConnect.IsValid()) {\n-\n             if (fFeeler) {\n                 // Add small amount of random noise before connection to avoid synchronization.\n                 int randsleep = GetRandInt(FEELER_SLEEP_WINDOW * 1000);\n                 if (!interruptNet.sleep_for(std::chrono::milliseconds(randsleep)))\n                     return;\n                 LogPrint(BCLog::NET, \"Making feeler connection to %s\\n\", addrConnect.ToString());\n+            } else {\n+                if (fFastStartup) {\n+                    if (nOutboundFullRelay >= 2 && nOutboundFullRelay + FAST_CONNECT_THREADS >= m_max_outbound_full_relay) {\n+                        // Done with fast connections\n+                        {\n+                            LOCK(cs_vNodes);\n+                            fFastFinished = true; // signal fast connect threads to stop\n+                            vFastConnect.clear();\n+                        }\n+                        LogPrint(BCLog::NET, \"Waiting for fast connection threads to finish (outbound=%d)\\n\", nOutboundFullRelay);\n+                        for (auto& t : threadFastConnections) {\n+                            if (t.joinable())\n+                                t.join();\n+                        }\n+                        threadFastConnections.clear();\n+                        fFastStartup = false;\n+                        if (interruptNet) continue;\n+                    } else {\n+                        // Add to vFastConnect\n+                        {\n+                            LOCK(cs_vNodes);\n+                            if (vFastConnect.size() < threadFastConnections.size()) {\n+                                vFastConnect.push_back({true, addrConnect});\n+                                continue;\n+                            }\n+                        }\n+                        bool placed = false;\n+                        while (!placed && !interruptNet) {\n+                            {\n+                                LOCK(cs_vNodes);\n+                                for (auto& i : vFastConnect) {\n+                                    if (!i.first) {\n+                                        i.second = addrConnect;\n+                                        i.first = true;\n+                                        placed = true;\n+                                        break;\n+                                    }\n+                                }\n+                            }\n+                            if (!placed && !interruptNet.sleep_for(std::chrono::milliseconds(100)))\n+                                return;\n+                        }\n+                        continue;\n+                    }\n+                }\n             }\n \n             // Open this connection as block-relay-only if we're already at our\n@@ -2311,6 +2403,13 @@ bool CConnman::Start(CScheduler& scheduler, const Options& connOptions)\n         }\n         return false;\n     }\n+\n+    if (connOptions.m_use_addrman_outgoing && connOptions.m_specified_outgoing.empty()) {\n+        for (size_t i = 0; i < FAST_CONNECT_THREADS; i++) {\n+            threadFastConnections.push_back(std::thread(&TraceThreads<std::function<void()> >, \"fastcon\", i, std::function<void()>(std::bind(&CConnman::ThreadOpenPeerConnectionsFast, this, i))));\n+        }\n+    }\n+\n     if (connOptions.m_use_addrman_outgoing || !connOptions.m_specified_outgoing.empty())\n         threadOpenConnections = std::thread(&TraceThread<std::function<void()> >, \"opencon\", std::function<void()>(std::bind(&CConnman::ThreadOpenConnections, this, connOptions.m_specified_outgoing)));\n \n@@ -2368,6 +2467,11 @@ void CConnman::Stop()\n         threadMessageHandler.join();\n     if (threadOpenConnections.joinable())\n         threadOpenConnections.join();\n+    for (auto& t : threadFastConnections) {\n+        // might be joined and cleared from threadOpenConnections, so finish that thread first\n+        if (t.joinable())\n+            t.join();\n+    }\n     if (threadOpenAddedConnections.joinable())\n         threadOpenAddedConnections.join();\n     if (threadDNSAddressSeed.joinable())"
+      },
+      {
+        "sha": "7f962fdd1f617cdc872b211dfaad6153f891ff54",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 0,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/62686dcaf2050257204797a68a00be12d7d316e8/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/62686dcaf2050257204797a68a00be12d7d316e8/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=62686dcaf2050257204797a68a00be12d7d316e8",
+        "patch": "@@ -63,6 +63,8 @@ static const unsigned int MAX_PROTOCOL_MESSAGE_LENGTH = 4 * 1000 * 1000;\n static const unsigned int MAX_SUBVERSION_LENGTH = 256;\n /** Maximum number of automatic outgoing nodes over which we'll relay everything (blocks, tx, addrs, etc) */\n static const int MAX_OUTBOUND_FULL_RELAY_CONNECTIONS = 8;\n+/** Number of fast connect threads */\n+static const int FAST_CONNECT_THREADS = 4;\n /** Maximum number of addnode outgoing nodes */\n static const int MAX_ADDNODE_CONNECTIONS = 8;\n /** Maximum number of block-relay-only outgoing connections */\n@@ -347,6 +349,7 @@ class CConnman\n     void AddOneShot(const std::string& strDest);\n     void ProcessOneShot();\n     void ThreadOpenConnections(std::vector<std::string> connect);\n+    void ThreadOpenPeerConnectionsFast(size_t threadnum);\n     void ThreadMessageHandler();\n     void AcceptConnection(const ListenSocket& hListenSocket);\n     void DisconnectNodes();\n@@ -416,6 +419,8 @@ class CConnman\n     std::vector<CNode*> vNodes GUARDED_BY(cs_vNodes);\n     uint64_t conn_attempts GUARDED_BY(cs_vNodes) = 0;\n     uint64_t conn_success GUARDED_BY(cs_vNodes) = 0;\n+    std::vector<std::pair<bool,CAddress> > vFastConnect GUARDED_BY(cs_vNodes);\n+    bool fFastFinished GUARDED_BY(cs_vNodes) = false;\n     std::list<CNode*> vNodesDisconnected;\n     mutable CCriticalSection cs_vNodes;\n     std::atomic<NodeId> nLastNodeId{0};\n@@ -471,6 +476,7 @@ class CConnman\n     std::thread threadSocketHandler;\n     std::thread threadOpenAddedConnections;\n     std::thread threadOpenConnections;\n+    std::vector<std::thread> threadFastConnections; // manipulated in threadOpenConnections\n     std::thread threadMessageHandler;\n \n     /** flag for deciding to connect to an extra outbound peer,"
+      },
+      {
+        "sha": "c8312dfe682a5988ca7b278145268339876e0de4",
+        "filename": "src/util/system.h",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 0,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/62686dcaf2050257204797a68a00be12d7d316e8/src/util/system.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/62686dcaf2050257204797a68a00be12d7d316e8/src/util/system.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/util/system.h?ref=62686dcaf2050257204797a68a00be12d7d316e8",
+        "patch": "@@ -360,6 +360,14 @@ template <typename Callable> void TraceThread(const char* name,  Callable func)\n         throw;\n     }\n }\n+/**\n+ * .. and a wrapper the allows for multiple threads for the same function\n+ */\n+template <typename Callable> void TraceThreads(const char* name, int index, Callable func)\n+{\n+    std::string nameidx = strprintf(\"%s%d\", name, index);\n+    TraceThread(nameidx.c_str(), func);\n+}\n \n std::string CopyrightHolders(const std::string& strPrefix);\n "
+      }
+    ]
+  }
+]

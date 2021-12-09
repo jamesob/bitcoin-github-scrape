@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "95d7f002957a7bb30a2d5d8b07fe8fe3c1f37ec0",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5NWQ3ZjAwMjk1N2E3YmIzMGEyZDVkOGIwN2ZlOGZlM2MxZjM3ZWMw",
+    "commit": {
+      "author": {
+        "name": "Mark Friedenbach",
+        "email": "mark@monetize.io",
+        "date": "2012-09-25T23:40:34Z"
+      },
+      "committer": {
+        "name": "Mark Friedenbach",
+        "email": "mark@monetize.io",
+        "date": "2012-09-25T23:40:34Z"
+      },
+      "message": "Documented bug in sign-extension behavior of opcodes OP_AND, OP_OR, and OP_XOR.\n\nDue to a bug in the implementation of MakeSameSize(), using OP_AND, OP_OR, or OP_XOR with signed values of unequal size will result in the sign-value becoming part of the smaller integer, with nonsensical results. This patch documents the unexpected behavior and provides the basis of a solution should decision be made to fix the bug in the future.",
+      "tree": {
+        "sha": "a2e8b9e591328ef2ee6db6d2eaa8c26d96bca53b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/a2e8b9e591328ef2ee6db6d2eaa8c26d96bca53b"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/95d7f002957a7bb30a2d5d8b07fe8fe3c1f37ec0",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/95d7f002957a7bb30a2d5d8b07fe8fe3c1f37ec0",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/95d7f002957a7bb30a2d5d8b07fe8fe3c1f37ec0",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/95d7f002957a7bb30a2d5d8b07fe8fe3c1f37ec0/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "1381ad2b21733071acb2a43c251dbecef524f110",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1381ad2b21733071acb2a43c251dbecef524f110",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/1381ad2b21733071acb2a43c251dbecef524f110"
+      }
+    ],
+    "stats": {
+      "total": 24,
+      "additions": 23,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "4357a9a1b3491d52a1b87b5284afab8fd421c143",
+        "filename": "src/script.cpp",
+        "status": "modified",
+        "additions": 23,
+        "deletions": 1,
+        "changes": 24,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/95d7f002957a7bb30a2d5d8b07fe8fe3c1f37ec0/src/script.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/95d7f002957a7bb30a2d5d8b07fe8fe3c1f37ec0/src/script.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script.cpp?ref=95d7f002957a7bb30a2d5d8b07fe8fe3c1f37ec0",
+        "patch": "@@ -54,12 +54,29 @@ bool CastToBool(const valtype& vch)\n     return false;\n }\n \n+//\n+// WARNING: This does not work as expected for signed integers; the sign-bit\n+// is left in place as the integer is zero-extended. The correct behavior\n+// would be to move the most significant bit of the last byte during the\n+// resize process. MakeSameSize() is currently only used by the disabled\n+// opcodes OP_AND, OP_OR, and OP_XOR.\n+//\n void MakeSameSize(valtype& vch1, valtype& vch2)\n {\n     // Lengthen the shorter one\n     if (vch1.size() < vch2.size())\n+        // PATCH:\n+        // +unsigned char msb = vch1[vch1.size()-1];\n+        // +vch1[vch1.size()-1] &= 0x7f;\n+        //  vch1.resize(vch2.size(), 0);\n+        // +vch1[vch1.size()-1] = msb;\n         vch1.resize(vch2.size(), 0);\n     if (vch2.size() < vch1.size())\n+        // PATCH:\n+        // +unsigned char msb = vch2[vch2.size()-1];\n+        // +vch2[vch2.size()-1] &= 0x7f;\n+        //  vch2.resize(vch1.size(), 0);\n+        // +vch2[vch2.size()-1] = msb;\n         vch2.resize(vch1.size(), 0);\n }\n \n@@ -663,6 +680,11 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co\n                 }\n                 break;\n \n+                //\n+                // WARNING: These disabled opcodes exhibit unexpected behavior\n+                // when used on signed integers due to a bug in MakeSameSize()\n+                // [see definition of MakeSameSize() above].\n+                //\n                 case OP_AND:\n                 case OP_OR:\n                 case OP_XOR:\n@@ -672,7 +694,7 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co\n                         return false;\n                     valtype& vch1 = stacktop(-2);\n                     valtype& vch2 = stacktop(-1);\n-                    MakeSameSize(vch1, vch2);\n+                    MakeSameSize(vch1, vch2); // <-- NOT SAFE FOR SIGNED VALUES\n                     if (opcode == OP_AND)\n                     {\n                         for (unsigned int i = 0; i < vch1.size(); i++)"
+      }
+    ]
+  }
+]

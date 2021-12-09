@@ -1,0 +1,98 @@
+[
+  {
+    "sha": "1ba3560fe870dac8d27d75671c483eaa4e0009ff",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxYmEzNTYwZmU4NzBkYWM4ZDI3ZDc1NjcxYzQ4M2VhYTRlMDAwOWZm",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-12-20T17:47:49Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-01-17T14:43:44Z"
+      },
+      "message": "[Qt] let OptionsModel::getProxySettings() directly query proxy\n\n- as a proxy set via GUI can be overridden via -proxy, directly query the\n  core to get active proxy\n- give a warning, if active proxy is not SOCKS5 (needs to be SOCKS5 for\n  the Qt networking code to work)\n- also remove an obsolete connect() call from optionsdialog.cpp and a\n  reference to Bitcoin-Qt (now just GUI)",
+      "tree": {
+        "sha": "3925fb306afea23ecc717c9ec2ce329ff56a8030",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/3925fb306afea23ecc717c9ec2ce329ff56a8030"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/1ba3560fe870dac8d27d75671c483eaa4e0009ff",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1ba3560fe870dac8d27d75671c483eaa4e0009ff",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/1ba3560fe870dac8d27d75671c483eaa4e0009ff",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1ba3560fe870dac8d27d75671c483eaa4e0009ff/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "08ede8ef5edd8bfe6b80d0900bd9bd65b2d45cbf",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/08ede8ef5edd8bfe6b80d0900bd9bd65b2d45cbf",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/08ede8ef5edd8bfe6b80d0900bd9bd65b2d45cbf"
+      }
+    ],
+    "stats": {
+      "total": 58,
+      "additions": 39,
+      "deletions": 19
+    },
+    "files": [
+      {
+        "sha": "f61bb3ed2c6ea8d86613b51d0d88108ed829dff8",
+        "filename": "src/qt/optionsdialog.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 2,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1ba3560fe870dac8d27d75671c483eaa4e0009ff/src/qt/optionsdialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1ba3560fe870dac8d27d75671c483eaa4e0009ff/src/qt/optionsdialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/optionsdialog.cpp?ref=1ba3560fe870dac8d27d75671c483eaa4e0009ff",
+        "patch": "@@ -53,7 +53,6 @@ OptionsDialog::OptionsDialog(QWidget *parent) :\n     connect(ui->connectSocks, SIGNAL(toggled(bool)), ui->proxyIp, SLOT(setEnabled(bool)));\n     connect(ui->connectSocks, SIGNAL(toggled(bool)), ui->proxyPort, SLOT(setEnabled(bool)));\n     connect(ui->connectSocks, SIGNAL(toggled(bool)), ui->socksVersion, SLOT(setEnabled(bool)));\n-    connect(ui->connectSocks, SIGNAL(clicked(bool)), this, SLOT(showRestartWarning_Proxy()));\n \n     ui->proxyIp->installEventFilter(this);\n \n@@ -204,7 +203,7 @@ void OptionsDialog::on_resetButton_clicked()\n         if(btnRetVal == QMessageBox::Cancel)\n             return;\n \n-        /* reset all options and close Bitcoin-Qt */\n+        /* reset all options and close GUI */\n         model->Reset();\n         QApplication::quit();\n     }"
+      },
+      {
+        "sha": "a18fd1d5143dd969c9bac30516a4273d1572a59f",
+        "filename": "src/qt/optionsmodel.cpp",
+        "status": "modified",
+        "additions": 18,
+        "deletions": 6,
+        "changes": 24,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1ba3560fe870dac8d27d75671c483eaa4e0009ff/src/qt/optionsmodel.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1ba3560fe870dac8d27d75671c483eaa4e0009ff/src/qt/optionsmodel.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/optionsmodel.cpp?ref=1ba3560fe870dac8d27d75671c483eaa4e0009ff",
+        "patch": "@@ -19,6 +19,7 @@\n #include \"walletdb.h\"\n #endif\n \n+#include <QNetworkProxy>\n #include <QSettings>\n #include <QStringList>\n \n@@ -375,14 +376,25 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in\n     return successful;\n }\n \n-bool OptionsModel::getProxySettings(QString& proxyIP, quint16 &proxyPort) const\n+bool OptionsModel::getProxySettings(QNetworkProxy& proxy) const\n {\n-    std::string proxy = GetArg(\"-proxy\", \"\");\n-    if (proxy.empty()) return false;\n+    // Directly query current base proxy, because\n+    // GUI settings can be overridden with -proxy.\n+    proxyType curProxy;\n+    if (GetProxy(NET_IPV4, curProxy)) {\n+        if (curProxy.second == 5) {\n+            proxy.setType(QNetworkProxy::Socks5Proxy);\n+            proxy.setHostName(QString::fromStdString(curProxy.first.ToStringIP()));\n+            proxy.setPort(curProxy.first.GetPort());\n+\n+            return true;\n+        }\n+        else\n+            return false;\n+    }\n+    else\n+        proxy.setType(QNetworkProxy::NoProxy);\n \n-    CService addrProxy(proxy);\n-    proxyIP = QString(addrProxy.ToStringIP().c_str());\n-    proxyPort = addrProxy.GetPort();\n     return true;\n }\n "
+      },
+      {
+        "sha": "7a71b772b2559684c75889b159a628d7f158cf23",
+        "filename": "src/qt/optionsmodel.h",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 1,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1ba3560fe870dac8d27d75671c483eaa4e0009ff/src/qt/optionsmodel.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1ba3560fe870dac8d27d75671c483eaa4e0009ff/src/qt/optionsmodel.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/optionsmodel.h?ref=1ba3560fe870dac8d27d75671c483eaa4e0009ff",
+        "patch": "@@ -7,6 +7,10 @@\n \n #include <QAbstractListModel>\n \n+QT_BEGIN_NAMESPACE\n+class QNetworkProxy;\n+QT_END_NAMESPACE\n+\n /** Interface from Qt to configuration data structure for Bitcoin client.\n    To Qt, the options are presented as a list with the different options\n    laid out vertically.\n@@ -54,7 +58,7 @@ class OptionsModel : public QAbstractListModel\n     bool getMinimizeOnClose() { return fMinimizeOnClose; }\n     int getDisplayUnit() { return nDisplayUnit; }\n     bool getDisplayAddresses() { return bDisplayAddresses; }\n-    bool getProxySettings(QString& proxyIP, quint16 &proxyPort) const;\n+    bool getProxySettings(QNetworkProxy& proxy) const;\n     bool getCoinControlFeatures() { return fCoinControlFeatures; }\n     const QString& getOverriddenByCommandLine() { return strOverriddenByCommandLine; }\n "
+      },
+      {
+        "sha": "ca6ae179905529e569f61a30d0df46626ffbc531",
+        "filename": "src/qt/paymentserver.cpp",
+        "status": "modified",
+        "additions": 15,
+        "deletions": 10,
+        "changes": 25,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1ba3560fe870dac8d27d75671c483eaa4e0009ff/src/qt/paymentserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1ba3560fe870dac8d27d75671c483eaa4e0009ff/src/qt/paymentserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.cpp?ref=1ba3560fe870dac8d27d75671c483eaa4e0009ff",
+        "patch": "@@ -335,17 +335,22 @@ void PaymentServer::initNetManager()\n     // netManager is used to fetch paymentrequests given in bitcoin: URIs\n     netManager = new QNetworkAccessManager(this);\n \n-    // Use proxy settings from optionsModel\n-    QString proxyIP;\n-    quint16 proxyPort;\n-    if (optionsModel->getProxySettings(proxyIP, proxyPort))\n-    {\n-        QNetworkProxy proxy;\n-        proxy.setType(QNetworkProxy::Socks5Proxy);\n-        proxy.setHostName(proxyIP);\n-        proxy.setPort(proxyPort);\n-        netManager->setProxy(proxy);\n+    QNetworkProxy proxy;\n+\n+    // Query active proxy (fails if no SOCKS5 proxy)\n+    if (optionsModel->getProxySettings(proxy)) {\n+        if (proxy.type() == QNetworkProxy::Socks5Proxy) {\n+            netManager->setProxy(proxy);\n+\n+            qDebug() << \"PaymentServer::initNetManager : Using SOCKS5 proxy\" << proxy.hostName() << \":\" << proxy.port();\n+        }\n+        else\n+            qDebug() << \"PaymentServer::initNetManager : No active proxy server found.\";\n     }\n+    else\n+        emit message(tr(\"Net manager warning\"),\n+            tr(\"Your active proxy doesn't support SOCKS5, which is required for payment requests via proxy.\"),\n+            CClientUIInterface::MSG_WARNING);\n \n     connect(netManager, SIGNAL(finished(QNetworkReply*)),\n             this, SLOT(netRequestFinished(QNetworkReply*)));"
+      }
+    ]
+  }
+]

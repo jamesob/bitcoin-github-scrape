@@ -1,0 +1,35 @@
+jonasschnelli,2015-07-03T07:54:01Z,utACK (mind the nit above).\n,https://github.com/bitcoin/bitcoin/pull/6371#issuecomment-118267842,118267842,
+Diapolo,2015-07-03T15:59:16Z,"@jonasschnelli Would be nice if you could test this pull and review commit 4, so this can get merged soon. I've got further small fixes for this but don't want to blow up this pull ;).\n",https://github.com/bitcoin/bitcoin/pull/6371#issuecomment-118380744,118380744,
+Diapolo,2015-07-21T19:17:17Z,@jonasschnelli Ping\n,https://github.com/bitcoin/bitcoin/pull/6371#issuecomment-123450858,123450858,
+Diapolo,2015-07-29T09:25:18Z,@jonasschnelli @laanwj Can we get this in please?\n,https://github.com/bitcoin/bitcoin/pull/6371#issuecomment-125890942,125890942,
+Diapolo,2015-08-10T12:14:05Z,"@jonasschnelli Too sad you couldn't yet ACK this, mind taking a look?\n",https://github.com/bitcoin/bitcoin/pull/6371#issuecomment-129424607,129424607,
+jgarzik,2015-09-16T13:31:23Z,ut ACK\n,https://github.com/bitcoin/bitcoin/pull/6371#issuecomment-140743271,140743271,
+Diapolo,2015-09-16T14:04:32Z,@jgarzik Thanks for review :).\n,https://github.com/bitcoin/bitcoin/pull/6371#issuecomment-140751522,140751522,
+dcousens,2015-09-19T01:50:21Z,utACK\n,https://github.com/bitcoin/bitcoin/pull/6371#issuecomment-141607988,141607988,
+Diapolo,2015-09-19T11:58:57Z,"@dcousens @jgarzik Reworked to fix your valuable nits, can you re-check and re-ACK please?\n",https://github.com/bitcoin/bitcoin/pull/6371#issuecomment-141656996,141656996,
+dcousens,2015-09-19T15:21:11Z,@Diapolo re-reviewed commit-by-commit.  utACK / concept ACK (683275e)\n,https://github.com/bitcoin/bitcoin/pull/6371#issuecomment-141679272,141679272,
+Diapolo,2015-09-21T05:58:28Z,"Seems unrelated!?\n\n```\nRunning 161 test cases...\n\nNo output has been received in the last 10 minutes, this potentially indicates a stalled build or something wrong with the build itself.\n\nThe build has been terminated\n```\n",https://github.com/bitcoin/bitcoin/pull/6371#issuecomment-141883262,141883262,
+Diapolo,2015-10-09T07:16:47Z,What is holding up the merge here?\n@jgarzik Ping :)\n,https://github.com/bitcoin/bitcoin/pull/6371#issuecomment-146775342,146775342,
+dcousens,2015-10-12T23:56:12Z,utACK\n,https://github.com/bitcoin/bitcoin/pull/6371#issuecomment-147551879,147551879,
+laanwj,2015-10-27T08:14:38Z,All utACK but I can't really see from the code changes whether it's correct. No one has tested this yet? Or is this covered by the current tests?\n,https://github.com/bitcoin/bitcoin/pull/6371#issuecomment-151410217,151410217,
+Diapolo,2015-10-27T16:57:48Z,"Well, I tested it :-D and I also was aware of these things while @jonasschnelli implemented it, but AFAIK no one was interrested in fixing/improving at that time...\n",https://github.com/bitcoin/bitcoin/pull/6371#issuecomment-151568545,151568545,
+jonasschnelli,2015-10-27T17:05:00Z,utACK. A unittest would be nice (or extending the rpc test with some banlist.dat checking on file basis).\n,https://github.com/bitcoin/bitcoin/pull/6371#issuecomment-151570985,151570985,
+jonasschnelli,2015-07-03T07:52:18Z,This line `CNode::SetBannedSetDirty(false);` should be called even if `bandb.Read(ban map)` failed.\n,https://github.com/bitcoin/bitcoin/pull/6371#discussion_r33845689,33845689,src/net.cpp
+Diapolo,2015-07-03T07:54:17Z,"As written in the code, it is false as default, so it isn't dirty, because no functions were called that change the flag :).\n",https://github.com/bitcoin/bitcoin/pull/6371#discussion_r33845801,33845801,src/net.cpp
+Diapolo,2015-07-03T07:55:18Z,@jonasschnelli Should this be `ips/subnets` rather than `addresses`?\n,https://github.com/bitcoin/bitcoin/pull/6371#discussion_r33845850,33845850,src/net.cpp
+jonasschnelli,2015-07-03T08:00:16Z,"Why is it's default false (`net.cppL448)?\nI would recommend to call`CNode::SetBannedSetDirty(false);` when we start up a node. There is no case where the list can be ""dirty"" in this state.\n",https://github.com/bitcoin/bitcoin/pull/6371#discussion_r33846119,33846119,src/net.cpp
+jonasschnelli,2015-07-03T08:01:58Z,"Hmm.... it could be `_(""Loading banned addresses/subnets..."")` but if we be particular about this: a subnet defines an amount of ""addresses"". But i don't care about that.\n",https://github.com/bitcoin/bitcoin/pull/6371#discussion_r33846197,33846197,src/net.cpp
+laanwj,2015-07-03T08:02:50Z,"`""Loading ban list...""`\n",https://github.com/bitcoin/bitcoin/pull/6371#discussion_r33846235,33846235,src/net.cpp
+Diapolo,2015-07-03T08:10:36Z,"IMHO an not explicitly initialized bool defaults to false (0).\nThis call here (where the comment is), is necessary because we just read and didn't change anything, as the `CNode::SetBanned()` call sets `setBannedIsDirty = true`.\n",https://github.com/bitcoin/bitcoin/pull/6371#discussion_r33846612,33846612,src/net.cpp
+jgarzik,2015-09-16T13:31:06Z,"General principle:  Code like ""if (!dirty) return;"" reduces the indentation level for the standard case, and makes the code more readable.\n",https://github.com/bitcoin/bitcoin/pull/6371#discussion_r39628910,39628910,src/net.cpp
+Diapolo,2015-09-16T14:03:33Z,"So you would have written?\n\n```\nif (bandb.Write(banmap)) CNode::SetBannedSetDirty(false);\n```\n\nOr are you talking about:\n\n```\nLogPrint(""net"", ""Flushed %d banned node ips/subnets to banlist.dat  %dms\n"", banmap.size(), GetTimeMillis() - Start);\n```\n",https://github.com/bitcoin/bitcoin/pull/6371#discussion_r39632922,39632922,src/net.cpp
+MarcoFalke,2015-09-16T15:57:45Z,I think it was `if (!CNode::BannedSetIsDirty()) return;`\n,https://github.com/bitcoin/bitcoin/pull/6371#discussion_r39648416,39648416,src/net.cpp
+Diapolo,2015-09-16T16:44:55Z,"LOL, got it now ;)... thanks for that hint.\n",https://github.com/bitcoin/bitcoin/pull/6371#discussion_r39654044,39654044,src/net.cpp
+dcousens,2015-09-19T01:01:47Z,`const`?\n,https://github.com/bitcoin/bitcoin/pull/6371#discussion_r39913917,39913917,src/net.cpp
+dcousens,2015-09-19T01:05:33Z,nit: Avoid the negation in logic here now that we handle both cases?\n,https://github.com/bitcoin/bitcoin/pull/6371#discussion_r39913999,39913999,src/net.cpp
+dcousens,2015-09-19T01:12:11Z,nit: same here?\n,https://github.com/bitcoin/bitcoin/pull/6371#discussion_r39914135,39914135,src/net.cpp
+dcousens,2015-09-19T01:27:46Z,`s/entires/entries`\n,https://github.com/bitcoin/bitcoin/pull/6371#discussion_r39914439,39914439,src/net.cpp
+dcousens,2015-09-19T01:34:16Z,@Diapolo any chance you'll do the early exit as @jgarzik suggested?\n,https://github.com/bitcoin/bitcoin/pull/6371#discussion_r39914523,39914523,src/net.cpp
+Diapolo,2015-09-19T11:28:39Z,"Not used a single time currently in net.cpp with (*it), so I'll leave that. But I'm open for further comments on this.\n",https://github.com/bitcoin/bitcoin/pull/6371#discussion_r39918826,39918826,src/net.cpp
+Diapolo,2015-09-19T11:32:26Z,"OK, will push a new version.\n",https://github.com/bitcoin/bitcoin/pull/6371#discussion_r39918842,39918842,src/net.cpp
+Diapolo,2015-09-19T11:36:38Z,"Yeah, will also push a new version ;).\n",https://github.com/bitcoin/bitcoin/pull/6371#discussion_r39918862,39918862,src/net.cpp

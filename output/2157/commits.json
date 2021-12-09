@@ -1,0 +1,98 @@
+[
+  {
+    "sha": "e6d230056202b05a27f187dff2648eb5c76fcfee",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplNmQyMzAwNTYyMDJiMDVhMjdmMTg3ZGZmMjY0OGViNWM3NmZjZmVl",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-01-08T07:17:58Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-01-09T15:55:24Z"
+      },
+      "message": "Bitcoin-Qt: fix known addressbook bugs\n\n- add qSort() for cachedAddressTable, as qLowerBound() and qUpperBound()\n  require the list to be in ascending order (see\n  http://harmattan-dev.nokia.com/docs/library/html/qt4/qtalgorithms.html#qLowerBound)\n- add a new check in AddressTableModel::setData() to just return, when no\n  changes were made to a label or an address (prevents entry duplication\n  issue)\n- remove \"rec->label = value.toString();\" from\n  AddressTableModel::setData() as the label gets updated by\n  AddressTablePriv::updateEntry() anyway (seems @sipa added this line via\n  https://github.com/bitcoin/bitcoin/commit/1025440184ef100a22d07c7bb543ee45cf169d64#L6R225)\n- add another new check in AddressTableModel::setData() to just return, if\n  a duplicate address was found (prevents address overwrite)\n- add a new check to EditAddressDialog::setModel() to prevent setting an\n  invalid model\n- re-work the switch-case statement in AddressTableModel::accept() to\n  always break (as return get's called anyway) and order the list to match\n  the enum definition\n- make accept() in editaddressdialog.h a public slot, which it should be\n- misc small coding style changes",
+      "tree": {
+        "sha": "2280c65d80a7014472a0f42b524e5959870de006",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/2280c65d80a7014472a0f42b524e5959870de006"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/e6d230056202b05a27f187dff2648eb5c76fcfee",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e6d230056202b05a27f187dff2648eb5c76fcfee",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/e6d230056202b05a27f187dff2648eb5c76fcfee",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e6d230056202b05a27f187dff2648eb5c76fcfee/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "429915bd0dfcdb03b13d9a3c2fb82d5401ef70ce",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/429915bd0dfcdb03b13d9a3c2fb82d5401ef70ce",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/429915bd0dfcdb03b13d9a3c2fb82d5401ef70ce"
+      }
+    ],
+    "stats": {
+      "total": 97,
+      "additions": 64,
+      "deletions": 33
+    },
+    "files": [
+      {
+        "sha": "03b09cdceb66f0d03c59ec69085dfed548588649",
+        "filename": "src/qt/addresstablemodel.cpp",
+        "status": "modified",
+        "additions": 28,
+        "deletions": 8,
+        "changes": 36,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e6d230056202b05a27f187dff2648eb5c76fcfee/src/qt/addresstablemodel.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e6d230056202b05a27f187dff2648eb5c76fcfee/src/qt/addresstablemodel.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/addresstablemodel.cpp?ref=e6d230056202b05a27f187dff2648eb5c76fcfee",
+        "patch": "@@ -69,6 +69,8 @@ class AddressTablePriv\n                                   QString::fromStdString(address.ToString())));\n             }\n         }\n+        // qLowerBound() and qUpperBound() require our cachedAddressTable list to be sorted in asc order\n+        qSort(cachedAddressTable.begin(), cachedAddressTable.end(), AddressTableEntryLessThan());\n     }\n \n     void updateEntry(const QString &address, const QString &label, bool isMine, int status)\n@@ -208,7 +210,7 @@ QVariant AddressTableModel::data(const QModelIndex &index, int role) const\n     return QVariant();\n }\n \n-bool AddressTableModel::setData(const QModelIndex & index, const QVariant & value, int role)\n+bool AddressTableModel::setData(const QModelIndex &index, const QVariant &value, int role)\n {\n     if(!index.isValid())\n         return false;\n@@ -221,18 +223,36 @@ bool AddressTableModel::setData(const QModelIndex & index, const QVariant & valu\n         switch(index.column())\n         {\n         case Label:\n+            // Do nothing, if old label == new label\n+            if(rec->label == value.toString())\n+            {\n+                editStatus = NO_CHANGES;\n+                return false;\n+            }\n             wallet->SetAddressBookName(CBitcoinAddress(rec->address.toStdString()).Get(), value.toString().toStdString());\n-            rec->label = value.toString();\n             break;\n         case Address:\n+            // Do nothing, if old address == new address\n+            if(CBitcoinAddress(rec->address.toStdString()) == CBitcoinAddress(value.toString().toStdString()))\n+            {\n+                editStatus = NO_CHANGES;\n+                return false;\n+            }\n             // Refuse to set invalid address, set error status and return false\n-            if(!walletModel->validateAddress(value.toString()))\n+            else if(!walletModel->validateAddress(value.toString()))\n             {\n                 editStatus = INVALID_ADDRESS;\n                 return false;\n             }\n+            // Check for duplicate addresses to prevent accidental deletion of addresses, if you try\n+            // to paste an existing address over another address (with a different label)\n+            else if(wallet->mapAddressBook.count(CBitcoinAddress(value.toString().toStdString()).Get()))\n+            {\n+                editStatus = DUPLICATE_ADDRESS;\n+                return false;\n+            }\n             // Double-check that we're not overwriting a receiving address\n-            if(rec->type == AddressTableEntry::Sending)\n+            else if(rec->type == AddressTableEntry::Sending)\n             {\n                 {\n                     LOCK(wallet->cs_wallet);\n@@ -244,7 +264,6 @@ bool AddressTableModel::setData(const QModelIndex & index, const QVariant & valu\n             }\n             break;\n         }\n-\n         return true;\n     }\n     return false;\n@@ -262,7 +281,7 @@ QVariant AddressTableModel::headerData(int section, Qt::Orientation orientation,\n     return QVariant();\n }\n \n-Qt::ItemFlags AddressTableModel::flags(const QModelIndex & index) const\n+Qt::ItemFlags AddressTableModel::flags(const QModelIndex &index) const\n {\n     if(!index.isValid())\n         return 0;\n@@ -279,7 +298,7 @@ Qt::ItemFlags AddressTableModel::flags(const QModelIndex & index) const\n     return retval;\n }\n \n-QModelIndex AddressTableModel::index(int row, int column, const QModelIndex & parent) const\n+QModelIndex AddressTableModel::index(int row, int column, const QModelIndex &parent) const\n {\n     Q_UNUSED(parent);\n     AddressTableEntry *data = priv->index(row);\n@@ -345,6 +364,7 @@ QString AddressTableModel::addRow(const QString &type, const QString &label, con\n     {\n         return QString();\n     }\n+\n     // Add entry\n     {\n         LOCK(wallet->cs_wallet);\n@@ -353,7 +373,7 @@ QString AddressTableModel::addRow(const QString &type, const QString &label, con\n     return QString::fromStdString(strAddress);\n }\n \n-bool AddressTableModel::removeRows(int row, int count, const QModelIndex & parent)\n+bool AddressTableModel::removeRows(int row, int count, const QModelIndex &parent)\n {\n     Q_UNUSED(parent);\n     AddressTableEntry *rec = priv->index(row);"
+      },
+      {
+        "sha": "ae3e3b2f0457947748a753c5f3e86527d452c2cc",
+        "filename": "src/qt/addresstablemodel.h",
+        "status": "modified",
+        "additions": 12,
+        "deletions": 11,
+        "changes": 23,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e6d230056202b05a27f187dff2648eb5c76fcfee/src/qt/addresstablemodel.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e6d230056202b05a27f187dff2648eb5c76fcfee/src/qt/addresstablemodel.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/addresstablemodel.h?ref=e6d230056202b05a27f187dff2648eb5c76fcfee",
+        "patch": "@@ -29,26 +29,27 @@ class AddressTableModel : public QAbstractTableModel\n \n     /** Return status of edit/insert operation */\n     enum EditStatus {\n-        OK,\n-        INVALID_ADDRESS,   /**< Unparseable address */\n-        DUPLICATE_ADDRESS,  /**< Address already in address book */\n-        WALLET_UNLOCK_FAILURE, /**< Wallet could not be unlocked to create new receiving address */\n-        KEY_GENERATION_FAILURE /**< Generating a new public key for a receiving address failed */\n+        OK,                     /**< Everything ok */\n+        NO_CHANGES,             /**< No changes were made during edit operation */\n+        INVALID_ADDRESS,        /**< Unparseable address */\n+        DUPLICATE_ADDRESS,      /**< Address already in address book */\n+        WALLET_UNLOCK_FAILURE,  /**< Wallet could not be unlocked to create new receiving address */\n+        KEY_GENERATION_FAILURE  /**< Generating a new public key for a receiving address failed */\n     };\n \n-    static const QString Send; /**< Specifies send address */\n-    static const QString Receive; /**< Specifies receive address */\n+    static const QString Send;      /**< Specifies send address */\n+    static const QString Receive;   /**< Specifies receive address */\n \n     /** @name Methods overridden from QAbstractTableModel\n         @{*/\n     int rowCount(const QModelIndex &parent) const;\n     int columnCount(const QModelIndex &parent) const;\n     QVariant data(const QModelIndex &index, int role) const;\n-    bool setData(const QModelIndex & index, const QVariant & value, int role);\n+    bool setData(const QModelIndex &index, const QVariant &value, int role);\n     QVariant headerData(int section, Qt::Orientation orientation, int role) const;\n-    QModelIndex index(int row, int column, const QModelIndex & parent) const;\n-    bool removeRows(int row, int count, const QModelIndex & parent = QModelIndex());\n-    Qt::ItemFlags flags(const QModelIndex & index) const;\n+    QModelIndex index(int row, int column, const QModelIndex &parent) const;\n+    bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex());\n+    Qt::ItemFlags flags(const QModelIndex &index) const;\n     /*@}*/\n \n     /* Add an address to the model."
+      },
+      {
+        "sha": "5cfcb34b9539877b5ba655235d2026bc9e5adcf8",
+        "filename": "src/qt/editaddressdialog.cpp",
+        "status": "modified",
+        "additions": 19,
+        "deletions": 11,
+        "changes": 30,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e6d230056202b05a27f187dff2648eb5c76fcfee/src/qt/editaddressdialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e6d230056202b05a27f187dff2648eb5c76fcfee/src/qt/editaddressdialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/editaddressdialog.cpp?ref=e6d230056202b05a27f187dff2648eb5c76fcfee",
+        "patch": "@@ -25,7 +25,7 @@ EditAddressDialog::EditAddressDialog(Mode mode, QWidget *parent) :\n         break;\n     case EditReceivingAddress:\n         setWindowTitle(tr(\"Edit receiving address\"));\n-        ui->addressEdit->setDisabled(true);\n+        ui->addressEdit->setEnabled(false);\n         break;\n     case EditSendingAddress:\n         setWindowTitle(tr(\"Edit sending address\"));\n@@ -44,6 +44,9 @@ EditAddressDialog::~EditAddressDialog()\n void EditAddressDialog::setModel(AddressTableModel *model)\n {\n     this->model = model;\n+    if(!model)\n+        return;\n+\n     mapper->setModel(model);\n     mapper->addMapping(ui->labelEdit, AddressTableModel::Label);\n     mapper->addMapping(ui->addressEdit, AddressTableModel::Address);\n@@ -58,6 +61,7 @@ bool EditAddressDialog::saveCurrentRow()\n {\n     if(!model)\n         return false;\n+\n     switch(mode)\n     {\n     case NewReceivingAddress:\n@@ -82,35 +86,39 @@ void EditAddressDialog::accept()\n {\n     if(!model)\n         return;\n+\n     if(!saveCurrentRow())\n     {\n         switch(model->getEditStatus())\n         {\n-        case AddressTableModel::DUPLICATE_ADDRESS:\n-            QMessageBox::warning(this, windowTitle(),\n-                tr(\"The entered address \\\"%1\\\" is already in the address book.\").arg(ui->addressEdit->text()),\n-                QMessageBox::Ok, QMessageBox::Ok);\n+        case AddressTableModel::OK:\n+            // Failed with unknown reason. Just reject.\n+            break;\n+        case AddressTableModel::NO_CHANGES:\n+            // No changes were made during edit operation. Just reject.\n             break;\n         case AddressTableModel::INVALID_ADDRESS:\n             QMessageBox::warning(this, windowTitle(),\n                 tr(\"The entered address \\\"%1\\\" is not a valid Bitcoin address.\").arg(ui->addressEdit->text()),\n                 QMessageBox::Ok, QMessageBox::Ok);\n-            return;\n+            break;\n+        case AddressTableModel::DUPLICATE_ADDRESS:\n+            QMessageBox::warning(this, windowTitle(),\n+                tr(\"The entered address \\\"%1\\\" is already in the address book.\").arg(ui->addressEdit->text()),\n+                QMessageBox::Ok, QMessageBox::Ok);\n+            break;\n         case AddressTableModel::WALLET_UNLOCK_FAILURE:\n             QMessageBox::critical(this, windowTitle(),\n                 tr(\"Could not unlock wallet.\"),\n                 QMessageBox::Ok, QMessageBox::Ok);\n-            return;\n+            break;\n         case AddressTableModel::KEY_GENERATION_FAILURE:\n             QMessageBox::critical(this, windowTitle(),\n                 tr(\"New key generation failed.\"),\n                 QMessageBox::Ok, QMessageBox::Ok);\n-            return;\n-        case AddressTableModel::OK:\n-            // Failed with unknown reason. Just reject.\n             break;\n-        }\n \n+        }\n         return;\n     }\n     QDialog::accept();"
+      },
+      {
+        "sha": "0e4183bd5227ddad39e0feedc9baaf467fc239de",
+        "filename": "src/qt/editaddressdialog.h",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 3,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e6d230056202b05a27f187dff2648eb5c76fcfee/src/qt/editaddressdialog.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e6d230056202b05a27f187dff2648eb5c76fcfee/src/qt/editaddressdialog.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/editaddressdialog.h?ref=e6d230056202b05a27f187dff2648eb5c76fcfee",
+        "patch": "@@ -27,15 +27,17 @@ class EditAddressDialog : public QDialog\n     };\n \n     explicit EditAddressDialog(Mode mode, QWidget *parent = 0);\n-    ~EditAddressDialog();    \n+    ~EditAddressDialog();\n \n     void setModel(AddressTableModel *model);\n     void loadRow(int row);\n \n-    void accept();\n-\n     QString getAddress() const;\n     void setAddress(const QString &address);\n+\n+public slots:\n+    void accept();\n+\n private:\n     bool saveCurrentRow();\n "
+      }
+    ]
+  }
+]

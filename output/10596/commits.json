@@ -1,0 +1,86 @@
+[
+  {
+    "sha": "352d582ba240b825cb834cdde041864bafca0e21",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozNTJkNTgyYmEyNDBiODI1Y2I4MzRjZGRlMDQxODY0YmFmY2EwZTIx",
+    "commit": {
+      "author": {
+        "name": "Marko Bencun",
+        "email": "marko.bencun@monetas.net",
+        "date": "2017-06-15T07:39:07Z"
+      },
+      "committer": {
+        "name": "Marko Bencun",
+        "email": "marko.bencun@monetas.net",
+        "date": "2017-07-19T21:34:50Z"
+      },
+      "message": "Add vConnect to CConnman::Options\n\nSplit the \"-connect\" argument parsing out of CConnman and put it into\nAppInitMain().",
+      "tree": {
+        "sha": "07edcd406696dec9a5e417f103cbf2acf801138c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/07edcd406696dec9a5e417f103cbf2acf801138c"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/352d582ba240b825cb834cdde041864bafca0e21",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/352d582ba240b825cb834cdde041864bafca0e21",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/352d582ba240b825cb834cdde041864bafca0e21",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/352d582ba240b825cb834cdde041864bafca0e21/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "7b6e8bc4424006119dc537699c8b3b3121e0b3c3",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7b6e8bc4424006119dc537699c8b3b3121e0b3c3",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/7b6e8bc4424006119dc537699c8b3b3121e0b3c3"
+      }
+    ],
+    "stats": {
+      "total": 32,
+      "additions": 24,
+      "deletions": 8
+    },
+    "files": [
+      {
+        "sha": "ceea9aa17068acffc0ae9c1835ba0e477db84136",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 1,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/352d582ba240b825cb834cdde041864bafca0e21/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/352d582ba240b825cb834cdde041864bafca0e21/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=352d582ba240b825cb834cdde041864bafca0e21",
+        "patch": "@@ -1651,7 +1651,14 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)\n     if (gArgs.IsArgSet(\"-seednode\")) {\n         connOptions.vSeedNodes = gArgs.GetArgs(\"-seednode\");\n     }\n-\n+    // Initiate outbound connections unless connect=0\n+    connOptions.m_use_addrman_outgoing = !gArgs.IsArgSet(\"-connect\");\n+    if (!connOptions.m_use_addrman_outgoing) {\n+        const auto connect = gArgs.GetArgs(\"-connect\");\n+        if (connect.size() != 1 || connect[0] != \"0\") {\n+            connOptions.m_specified_outgoing = connect;\n+        }\n+    }\n     if (!connman.Start(scheduler, connOptions)) {\n         return false;\n     }"
+      },
+      {
+        "sha": "c83226efa928eb89e805873a9b25d44d4e4ee843",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 6,
+        "changes": 19,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/352d582ba240b825cb834cdde041864bafca0e21/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/352d582ba240b825cb834cdde041864bafca0e21/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=352d582ba240b825cb834cdde041864bafca0e21",
+        "patch": "@@ -1674,15 +1674,15 @@ void CConnman::ProcessOneShot()\n     }\n }\n \n-void CConnman::ThreadOpenConnections()\n+void CConnman::ThreadOpenConnections(const std::vector<std::string> connect)\n {\n     // Connect to specific addresses\n-    if (gArgs.IsArgSet(\"-connect\"))\n+    if (!connect.empty())\n     {\n         for (int64_t nLoop = 0;; nLoop++)\n         {\n             ProcessOneShot();\n-            for (const std::string& strAddr : gArgs.GetArgs(\"-connect\"))\n+            for (const std::string& strAddr : connect)\n             {\n                 CAddress addr(CService(), NODE_NONE);\n                 OpenNetworkConnection(addr, false, NULL, strAddr.c_str());\n@@ -2360,9 +2360,16 @@ bool CConnman::Start(CScheduler& scheduler, Options connOptions)\n     // Initiate outbound connections from -addnode\n     threadOpenAddedConnections = std::thread(&TraceThread<std::function<void()> >, \"addcon\", std::function<void()>(std::bind(&CConnman::ThreadOpenAddedConnections, this)));\n \n-    // Initiate outbound connections unless connect=0\n-    if (!gArgs.IsArgSet(\"-connect\") || gArgs.GetArgs(\"-connect\").size() != 1 || gArgs.GetArgs(\"-connect\")[0] != \"0\")\n-        threadOpenConnections = std::thread(&TraceThread<std::function<void()> >, \"opencon\", std::function<void()>(std::bind(&CConnman::ThreadOpenConnections, this)));\n+    if (connOptions.m_use_addrman_outgoing && !connOptions.m_specified_outgoing.empty()) {\n+        if (clientInterface) {\n+            clientInterface->ThreadSafeMessageBox(\n+                _(\"Cannot provide specific connections and have addrman find outgoing connections at the same.\"),\n+                \"\", CClientUIInterface::MSG_ERROR);\n+        }\n+        return false;\n+    }\n+    if (connOptions.m_use_addrman_outgoing || !connOptions.m_specified_outgoing.empty())\n+        threadOpenConnections = std::thread(&TraceThread<std::function<void()> >, \"opencon\", std::function<void()>(std::bind(&CConnman::ThreadOpenConnections, this, connOptions.m_specified_outgoing)));\n \n     // Process messages\n     threadMessageHandler = std::thread(&TraceThread<std::function<void()> >, \"msghand\", std::function<void()>(std::bind(&CConnman::ThreadMessageHandler, this)));"
+      },
+      {
+        "sha": "44e0e78fcedb66d23929d48b89b8cdb04aa8c578",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 1,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/352d582ba240b825cb834cdde041864bafca0e21/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/352d582ba240b825cb834cdde041864bafca0e21/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=352d582ba240b825cb834cdde041864bafca0e21",
+        "patch": "@@ -145,6 +145,8 @@ class CConnman\n         std::vector<std::string> vSeedNodes;\n         std::vector<CSubNet> vWhitelistedRange;\n         std::vector<CService> vBinds, vWhiteBinds;\n+        bool m_use_addrman_outgoing = true;\n+        std::vector<std::string> m_specified_outgoing;\n     };\n     CConnman(uint64_t seed0, uint64_t seed1);\n     ~CConnman();\n@@ -293,7 +295,7 @@ class CConnman\n     void ThreadOpenAddedConnections();\n     void AddOneShot(const std::string& strDest);\n     void ProcessOneShot();\n-    void ThreadOpenConnections();\n+    void ThreadOpenConnections(std::vector<std::string> connect);\n     void ThreadMessageHandler();\n     void AcceptConnection(const ListenSocket& hListenSocket);\n     void ThreadSocketHandler();"
+      }
+    ]
+  }
+]

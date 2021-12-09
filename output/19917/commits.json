@@ -1,0 +1,540 @@
+[
+  {
+    "sha": "8f30df2002f00b7613e602bc576285974d8f2bcf",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4ZjMwZGYyMDAyZjAwYjc2MTNlNjAyYmM1NzYyODU5NzRkOGYyYmNm",
+    "commit": {
+      "author": {
+        "name": "Jo\u00e3o Barbosa",
+        "email": "joao.paulo.barbosa@gmail.com",
+        "date": "2020-09-08T13:26:03Z"
+      },
+      "committer": {
+        "name": "Jo\u00e3o Barbosa",
+        "email": "joao.paulo.barbosa@gmail.com",
+        "date": "2020-09-08T13:55:41Z"
+      },
+      "message": "net: Batch RelayTransaction in PeerLogicValidation::ReattemptInitialBroadcast",
+      "tree": {
+        "sha": "fe1ece8b53f128574d07ca3c53658183332d5e18",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/fe1ece8b53f128574d07ca3c53658183332d5e18"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/8f30df2002f00b7613e602bc576285974d8f2bcf",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8f30df2002f00b7613e602bc576285974d8f2bcf",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/8f30df2002f00b7613e602bc576285974d8f2bcf",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8f30df2002f00b7613e602bc576285974d8f2bcf/comments",
+    "author": {
+      "login": "promag",
+      "id": 3534524,
+      "node_id": "MDQ6VXNlcjM1MzQ1MjQ=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3534524?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/promag",
+      "html_url": "https://github.com/promag",
+      "followers_url": "https://api.github.com/users/promag/followers",
+      "following_url": "https://api.github.com/users/promag/following{/other_user}",
+      "gists_url": "https://api.github.com/users/promag/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/promag/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/promag/subscriptions",
+      "organizations_url": "https://api.github.com/users/promag/orgs",
+      "repos_url": "https://api.github.com/users/promag/repos",
+      "events_url": "https://api.github.com/users/promag/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/promag/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "promag",
+      "id": 3534524,
+      "node_id": "MDQ6VXNlcjM1MzQ1MjQ=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3534524?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/promag",
+      "html_url": "https://github.com/promag",
+      "followers_url": "https://api.github.com/users/promag/followers",
+      "following_url": "https://api.github.com/users/promag/following{/other_user}",
+      "gists_url": "https://api.github.com/users/promag/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/promag/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/promag/subscriptions",
+      "organizations_url": "https://api.github.com/users/promag/orgs",
+      "repos_url": "https://api.github.com/users/promag/repos",
+      "events_url": "https://api.github.com/users/promag/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/promag/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "147d50d63e07f600b414273a9f6b84f9f4ad9696",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/147d50d63e07f600b414273a9f6b84f9f4ad9696",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/147d50d63e07f600b414273a9f6b84f9f4ad9696"
+      }
+    ],
+    "stats": {
+      "total": 11,
+      "additions": 9,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "f35a3d8a048885981a8195f8608676a092522a42",
+        "filename": "src/net_processing.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 2,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8f30df2002f00b7613e602bc576285974d8f2bcf/src/net_processing.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8f30df2002f00b7613e602bc576285974d8f2bcf/src/net_processing.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.cpp?ref=8f30df2002f00b7613e602bc576285974d8f2bcf",
+        "patch": "@@ -889,17 +889,24 @@ void PeerManager::InitializeNode(CNode *pnode) {\n \n void PeerManager::ReattemptInitialBroadcast(CScheduler& scheduler) const\n {\n+    std::vector<std::pair<uint256, uint256>> relay_transactions;\n     std::map<uint256, uint256> unbroadcast_txids = m_mempool.GetUnbroadcastTxs();\n \n+    relay_transactions.reserve(unbroadcast_txids.size());\n     for (const auto& elem : unbroadcast_txids) {\n         // Sanity check: all unbroadcast txns should exist in the mempool\n         if (m_mempool.exists(elem.first)) {\n-            LOCK(cs_main);\n-            RelayTransaction(elem.first, elem.second, m_connman);\n+            relay_transactions.push_back(elem);\n         } else {\n             m_mempool.RemoveUnbroadcastTx(elem.first, true);\n         }\n     }\n+    {\n+        LOCK(cs_main);\n+        for (const auto& elem : relay_transactions) {\n+            RelayTransaction(elem.first, elem.second, m_connman);\n+        }\n+    }\n \n     // Schedule next run for 10-15 minutes in the future.\n     // We add randomness on every cycle to avoid the possibility of P2P fingerprinting."
+      }
+    ]
+  },
+  {
+    "sha": "746c6d4b8f734d74aac955eaea28bbb1990492b0",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3NDZjNmQ0YjhmNzM0ZDc0YWFjOTU1ZWFlYTI4YmJiMTk5MDQ5MmIw",
+    "commit": {
+      "author": {
+        "name": "Jo\u00e3o Barbosa",
+        "email": "joao.paulo.barbosa@gmail.com",
+        "date": "2020-09-08T13:33:37Z"
+      },
+      "committer": {
+        "name": "Jo\u00e3o Barbosa",
+        "email": "joao.paulo.barbosa@gmail.com",
+        "date": "2020-09-08T13:55:41Z"
+      },
+      "message": "net: Batch RemoveUnbroadcastTx in PeerLogicValidation::ReattemptInitialBroadcast",
+      "tree": {
+        "sha": "5e62548ae61a70ffe85e9e893c7d2d32c0aede95",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/5e62548ae61a70ffe85e9e893c7d2d32c0aede95"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/746c6d4b8f734d74aac955eaea28bbb1990492b0",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/746c6d4b8f734d74aac955eaea28bbb1990492b0",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/746c6d4b8f734d74aac955eaea28bbb1990492b0",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/746c6d4b8f734d74aac955eaea28bbb1990492b0/comments",
+    "author": {
+      "login": "promag",
+      "id": 3534524,
+      "node_id": "MDQ6VXNlcjM1MzQ1MjQ=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3534524?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/promag",
+      "html_url": "https://github.com/promag",
+      "followers_url": "https://api.github.com/users/promag/followers",
+      "following_url": "https://api.github.com/users/promag/following{/other_user}",
+      "gists_url": "https://api.github.com/users/promag/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/promag/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/promag/subscriptions",
+      "organizations_url": "https://api.github.com/users/promag/orgs",
+      "repos_url": "https://api.github.com/users/promag/repos",
+      "events_url": "https://api.github.com/users/promag/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/promag/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "promag",
+      "id": 3534524,
+      "node_id": "MDQ6VXNlcjM1MzQ1MjQ=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3534524?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/promag",
+      "html_url": "https://github.com/promag",
+      "followers_url": "https://api.github.com/users/promag/followers",
+      "following_url": "https://api.github.com/users/promag/following{/other_user}",
+      "gists_url": "https://api.github.com/users/promag/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/promag/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/promag/subscriptions",
+      "organizations_url": "https://api.github.com/users/promag/orgs",
+      "repos_url": "https://api.github.com/users/promag/repos",
+      "events_url": "https://api.github.com/users/promag/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/promag/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "8f30df2002f00b7613e602bc576285974d8f2bcf",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8f30df2002f00b7613e602bc576285974d8f2bcf",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/8f30df2002f00b7613e602bc576285974d8f2bcf"
+      }
+    ],
+    "stats": {
+      "total": 20,
+      "additions": 11,
+      "deletions": 9
+    },
+    "files": [
+      {
+        "sha": "a5439eecf88d2b3c8e60e1c4fdb9ea68fb18ec90",
+        "filename": "src/net_processing.cpp",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 9,
+        "changes": 20,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/746c6d4b8f734d74aac955eaea28bbb1990492b0/src/net_processing.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/746c6d4b8f734d74aac955eaea28bbb1990492b0/src/net_processing.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.cpp?ref=746c6d4b8f734d74aac955eaea28bbb1990492b0",
+        "patch": "@@ -890,15 +890,17 @@ void PeerManager::InitializeNode(CNode *pnode) {\n void PeerManager::ReattemptInitialBroadcast(CScheduler& scheduler) const\n {\n     std::vector<std::pair<uint256, uint256>> relay_transactions;\n-    std::map<uint256, uint256> unbroadcast_txids = m_mempool.GetUnbroadcastTxs();\n-\n-    relay_transactions.reserve(unbroadcast_txids.size());\n-    for (const auto& elem : unbroadcast_txids) {\n-        // Sanity check: all unbroadcast txns should exist in the mempool\n-        if (m_mempool.exists(elem.first)) {\n-            relay_transactions.push_back(elem);\n-        } else {\n-            m_mempool.RemoveUnbroadcastTx(elem.first, true);\n+    {\n+        LOCK(m_mempool.cs);\n+        std::map<uint256, uint256> unbroadcast_txids = m_mempool.GetUnbroadcastTxs();\n+        relay_transactions.reserve(unbroadcast_txids.size());\n+        for (const auto& elem : unbroadcast_txids) {\n+            // Sanity check: all unbroadcast txns should exist in the mempool\n+            if (m_mempool.exists(elem.first)) {\n+                relay_transactions.push_back(elem);\n+            } else {\n+                m_mempool.RemoveUnbroadcastTx(elem.first, true);\n+            }\n         }\n     }\n     {"
+      }
+    ]
+  },
+  {
+    "sha": "7c355391563925222286af65efd59c69f83586de",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3YzM1NTM5MTU2MzkyNTIyMjI4NmFmNjVlZmQ1OWM2OWY4MzU4NmRl",
+    "commit": {
+      "author": {
+        "name": "Jo\u00e3o Barbosa",
+        "email": "joao.paulo.barbosa@gmail.com",
+        "date": "2020-09-08T13:54:18Z"
+      },
+      "committer": {
+        "name": "Jo\u00e3o Barbosa",
+        "email": "joao.paulo.barbosa@gmail.com",
+        "date": "2020-09-08T21:06:07Z"
+      },
+      "message": "refactor: CTxMemPool::RemoveUnbroadcastTx requires lock",
+      "tree": {
+        "sha": "ab40a8742bc6402216f378ca862d81d41db538ae",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/ab40a8742bc6402216f378ca862d81d41db538ae"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/7c355391563925222286af65efd59c69f83586de",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7c355391563925222286af65efd59c69f83586de",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/7c355391563925222286af65efd59c69f83586de",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7c355391563925222286af65efd59c69f83586de/comments",
+    "author": {
+      "login": "promag",
+      "id": 3534524,
+      "node_id": "MDQ6VXNlcjM1MzQ1MjQ=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3534524?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/promag",
+      "html_url": "https://github.com/promag",
+      "followers_url": "https://api.github.com/users/promag/followers",
+      "following_url": "https://api.github.com/users/promag/following{/other_user}",
+      "gists_url": "https://api.github.com/users/promag/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/promag/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/promag/subscriptions",
+      "organizations_url": "https://api.github.com/users/promag/orgs",
+      "repos_url": "https://api.github.com/users/promag/repos",
+      "events_url": "https://api.github.com/users/promag/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/promag/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "promag",
+      "id": 3534524,
+      "node_id": "MDQ6VXNlcjM1MzQ1MjQ=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3534524?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/promag",
+      "html_url": "https://github.com/promag",
+      "followers_url": "https://api.github.com/users/promag/followers",
+      "following_url": "https://api.github.com/users/promag/following{/other_user}",
+      "gists_url": "https://api.github.com/users/promag/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/promag/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/promag/subscriptions",
+      "organizations_url": "https://api.github.com/users/promag/orgs",
+      "repos_url": "https://api.github.com/users/promag/repos",
+      "events_url": "https://api.github.com/users/promag/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/promag/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "746c6d4b8f734d74aac955eaea28bbb1990492b0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/746c6d4b8f734d74aac955eaea28bbb1990492b0",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/746c6d4b8f734d74aac955eaea28bbb1990492b0"
+      }
+    ],
+    "stats": {
+      "total": 9,
+      "additions": 4,
+      "deletions": 5
+    },
+    "files": [
+      {
+        "sha": "7c74eb22de33bfed6eea789e0709403e24a076a2",
+        "filename": "src/net_processing.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7c355391563925222286af65efd59c69f83586de/src/net_processing.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7c355391563925222286af65efd59c69f83586de/src/net_processing.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.cpp?ref=7c355391563925222286af65efd59c69f83586de",
+        "patch": "@@ -1765,11 +1765,11 @@ void static ProcessGetData(CNode& pfrom, const CChainParams& chainparams, CConnm\n             // WTX and WITNESS_TX imply we serialize with witness\n             int nSendFlags = (inv.IsMsgTx() ? SERIALIZE_TRANSACTION_NO_WITNESS : 0);\n             connman.PushMessage(&pfrom, msgMaker.Make(nSendFlags, NetMsgType::TX, *tx));\n-            mempool.RemoveUnbroadcastTx(tx->GetHash());\n             // As we're going to send tx, make sure its unconfirmed parents are made requestable.\n             std::vector<uint256> parent_ids_to_add;\n             {\n                 LOCK(mempool.cs);\n+                mempool.RemoveUnbroadcastTx(tx->GetHash());\n                 auto txiter = mempool.GetIter(tx->GetHash());\n                 if (txiter) {\n                     const CTxMemPoolEntry::Parents& parents = (*txiter)->GetMemPoolParentsConst();"
+      },
+      {
+        "sha": "b43f1fa8a7245ed7f99ad0b5a4b5790478453355",
+        "filename": "src/txmempool.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 3,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7c355391563925222286af65efd59c69f83586de/src/txmempool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7c355391563925222286af65efd59c69f83586de/src/txmempool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.cpp?ref=7c355391563925222286af65efd59c69f83586de",
+        "patch": "@@ -421,7 +421,7 @@ void CTxMemPool::removeUnchecked(txiter it, MemPoolRemovalReason reason)\n     for (const CTxIn& txin : it->GetTx().vin)\n         mapNextTx.erase(txin.prevout);\n \n-    RemoveUnbroadcastTx(hash, true /* add logging because unchecked */ );\n+    WITH_LOCK(cs, RemoveUnbroadcastTx(hash, true /* add logging because unchecked */ ));\n \n     if (vTxHashes.size() > 1) {\n         vTxHashes[it->vTxHashesIdx] = std::move(vTxHashes.back());\n@@ -929,8 +929,7 @@ size_t CTxMemPool::DynamicMemoryUsage() const {\n }\n \n void CTxMemPool::RemoveUnbroadcastTx(const uint256& txid, const bool unchecked) {\n-    LOCK(cs);\n-\n+    AssertLockHeld(cs);\n     if (m_unbroadcast_txids.erase(txid))\n     {\n         LogPrint(BCLog::MEMPOOL, \"Removed %i from set of unbroadcast txns%s\\n\", txid.GetHex(), (unchecked ? \" before confirmation that txn was sent out\" : \"\"));"
+      },
+      {
+        "sha": "cf0122243008c9cfe0fad6ecc0520a1b8708d790",
+        "filename": "src/txmempool.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7c355391563925222286af65efd59c69f83586de/src/txmempool.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7c355391563925222286af65efd59c69f83586de/src/txmempool.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.h?ref=7c355391563925222286af65efd59c69f83586de",
+        "patch": "@@ -761,7 +761,7 @@ class CTxMemPool\n     }\n \n     /** Removes a transaction from the unbroadcast set */\n-    void RemoveUnbroadcastTx(const uint256& txid, const bool unchecked = false);\n+    void RemoveUnbroadcastTx(const uint256& txid, const bool unchecked = false) EXCLUSIVE_LOCKS_REQUIRED(cs);\n \n     /** Returns transactions in unbroadcast set */\n     std::map<uint256, uint256> GetUnbroadcastTxs() const {"
+      }
+    ]
+  },
+  {
+    "sha": "fb2dca415f6ac74d79292296831ccc33c485230b",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmYjJkY2E0MTVmNmFjNzRkNzkyOTIyOTY4MzFjY2MzM2M0ODUyMzBi",
+    "commit": {
+      "author": {
+        "name": "Jo\u00e3o Barbosa",
+        "email": "joao.paulo.barbosa@gmail.com",
+        "date": "2020-09-08T20:46:56Z"
+      },
+      "committer": {
+        "name": "Jo\u00e3o Barbosa",
+        "email": "joao.paulo.barbosa@gmail.com",
+        "date": "2020-09-08T21:06:14Z"
+      },
+      "message": "refactor: CTxMemPool::GetUnbroadcastTxs requires lock",
+      "tree": {
+        "sha": "164267707fd2b1d762bec0fb95282a6bb00ca1ab",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/164267707fd2b1d762bec0fb95282a6bb00ca1ab"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/fb2dca415f6ac74d79292296831ccc33c485230b",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fb2dca415f6ac74d79292296831ccc33c485230b",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/fb2dca415f6ac74d79292296831ccc33c485230b",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fb2dca415f6ac74d79292296831ccc33c485230b/comments",
+    "author": {
+      "login": "promag",
+      "id": 3534524,
+      "node_id": "MDQ6VXNlcjM1MzQ1MjQ=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3534524?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/promag",
+      "html_url": "https://github.com/promag",
+      "followers_url": "https://api.github.com/users/promag/followers",
+      "following_url": "https://api.github.com/users/promag/following{/other_user}",
+      "gists_url": "https://api.github.com/users/promag/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/promag/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/promag/subscriptions",
+      "organizations_url": "https://api.github.com/users/promag/orgs",
+      "repos_url": "https://api.github.com/users/promag/repos",
+      "events_url": "https://api.github.com/users/promag/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/promag/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "promag",
+      "id": 3534524,
+      "node_id": "MDQ6VXNlcjM1MzQ1MjQ=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3534524?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/promag",
+      "html_url": "https://github.com/promag",
+      "followers_url": "https://api.github.com/users/promag/followers",
+      "following_url": "https://api.github.com/users/promag/following{/other_user}",
+      "gists_url": "https://api.github.com/users/promag/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/promag/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/promag/subscriptions",
+      "organizations_url": "https://api.github.com/users/promag/orgs",
+      "repos_url": "https://api.github.com/users/promag/repos",
+      "events_url": "https://api.github.com/users/promag/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/promag/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "7c355391563925222286af65efd59c69f83586de",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7c355391563925222286af65efd59c69f83586de",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/7c355391563925222286af65efd59c69f83586de"
+      }
+    ],
+    "stats": {
+      "total": 5,
+      "additions": 3,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "8b5136e958c9be301fa3c9d87991066f43465a52",
+        "filename": "src/txmempool.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 2,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fb2dca415f6ac74d79292296831ccc33c485230b/src/txmempool.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fb2dca415f6ac74d79292296831ccc33c485230b/src/txmempool.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.h?ref=fb2dca415f6ac74d79292296831ccc33c485230b",
+        "patch": "@@ -764,8 +764,9 @@ class CTxMemPool\n     void RemoveUnbroadcastTx(const uint256& txid, const bool unchecked = false) EXCLUSIVE_LOCKS_REQUIRED(cs);\n \n     /** Returns transactions in unbroadcast set */\n-    std::map<uint256, uint256> GetUnbroadcastTxs() const {\n-        LOCK(cs);\n+    std::map<uint256, uint256> GetUnbroadcastTxs() const EXCLUSIVE_LOCKS_REQUIRED(cs)\n+    {\n+        AssertLockHeld(cs);\n         return m_unbroadcast_txids;\n     }\n "
+      }
+    ]
+  },
+  {
+    "sha": "dde441c11a07b9ff72dbcfda896c61adf33ae228",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkZGU0NDFjMTFhMDdiOWZmNzJkYmNmZGE4OTZjNjFhZGYzM2FlMjI4",
+    "commit": {
+      "author": {
+        "name": "Jo\u00e3o Barbosa",
+        "email": "joao.paulo.barbosa@gmail.com",
+        "date": "2020-09-08T21:05:54Z"
+      },
+      "committer": {
+        "name": "Jo\u00e3o Barbosa",
+        "email": "joao.paulo.barbosa@gmail.com",
+        "date": "2020-09-08T21:06:18Z"
+      },
+      "message": "refactor: CTxMemPool::exists requires lock",
+      "tree": {
+        "sha": "74b3b846096c30d34df5888f274aa48f9f5987b1",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/74b3b846096c30d34df5888f274aa48f9f5987b1"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/dde441c11a07b9ff72dbcfda896c61adf33ae228",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/dde441c11a07b9ff72dbcfda896c61adf33ae228",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/dde441c11a07b9ff72dbcfda896c61adf33ae228",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/dde441c11a07b9ff72dbcfda896c61adf33ae228/comments",
+    "author": {
+      "login": "promag",
+      "id": 3534524,
+      "node_id": "MDQ6VXNlcjM1MzQ1MjQ=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3534524?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/promag",
+      "html_url": "https://github.com/promag",
+      "followers_url": "https://api.github.com/users/promag/followers",
+      "following_url": "https://api.github.com/users/promag/following{/other_user}",
+      "gists_url": "https://api.github.com/users/promag/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/promag/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/promag/subscriptions",
+      "organizations_url": "https://api.github.com/users/promag/orgs",
+      "repos_url": "https://api.github.com/users/promag/repos",
+      "events_url": "https://api.github.com/users/promag/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/promag/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "promag",
+      "id": 3534524,
+      "node_id": "MDQ6VXNlcjM1MzQ1MjQ=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3534524?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/promag",
+      "html_url": "https://github.com/promag",
+      "followers_url": "https://api.github.com/users/promag/followers",
+      "following_url": "https://api.github.com/users/promag/following{/other_user}",
+      "gists_url": "https://api.github.com/users/promag/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/promag/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/promag/subscriptions",
+      "organizations_url": "https://api.github.com/users/promag/orgs",
+      "repos_url": "https://api.github.com/users/promag/repos",
+      "events_url": "https://api.github.com/users/promag/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/promag/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "fb2dca415f6ac74d79292296831ccc33c485230b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fb2dca415f6ac74d79292296831ccc33c485230b",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/fb2dca415f6ac74d79292296831ccc33c485230b"
+      }
+    ],
+    "stats": {
+      "total": 12,
+      "additions": 6,
+      "deletions": 6
+    },
+    "files": [
+      {
+        "sha": "1e9c90720ce082bbe4ef6eebb2367241d914ffc5",
+        "filename": "src/net_processing.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/dde441c11a07b9ff72dbcfda896c61adf33ae228/src/net_processing.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/dde441c11a07b9ff72dbcfda896c61adf33ae228/src/net_processing.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.cpp?ref=dde441c11a07b9ff72dbcfda896c61adf33ae228",
+        "patch": "@@ -1488,7 +1488,7 @@ bool static AlreadyHaveTx(const GenTxid& gtxid, const CTxMemPool& mempool) EXCLU\n         if (g_recent_confirmed_transactions->contains(hash)) return true;\n     }\n \n-    return recentRejects->contains(hash) || mempool.exists(gtxid);\n+    return recentRejects->contains(hash) || WITH_LOCK(mempool.cs, return mempool.exists(gtxid));\n }\n \n bool static AlreadyHaveBlock(const uint256& block_hash) EXCLUSIVE_LOCKS_REQUIRED(cs_main)\n@@ -3124,7 +3124,7 @@ void PeerManager::ProcessMessage(CNode& pfrom, const std::string& msg_type, CDat\n                 // if they were already in the mempool,\n                 // allowing the node to function as a gateway for\n                 // nodes hidden behind it.\n-                if (!m_mempool.exists(tx.GetHash())) {\n+                if (!WITH_LOCK(m_mempool.cs, return m_mempool.exists(tx.GetHash()))) {\n                     LogPrintf(\"Not relaying non-mempool transaction %s from forcerelay peer=%d\\n\", tx.GetHash().ToString(), pfrom.GetId());\n                 } else {\n                     LogPrintf(\"Force relaying tx %s from peer=%d\\n\", tx.GetHash().ToString(), pfrom.GetId());"
+      },
+      {
+        "sha": "bcf25f3f5fe47a72e80d8837777ee06921b57801",
+        "filename": "src/node/transaction.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/dde441c11a07b9ff72dbcfda896c61adf33ae228/src/node/transaction.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/dde441c11a07b9ff72dbcfda896c61adf33ae228/src/node/transaction.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/node/transaction.cpp?ref=dde441c11a07b9ff72dbcfda896c61adf33ae228",
+        "patch": "@@ -35,7 +35,7 @@ TransactionError BroadcastTransaction(NodeContext& node, const CTransactionRef t\n         // So if the output does exist, then this transaction exists in the chain.\n         if (!existingCoin.IsSpent()) return TransactionError::ALREADY_IN_CHAIN;\n     }\n-    if (!node.mempool->exists(hashTx)) {\n+    if (!WITH_LOCK(node.mempool->cs, return node.mempool->exists(hashTx))) {\n         // Transaction is not already in the mempool. Submit it.\n         TxValidationState state;\n         if (!AcceptToMemoryPool(*node.mempool, state, std::move(tx),"
+      },
+      {
+        "sha": "6b9d929cecce1ae3784fc1d98aa0bd0cd72c057b",
+        "filename": "src/txmempool.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 3,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/dde441c11a07b9ff72dbcfda896c61adf33ae228/src/txmempool.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/dde441c11a07b9ff72dbcfda896c61adf33ae228/src/txmempool.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.h?ref=dde441c11a07b9ff72dbcfda896c61adf33ae228",
+        "patch": "@@ -729,15 +729,15 @@ class CTxMemPool\n         return totalTxSize;\n     }\n \n-    bool exists(const GenTxid& gtxid) const\n+    bool exists(const GenTxid& gtxid) const EXCLUSIVE_LOCKS_REQUIRED(cs)\n     {\n-        LOCK(cs);\n+        AssertLockHeld(cs);\n         if (gtxid.IsWtxid()) {\n             return (mapTx.get<index_by_wtxid>().count(gtxid.GetHash()) != 0);\n         }\n         return (mapTx.count(gtxid.GetHash()) != 0);\n     }\n-    bool exists(const uint256& txid) const { return exists(GenTxid{false, txid}); }\n+    bool exists(const uint256& txid) const EXCLUSIVE_LOCKS_REQUIRED(cs) { return exists(GenTxid{false, txid}); }\n \n     CTransactionRef get(const uint256& hash) const;\n     txiter get_iter_from_wtxid(const uint256& wtxid) const EXCLUSIVE_LOCKS_REQUIRED(cs)"
+      }
+    ]
+  }
+]

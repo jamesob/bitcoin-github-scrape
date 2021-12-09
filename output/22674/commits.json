@@ -1,0 +1,870 @@
+[
+  {
+    "sha": "9b2fdca7f03911ac40fe0f8a0b5da534bee4554b",
+    "node_id": "C_kwDOABII59oAKDliMmZkY2E3ZjAzOTExYWM0MGZlMGY4YTBiNWRhNTM0YmVlNDU1NGI",
+    "commit": {
+      "author": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-07-16T09:29:11Z"
+      },
+      "committer": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-11-29T12:46:58Z"
+      },
+      "message": "[packages] add static IsChildWithParents function",
+      "tree": {
+        "sha": "8ac96fe74605aaf0d0288ef6ae25b0ddb3bb6435",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/8ac96fe74605aaf0d0288ef6ae25b0ddb3bb6435"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/9b2fdca7f03911ac40fe0f8a0b5da534bee4554b",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9b2fdca7f03911ac40fe0f8a0b5da534bee4554b",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/9b2fdca7f03911ac40fe0f8a0b5da534bee4554b",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9b2fdca7f03911ac40fe0f8a0b5da534bee4554b/comments",
+    "author": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "8ae4ba481ce8f7da173bef24432729c87a36cb70",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8ae4ba481ce8f7da173bef24432729c87a36cb70",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/8ae4ba481ce8f7da173bef24432729c87a36cb70"
+      }
+    ],
+    "stats": {
+      "total": 23,
+      "additions": 23,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "21f548881603d1882e33d2fa14fd79b180ceee0e",
+        "filename": "src/policy/packages.cpp",
+        "status": "modified",
+        "additions": 17,
+        "deletions": 0,
+        "changes": 17,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9b2fdca7f03911ac40fe0f8a0b5da534bee4554b/src/policy/packages.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9b2fdca7f03911ac40fe0f8a0b5da534bee4554b/src/policy/packages.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/policy/packages.cpp?ref=9b2fdca7f03911ac40fe0f8a0b5da534bee4554b",
+        "patch": "@@ -60,3 +60,20 @@ bool CheckPackage(const Package& txns, PackageValidationState& state)\n     }\n     return true;\n }\n+\n+bool IsChildWithParents(const Package& package)\n+{\n+    assert(std::all_of(package.cbegin(), package.cend(), [](const auto& tx){return tx != nullptr;}));\n+    if (package.size() < 2) return false;\n+\n+    // The package is expected to be sorted, so the last transaction is the child.\n+    const auto& child = package.back();\n+    std::unordered_set<uint256, SaltedTxidHasher> input_txids;\n+    std::transform(child->vin.cbegin(), child->vin.cend(),\n+                   std::inserter(input_txids, input_txids.end()),\n+                   [](const auto& input) { return input.prevout.hash; });\n+\n+    // Every transaction must be a parent of the last transaction in the package.\n+    return std::all_of(package.cbegin(), package.cend() - 1,\n+                       [&input_txids](const auto& ptx) { return input_txids.count(ptx->GetHash()) > 0; });\n+}"
+      },
+      {
+        "sha": "d2744f1265a0e141d0e584c5268ad7851e991b49",
+        "filename": "src/policy/packages.h",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 0,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9b2fdca7f03911ac40fe0f8a0b5da534bee4554b/src/policy/packages.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9b2fdca7f03911ac40fe0f8a0b5da534bee4554b/src/policy/packages.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/policy/packages.h?ref=9b2fdca7f03911ac40fe0f8a0b5da534bee4554b",
+        "patch": "@@ -41,4 +41,10 @@ class PackageValidationState : public ValidationState<PackageValidationResult> {\n  */\n bool CheckPackage(const Package& txns, PackageValidationState& state);\n \n+/** Context-free check that a package is exactly one child and its parents; not all parents need to\n+ * be present, but the package must not contain any transactions that are not the child's parents.\n+ * It is expected to be sorted, which means the last transaction must be the child.\n+ */\n+bool IsChildWithParents(const Package& package);\n+\n #endif // BITCOIN_POLICY_PACKAGES_H"
+      }
+    ]
+  },
+  {
+    "sha": "ba26169f6035c238378a3c9647213328a006fa23",
+    "node_id": "C_kwDOABII59oAKGJhMjYxNjlmNjAzNWMyMzgzNzhhM2M5NjQ3MjEzMzI4YTAwNmZhMjM",
+    "commit": {
+      "author": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-07-16T14:08:33Z"
+      },
+      "committer": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-11-29T12:48:23Z"
+      },
+      "message": "[unit test] context-free package checks",
+      "tree": {
+        "sha": "39445873caaf7bb474e1e51a9d9f8483049fa448",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/39445873caaf7bb474e1e51a9d9f8483049fa448"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/ba26169f6035c238378a3c9647213328a006fa23",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ba26169f6035c238378a3c9647213328a006fa23",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/ba26169f6035c238378a3c9647213328a006fa23",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ba26169f6035c238378a3c9647213328a006fa23/comments",
+    "author": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "9b2fdca7f03911ac40fe0f8a0b5da534bee4554b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9b2fdca7f03911ac40fe0f8a0b5da534bee4554b",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/9b2fdca7f03911ac40fe0f8a0b5da534bee4554b"
+      }
+    ],
+    "stats": {
+      "total": 93,
+      "additions": 93,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "6c996c2630fd75d253cf57ca326e6f707a15c158",
+        "filename": "src/test/txpackage_tests.cpp",
+        "status": "modified",
+        "additions": 93,
+        "deletions": 0,
+        "changes": 93,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ba26169f6035c238378a3c9647213328a006fa23/src/test/txpackage_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ba26169f6035c238378a3c9647213328a006fa23/src/test/txpackage_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/txpackage_tests.cpp?ref=ba26169f6035c238378a3c9647213328a006fa23",
+        "patch": "@@ -114,4 +114,97 @@ BOOST_FIXTURE_TEST_CASE(package_validation_tests, TestChain100Setup)\n     // Check that mempool size hasn't changed.\n     BOOST_CHECK_EQUAL(m_node.mempool->size(), initialPoolSize);\n }\n+\n+BOOST_FIXTURE_TEST_CASE(noncontextual_package_tests, TestChain100Setup)\n+{\n+    // The signatures won't be verified so we can just use a placeholder\n+    CKey placeholder_key;\n+    placeholder_key.MakeNewKey(true);\n+    CScript spk = GetScriptForDestination(PKHash(placeholder_key.GetPubKey()));\n+    CKey placeholder_key_2;\n+    placeholder_key_2.MakeNewKey(true);\n+    CScript spk2 = GetScriptForDestination(PKHash(placeholder_key_2.GetPubKey()));\n+\n+    // Parent and Child Package\n+    {\n+        auto mtx_parent = CreateValidMempoolTransaction(m_coinbase_txns[0], 0, 0, coinbaseKey, spk,\n+                                                        CAmount(49 * COIN), /* submit */ false);\n+        CTransactionRef tx_parent = MakeTransactionRef(mtx_parent);\n+\n+        auto mtx_child = CreateValidMempoolTransaction(tx_parent, 0, 101, placeholder_key, spk2,\n+                                                       CAmount(48 * COIN), /* submit */ false);\n+        CTransactionRef tx_child = MakeTransactionRef(mtx_child);\n+\n+        PackageValidationState state;\n+        BOOST_CHECK(CheckPackage({tx_parent, tx_child}, state));\n+        BOOST_CHECK(!CheckPackage({tx_child, tx_parent}, state));\n+        BOOST_CHECK_EQUAL(state.GetResult(), PackageValidationResult::PCKG_POLICY);\n+        BOOST_CHECK_EQUAL(state.GetRejectReason(), \"package-not-sorted\");\n+        BOOST_CHECK(IsChildWithParents({tx_parent, tx_child}));\n+    }\n+\n+    // 24 Parents and 1 Child\n+    {\n+        Package package;\n+        CMutableTransaction child;\n+        for (int i{0}; i < 24; ++i) {\n+            auto parent = MakeTransactionRef(CreateValidMempoolTransaction(m_coinbase_txns[i + 1],\n+                                             0, 0, coinbaseKey, spk, CAmount(48 * COIN), false));\n+            package.emplace_back(parent);\n+            child.vin.push_back(CTxIn(COutPoint(parent->GetHash(), 0)));\n+        }\n+        child.vout.push_back(CTxOut(47 * COIN, spk2));\n+\n+        // The child must be in the package.\n+        BOOST_CHECK(!IsChildWithParents(package));\n+\n+        // The parents can be in any order.\n+        FastRandomContext rng;\n+        Shuffle(package.begin(), package.end(), rng);\n+        package.push_back(MakeTransactionRef(child));\n+\n+        PackageValidationState state;\n+        BOOST_CHECK(CheckPackage(package, state));\n+        BOOST_CHECK(IsChildWithParents(package));\n+\n+        package.erase(package.begin());\n+        BOOST_CHECK(IsChildWithParents(package));\n+\n+        // The package cannot have unrelated transactions.\n+        package.insert(package.begin(), m_coinbase_txns[0]);\n+        BOOST_CHECK(!IsChildWithParents(package));\n+    }\n+\n+    // 2 Parents and 1 Child where one parent depends on the other.\n+    {\n+        CMutableTransaction mtx_parent;\n+        mtx_parent.vin.push_back(CTxIn(COutPoint(m_coinbase_txns[0]->GetHash(), 0)));\n+        mtx_parent.vout.push_back(CTxOut(20 * COIN, spk));\n+        mtx_parent.vout.push_back(CTxOut(20 * COIN, spk2));\n+        CTransactionRef tx_parent = MakeTransactionRef(mtx_parent);\n+\n+        CMutableTransaction mtx_parent_also_child;\n+        mtx_parent_also_child.vin.push_back(CTxIn(COutPoint(tx_parent->GetHash(), 0)));\n+        mtx_parent_also_child.vout.push_back(CTxOut(20 * COIN, spk));\n+        CTransactionRef tx_parent_also_child = MakeTransactionRef(mtx_parent_also_child);\n+\n+        CMutableTransaction mtx_child;\n+        mtx_child.vin.push_back(CTxIn(COutPoint(tx_parent->GetHash(), 1)));\n+        mtx_child.vin.push_back(CTxIn(COutPoint(tx_parent_also_child->GetHash(), 0)));\n+        mtx_child.vout.push_back(CTxOut(39 * COIN, spk));\n+        CTransactionRef tx_child = MakeTransactionRef(mtx_child);\n+\n+        PackageValidationState state;\n+        BOOST_CHECK(IsChildWithParents({tx_parent, tx_parent_also_child}));\n+        BOOST_CHECK(IsChildWithParents({tx_parent, tx_child}));\n+        BOOST_CHECK(IsChildWithParents({tx_parent, tx_parent_also_child, tx_child}));\n+        // IsChildWithParents does not detect unsorted parents.\n+        BOOST_CHECK(IsChildWithParents({tx_parent_also_child, tx_parent, tx_child}));\n+        BOOST_CHECK(CheckPackage({tx_parent, tx_parent_also_child, tx_child}, state));\n+        BOOST_CHECK(!CheckPackage({tx_parent_also_child, tx_parent, tx_child}, state));\n+        BOOST_CHECK_EQUAL(state.GetResult(), PackageValidationResult::PCKG_POLICY);\n+        BOOST_CHECK_EQUAL(state.GetRejectReason(), \"package-not-sorted\");\n+    }\n+}\n+\n BOOST_AUTO_TEST_SUITE_END()"
+      }
+    ]
+  },
+  {
+    "sha": "d59ddc5c3d1c035474d7bc9fa9f8a0eeb1c8498c",
+    "node_id": "C_kwDOABII59oAKGQ1OWRkYzVjM2QxYzAzNTQ3NGQ3YmM5ZmE5ZjhhMGVlYjFjODQ5OGM",
+    "commit": {
+      "author": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-10-20T11:02:18Z"
+      },
+      "committer": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-11-29T15:33:07Z"
+      },
+      "message": "[packages/doc] define and document package rules\n\nCentral place for putting package-related info. This document or parts\nof it can also be easily ported to other places if deemed appropriate.",
+      "tree": {
+        "sha": "9be6b98492de028b2ab1176bc64738e6ff68f12d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/9be6b98492de028b2ab1176bc64738e6ff68f12d"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/d59ddc5c3d1c035474d7bc9fa9f8a0eeb1c8498c",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d59ddc5c3d1c035474d7bc9fa9f8a0eeb1c8498c",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/d59ddc5c3d1c035474d7bc9fa9f8a0eeb1c8498c",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d59ddc5c3d1c035474d7bc9fa9f8a0eeb1c8498c/comments",
+    "author": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "ba26169f6035c238378a3c9647213328a006fa23",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ba26169f6035c238378a3c9647213328a006fa23",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/ba26169f6035c238378a3c9647213328a006fa23"
+      }
+    ],
+    "stats": {
+      "total": 80,
+      "additions": 72,
+      "deletions": 8
+    },
+    "files": [
+      {
+        "sha": "965cbc4511791d8092b34c7968a647172471847c",
+        "filename": "doc/README.md",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d59ddc5c3d1c035474d7bc9fa9f8a0eeb1c8498c/doc/README.md",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d59ddc5c3d1c035474d7bc9fa9f8a0eeb1c8498c/doc/README.md",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/doc/README.md?ref=d59ddc5c3d1c035474d7bc9fa9f8a0eeb1c8498c",
+        "patch": "@@ -82,6 +82,7 @@ The Bitcoin repo's [root README](/README.md) contains relevant information on th\n - [Reduce Memory](reduce-memory.md)\n - [Reduce Traffic](reduce-traffic.md)\n - [Tor Support](tor.md)\n+- [Transaction Relay Policy](policy/README.md)\n - [ZMQ](zmq.md)\n \n License"
+      },
+      {
+        "sha": "9c83f4b56ec067e39cbe1ecb1c34878abc931aa3",
+        "filename": "doc/policy/README.md",
+        "status": "added",
+        "additions": 10,
+        "deletions": 0,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d59ddc5c3d1c035474d7bc9fa9f8a0eeb1c8498c/doc/policy/README.md",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d59ddc5c3d1c035474d7bc9fa9f8a0eeb1c8498c/doc/policy/README.md",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/doc/policy/README.md?ref=d59ddc5c3d1c035474d7bc9fa9f8a0eeb1c8498c",
+        "patch": "@@ -0,0 +1,10 @@\n+# Transaction Relay Policy\n+\n+Policy is a set of validation rules, in addition to consensus, enforced for unconfirmed\n+transactions.\n+\n+This documentation is not an exhaustive list of all policy rules.\n+\n+- [Packages](packages.md)\n+\n+"
+      },
+      {
+        "sha": "07698f2af2ba8a35639cfbca186469a1b42ce27b",
+        "filename": "doc/policy/packages.md",
+        "status": "added",
+        "additions": 59,
+        "deletions": 0,
+        "changes": 59,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d59ddc5c3d1c035474d7bc9fa9f8a0eeb1c8498c/doc/policy/packages.md",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d59ddc5c3d1c035474d7bc9fa9f8a0eeb1c8498c/doc/policy/packages.md",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/doc/policy/packages.md?ref=d59ddc5c3d1c035474d7bc9fa9f8a0eeb1c8498c",
+        "patch": "@@ -0,0 +1,59 @@\n+# Package Mempool Accept\n+\n+## Definitions\n+\n+A **package** is an ordered list of transactions, representable by a connected Directed Acyclic\n+Graph (a directed edge exists between a transaction that spends the output of another transaction).\n+\n+For every transaction `t` in a **topologically sorted** package, if any of its parents are present\n+in the package, they appear somewhere in the list before `t`.\n+\n+A **child-with-unconfirmed-parents** package is a topologically sorted package that consists of\n+exactly one child and all of its unconfirmed parents (no other transactions may be present).\n+The last transaction in the package is the child, and its package can be canonically defined based\n+on the current state: each of its inputs must be available in the UTXO set as of the current chain\n+tip or some preceding transaction in the package.\n+\n+## Package Mempool Acceptance Rules\n+\n+The following rules are enforced for all packages:\n+\n+* Packages cannot exceed `MAX_PACKAGE_COUNT=25` count and `MAX_PACKAGE_SIZE=101KvB` total size\n+   (#20833)\n+\n+   - *Rationale*: This is already enforced as mempool ancestor/descendant limits. If\n+     transactions in a package are all related, exceeding this limit would mean that the package\n+     can either be split up or it wouldn't pass individual mempool policy.\n+\n+   - Note that, if these mempool limits change, package limits should be reconsidered. Users may\n+     also configure their mempool limits differently.\n+\n+* Packages must be topologically sorted. (#20833)\n+\n+* Packages cannot have conflicting transactions, i.e. no two transactions in a package can spend\n+   the same inputs. Packages cannot have duplicate transactions. (#20833)\n+\n+* No transaction in a package can conflict with a mempool transaction. BIP125 Replace By Fee is\n+  currently disabled for packages. (#20833)\n+\n+   - Package RBF may be enabled in the future.\n+\n+* When packages are evaluated against ancestor/descendant limits, the union of all transactions'\n+  descendants and ancestors is considered. (#21800)\n+\n+   - *Rationale*: This is essentially a \"worst case\" heuristic intended for packages that are\n+     heavily connected, i.e. some transaction in the package is the ancestor or descendant of all\n+     the other transactions.\n+\n+The following rules are only enforced for packages to be submitted to the mempool (not enforced for\n+test accepts):\n+\n+* Packages must be child-with-unconfirmed-parents packages. This also means packages must contain at\n+  least 2 transactions. (#22674)\n+\n+   - *Rationale*: This allows for fee-bumping by CPFP. Allowing multiple parents makes it possible\n+     to fee-bump a batch of transactions. Restricting packages to a defined topology is easier to\n+     reason about and simplifies the validation logic greatly.\n+\n+   - Warning: Batched fee-bumping may be unsafe for some use cases. Users and application developers\n+     should take caution if utilizing multi-parent packages."
+      },
+      {
+        "sha": "2621d3e7f136cd2027247a260eaf7ddcef5b321b",
+        "filename": "src/validation.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 8,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d59ddc5c3d1c035474d7bc9fa9f8a0eeb1c8498c/src/validation.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d59ddc5c3d1c035474d7bc9fa9f8a0eeb1c8498c/src/validation.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.h?ref=d59ddc5c3d1c035474d7bc9fa9f8a0eeb1c8498c",
+        "patch": "@@ -216,14 +216,8 @@ MempoolAcceptResult AcceptToMemoryPool(CChainState& active_chainstate, CTxMemPoo\n                                        bool bypass_limits, bool test_accept=false) EXCLUSIVE_LOCKS_REQUIRED(cs_main);\n \n /**\n-* Atomically test acceptance of a package. If the package only contains one tx, package rules still\n-* apply. Package validation does not allow BIP125 replacements, so the transaction(s) cannot spend\n-* the same inputs as any transaction in the mempool.\n-* @param[in]    txns                Group of transactions which may be independent or contain\n-*                                   parent-child dependencies. The transactions must not conflict\n-*                                   with each other, i.e., must not spend the same inputs. If any\n-*                                   dependencies exist, parents must appear anywhere in the list\n-*                                   before their children.\n+* Validate (and maybe submit) a package to the mempool. See doc/policy/packages.md for full details\n+* on package validation rules.\n * @returns a PackageMempoolAcceptResult which includes a MempoolAcceptResult for each transaction.\n * If a transaction fails, validation will exit early and some results may be missing.\n */"
+      }
+    ]
+  },
+  {
+    "sha": "144a29099a865ac1dc3e5291d9529fbcca9c83a4",
+    "node_id": "C_kwDOABII59oAKDE0NGEyOTA5OWE4NjVhYzFkYzNlNTI5MWQ5NTI5ZmJjY2E5YzgzYTQ",
+    "commit": {
+      "author": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-09-22T14:40:22Z"
+      },
+      "committer": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-11-29T15:33:07Z"
+      },
+      "message": "[policy] require submitted packages to be child-with-unconfirmed-parents\n\nNote that this code path is not ever executed yet, because\nProcessNewPackage asserts test_accept=true.",
+      "tree": {
+        "sha": "d467b9018d73c51e321f58bb47d9d1509e7f668c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/d467b9018d73c51e321f58bb47d9d1509e7f668c"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/144a29099a865ac1dc3e5291d9529fbcca9c83a4",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/144a29099a865ac1dc3e5291d9529fbcca9c83a4",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/144a29099a865ac1dc3e5291d9529fbcca9c83a4",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/144a29099a865ac1dc3e5291d9529fbcca9c83a4/comments",
+    "author": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "d59ddc5c3d1c035474d7bc9fa9f8a0eeb1c8498c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d59ddc5c3d1c035474d7bc9fa9f8a0eeb1c8498c",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/d59ddc5c3d1c035474d7bc9fa9f8a0eeb1c8498c"
+      }
+    ],
+    "stats": {
+      "total": 85,
+      "additions": 83,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "08d37aec0c57439d715eab4481721ac25cdcc479",
+        "filename": "src/validation.cpp",
+        "status": "modified",
+        "additions": 83,
+        "deletions": 2,
+        "changes": 85,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/144a29099a865ac1dc3e5291d9529fbcca9c83a4/src/validation.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/144a29099a865ac1dc3e5291d9529fbcca9c83a4/src/validation.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.cpp?ref=144a29099a865ac1dc3e5291d9529fbcca9c83a4",
+        "patch": "@@ -477,6 +477,17 @@ class MemPoolAccept\n             };\n         }\n \n+        /** Parameters for child-with-unconfirmed-parents package validation. */\n+        static ATMPArgs PackageChildWithParents(const CChainParams& chainparams, int64_t accept_time,\n+                                                std::vector<COutPoint>& coins_to_uncache) {\n+            return ATMPArgs{/* m_chainparams */ chainparams,\n+                            /* m_accept_time */ accept_time,\n+                            /* m_bypass_limits */ false,\n+                            /* m_coins_to_uncache */ coins_to_uncache,\n+                            /* m_test_accept */ false,\n+                            /* m_allow_bip125_replacement */ false,\n+            };\n+        }\n         // No default ctor to avoid exposing details to clients and allowing the possibility of\n         // mixing up the order of the arguments. Use static functions above instead.\n         ATMPArgs() = delete;\n@@ -492,6 +503,12 @@ class MemPoolAccept\n     */\n     PackageMempoolAcceptResult AcceptMultipleTransactions(const std::vector<CTransactionRef>& txns, ATMPArgs& args) EXCLUSIVE_LOCKS_REQUIRED(cs_main);\n \n+    /**\n+     * Package (more specific than just multiple transactions) acceptance. Package must be a child\n+     * with all of its unconfirmed parents, and topologically sorted.\n+     */\n+    PackageMempoolAcceptResult AcceptPackage(const Package& package, ATMPArgs& args) EXCLUSIVE_LOCKS_REQUIRED(cs_main);\n+\n private:\n     // All the intermediate state that gets passed between the various levels\n     // of checking a given transaction.\n@@ -1077,6 +1094,62 @@ PackageMempoolAcceptResult MemPoolAccept::AcceptMultipleTransactions(const std::\n     return PackageMempoolAcceptResult(package_state, std::move(results));\n }\n \n+PackageMempoolAcceptResult MemPoolAccept::AcceptPackage(const Package& package, ATMPArgs& args)\n+{\n+    AssertLockHeld(cs_main);\n+    PackageValidationState package_state;\n+\n+    // Check that the package is well-formed. If it isn't, we won't try to validate any of the\n+    // transactions and thus won't return any MempoolAcceptResults, just a package-wide error.\n+\n+    // Context-free package checks.\n+    if (!CheckPackage(package, package_state)) return PackageMempoolAcceptResult(package_state, {});\n+\n+    // All transactions in the package must be a parent of the last transaction. This is just an\n+    // opportunity for us to fail fast on a context-free check without taking the mempool lock.\n+    if (!IsChildWithParents(package)) {\n+        package_state.Invalid(PackageValidationResult::PCKG_POLICY, \"package-not-child-with-parents\");\n+        return PackageMempoolAcceptResult(package_state, {});\n+    }\n+\n+    const auto& child = package[package.size() - 1];\n+    // The package must be 1 child with all of its unconfirmed parents. The package is expected to\n+    // be sorted, so the last transaction is the child.\n+    std::unordered_set<uint256, SaltedTxidHasher> unconfirmed_parent_txids;\n+    std::transform(package.cbegin(), package.end() - 1,\n+                   std::inserter(unconfirmed_parent_txids, unconfirmed_parent_txids.end()),\n+                   [](const auto& tx) { return tx->GetHash(); });\n+\n+    // All child inputs must refer to a preceding package transaction or a confirmed UTXO. The only\n+    // way to verify this is to look up the child's inputs in our current coins view (not including\n+    // mempool), and enforce that all parents not present in the package be available at chain tip.\n+    // Since this check can bring new coins into the coins cache, keep track of these coins and\n+    // uncache them if we don't end up submitting this package to the mempool.\n+    const CCoinsViewCache& coins_tip_cache = m_active_chainstate.CoinsTip();\n+    for (const auto& input : child->vin) {\n+        if (!coins_tip_cache.HaveCoinInCache(input.prevout)) {\n+            args.m_coins_to_uncache.push_back(input.prevout);\n+        }\n+    }\n+    // Using the MemPoolAccept m_view cache allows us to look up these same coins faster later.\n+    // This should be connecting directly to CoinsTip, not to m_viewmempool, because we specifically\n+    // require inputs to be confirmed if they aren't in the package.\n+    m_view.SetBackend(m_active_chainstate.CoinsTip());\n+    const auto package_or_confirmed = [this, &unconfirmed_parent_txids](const auto& input) {\n+         return unconfirmed_parent_txids.count(input.prevout.hash) > 0 || m_view.HaveCoin(input.prevout);\n+    };\n+    if (!std::all_of(child->vin.cbegin(), child->vin.cend(), package_or_confirmed)) {\n+        package_state.Invalid(PackageValidationResult::PCKG_POLICY, \"package-not-child-with-unconfirmed-parents\");\n+        return PackageMempoolAcceptResult(package_state, {});\n+    }\n+    // Protect against bugs where we pull more inputs from disk that miss being added to\n+    // coins_to_uncache. The backend will be connected again when needed in PreChecks.\n+    m_view.SetBackend(m_dummy);\n+\n+    LOCK(m_pool.cs);\n+    return AcceptMultipleTransactions(package, args);\n+}\n+\n } // anon namespace\n \n /** (try to) add transaction to memory pool with a specified acceptance time **/\n@@ -1120,8 +1193,16 @@ PackageMempoolAcceptResult ProcessNewPackage(CChainState& active_chainstate, CTx\n \n     std::vector<COutPoint> coins_to_uncache;\n     const CChainParams& chainparams = Params();\n-    auto args = MemPoolAccept::ATMPArgs::PackageTestAccept(chainparams, GetTime(), coins_to_uncache);\n-    const PackageMempoolAcceptResult result = MemPoolAccept(pool, active_chainstate).AcceptMultipleTransactions(package, args);\n+    const auto result = [&]() EXCLUSIVE_LOCKS_REQUIRED(cs_main) {\n+        AssertLockHeld(cs_main);\n+        if (test_accept) {\n+            auto args = MemPoolAccept::ATMPArgs::PackageTestAccept(chainparams, GetTime(), coins_to_uncache);\n+            return MemPoolAccept(pool, active_chainstate).AcceptMultipleTransactions(package, args);\n+        } else {\n+            auto args = MemPoolAccept::ATMPArgs::PackageChildWithParents(chainparams, GetTime(), coins_to_uncache);\n+            return MemPoolAccept(pool, active_chainstate).AcceptPackage(package, args);\n+        }\n+    }();\n \n     // Uncache coins pertaining to transactions that were not submitted to the mempool.\n     for (const COutPoint& hashTx : coins_to_uncache) {"
+      }
+    ]
+  },
+  {
+    "sha": "be3ff151a1f9665720cdf70d072b098a2f9726a9",
+    "node_id": "C_kwDOABII59oAKGJlM2ZmMTUxYTFmOTY2NTcyMGNkZjcwZDA3MmIwOThhMmY5NzI2YTk",
+    "commit": {
+      "author": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-07-20T10:07:25Z"
+      },
+      "committer": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-11-29T15:42:46Z"
+      },
+      "message": "[validation] full package accept + mempool submission",
+      "tree": {
+        "sha": "ca3c98168e9357de0dec83aceb7529e952e564de",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/ca3c98168e9357de0dec83aceb7529e952e564de"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/be3ff151a1f9665720cdf70d072b098a2f9726a9",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/be3ff151a1f9665720cdf70d072b098a2f9726a9",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/be3ff151a1f9665720cdf70d072b098a2f9726a9",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/be3ff151a1f9665720cdf70d072b098a2f9726a9/comments",
+    "author": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "144a29099a865ac1dc3e5291d9529fbcca9c83a4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/144a29099a865ac1dc3e5291d9529fbcca9c83a4",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/144a29099a865ac1dc3e5291d9529fbcca9c83a4"
+      }
+    ],
+    "stats": {
+      "total": 115,
+      "additions": 106,
+      "deletions": 9
+    },
+    "files": [
+      {
+        "sha": "692c18983fef6c23930a29e0f669cd64b99f96e4",
+        "filename": "src/validation.cpp",
+        "status": "modified",
+        "additions": 103,
+        "deletions": 8,
+        "changes": 111,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/be3ff151a1f9665720cdf70d072b098a2f9726a9/src/validation.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/be3ff151a1f9665720cdf70d072b098a2f9726a9/src/validation.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.cpp?ref=be3ff151a1f9665720cdf70d072b098a2f9726a9",
+        "patch": "@@ -451,6 +451,11 @@ class MemPoolAccept\n          * any transaction spending the same inputs as a transaction in the mempool is considered\n          * a conflict. */\n         const bool m_allow_bip125_replacement;\n+        /** When true, the mempool will not be trimmed when individual transactions are submitted in\n+         * Finalize(). Instead, limits should be enforced at the end to ensure the package is not\n+         * partially submitted.\n+         */\n+        const bool m_package_submission;\n \n         /** Parameters for single transaction mempool validation. */\n         static ATMPArgs SingleAccept(const CChainParams& chainparams, int64_t accept_time,\n@@ -462,6 +467,7 @@ class MemPoolAccept\n                             /* m_coins_to_uncache */ coins_to_uncache,\n                             /* m_test_accept */ test_accept,\n                             /* m_allow_bip125_replacement */ true,\n+                            /* m_package_submission */ false,\n             };\n         }\n \n@@ -474,6 +480,7 @@ class MemPoolAccept\n                             /* m_coins_to_uncache */ coins_to_uncache,\n                             /* m_test_accept */ true,\n                             /* m_allow_bip125_replacement */ false,\n+                            /* m_package_submission */ false, // not submitting to mempool\n             };\n         }\n \n@@ -486,6 +493,7 @@ class MemPoolAccept\n                             /* m_coins_to_uncache */ coins_to_uncache,\n                             /* m_test_accept */ false,\n                             /* m_allow_bip125_replacement */ false,\n+                            /* m_package_submission */ true,\n             };\n         }\n         // No default ctor to avoid exposing details to clients and allowing the possibility of\n@@ -497,9 +505,9 @@ class MemPoolAccept\n     MempoolAcceptResult AcceptSingleTransaction(const CTransactionRef& ptx, ATMPArgs& args) EXCLUSIVE_LOCKS_REQUIRED(cs_main);\n \n     /**\n-    * Multiple transaction acceptance. Transactions may or may not be interdependent,\n-    * but must not conflict with each other. Parents must come before children if any\n-    * dependencies exist.\n+    * Multiple transaction acceptance. Transactions may or may not be interdependent, but must not\n+    * conflict with each other, and the transactions cannot already be in the mempool. Parents must\n+    * come before children if any dependencies exist.\n     */\n     PackageMempoolAcceptResult AcceptMultipleTransactions(const std::vector<CTransactionRef>& txns, ATMPArgs& args) EXCLUSIVE_LOCKS_REQUIRED(cs_main);\n \n@@ -581,6 +589,14 @@ class MemPoolAccept\n     // limiting is performed, false otherwise.\n     bool Finalize(const ATMPArgs& args, Workspace& ws) EXCLUSIVE_LOCKS_REQUIRED(cs_main, m_pool.cs);\n \n+    // Submit all transactions to the mempool and call ConsensusScriptChecks to add to the script\n+    // cache - should only be called after successful validation of all transactions in the package.\n+    // The package may end up partially-submitted after size limitting; returns true if all\n+    // transactions are successfully added to the mempool, false otherwise.\n+    bool FinalizePackage(const ATMPArgs& args, std::vector<Workspace>& workspaces, PackageValidationState& package_state,\n+                         std::map<const uint256, const MempoolAcceptResult>& results)\n+         EXCLUSIVE_LOCKS_REQUIRED(cs_main, m_pool.cs);\n+\n     // Compare a package's feerate against minimum allowed.\n     bool CheckFeeRate(size_t package_size, CAmount package_fee, TxValidationState& state) EXCLUSIVE_LOCKS_REQUIRED(cs_main, m_pool.cs)\n     {\n@@ -992,20 +1008,88 @@ bool MemPoolAccept::Finalize(const ATMPArgs& args, Workspace& ws)\n     // - it's not being re-added during a reorg which bypasses typical mempool fee limits\n     // - the node is not behind\n     // - the transaction is not dependent on any other transactions in the mempool\n-    bool validForFeeEstimation = !bypass_limits && IsCurrentForFeeEstimation(m_active_chainstate) && m_pool.HasNoInputsOf(tx);\n+    // - it's not part of a package. Since package relay is not currently supported, this\n+    // transaction has not necessarily been accepted to miners' mempools.\n+    bool validForFeeEstimation = !bypass_limits && !args.m_package_submission && IsCurrentForFeeEstimation(m_active_chainstate) && m_pool.HasNoInputsOf(tx);\n \n     // Store transaction in memory\n     m_pool.addUnchecked(*entry, ws.m_ancestors, validForFeeEstimation);\n \n     // trim mempool and check if tx was trimmed\n-    if (!bypass_limits) {\n+    // If we are validating a package, don't trim here because we could evict a previous transaction\n+    // in the package. LimitMempoolSize() should be called at the very end to make sure the mempool\n+    // is still within limits and package submission happens atomically.\n+    if (!args.m_package_submission && !bypass_limits) {\n         LimitMempoolSize(m_pool, m_active_chainstate.CoinsTip(), gArgs.GetIntArg(\"-maxmempool\", DEFAULT_MAX_MEMPOOL_SIZE) * 1000000, std::chrono::hours{gArgs.GetIntArg(\"-mempoolexpiry\", DEFAULT_MEMPOOL_EXPIRY)});\n         if (!m_pool.exists(GenTxid::Txid(hash)))\n             return state.Invalid(TxValidationResult::TX_MEMPOOL_POLICY, \"mempool full\");\n     }\n     return true;\n }\n \n+bool MemPoolAccept::FinalizePackage(const ATMPArgs& args, std::vector<Workspace>& workspaces,\n+                                    PackageValidationState& package_state,\n+                                    std::map<const uint256, const MempoolAcceptResult>& results)\n+{\n+    AssertLockHeld(cs_main);\n+    AssertLockHeld(m_pool.cs);\n+    bool all_submitted = true;\n+    // ConsensusScriptChecks adds to the script cache and is therefore consensus-critical;\n+    // CheckInputsFromMempoolAndCache asserts that transactions only spend coins available from the\n+    // mempool or UTXO set. Submit each transaction to the mempool immediately after calling\n+    // ConsensusScriptChecks to make the outputs available for subsequent transactions.\n+    for (Workspace& ws : workspaces) {\n+        if (!ConsensusScriptChecks(args, ws)) {\n+            results.emplace(ws.m_ptx->GetWitnessHash(), MempoolAcceptResult::Failure(ws.m_state));\n+            // Since PolicyScriptChecks() passed, this should never fail.\n+            all_submitted = Assume(false);\n+        }\n+\n+        // Re-calculate mempool ancestors to call addUnchecked(). They may have changed since the\n+        // last calculation done in PreChecks, since package ancestors have already been submitted.\n+        std::string err_string;\n+        if(!m_pool.CalculateMemPoolAncestors(*ws.m_entry, ws.m_ancestors, m_limit_ancestors,\n+                                             m_limit_ancestor_size, m_limit_descendants,\n+                                             m_limit_descendant_size, err_string)) {\n+            results.emplace(ws.m_ptx->GetWitnessHash(), MempoolAcceptResult::Failure(ws.m_state));\n+            // Since PreChecks() and PackageMempoolChecks() both enforce limits, this should never fail.\n+            all_submitted = Assume(false);\n+        }\n+        // If we call LimitMempoolSize() for each individual Finalize(), the mempool will not take\n+        // the transaction's descendant feerate into account because it hasn't seen them yet. Also,\n+        // we risk evicting a transaction that a subsequent package transaction depends on. Instead,\n+        // allow the mempool to temporarily bypass limits, the maximum package size) while\n+        // submitting transactions individually and then trim at the very end.\n+        if (!Finalize(args, ws)) {\n+            results.emplace(ws.m_ptx->GetWitnessHash(), MempoolAcceptResult::Failure(ws.m_state));\n+            // Since LimitMempoolSize() won't be called, this should never fail.\n+            all_submitted = Assume(false);\n+        }\n+    }\n+\n+    // It may or may not be the case that all the transactions made it into the mempool. Regardless,\n+    // make sure we haven't exceeded max mempool size.\n+    LimitMempoolSize(m_pool, m_active_chainstate.CoinsTip(),\n+                     gArgs.GetIntArg(\"-maxmempool\", DEFAULT_MAX_MEMPOOL_SIZE) * 1000000,\n+                     std::chrono::hours{gArgs.GetIntArg(\"-mempoolexpiry\", DEFAULT_MEMPOOL_EXPIRY)});\n+    if (!all_submitted) return false;\n+\n+    // Find the wtxids of the transactions that made it into the mempool. Allow partial submission,\n+    // but don't report success unless they all made it into the mempool.\n+    for (Workspace& ws : workspaces) {\n+        if (m_pool.exists(GenTxid::Wtxid(ws.m_ptx->GetWitnessHash()))) {\n+            results.emplace(ws.m_ptx->GetWitnessHash(),\n+                MempoolAcceptResult::Success(std::move(ws.m_replaced_transactions), ws.m_vsize, ws.m_base_fees));\n+            GetMainSignals().TransactionAddedToMempool(ws.m_ptx, m_pool.GetAndIncrementSequence());\n+        } else {\n+            all_submitted = false;\n+            ws.m_state.Invalid(TxValidationResult::TX_MEMPOOL_POLICY, \"mempool full\");\n+            results.emplace(ws.m_ptx->GetWitnessHash(), MempoolAcceptResult::Failure(ws.m_state));\n+        }\n+    }\n+    return all_submitted;\n+}\n+\n MempoolAcceptResult MemPoolAccept::AcceptSingleTransaction(const CTransactionRef& ptx, ATMPArgs& args)\n {\n     AssertLockHeld(cs_main);\n@@ -1091,6 +1175,13 @@ PackageMempoolAcceptResult MemPoolAccept::AcceptMultipleTransactions(const std::\n         }\n     }\n \n+    if (args.m_test_accept) return PackageMempoolAcceptResult(package_state, std::move(results));\n+\n+    if (!FinalizePackage(args, workspaces, package_state, results)) {\n+        package_state.Invalid(PackageValidationResult::PCKG_TX, \"submission failed\");\n+        return PackageMempoolAcceptResult(package_state, std::move(results));\n+    }\n+\n     return PackageMempoolAcceptResult(package_state, std::move(results));\n }\n \n@@ -1187,7 +1278,6 @@ PackageMempoolAcceptResult ProcessNewPackage(CChainState& active_chainstate, CTx\n                                                    const Package& package, bool test_accept)\n {\n     AssertLockHeld(cs_main);\n-    assert(test_accept); // Only allow package accept dry-runs (testmempoolaccept RPC).\n     assert(!package.empty());\n     assert(std::all_of(package.cbegin(), package.cend(), [](const auto& tx){return tx != nullptr;}));\n \n@@ -1205,9 +1295,14 @@ PackageMempoolAcceptResult ProcessNewPackage(CChainState& active_chainstate, CTx\n     }();\n \n     // Uncache coins pertaining to transactions that were not submitted to the mempool.\n-    for (const COutPoint& hashTx : coins_to_uncache) {\n-        active_chainstate.CoinsTip().Uncache(hashTx);\n+    // Ensure the coins cache is still within limits.\n+    if (test_accept || result.m_state.IsInvalid()) {\n+        for (const COutPoint& hashTx : coins_to_uncache) {\n+            active_chainstate.CoinsTip().Uncache(hashTx);\n+        }\n     }\n+    BlockValidationState state_dummy;\n+    active_chainstate.FlushStateToDisk(state_dummy, FlushStateMode::PERIODIC);\n     return result;\n }\n "
+      },
+      {
+        "sha": "4578a5e02ecd5bf1bfde296defbdef653832c253",
+        "filename": "src/validation.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 1,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/be3ff151a1f9665720cdf70d072b098a2f9726a9/src/validation.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/be3ff151a1f9665720cdf70d072b098a2f9726a9/src/validation.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.h?ref=be3ff151a1f9665720cdf70d072b098a2f9726a9",
+        "patch": "@@ -218,8 +218,10 @@ MempoolAcceptResult AcceptToMemoryPool(CChainState& active_chainstate, CTxMemPoo\n /**\n * Validate (and maybe submit) a package to the mempool. See doc/policy/packages.md for full details\n * on package validation rules.\n+* @param[in]    test_accept     When true, run validation checks but don't submit to mempool.\n * @returns a PackageMempoolAcceptResult which includes a MempoolAcceptResult for each transaction.\n-* If a transaction fails, validation will exit early and some results may be missing.\n+* If a transaction fails, validation will exit early and some results may be missing. It is also\n+* possible for the package to be partially submitted.\n */\n PackageMempoolAcceptResult ProcessNewPackage(CChainState& active_chainstate, CTxMemPool& pool,\n                                                    const Package& txns, bool test_accept)"
+      }
+    ]
+  },
+  {
+    "sha": "8310d942e046c5a9b6bd90afdcd3af68dd91e081",
+    "node_id": "C_kwDOABII59oAKDgzMTBkOTQyZTA0NmM1YTliNmJkOTBhZmRjZDNhZjY4ZGQ5MWUwODE",
+    "commit": {
+      "author": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-09-07T13:08:32Z"
+      },
+      "committer": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-11-29T15:46:48Z"
+      },
+      "message": "[packages] add sanity checks for package vs mempool limits",
+      "tree": {
+        "sha": "71d05f6e3d9d314f37d02908216b12b1588e1c1a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/71d05f6e3d9d314f37d02908216b12b1588e1c1a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/8310d942e046c5a9b6bd90afdcd3af68dd91e081",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8310d942e046c5a9b6bd90afdcd3af68dd91e081",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/8310d942e046c5a9b6bd90afdcd3af68dd91e081",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8310d942e046c5a9b6bd90afdcd3af68dd91e081/comments",
+    "author": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "be3ff151a1f9665720cdf70d072b098a2f9726a9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/be3ff151a1f9665720cdf70d072b098a2f9726a9",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/be3ff151a1f9665720cdf70d072b098a2f9726a9"
+      }
+    ],
+    "stats": {
+      "total": 10,
+      "additions": 10,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "e3ad5f2e9f734e0f720227550d7e4a5d44c433e7",
+        "filename": "src/validation.h",
+        "status": "modified",
+        "additions": 10,
+        "deletions": 0,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8310d942e046c5a9b6bd90afdcd3af68dd91e081/src/validation.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8310d942e046c5a9b6bd90afdcd3af68dd91e081/src/validation.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.h?ref=8310d942e046c5a9b6bd90afdcd3af68dd91e081",
+        "patch": "@@ -60,6 +60,16 @@ static const unsigned int DEFAULT_ANCESTOR_SIZE_LIMIT = 101;\n static const unsigned int DEFAULT_DESCENDANT_LIMIT = 25;\n /** Default for -limitdescendantsize, maximum kilobytes of in-mempool descendants */\n static const unsigned int DEFAULT_DESCENDANT_SIZE_LIMIT = 101;\n+\n+// If a package is submitted, it must be within the mempool's ancestor/descendant limits. Since a\n+// submitted package must be child-with-unconfirmed-parents (all of the transactions are an ancestor\n+// of the child), package limits are ultimately bounded by mempool package limits. Ensure that the\n+// defaults reflect this constraint.\n+static_assert(DEFAULT_DESCENDANT_LIMIT >= MAX_PACKAGE_COUNT);\n+static_assert(DEFAULT_ANCESTOR_LIMIT >= MAX_PACKAGE_COUNT);\n+static_assert(DEFAULT_ANCESTOR_SIZE_LIMIT >= MAX_PACKAGE_SIZE);\n+static_assert(DEFAULT_DESCENDANT_SIZE_LIMIT >= MAX_PACKAGE_SIZE);\n+\n /** Default for -mempoolexpiry, expiration time for mempool transactions in hours */\n static const unsigned int DEFAULT_MEMPOOL_EXPIRY = 336;\n /** Maximum number of dedicated script-checking threads allowed */"
+      }
+    ]
+  },
+  {
+    "sha": "e12fafda2dfbbdf63f125e5af797ecfaa6488f66",
+    "node_id": "C_kwDOABII59oAKGUxMmZhZmRhMmRmYmJkZjYzZjEyNWU1YWY3OTdlY2ZhYTY0ODhmNjY",
+    "commit": {
+      "author": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-08-23T15:57:10Z"
+      },
+      "committer": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-11-29T15:46:48Z"
+      },
+      "message": "[validation] de-duplicate package transactions already in mempool\n\nAs node operators are free to set their mempool policies however they\nplease, it's possible for package transaction(s) to already be in the\nmempool. We definitely don't want to reject the entire package in that\ncase (as that could be a censorship vector).\n\nWe should still return the successful result to the caller, so add\nanother result type to MempoolAcceptResult.",
+      "tree": {
+        "sha": "35bb2be46723a36f0cd474e53cc74c887c623447",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/35bb2be46723a36f0cd474e53cc74c887c623447"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/e12fafda2dfbbdf63f125e5af797ecfaa6488f66",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e12fafda2dfbbdf63f125e5af797ecfaa6488f66",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/e12fafda2dfbbdf63f125e5af797ecfaa6488f66",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e12fafda2dfbbdf63f125e5af797ecfaa6488f66/comments",
+    "author": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "8310d942e046c5a9b6bd90afdcd3af68dd91e081",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8310d942e046c5a9b6bd90afdcd3af68dd91e081",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/8310d942e046c5a9b6bd90afdcd3af68dd91e081"
+      }
+    ],
+    "stats": {
+      "total": 64,
+      "additions": 61,
+      "deletions": 3
+    },
+    "files": [
+      {
+        "sha": "12d59690a3a83f0c4dd427396b42482d380dd94f",
+        "filename": "src/rpc/rawtransaction.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e12fafda2dfbbdf63f125e5af797ecfaa6488f66/src/rpc/rawtransaction.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e12fafda2dfbbdf63f125e5af797ecfaa6488f66/src/rpc/rawtransaction.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/rawtransaction.cpp?ref=e12fafda2dfbbdf63f125e5af797ecfaa6488f66",
+        "patch": "@@ -974,6 +974,8 @@ static RPCHelpMan testmempoolaccept()\n             continue;\n         }\n         const auto& tx_result = it->second;\n+        // Package testmempoolaccept doesn't allow transactions to already be in the mempool.\n+        CHECK_NONFATAL(tx_result.m_result_type != MempoolAcceptResult::ResultType::MEMPOOL_ENTRY);\n         if (tx_result.m_result_type == MempoolAcceptResult::ResultType::VALID) {\n             const CAmount fee = tx_result.m_base_fees.value();\n             // Check that fee does not exceed maximum fee"
+      },
+      {
+        "sha": "dbcb99a6aa349dc693ae445cd3a74066f6a190e4",
+        "filename": "src/validation.cpp",
+        "status": "modified",
+        "additions": 47,
+        "deletions": 1,
+        "changes": 48,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e12fafda2dfbbdf63f125e5af797ecfaa6488f66/src/validation.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e12fafda2dfbbdf63f125e5af797ecfaa6488f66/src/validation.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.cpp?ref=e12fafda2dfbbdf63f125e5af797ecfaa6488f66",
+        "patch": "@@ -916,6 +916,10 @@ bool MemPoolAccept::PackageMempoolChecks(const std::vector<CTransactionRef>& txn\n     AssertLockHeld(cs_main);\n     AssertLockHeld(m_pool.cs);\n \n+    // CheckPackageLimits expects the package transactions to not already be in the mempool.\n+    assert(std::all_of(txns.cbegin(), txns.cend(), [this](const auto& tx)\n+                       { return !m_pool.exists(GenTxid::Txid(tx->GetHash()));}));\n+\n     std::string err_string;\n     if (!m_pool.CheckPackageLimits(txns, m_limit_ancestors, m_limit_ancestor_size, m_limit_descendants,\n                                    m_limit_descendant_size, err_string)) {\n@@ -1238,7 +1242,49 @@ PackageMempoolAcceptResult MemPoolAccept::AcceptPackage(const Package& package,\n     m_view.SetBackend(m_dummy);\n \n     LOCK(m_pool.cs);\n-    return AcceptMultipleTransactions(package, args);\n+    std::map<const uint256, const MempoolAcceptResult> results;\n+    // As node operators are free to set their mempool policies however they please, it's possible\n+    // for package transaction(s) to already be in the mempool, and we don't want to reject the\n+    // entire package in that case (as that could be a censorship vector).  Filter the transactions\n+    // that are already in mempool and add their information to results, since we already have them.\n+    std::vector<CTransactionRef> txns_new;\n+    for (const auto& tx : package) {\n+        const auto& wtxid = tx->GetWitnessHash();\n+        const auto& txid = tx->GetHash();\n+        // There are 3 possibilities: already in mempool, same-txid-diff-wtxid already in mempool,\n+        // or not in mempool. An already confirmed tx is treated as one not in mempool, because all\n+        // we know is that the inputs aren't available.\n+        if (m_pool.exists(GenTxid::Wtxid(wtxid))) {\n+            // Exact transaction already exists in the mempool.\n+            auto iter = m_pool.GetIter(wtxid);\n+            assert(iter != std::nullopt);\n+            results.emplace(wtxid, MempoolAcceptResult::MempoolTx(iter.value()->GetTxSize(), iter.value()->GetFee()));\n+        } else if (m_pool.exists(GenTxid::Txid(txid))) {\n+            // Transaction with the same non-witness data but different witness (same txid,\n+            // different wtxid) already exists in the mempool.\n+            //\n+            // We don't allow replacement transactions right now, so just swap the package\n+            // transaction for the mempool one. Note that we are ignoring the validity of the\n+            // package transaction passed in.\n+            // TODO: allow witness replacement in packages.\n+            auto iter = m_pool.GetIter(wtxid);\n+            assert(iter != std::nullopt);\n+            results.emplace(txid, MempoolAcceptResult::MempoolTx(iter.value()->GetTxSize(), iter.value()->GetFee()));\n+        } else {\n+            // Transaction does not already exist in the mempool.\n+            txns_new.push_back(tx);\n+        }\n+    }\n+\n+    // Nothing to do if the entire package has already been submitted.\n+    if (txns_new.empty()) return PackageMempoolAcceptResult(package_state, std::move(results));\n+    // Validate the (deduplicated) transactions as a package.\n+    auto submission_result = AcceptMultipleTransactions(txns_new, args);\n+    // Include already-in-mempool transaction results in the final result.\n+    for (const auto& [wtxid, mempoolaccept_res] : results) {\n+        submission_result.m_tx_results.emplace(wtxid, mempoolaccept_res);\n+    }\n+    return submission_result;\n }\n \n } // anon namespace"
+      },
+      {
+        "sha": "e53ef53b0713ac77996d149e56d4ab3eb9a5cca6",
+        "filename": "src/validation.h",
+        "status": "modified",
+        "additions": 12,
+        "deletions": 2,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e12fafda2dfbbdf63f125e5af797ecfaa6488f66/src/validation.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e12fafda2dfbbdf63f125e5af797ecfaa6488f66/src/validation.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.h?ref=e12fafda2dfbbdf63f125e5af797ecfaa6488f66",
+        "patch": "@@ -161,17 +161,19 @@ struct MempoolAcceptResult {\n     enum class ResultType {\n         VALID, //!> Fully validated, valid.\n         INVALID, //!> Invalid.\n+        MEMPOOL_ENTRY, //!> Valid, transaction was already in the mempool.\n     };\n     const ResultType m_result_type;\n     const TxValidationState m_state;\n \n-    // The following fields are only present when m_result_type = ResultType::VALID\n+    // The following fields are only present when m_result_type = ResultType::VALID or MEMPOOL_ENTRY\n     /** Mempool transactions replaced by the tx per BIP 125 rules. */\n     const std::optional<std::list<CTransactionRef>> m_replaced_transactions;\n     /** Virtual size as used by the mempool, calculated using serialized size and sigops. */\n     const std::optional<int64_t> m_vsize;\n     /** Raw base fees in satoshis. */\n     const std::optional<CAmount> m_base_fees;\n+\n     static MempoolAcceptResult Failure(TxValidationState state) {\n         return MempoolAcceptResult(state);\n     }\n@@ -180,6 +182,10 @@ struct MempoolAcceptResult {\n         return MempoolAcceptResult(std::move(replaced_txns), vsize, fees);\n     }\n \n+    static MempoolAcceptResult MempoolTx(int64_t vsize, CAmount fees) {\n+        return MempoolAcceptResult(vsize, fees);\n+    }\n+\n // Private constructors. Use static methods MempoolAcceptResult::Success, etc. to construct.\n private:\n     /** Constructor for failure case */\n@@ -192,6 +198,10 @@ struct MempoolAcceptResult {\n     explicit MempoolAcceptResult(std::list<CTransactionRef>&& replaced_txns, int64_t vsize, CAmount fees)\n         : m_result_type(ResultType::VALID),\n         m_replaced_transactions(std::move(replaced_txns)), m_vsize{vsize}, m_base_fees(fees) {}\n+\n+    /** Constructor for already-in-mempool case. It wouldn't replace any transactions. */\n+    explicit MempoolAcceptResult(int64_t vsize, CAmount fees)\n+        : m_result_type(ResultType::MEMPOOL_ENTRY), m_vsize{vsize}, m_base_fees(fees) {}\n };\n \n /**\n@@ -201,7 +211,7 @@ struct PackageMempoolAcceptResult\n {\n     const PackageValidationState m_state;\n     /**\n-    * Map from wtxid to finished MempoolAcceptResults. The client is responsible\n+    * Map from (w)txid to finished MempoolAcceptResults. The client is responsible\n     * for keeping track of the transaction objects themselves. If a result is not\n     * present, it means validation was unfinished for that transaction. If there\n     * was a package-wide error (see result in m_state), m_tx_results will be empty."
+      }
+    ]
+  },
+  {
+    "sha": "046e8ff264be6b888c0f9a9d822e32aa74e19b78",
+    "node_id": "C_kwDOABII59oAKDA0NmU4ZmYyNjRiZTZiODg4YzBmOWE5ZDgyMmUzMmFhNzRlMTliNzg",
+    "commit": {
+      "author": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-09-24T16:02:37Z"
+      },
+      "committer": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-11-29T16:07:18Z"
+      },
+      "message": "[unit test] package submission",
+      "tree": {
+        "sha": "b0e1ed6716691296786fabb30bd754cc78a57f99",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/b0e1ed6716691296786fabb30bd754cc78a57f99"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/046e8ff264be6b888c0f9a9d822e32aa74e19b78",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/046e8ff264be6b888c0f9a9d822e32aa74e19b78",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/046e8ff264be6b888c0f9a9d822e32aa74e19b78",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/046e8ff264be6b888c0f9a9d822e32aa74e19b78/comments",
+    "author": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "e12fafda2dfbbdf63f125e5af797ecfaa6488f66",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e12fafda2dfbbdf63f125e5af797ecfaa6488f66",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/e12fafda2dfbbdf63f125e5af797ecfaa6488f66"
+      }
+    ],
+    "stats": {
+      "total": 120,
+      "additions": 120,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "086219de14c8bc5fdb9fb1c82fdb8574df3ffce4",
+        "filename": "src/test/txpackage_tests.cpp",
+        "status": "modified",
+        "additions": 120,
+        "deletions": 0,
+        "changes": 120,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/046e8ff264be6b888c0f9a9d822e32aa74e19b78/src/test/txpackage_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/046e8ff264be6b888c0f9a9d822e32aa74e19b78/src/test/txpackage_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/txpackage_tests.cpp?ref=046e8ff264be6b888c0f9a9d822e32aa74e19b78",
+        "patch": "@@ -207,4 +207,124 @@ BOOST_FIXTURE_TEST_CASE(noncontextual_package_tests, TestChain100Setup)\n     }\n }\n \n+BOOST_FIXTURE_TEST_CASE(package_submission_tests, TestChain100Setup)\n+{\n+    LOCK(cs_main);\n+    unsigned int expected_pool_size = m_node.mempool->size();\n+    CKey parent_key;\n+    parent_key.MakeNewKey(true);\n+    CScript parent_locking_script = GetScriptForDestination(PKHash(parent_key.GetPubKey()));\n+\n+    // Unrelated transactions are not allowed in package submission.\n+    Package package_unrelated;\n+    for (size_t i{0}; i < 10; ++i) {\n+        auto mtx = CreateValidMempoolTransaction(/* input_transaction */ m_coinbase_txns[i + 25], /* vout */ 0,\n+                                                 /* input_height */ 0, /* input_signing_key */ coinbaseKey,\n+                                                 /* output_destination */ parent_locking_script,\n+                                                 /* output_amount */ CAmount(49 * COIN), /* submit */ false);\n+        package_unrelated.emplace_back(MakeTransactionRef(mtx));\n+    }\n+    auto result_unrelated_submit = ProcessNewPackage(m_node.chainman->ActiveChainstate(), *m_node.mempool,\n+                                                     package_unrelated, /* test_accept */ false);\n+    BOOST_CHECK(result_unrelated_submit.m_state.IsInvalid());\n+    BOOST_CHECK_EQUAL(result_unrelated_submit.m_state.GetResult(), PackageValidationResult::PCKG_POLICY);\n+    BOOST_CHECK_EQUAL(result_unrelated_submit.m_state.GetRejectReason(), \"package-not-child-with-parents\");\n+    BOOST_CHECK_EQUAL(m_node.mempool->size(), expected_pool_size);\n+\n+    // Parent and Child (and Grandchild) Package\n+    Package package_parent_child;\n+    Package package_3gen;\n+    auto mtx_parent = CreateValidMempoolTransaction(/* input_transaction */ m_coinbase_txns[0], /* vout */ 0,\n+                                                    /* input_height */ 0, /* input_signing_key */ coinbaseKey,\n+                                                    /* output_destination */ parent_locking_script,\n+                                                    /* output_amount */ CAmount(49 * COIN), /* submit */ false);\n+    CTransactionRef tx_parent = MakeTransactionRef(mtx_parent);\n+    package_parent_child.push_back(tx_parent);\n+    package_3gen.push_back(tx_parent);\n+\n+    CKey child_key;\n+    child_key.MakeNewKey(true);\n+    CScript child_locking_script = GetScriptForDestination(PKHash(child_key.GetPubKey()));\n+    auto mtx_child = CreateValidMempoolTransaction(/* input_transaction */ tx_parent, /* vout */ 0,\n+                                                   /* input_height */ 101, /* input_signing_key */ parent_key,\n+                                                   /* output_destination */ child_locking_script,\n+                                                   /* output_amount */ CAmount(48 * COIN), /* submit */ false);\n+    CTransactionRef tx_child = MakeTransactionRef(mtx_child);\n+    package_parent_child.push_back(tx_child);\n+    package_3gen.push_back(tx_child);\n+\n+    CKey grandchild_key;\n+    grandchild_key.MakeNewKey(true);\n+    CScript grandchild_locking_script = GetScriptForDestination(PKHash(grandchild_key.GetPubKey()));\n+    auto mtx_grandchild = CreateValidMempoolTransaction(/* input_transaction */ tx_child, /* vout */ 0,\n+                                                       /* input_height */ 101, /* input_signing_key */ child_key,\n+                                                       /* output_destination */ grandchild_locking_script,\n+                                                       /* output_amount */ CAmount(47 * COIN), /* submit */ false);\n+    CTransactionRef tx_grandchild = MakeTransactionRef(mtx_grandchild);\n+    package_3gen.push_back(tx_grandchild);\n+\n+    // 3 Generations is not allowed.\n+    {\n+        auto result_3gen_submit = ProcessNewPackage(m_node.chainman->ActiveChainstate(), *m_node.mempool,\n+                                                    package_3gen, /* test_accept */ false);\n+        BOOST_CHECK(result_3gen_submit.m_state.IsInvalid());\n+        BOOST_CHECK_EQUAL(result_3gen_submit.m_state.GetResult(), PackageValidationResult::PCKG_POLICY);\n+        BOOST_CHECK_EQUAL(result_3gen_submit.m_state.GetRejectReason(), \"package-not-child-with-parents\");\n+        BOOST_CHECK_EQUAL(m_node.mempool->size(), expected_pool_size);\n+    }\n+\n+    // Child with missing parent.\n+    mtx_child.vin.push_back(CTxIn(COutPoint(package_unrelated[0]->GetHash(), 0)));\n+    Package package_missing_parent;\n+    package_missing_parent.push_back(tx_parent);\n+    package_missing_parent.push_back(MakeTransactionRef(mtx_child));\n+    {\n+        const auto result_missing_parent = ProcessNewPackage(m_node.chainman->ActiveChainstate(), *m_node.mempool,\n+                                                             package_missing_parent, /* test_accept */ false);\n+        BOOST_CHECK(result_missing_parent.m_state.IsInvalid());\n+        BOOST_CHECK_EQUAL(result_missing_parent.m_state.GetResult(), PackageValidationResult::PCKG_POLICY);\n+        BOOST_CHECK_EQUAL(result_missing_parent.m_state.GetRejectReason(), \"package-not-child-with-unconfirmed-parents\");\n+        BOOST_CHECK_EQUAL(m_node.mempool->size(), expected_pool_size);\n+\n+    }\n+\n+    // Submit package with parent + child.\n+    {\n+        const auto submit_parent_child = ProcessNewPackage(m_node.chainman->ActiveChainstate(), *m_node.mempool,\n+                                                           package_parent_child, /* test_accept */ false);\n+        expected_pool_size += 2;\n+        BOOST_CHECK_MESSAGE(submit_parent_child.m_state.IsValid(),\n+                            \"Package validation unexpectedly failed: \" << submit_parent_child.m_state.GetRejectReason());\n+        auto it_parent = submit_parent_child.m_tx_results.find(tx_parent->GetWitnessHash());\n+        auto it_child = submit_parent_child.m_tx_results.find(tx_child->GetWitnessHash());\n+        BOOST_CHECK(it_parent != submit_parent_child.m_tx_results.end());\n+        BOOST_CHECK(it_parent->second.m_state.IsValid());\n+        BOOST_CHECK(it_child != submit_parent_child.m_tx_results.end());\n+        BOOST_CHECK(it_child->second.m_state.IsValid());\n+\n+        BOOST_CHECK_EQUAL(m_node.mempool->size(), expected_pool_size);\n+        BOOST_CHECK(m_node.mempool->exists(GenTxid::Txid(tx_parent->GetHash())));\n+        BOOST_CHECK(m_node.mempool->exists(GenTxid::Txid(tx_child->GetHash())));\n+    }\n+\n+    // Already-in-mempool transactions should be detected and de-duplicated.\n+    {\n+        const auto submit_deduped = ProcessNewPackage(m_node.chainman->ActiveChainstate(), *m_node.mempool,\n+                                                      package_parent_child, /* test_accept */ false);\n+        BOOST_CHECK_MESSAGE(submit_deduped.m_state.IsValid(),\n+                            \"Package validation unexpectedly failed: \" << submit_deduped.m_state.GetRejectReason());\n+        auto it_parent_deduped = submit_deduped.m_tx_results.find(tx_parent->GetWitnessHash());\n+        auto it_child_deduped = submit_deduped.m_tx_results.find(tx_child->GetWitnessHash());\n+        BOOST_CHECK(it_parent_deduped != submit_deduped.m_tx_results.end());\n+        BOOST_CHECK(it_parent_deduped->second.m_state.IsValid());\n+        BOOST_CHECK(it_parent_deduped->second.m_result_type == MempoolAcceptResult::ResultType::MEMPOOL_ENTRY);\n+        BOOST_CHECK(it_child_deduped != submit_deduped.m_tx_results.end());\n+        BOOST_CHECK(it_child_deduped->second.m_state.IsValid());\n+        BOOST_CHECK(it_child_deduped->second.m_result_type == MempoolAcceptResult::ResultType::MEMPOOL_ENTRY);\n+\n+        BOOST_CHECK_EQUAL(m_node.mempool->size(), expected_pool_size);\n+        BOOST_CHECK(m_node.mempool->exists(GenTxid::Txid(tx_parent->GetHash())));\n+        BOOST_CHECK(m_node.mempool->exists(GenTxid::Txid(tx_child->GetHash())));\n+    }\n+}\n BOOST_AUTO_TEST_SUITE_END()"
+      }
+    ]
+  }
+]

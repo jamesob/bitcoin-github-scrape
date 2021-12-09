@@ -1,0 +1,86 @@
+[
+  {
+    "sha": "4aaa4313e7edf5d23143e393efd2d5892d5dde48",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0YWFhNDMxM2U3ZWRmNWQyMzE0M2UzOTNlZmQyZDU4OTJkNWRkZTQ4",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-08-02T07:02:05Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-08-02T07:05:10Z"
+      },
+      "message": "small UX update for optionsdialog\n\n- add enableApplyButton() and disableApplyButton() to optionsdialog.{h/cpp}\n- they are used to ensure the Ok button does not get disabled, when Apply needs to be disabled (standard UX should allow Ok always to dismiss the dialog and only disable it, when we have a faulty proxy IP)\n- disable Apply after initially loading the settings, as nothing new needs to be saved\n- remove orphan settings from optionsdialog.ui that are default anyway",
+      "tree": {
+        "sha": "f9f0c486ea7d82ef4c33bfd84ffa01f79fc80d83",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f9f0c486ea7d82ef4c33bfd84ffa01f79fc80d83"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/4aaa4313e7edf5d23143e393efd2d5892d5dde48",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4aaa4313e7edf5d23143e393efd2d5892d5dde48",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/4aaa4313e7edf5d23143e393efd2d5892d5dde48",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4aaa4313e7edf5d23143e393efd2d5892d5dde48/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "8ce7915aad505fd6e57f599b5b43fc241d8b4cb4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8ce7915aad505fd6e57f599b5b43fc241d8b4cb4",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/8ce7915aad505fd6e57f599b5b43fc241d8b4cb4"
+      }
+    ],
+    "stats": {
+      "total": 35,
+      "additions": 23,
+      "deletions": 12
+    },
+    "files": [
+      {
+        "sha": "1b81b0cdc8e90bbda641dd53ae032c231b8b3ab8",
+        "filename": "src/qt/forms/optionsdialog.ui",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 6,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4aaa4313e7edf5d23143e393efd2d5892d5dde48/src/qt/forms/optionsdialog.ui",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4aaa4313e7edf5d23143e393efd2d5892d5dde48/src/qt/forms/optionsdialog.ui",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/forms/optionsdialog.ui?ref=4aaa4313e7edf5d23143e393efd2d5892d5dde48",
+        "patch": "@@ -432,12 +432,6 @@\n        <property name=\"autoDefault\">\n         <bool>false</bool>\n        </property>\n-       <property name=\"default\">\n-        <bool>false</bool>\n-       </property>\n-       <property name=\"flat\">\n-        <bool>false</bool>\n-       </property>\n       </widget>\n      </item>\n     </layout>"
+      },
+      {
+        "sha": "f8d1fe56fb618931753870f47910d5228a3cfba2",
+        "filename": "src/qt/optionsdialog.cpp",
+        "status": "modified",
+        "additions": 19,
+        "deletions": 6,
+        "changes": 25,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4aaa4313e7edf5d23143e393efd2d5892d5dde48/src/qt/optionsdialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4aaa4313e7edf5d23143e393efd2d5892d5dde48/src/qt/optionsdialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/optionsdialog.cpp?ref=4aaa4313e7edf5d23143e393efd2d5892d5dde48",
+        "patch": "@@ -87,10 +87,10 @@ OptionsDialog::OptionsDialog(QWidget *parent) :\n     mapper->setSubmitPolicy(QDataWidgetMapper::ManualSubmit);\n     mapper->setOrientation(Qt::Vertical);\n \n-    /* enable save buttons when data modified */\n-    connect(mapper, SIGNAL(viewModified()), this, SLOT(enableSaveButtons()));\n-    /* disable save buttons when new data loaded */\n-    connect(mapper, SIGNAL(currentIndexChanged(int)), this, SLOT(disableSaveButtons()));\n+    /* enable apply button when data modified */\n+    connect(mapper, SIGNAL(viewModified()), this, SLOT(enableApplyButton()));\n+    /* disable apply button when new data loaded */\n+    connect(mapper, SIGNAL(currentIndexChanged(int)), this, SLOT(disableApplyButton()));\n     /* setup/change UI elements when proxy IP is invalid/valid */\n     connect(this, SIGNAL(proxyIpValid(QValidatedLineEdit *, bool)), this, SLOT(handleProxyIpValid(QValidatedLineEdit *, bool)));\n }\n@@ -116,8 +116,11 @@ void OptionsDialog::setModel(OptionsModel *model)\n     /* update the display unit, to not use the default (\"BTC\") */\n     updateDisplayUnit();\n \n-    /* warn only when language selection changes (placed here so init of ui->lang via mapper doesn't trigger this) */\n+    /* warn only when language selection changes by user action (placed here so init via mapper doesn't trigger this) */\n     connect(ui->lang, SIGNAL(valueChanged()), this, SLOT(showRestartWarning_Lang()));\n+\n+    /* disable apply button after settings are loaded as there is nothing to save */\n+    disableApplyButton();\n }\n \n void OptionsDialog::setMapper()\n@@ -147,6 +150,16 @@ void OptionsDialog::setMapper()\n     mapper->addMapping(ui->displayAddresses, OptionsModel::DisplayAddresses);\n }\n \n+void OptionsDialog::enableApplyButton()\n+{\n+    ui->applyButton->setEnabled(true);\n+}\n+\n+void OptionsDialog::disableApplyButton()\n+{\n+    ui->applyButton->setEnabled(false);\n+}\n+\n void OptionsDialog::enableSaveButtons()\n {\n     /* prevent enabling of the save buttons when data modified, if there is an invalid proxy address present */\n@@ -179,7 +192,7 @@ void OptionsDialog::on_cancelButton_clicked()\n void OptionsDialog::on_applyButton_clicked()\n {\n     mapper->submit();\n-    ui->applyButton->setEnabled(false);\n+    disableApplyButton();\n }\n \n void OptionsDialog::showRestartWarning_Proxy()"
+      },
+      {
+        "sha": "18469f509d9ff60cf6c68c1f040cecbecf1ef3b4",
+        "filename": "src/qt/optionsdialog.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 0,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4aaa4313e7edf5d23143e393efd2d5892d5dde48/src/qt/optionsdialog.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4aaa4313e7edf5d23143e393efd2d5892d5dde48/src/qt/optionsdialog.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/optionsdialog.h?ref=4aaa4313e7edf5d23143e393efd2d5892d5dde48",
+        "patch": "@@ -26,6 +26,10 @@ class OptionsDialog : public QDialog\n     bool eventFilter(QObject *object, QEvent *event);\n \n private slots:\n+    /* enable only apply button */\n+    void enableApplyButton();\n+    /* disable only apply button */\n+    void disableApplyButton();\n     /* enable apply button and OK button */\n     void enableSaveButtons();\n     /* disable apply button and OK button */"
+      }
+    ]
+  }
+]

@@ -1,0 +1,464 @@
+[
+  {
+    "sha": "d2c5d044d00ec805957ab246a7863d83ca075805",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkMmM1ZDA0NGQwMGVjODA1OTU3YWIyNDZhNzg2M2Q4M2NhMDc1ODA1",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-08-16T13:35:45Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-08-16T13:35:45Z"
+      },
+      "message": "Precompute sighashes\n\nOriginal version by Nicolas Dorier. Precomputing version by Pieter Wuille.",
+      "tree": {
+        "sha": "154dd70f87cf7a91adeaa7658257c4faacf03e62",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/154dd70f87cf7a91adeaa7658257c4faacf03e62"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/d2c5d044d00ec805957ab246a7863d83ca075805",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d2c5d044d00ec805957ab246a7863d83ca075805",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/d2c5d044d00ec805957ab246a7863d83ca075805",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d2c5d044d00ec805957ab246a7863d83ca075805/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "2c2d471e18f0601c2767cf516425b2ecfcfd2126",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2c2d471e18f0601c2767cf516425b2ecfcfd2126",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/2c2d471e18f0601c2767cf516425b2ecfcfd2126"
+      }
+    ],
+    "stats": {
+      "total": 116,
+      "additions": 78,
+      "deletions": 38
+    },
+    "files": [
+      {
+        "sha": "7f48ccbae1de44775e577609f494d42e2de442d6",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 9,
+        "changes": 22,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d2c5d044d00ec805957ab246a7863d83ca075805/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d2c5d044d00ec805957ab246a7863d83ca075805/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=d2c5d044d00ec805957ab246a7863d83ca075805",
+        "patch": "@@ -1492,12 +1492,13 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState& state, const C\n \n         // Check against previous transactions\n         // This is done last to help prevent CPU exhaustion denial-of-service attacks.\n-        if (!CheckInputs(tx, state, view, true, scriptVerifyFlags, true)) {\n+        CachedHashes cachedHashes(tx);\n+        if (!CheckInputs(tx, state, view, true, scriptVerifyFlags, true, cachedHashes)) {\n             // SCRIPT_VERIFY_CLEANSTACK requires SCRIPT_VERIFY_WITNESS, so we\n             // need to turn both off, and compare against just turning off CLEANSTACK\n             // to see if the failure is specifically due to witness validation.\n-            if (CheckInputs(tx, state, view, true, scriptVerifyFlags & ~(SCRIPT_VERIFY_WITNESS | SCRIPT_VERIFY_CLEANSTACK), true) &&\n-                !CheckInputs(tx, state, view, true, scriptVerifyFlags & ~SCRIPT_VERIFY_CLEANSTACK, true)) {\n+            if (CheckInputs(tx, state, view, true, scriptVerifyFlags & ~(SCRIPT_VERIFY_WITNESS | SCRIPT_VERIFY_CLEANSTACK), true, cachedHashes) &&\n+                !CheckInputs(tx, state, view, true, scriptVerifyFlags & ~SCRIPT_VERIFY_CLEANSTACK, true, cachedHashes)) {\n                 // Only the witness is wrong, so the transaction itself may be fine.\n                 state.SetCorruptionPossible();\n             }\n@@ -1513,7 +1514,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState& state, const C\n         // There is a similar check in CreateNewBlock() to prevent creating\n         // invalid blocks, however allowing such transactions into the mempool\n         // can be exploited as a DoS attack.\n-        if (!CheckInputs(tx, state, view, true, MANDATORY_SCRIPT_VERIFY_FLAGS, true))\n+        if (!CheckInputs(tx, state, view, true, MANDATORY_SCRIPT_VERIFY_FLAGS, true, cachedHashes))\n         {\n             return error(\"%s: BUG! PLEASE REPORT THIS! ConnectInputs failed against MANDATORY but not STANDARD flags %s, %s\",\n                 __func__, hash.ToString(), FormatStateMessage(state));\n@@ -1910,7 +1911,7 @@ void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight)\n bool CScriptCheck::operator()() {\n     const CScript &scriptSig = ptxTo->vin[nIn].scriptSig;\n     const CScriptWitness *witness = (nIn < ptxTo->wit.vtxinwit.size()) ? &ptxTo->wit.vtxinwit[nIn].scriptWitness : NULL;\n-    if (!VerifyScript(scriptSig, scriptPubKey, witness, nFlags, CachingTransactionSignatureChecker(ptxTo, nIn, amount, cacheStore), &error)) {\n+    if (!VerifyScript(scriptSig, scriptPubKey, witness, nFlags, CachingTransactionSignatureChecker(ptxTo, nIn, amount, cacheStore, *cachedHashes), &error)) {\n         return false;\n     }\n     return true;\n@@ -1969,7 +1970,7 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins\n }\n }// namespace Consensus\n \n-bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsViewCache &inputs, bool fScriptChecks, unsigned int flags, bool cacheStore, std::vector<CScriptCheck> *pvChecks)\n+bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsViewCache &inputs, bool fScriptChecks, unsigned int flags, bool cacheStore, CachedHashes& cachedHashes, std::vector<CScriptCheck> *pvChecks)\n {\n     if (!tx.IsCoinBase())\n     {\n@@ -1996,7 +1997,7 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi\n                 assert(coins);\n \n                 // Verify signature\n-                CScriptCheck check(*coins, tx, i, flags, cacheStore);\n+                CScriptCheck check(*coins, tx, i, flags, cacheStore, &cachedHashes);\n                 if (pvChecks) {\n                     pvChecks->push_back(CScriptCheck());\n                     check.swap(pvChecks->back());\n@@ -2009,7 +2010,7 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi\n                         // avoid splitting the network between upgraded and\n                         // non-upgraded nodes.\n                         CScriptCheck check2(*coins, tx, i,\n-                                flags & ~STANDARD_NOT_MANDATORY_VERIFY_FLAGS, cacheStore);\n+                                flags & ~STANDARD_NOT_MANDATORY_VERIFY_FLAGS, cacheStore, &cachedHashes);\n                         if (check2())\n                             return state.Invalid(false, REJECT_NONSTANDARD, strprintf(\"non-mandatory-script-verify-flag (%s)\", ScriptErrorString(check.GetScriptError())));\n                     }\n@@ -2405,6 +2406,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin\n     std::vector<std::pair<uint256, CDiskTxPos> > vPos;\n     vPos.reserve(block.vtx.size());\n     blockundo.vtxundo.reserve(block.vtx.size() - 1);\n+    std::vector<CachedHashes> cachedHashes;\n+    cachedHashes.reserve(block.vtx.size()); // Required so that pointers to individual CachedHashes don't get invalidated\n     for (unsigned int i = 0; i < block.vtx.size(); i++)\n     {\n         const CTransaction &tx = block.vtx[i];\n@@ -2451,13 +2454,14 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin\n             return state.DoS(100, error(\"ConnectBlock(): too many sigops\"),\n                              REJECT_INVALID, \"bad-blk-sigops\");\n \n+        cachedHashes.emplace_back(tx);\n         if (!tx.IsCoinBase())\n         {\n             nFees += view.GetValueIn(tx)-tx.GetValueOut();\n \n             std::vector<CScriptCheck> vChecks;\n             bool fCacheResults = fJustCheck; /* Don't cache results if we're actually connecting blocks (still consult the cache, though) */\n-            if (!CheckInputs(tx, state, view, fScriptChecks, flags, fCacheResults, nScriptCheckThreads ? &vChecks : NULL))\n+            if (!CheckInputs(tx, state, view, fScriptChecks, flags, fCacheResults, cachedHashes[i], nScriptCheckThreads ? &vChecks : NULL))\n                 return error(\"ConnectBlock(): CheckInputs on %s failed with %s\",\n                     tx.GetHash().ToString(), FormatStateMessage(state));\n             control.Add(vChecks);"
+      },
+      {
+        "sha": "fbf66c04811667568bbf946296473bf7e57a424e",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 3,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d2c5d044d00ec805957ab246a7863d83ca075805/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d2c5d044d00ec805957ab246a7863d83ca075805/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=d2c5d044d00ec805957ab246a7863d83ca075805",
+        "patch": "@@ -38,6 +38,7 @@ class CScriptCheck;\n class CTxMemPool;\n class CValidationInterface;\n class CValidationState;\n+class CachedHashes;\n \n struct CNodeStateStats;\n struct LockPoints;\n@@ -347,7 +348,7 @@ int64_t GetTransactionSigOpCost(const CTransaction& tx, const CCoinsViewCache& i\n  * instead of being performed inline.\n  */\n bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsViewCache &view, bool fScriptChecks,\n-                 unsigned int flags, bool cacheStore, std::vector<CScriptCheck> *pvChecks = NULL);\n+                 unsigned int flags, bool cacheStore, CachedHashes& cachedHashes, std::vector<CScriptCheck> *pvChecks = NULL);\n \n /** Apply the effects of this transaction on the UTXO set represented by view */\n void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight);\n@@ -421,12 +422,13 @@ class CScriptCheck\n     unsigned int nFlags;\n     bool cacheStore;\n     ScriptError error;\n+    CachedHashes *cachedHashes;\n \n public:\n     CScriptCheck(): amount(0), ptxTo(0), nIn(0), nFlags(0), cacheStore(false), error(SCRIPT_ERR_UNKNOWN_ERROR) {}\n-    CScriptCheck(const CCoins& txFromIn, const CTransaction& txToIn, unsigned int nInIn, unsigned int nFlagsIn, bool cacheIn) :\n+    CScriptCheck(const CCoins& txFromIn, const CTransaction& txToIn, unsigned int nInIn, unsigned int nFlagsIn, bool cacheIn, CachedHashes* cachedHashesIn) :\n         scriptPubKey(txFromIn.vout[txToIn.vin[nInIn].prevout.n].scriptPubKey), amount(txFromIn.vout[txToIn.vin[nInIn].prevout.n].nValue),\n-        ptxTo(&txToIn), nIn(nInIn), nFlags(nFlagsIn), cacheStore(cacheIn), error(SCRIPT_ERR_UNKNOWN_ERROR) { }\n+        ptxTo(&txToIn), nIn(nInIn), nFlags(nFlagsIn), cacheStore(cacheIn), error(SCRIPT_ERR_UNKNOWN_ERROR), cachedHashes(cachedHashesIn) { }\n \n     bool operator()();\n \n@@ -438,6 +440,7 @@ class CScriptCheck\n         std::swap(nFlags, check.nFlags);\n         std::swap(cacheStore, check.cacheStore);\n         std::swap(error, check.error);\n+        std::swap(cachedHashes, check.cachedHashes);\n     }\n \n     ScriptError GetScriptError() const { return error; }"
+      },
+      {
+        "sha": "01a8babb679ebc6db12bdcb3e587c1fb3fe75b14",
+        "filename": "src/script/bitcoinconsensus.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d2c5d044d00ec805957ab246a7863d83ca075805/src/script/bitcoinconsensus.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d2c5d044d00ec805957ab246a7863d83ca075805/src/script/bitcoinconsensus.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/bitcoinconsensus.cpp?ref=d2c5d044d00ec805957ab246a7863d83ca075805",
+        "patch": "@@ -84,8 +84,8 @@ static int verify_script(const unsigned char *scriptPubKey, unsigned int scriptP\n \n         // Regardless of the verification result, the tx did not error.\n         set_error(err, bitcoinconsensus_ERR_OK);\n-\n-        return VerifyScript(tx.vin[nIn].scriptSig, CScript(scriptPubKey, scriptPubKey + scriptPubKeyLen), nIn < tx.wit.vtxinwit.size() ? &tx.wit.vtxinwit[nIn].scriptWitness : NULL, flags, TransactionSignatureChecker(&tx, nIn, amount), NULL);\n+        CachedHashes cachedHashes(tx);\n+        return VerifyScript(tx.vin[nIn].scriptSig, CScript(scriptPubKey, scriptPubKey + scriptPubKeyLen), nIn < tx.wit.vtxinwit.size() ? &tx.wit.vtxinwit[nIn].scriptWitness : NULL, flags, TransactionSignatureChecker(&tx, nIn, amount, cachedHashes), NULL);\n     } catch (const std::exception&) {\n         return set_error(err, bitcoinconsensus_ERR_TX_DESERIALIZE); // Error deserializing\n     }"
+      },
+      {
+        "sha": "459feaa0f48267894409bfb370047c02ae559d42",
+        "filename": "src/script/interpreter.cpp",
+        "status": "modified",
+        "additions": 37,
+        "deletions": 17,
+        "changes": 54,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d2c5d044d00ec805957ab246a7863d83ca075805/src/script/interpreter.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d2c5d044d00ec805957ab246a7863d83ca075805/src/script/interpreter.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/interpreter.cpp?ref=d2c5d044d00ec805957ab246a7863d83ca075805",
+        "patch": "@@ -1108,37 +1108,57 @@ class CTransactionSignatureSerializer {\n     }\n };\n \n+uint256 GetPrevoutHash(const CTransaction& txTo) {\n+    CHashWriter ss(SER_GETHASH, 0);\n+    for (unsigned int n = 0; n < txTo.vin.size(); n++) {\n+        ss << txTo.vin[n].prevout;\n+    }\n+    return ss.GetHash();\n+}\n+\n+uint256 GetSequenceHash(const CTransaction& txTo) {\n+    CHashWriter ss(SER_GETHASH, 0);\n+    for (unsigned int n = 0; n < txTo.vin.size(); n++) {\n+        ss << txTo.vin[n].nSequence;\n+    }\n+    return ss.GetHash();\n+}\n+\n+uint256 GetOutputsHash(const CTransaction& txTo) {\n+    CHashWriter ss(SER_GETHASH, 0);\n+    for (unsigned int n = 0; n < txTo.vout.size(); n++) {\n+        ss << txTo.vout[n];\n+    }\n+    return ss.GetHash();\n+}\n+\n } // anon namespace\n \n-uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType, const CAmount& amount, SigVersion sigversion)\n+CachedHashes::CachedHashes(const CTransaction& txTo)\n+{\n+    hashPrevouts = GetPrevoutHash(txTo);\n+    hashSequence = GetSequenceHash(txTo);\n+    hashOutputs = GetOutputsHash(txTo);\n+}\n+\n+uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType, const CAmount& amount, SigVersion sigversion, const CachedHashes* cache)\n {\n     if (sigversion == SIGVERSION_WITNESS_V0) {\n         uint256 hashPrevouts;\n         uint256 hashSequence;\n         uint256 hashOutputs;\n \n         if (!(nHashType & SIGHASH_ANYONECANPAY)) {\n-            CHashWriter ss(SER_GETHASH, 0);\n-            for (unsigned int n = 0; n < txTo.vin.size(); n++) {\n-                ss << txTo.vin[n].prevout;\n-            }\n-            hashPrevouts = ss.GetHash(); // TODO: cache this value for all signatures in a transaction\n+            hashPrevouts = cache ? cache->hashPrevouts : GetPrevoutHash(txTo);\n         }\n \n         if (!(nHashType & SIGHASH_ANYONECANPAY) && (nHashType & 0x1f) != SIGHASH_SINGLE && (nHashType & 0x1f) != SIGHASH_NONE) {\n-            CHashWriter ss(SER_GETHASH, 0);\n-            for (unsigned int n = 0; n < txTo.vin.size(); n++) {\n-                ss << txTo.vin[n].nSequence;\n-            }\n-            hashSequence = ss.GetHash(); // TODO: cache this value for all signatures in a transaction\n+            hashSequence = cache ? cache->hashSequence : GetSequenceHash(txTo);\n         }\n \n+\n         if ((nHashType & 0x1f) != SIGHASH_SINGLE && (nHashType & 0x1f) != SIGHASH_NONE) {\n-            CHashWriter ss(SER_GETHASH, 0);\n-            for (unsigned int n = 0; n < txTo.vout.size(); n++) {\n-                ss << txTo.vout[n];\n-            }\n-            hashOutputs = ss.GetHash(); // TODO: cache this value for all signatures in a transaction\n+            hashOutputs = cache ? cache->hashOutputs : GetOutputsHash(txTo);\n         } else if ((nHashType & 0x1f) == SIGHASH_SINGLE && nIn < txTo.vout.size()) {\n             CHashWriter ss(SER_GETHASH, 0);\n             ss << txTo.vout[nIn];\n@@ -1209,7 +1229,7 @@ bool TransactionSignatureChecker::CheckSig(const vector<unsigned char>& vchSigIn\n     int nHashType = vchSig.back();\n     vchSig.pop_back();\n \n-    uint256 sighash = SignatureHash(scriptCode, *txTo, nIn, nHashType, amount, sigversion);\n+    uint256 sighash = SignatureHash(scriptCode, *txTo, nIn, nHashType, amount, sigversion, this->cachedHashes);\n \n     if (!VerifySignature(vchSig, pubkey, sighash))\n         return false;"
+      },
+      {
+        "sha": "b4da113eec939771d6b28cff84e0cfb54267c454",
+        "filename": "src/script/interpreter.h",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 2,
+        "changes": 13,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d2c5d044d00ec805957ab246a7863d83ca075805/src/script/interpreter.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d2c5d044d00ec805957ab246a7863d83ca075805/src/script/interpreter.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/interpreter.h?ref=d2c5d044d00ec805957ab246a7863d83ca075805",
+        "patch": "@@ -98,13 +98,20 @@ enum\n \n bool CheckSignatureEncoding(const std::vector<unsigned char> &vchSig, unsigned int flags, ScriptError* serror);\n \n+struct CachedHashes\n+{\n+    uint256 hashPrevouts, hashSequence, hashOutputs;\n+\n+    CachedHashes(const CTransaction& tx);\n+};\n+\n enum SigVersion\n {\n     SIGVERSION_BASE = 0,\n     SIGVERSION_WITNESS_V0 = 1,\n };\n \n-uint256 SignatureHash(const CScript &scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType, const CAmount& amount, SigVersion sigversion);\n+uint256 SignatureHash(const CScript &scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType, const CAmount& amount, SigVersion sigversion, const CachedHashes* cache = NULL);\n \n class BaseSignatureChecker\n {\n@@ -133,12 +140,14 @@ class TransactionSignatureChecker : public BaseSignatureChecker\n     const CTransaction* txTo;\n     unsigned int nIn;\n     const CAmount amount;\n+    const CachedHashes* cachedHashes;\n \n protected:\n     virtual bool VerifySignature(const std::vector<unsigned char>& vchSig, const CPubKey& vchPubKey, const uint256& sighash) const;\n \n public:\n-    TransactionSignatureChecker(const CTransaction* txToIn, unsigned int nInIn, const CAmount& amountIn) : txTo(txToIn), nIn(nInIn), amount(amountIn) {}\n+    TransactionSignatureChecker(const CTransaction* txToIn, unsigned int nInIn, const CAmount& amountIn) : txTo(txToIn), nIn(nInIn), amount(amountIn), cachedHashes(NULL) {}\n+    TransactionSignatureChecker(const CTransaction* txToIn, unsigned int nInIn, const CAmount& amountIn, const CachedHashes& cachedHashesIn) : txTo(txToIn), nIn(nInIn), amount(amountIn), cachedHashes(&cachedHashesIn) {}\n     bool CheckSig(const std::vector<unsigned char>& scriptSig, const std::vector<unsigned char>& vchPubKey, const CScript& scriptCode, SigVersion sigversion) const;\n     bool CheckLockTime(const CScriptNum& nLockTime) const;\n     bool CheckSequence(const CScriptNum& nSequence) const;"
+      },
+      {
+        "sha": "551f8b2253e760aee66b50535bd3ef0336784ae3",
+        "filename": "src/script/sigcache.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d2c5d044d00ec805957ab246a7863d83ca075805/src/script/sigcache.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d2c5d044d00ec805957ab246a7863d83ca075805/src/script/sigcache.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/sigcache.h?ref=d2c5d044d00ec805957ab246a7863d83ca075805",
+        "patch": "@@ -22,7 +22,7 @@ class CachingTransactionSignatureChecker : public TransactionSignatureChecker\n     bool store;\n \n public:\n-    CachingTransactionSignatureChecker(const CTransaction* txToIn, unsigned int nInIn, const CAmount& amount, bool storeIn) : TransactionSignatureChecker(txToIn, nInIn, amount), store(storeIn) {}\n+    CachingTransactionSignatureChecker(const CTransaction* txToIn, unsigned int nInIn, const CAmount& amount, bool storeIn, CachedHashes& cachedHashesIn) : TransactionSignatureChecker(txToIn, nInIn, amount, cachedHashesIn), store(storeIn) {}\n \n     bool VerifySignature(const std::vector<unsigned char>& vchSig, const CPubKey& vchPubKey, const uint256& sighash) const;\n };"
+      },
+      {
+        "sha": "5cd7c936229770c94d4f77f4bf0bca237cbc6d67",
+        "filename": "src/test/script_P2SH_tests.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 2,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d2c5d044d00ec805957ab246a7863d83ca075805/src/test/script_P2SH_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d2c5d044d00ec805957ab246a7863d83ca075805/src/test/script_P2SH_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/script_P2SH_tests.cpp?ref=d2c5d044d00ec805957ab246a7863d83ca075805",
+        "patch": "@@ -107,18 +107,20 @@ BOOST_AUTO_TEST_CASE(sign)\n     }\n     // All of the above should be OK, and the txTos have valid signatures\n     // Check to make sure signature verification fails if we use the wrong ScriptSig:\n-    for (int i = 0; i < 8; i++)\n+    for (int i = 0; i < 8; i++) {\n+        CachedHashes cachedHashes(txTo[i]);\n         for (int j = 0; j < 8; j++)\n         {\n             CScript sigSave = txTo[i].vin[0].scriptSig;\n             txTo[i].vin[0].scriptSig = txTo[j].vin[0].scriptSig;\n-            bool sigOK = CScriptCheck(CCoins(txFrom, 0), txTo[i], 0, SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC, false)();\n+            bool sigOK = CScriptCheck(CCoins(txFrom, 0), txTo[i], 0, SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC, false, &cachedHashes)();\n             if (i == j)\n                 BOOST_CHECK_MESSAGE(sigOK, strprintf(\"VerifySignature %d %d\", i, j));\n             else\n                 BOOST_CHECK_MESSAGE(!sigOK, strprintf(\"VerifySignature %d %d\", i, j));\n             txTo[i].vin[0].scriptSig = sigSave;\n         }\n+    }\n }\n \n BOOST_AUTO_TEST_CASE(norecurse)"
+      },
+      {
+        "sha": "c06515f7302b6cf3c6b1dca11e56320083dc0615",
+        "filename": "src/test/transaction_tests.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 2,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d2c5d044d00ec805957ab246a7863d83ca075805/src/test/transaction_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d2c5d044d00ec805957ab246a7863d83ca075805/src/test/transaction_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/transaction_tests.cpp?ref=d2c5d044d00ec805957ab246a7863d83ca075805",
+        "patch": "@@ -153,6 +153,7 @@ BOOST_AUTO_TEST_CASE(tx_valid)\n             BOOST_CHECK_MESSAGE(CheckTransaction(tx, state), strTest);\n             BOOST_CHECK(state.IsValid());\n \n+            CachedHashes cachedHashes(tx);\n             for (unsigned int i = 0; i < tx.vin.size(); i++)\n             {\n                 if (!mapprevOutScriptPubKeys.count(tx.vin[i].prevout))\n@@ -168,7 +169,7 @@ BOOST_AUTO_TEST_CASE(tx_valid)\n                 unsigned int verify_flags = ParseScriptFlags(test[2].get_str());\n                 const CScriptWitness *witness = (i < tx.wit.vtxinwit.size()) ? &tx.wit.vtxinwit[i].scriptWitness : NULL;\n                 BOOST_CHECK_MESSAGE(VerifyScript(tx.vin[i].scriptSig, mapprevOutScriptPubKeys[tx.vin[i].prevout],\n-                                                 witness, verify_flags, TransactionSignatureChecker(&tx, i, amount), &err),\n+                                                 witness, verify_flags, TransactionSignatureChecker(&tx, i, amount, cachedHashes), &err),\n                                     strTest);\n                 BOOST_CHECK_MESSAGE(err == SCRIPT_ERR_OK, ScriptErrorString(err));\n             }\n@@ -237,6 +238,7 @@ BOOST_AUTO_TEST_CASE(tx_invalid)\n             CValidationState state;\n             fValid = CheckTransaction(tx, state) && state.IsValid();\n \n+            CachedHashes cachedHashes(tx);\n             for (unsigned int i = 0; i < tx.vin.size() && fValid; i++)\n             {\n                 if (!mapprevOutScriptPubKeys.count(tx.vin[i].prevout))\n@@ -252,7 +254,7 @@ BOOST_AUTO_TEST_CASE(tx_invalid)\n                 }\n                 const CScriptWitness *witness = (i < tx.wit.vtxinwit.size()) ? &tx.wit.vtxinwit[i].scriptWitness : NULL;\n                 fValid = VerifyScript(tx.vin[i].scriptSig, mapprevOutScriptPubKeys[tx.vin[i].prevout],\n-                                      witness, verify_flags, TransactionSignatureChecker(&tx, i, amount), &err);\n+                                      witness, verify_flags, TransactionSignatureChecker(&tx, i, amount, cachedHashes), &err);\n             }\n             BOOST_CHECK_MESSAGE(!fValid, strTest);\n             BOOST_CHECK_MESSAGE(err != SCRIPT_ERR_OK, ScriptErrorString(err));"
+      }
+    ]
+  },
+  {
+    "sha": "ab48c5e72156b34300db4a6521cb3c9969be3937",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphYjQ4YzVlNzIxNTZiMzQzMDBkYjRhNjUyMWNiM2M5OTY5YmUzOTM3",
+    "commit": {
+      "author": {
+        "name": "Nicolas DORIER",
+        "email": "nicolas.dorier@gmail.com",
+        "date": "2016-08-16T13:37:56Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-08-16T13:37:56Z"
+      },
+      "message": "Unit test for sighash caching",
+      "tree": {
+        "sha": "438174c955865880617170542baced69a1b4c90a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/438174c955865880617170542baced69a1b4c90a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/ab48c5e72156b34300db4a6521cb3c9969be3937",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ab48c5e72156b34300db4a6521cb3c9969be3937",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/ab48c5e72156b34300db4a6521cb3c9969be3937",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ab48c5e72156b34300db4a6521cb3c9969be3937/comments",
+    "author": {
+      "login": "NicolasDorier",
+      "id": 3020646,
+      "node_id": "MDQ6VXNlcjMwMjA2NDY=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3020646?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/NicolasDorier",
+      "html_url": "https://github.com/NicolasDorier",
+      "followers_url": "https://api.github.com/users/NicolasDorier/followers",
+      "following_url": "https://api.github.com/users/NicolasDorier/following{/other_user}",
+      "gists_url": "https://api.github.com/users/NicolasDorier/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/NicolasDorier/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/NicolasDorier/subscriptions",
+      "organizations_url": "https://api.github.com/users/NicolasDorier/orgs",
+      "repos_url": "https://api.github.com/users/NicolasDorier/repos",
+      "events_url": "https://api.github.com/users/NicolasDorier/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/NicolasDorier/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "d2c5d044d00ec805957ab246a7863d83ca075805",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d2c5d044d00ec805957ab246a7863d83ca075805",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/d2c5d044d00ec805957ab246a7863d83ca075805"
+      }
+    ],
+    "stats": {
+      "total": 81,
+      "additions": 81,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "8f8666c76d1dcbd57d1fef6564191c0114a5e3c3",
+        "filename": "src/test/transaction_tests.cpp",
+        "status": "modified",
+        "additions": 81,
+        "deletions": 0,
+        "changes": 81,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ab48c5e72156b34300db4a6521cb3c9969be3937/src/test/transaction_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ab48c5e72156b34300db4a6521cb3c9969be3937/src/test/transaction_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/transaction_tests.cpp?ref=ab48c5e72156b34300db4a6521cb3c9969be3937",
+        "patch": "@@ -7,6 +7,7 @@\n #include \"test/test_bitcoin.h\"\n \n #include \"clientversion.h\"\n+#include \"checkqueue.h\"\n #include \"consensus/validation.h\"\n #include \"core_io.h\"\n #include \"key.h\"\n@@ -421,6 +422,86 @@ void ReplaceRedeemScript(CScript& script, const CScript& redeemScript)\n     script = PushAll(stack);\n }\n \n+BOOST_AUTO_TEST_CASE(test_big_witness_transaction) {\n+    CMutableTransaction mtx;\n+    mtx.nVersion = 1;\n+\n+    CKey key;\n+    key.MakeNewKey(false);\n+    CBasicKeyStore keystore;\n+    keystore.AddKeyPubKey(key, key.GetPubKey());\n+    CKeyID hash = key.GetPubKey().GetID();\n+    CScript scriptPubKey = CScript() << OP_0 << std::vector<unsigned char>(hash.begin(), hash.end());\n+\n+    vector<int> sigHashes;\n+    sigHashes.push_back(SIGHASH_NONE | SIGHASH_ANYONECANPAY);\n+    sigHashes.push_back(SIGHASH_SINGLE | SIGHASH_ANYONECANPAY);\n+    sigHashes.push_back(SIGHASH_ALL | SIGHASH_ANYONECANPAY);\n+    sigHashes.push_back(SIGHASH_NONE);\n+    sigHashes.push_back(SIGHASH_SINGLE);\n+    sigHashes.push_back(SIGHASH_ALL);\n+\n+    // create a big transaction of 4500 inputs signed by the same key\n+    for(uint32_t ij = 0; ij < 4500; ij++) {\n+        uint32_t i = mtx.vin.size();\n+        uint256 prevId;\n+        prevId.SetHex(\"0000000000000000000000000000000000000000000000000000000000000100\");\n+        COutPoint outpoint(prevId, i);\n+\n+        mtx.vin.resize(mtx.vin.size() + 1);\n+        mtx.vin[i].prevout = outpoint;\n+        mtx.vin[i].scriptSig = CScript();\n+\n+        mtx.vout.resize(mtx.vout.size() + 1);\n+        mtx.vout[i].nValue = 1000;\n+        mtx.vout[i].scriptPubKey = CScript() << OP_1;\n+    }\n+\n+    // sign all inputs\n+    for(uint32_t i = 0; i < mtx.vin.size(); i++) {\n+        bool hashSigned = SignSignature(keystore, scriptPubKey, mtx, i, 1000, sigHashes.at(i % sigHashes.size()));\n+        assert(hashSigned);\n+    }\n+\n+    CTransaction tx;\n+    CDataStream ssout(SER_NETWORK, PROTOCOL_VERSION);\n+    WithOrVersion(&ssout, 0) << mtx;\n+    WithOrVersion(&ssout, 0) >> tx;\n+\n+    // check all inputs concurrently, with the cache\n+    CachedHashes cachedHashes(tx);\n+    boost::thread_group threadGroup;\n+    CCheckQueue<CScriptCheck> scriptcheckqueue(128);\n+    CCheckQueueControl<CScriptCheck> control(&scriptcheckqueue);\n+\n+    for (int i=0; i<20; i++)\n+        threadGroup.create_thread(boost::bind(&CCheckQueue<CScriptCheck>::Thread, boost::ref(scriptcheckqueue)));\n+\n+    CCoins coins;\n+    coins.nVersion = 1;\n+    coins.fCoinBase = false;\n+    for(uint32_t i = 0; i < mtx.vin.size(); i++) {\n+        CTxOut txout;\n+        txout.nValue = 1000;\n+        txout.scriptPubKey = scriptPubKey;\n+        coins.vout.push_back(txout);\n+    }\n+\n+    for(uint32_t i = 0; i < mtx.vin.size(); i++) {\n+        std::vector<CScriptCheck> vChecks;\n+        CScriptCheck check(coins, tx, i, SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_WITNESS, false, &cachedHashes);\n+        vChecks.push_back(CScriptCheck());\n+        check.swap(vChecks.back());\n+        control.Add(vChecks);\n+    }\n+\n+    bool controlCheck = control.Wait();\n+    assert(controlCheck);\n+\n+    threadGroup.interrupt_all();\n+    threadGroup.join_all();\n+}\n+\n BOOST_AUTO_TEST_CASE(test_witness)\n {\n     CBasicKeyStore keystore, keystore2;"
+      }
+    ]
+  },
+  {
+    "sha": "35fe0393f216aa6020fc929272118eade5628636",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozNWZlMDM5M2YyMTZhYTYwMjBmYzkyOTI3MjExOGVhZGU1NjI4NjM2",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-08-26T16:38:20Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-08-26T16:44:10Z"
+      },
+      "message": "Rename to PrecomputedTransactionData",
+      "tree": {
+        "sha": "72290f9f9a02d627dd0212b72e90823b4e3adf5d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/72290f9f9a02d627dd0212b72e90823b4e3adf5d"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/35fe0393f216aa6020fc929272118eade5628636",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/35fe0393f216aa6020fc929272118eade5628636",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/35fe0393f216aa6020fc929272118eade5628636",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/35fe0393f216aa6020fc929272118eade5628636/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "ab48c5e72156b34300db4a6521cb3c9969be3937",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ab48c5e72156b34300db4a6521cb3c9969be3937",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/ab48c5e72156b34300db4a6521cb3c9969be3937"
+      }
+    ],
+    "stats": {
+      "total": 78,
+      "additions": 39,
+      "deletions": 39
+    },
+    "files": [
+      {
+        "sha": "3cb476f9577ba4586670a97f08cad8778713c730",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 13,
+        "changes": 26,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/35fe0393f216aa6020fc929272118eade5628636/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/35fe0393f216aa6020fc929272118eade5628636/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=35fe0393f216aa6020fc929272118eade5628636",
+        "patch": "@@ -1492,13 +1492,13 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState& state, const C\n \n         // Check against previous transactions\n         // This is done last to help prevent CPU exhaustion denial-of-service attacks.\n-        CachedHashes cachedHashes(tx);\n-        if (!CheckInputs(tx, state, view, true, scriptVerifyFlags, true, cachedHashes)) {\n+        PrecomputedTransactionData txdata(tx);\n+        if (!CheckInputs(tx, state, view, true, scriptVerifyFlags, true, txdata)) {\n             // SCRIPT_VERIFY_CLEANSTACK requires SCRIPT_VERIFY_WITNESS, so we\n             // need to turn both off, and compare against just turning off CLEANSTACK\n             // to see if the failure is specifically due to witness validation.\n-            if (CheckInputs(tx, state, view, true, scriptVerifyFlags & ~(SCRIPT_VERIFY_WITNESS | SCRIPT_VERIFY_CLEANSTACK), true, cachedHashes) &&\n-                !CheckInputs(tx, state, view, true, scriptVerifyFlags & ~SCRIPT_VERIFY_CLEANSTACK, true, cachedHashes)) {\n+            if (CheckInputs(tx, state, view, true, scriptVerifyFlags & ~(SCRIPT_VERIFY_WITNESS | SCRIPT_VERIFY_CLEANSTACK), true, txdata) &&\n+                !CheckInputs(tx, state, view, true, scriptVerifyFlags & ~SCRIPT_VERIFY_CLEANSTACK, true, txdata)) {\n                 // Only the witness is wrong, so the transaction itself may be fine.\n                 state.SetCorruptionPossible();\n             }\n@@ -1514,7 +1514,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState& state, const C\n         // There is a similar check in CreateNewBlock() to prevent creating\n         // invalid blocks, however allowing such transactions into the mempool\n         // can be exploited as a DoS attack.\n-        if (!CheckInputs(tx, state, view, true, MANDATORY_SCRIPT_VERIFY_FLAGS, true, cachedHashes))\n+        if (!CheckInputs(tx, state, view, true, MANDATORY_SCRIPT_VERIFY_FLAGS, true, txdata))\n         {\n             return error(\"%s: BUG! PLEASE REPORT THIS! ConnectInputs failed against MANDATORY but not STANDARD flags %s, %s\",\n                 __func__, hash.ToString(), FormatStateMessage(state));\n@@ -1911,7 +1911,7 @@ void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight)\n bool CScriptCheck::operator()() {\n     const CScript &scriptSig = ptxTo->vin[nIn].scriptSig;\n     const CScriptWitness *witness = (nIn < ptxTo->wit.vtxinwit.size()) ? &ptxTo->wit.vtxinwit[nIn].scriptWitness : NULL;\n-    if (!VerifyScript(scriptSig, scriptPubKey, witness, nFlags, CachingTransactionSignatureChecker(ptxTo, nIn, amount, cacheStore, *cachedHashes), &error)) {\n+    if (!VerifyScript(scriptSig, scriptPubKey, witness, nFlags, CachingTransactionSignatureChecker(ptxTo, nIn, amount, cacheStore, *txdata), &error)) {\n         return false;\n     }\n     return true;\n@@ -1970,7 +1970,7 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins\n }\n }// namespace Consensus\n \n-bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsViewCache &inputs, bool fScriptChecks, unsigned int flags, bool cacheStore, CachedHashes& cachedHashes, std::vector<CScriptCheck> *pvChecks)\n+bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsViewCache &inputs, bool fScriptChecks, unsigned int flags, bool cacheStore, PrecomputedTransactionData& txdata, std::vector<CScriptCheck> *pvChecks)\n {\n     if (!tx.IsCoinBase())\n     {\n@@ -1997,7 +1997,7 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi\n                 assert(coins);\n \n                 // Verify signature\n-                CScriptCheck check(*coins, tx, i, flags, cacheStore, &cachedHashes);\n+                CScriptCheck check(*coins, tx, i, flags, cacheStore, &txdata);\n                 if (pvChecks) {\n                     pvChecks->push_back(CScriptCheck());\n                     check.swap(pvChecks->back());\n@@ -2010,7 +2010,7 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi\n                         // avoid splitting the network between upgraded and\n                         // non-upgraded nodes.\n                         CScriptCheck check2(*coins, tx, i,\n-                                flags & ~STANDARD_NOT_MANDATORY_VERIFY_FLAGS, cacheStore, &cachedHashes);\n+                                flags & ~STANDARD_NOT_MANDATORY_VERIFY_FLAGS, cacheStore, &txdata);\n                         if (check2())\n                             return state.Invalid(false, REJECT_NONSTANDARD, strprintf(\"non-mandatory-script-verify-flag (%s)\", ScriptErrorString(check.GetScriptError())));\n                     }\n@@ -2406,8 +2406,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin\n     std::vector<std::pair<uint256, CDiskTxPos> > vPos;\n     vPos.reserve(block.vtx.size());\n     blockundo.vtxundo.reserve(block.vtx.size() - 1);\n-    std::vector<CachedHashes> cachedHashes;\n-    cachedHashes.reserve(block.vtx.size()); // Required so that pointers to individual CachedHashes don't get invalidated\n+    std::vector<PrecomputedTransactionData> txdata;\n+    txdata.reserve(block.vtx.size()); // Required so that pointers to individual PrecomputedTransactionData don't get invalidated\n     for (unsigned int i = 0; i < block.vtx.size(); i++)\n     {\n         const CTransaction &tx = block.vtx[i];\n@@ -2454,14 +2454,14 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin\n             return state.DoS(100, error(\"ConnectBlock(): too many sigops\"),\n                              REJECT_INVALID, \"bad-blk-sigops\");\n \n-        cachedHashes.emplace_back(tx);\n+        txdata.emplace_back(tx);\n         if (!tx.IsCoinBase())\n         {\n             nFees += view.GetValueIn(tx)-tx.GetValueOut();\n \n             std::vector<CScriptCheck> vChecks;\n             bool fCacheResults = fJustCheck; /* Don't cache results if we're actually connecting blocks (still consult the cache, though) */\n-            if (!CheckInputs(tx, state, view, fScriptChecks, flags, fCacheResults, cachedHashes[i], nScriptCheckThreads ? &vChecks : NULL))\n+            if (!CheckInputs(tx, state, view, fScriptChecks, flags, fCacheResults, txdata[i], nScriptCheckThreads ? &vChecks : NULL))\n                 return error(\"ConnectBlock(): CheckInputs on %s failed with %s\",\n                     tx.GetHash().ToString(), FormatStateMessage(state));\n             control.Add(vChecks);"
+      },
+      {
+        "sha": "1c374c8a03ae33fee7afe6ba2af1274c65891359",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 6,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/35fe0393f216aa6020fc929272118eade5628636/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/35fe0393f216aa6020fc929272118eade5628636/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=35fe0393f216aa6020fc929272118eade5628636",
+        "patch": "@@ -38,7 +38,7 @@ class CScriptCheck;\n class CTxMemPool;\n class CValidationInterface;\n class CValidationState;\n-class CachedHashes;\n+class PrecomputedTransactionData;\n \n struct CNodeStateStats;\n struct LockPoints;\n@@ -348,7 +348,7 @@ int64_t GetTransactionSigOpCost(const CTransaction& tx, const CCoinsViewCache& i\n  * instead of being performed inline.\n  */\n bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsViewCache &view, bool fScriptChecks,\n-                 unsigned int flags, bool cacheStore, CachedHashes& cachedHashes, std::vector<CScriptCheck> *pvChecks = NULL);\n+                 unsigned int flags, bool cacheStore, PrecomputedTransactionData& txdata, std::vector<CScriptCheck> *pvChecks = NULL);\n \n /** Apply the effects of this transaction on the UTXO set represented by view */\n void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight);\n@@ -422,13 +422,13 @@ class CScriptCheck\n     unsigned int nFlags;\n     bool cacheStore;\n     ScriptError error;\n-    CachedHashes *cachedHashes;\n+    PrecomputedTransactionData *txdata;\n \n public:\n     CScriptCheck(): amount(0), ptxTo(0), nIn(0), nFlags(0), cacheStore(false), error(SCRIPT_ERR_UNKNOWN_ERROR) {}\n-    CScriptCheck(const CCoins& txFromIn, const CTransaction& txToIn, unsigned int nInIn, unsigned int nFlagsIn, bool cacheIn, CachedHashes* cachedHashesIn) :\n+    CScriptCheck(const CCoins& txFromIn, const CTransaction& txToIn, unsigned int nInIn, unsigned int nFlagsIn, bool cacheIn, PrecomputedTransactionData* txdataIn) :\n         scriptPubKey(txFromIn.vout[txToIn.vin[nInIn].prevout.n].scriptPubKey), amount(txFromIn.vout[txToIn.vin[nInIn].prevout.n].nValue),\n-        ptxTo(&txToIn), nIn(nInIn), nFlags(nFlagsIn), cacheStore(cacheIn), error(SCRIPT_ERR_UNKNOWN_ERROR), cachedHashes(cachedHashesIn) { }\n+        ptxTo(&txToIn), nIn(nInIn), nFlags(nFlagsIn), cacheStore(cacheIn), error(SCRIPT_ERR_UNKNOWN_ERROR), txdata(txdataIn) { }\n \n     bool operator()();\n \n@@ -440,7 +440,7 @@ class CScriptCheck\n         std::swap(nFlags, check.nFlags);\n         std::swap(cacheStore, check.cacheStore);\n         std::swap(error, check.error);\n-        std::swap(cachedHashes, check.cachedHashes);\n+        std::swap(txdata, check.txdata);\n     }\n \n     ScriptError GetScriptError() const { return error; }"
+      },
+      {
+        "sha": "b629f4278ba203df893280de5dff6be51c4718ba",
+        "filename": "src/script/bitcoinconsensus.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/35fe0393f216aa6020fc929272118eade5628636/src/script/bitcoinconsensus.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/35fe0393f216aa6020fc929272118eade5628636/src/script/bitcoinconsensus.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/bitcoinconsensus.cpp?ref=35fe0393f216aa6020fc929272118eade5628636",
+        "patch": "@@ -84,8 +84,8 @@ static int verify_script(const unsigned char *scriptPubKey, unsigned int scriptP\n \n         // Regardless of the verification result, the tx did not error.\n         set_error(err, bitcoinconsensus_ERR_OK);\n-        CachedHashes cachedHashes(tx);\n-        return VerifyScript(tx.vin[nIn].scriptSig, CScript(scriptPubKey, scriptPubKey + scriptPubKeyLen), nIn < tx.wit.vtxinwit.size() ? &tx.wit.vtxinwit[nIn].scriptWitness : NULL, flags, TransactionSignatureChecker(&tx, nIn, amount, cachedHashes), NULL);\n+        PrecomputedTransactionData txdata(tx);\n+        return VerifyScript(tx.vin[nIn].scriptSig, CScript(scriptPubKey, scriptPubKey + scriptPubKeyLen), nIn < tx.wit.vtxinwit.size() ? &tx.wit.vtxinwit[nIn].scriptWitness : NULL, flags, TransactionSignatureChecker(&tx, nIn, amount, txdata), NULL);\n     } catch (const std::exception&) {\n         return set_error(err, bitcoinconsensus_ERR_TX_DESERIALIZE); // Error deserializing\n     }"
+      },
+      {
+        "sha": "47ea261e31040b70fc0d5ade24ced48d67bd1773",
+        "filename": "src/script/interpreter.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 3,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/35fe0393f216aa6020fc929272118eade5628636/src/script/interpreter.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/35fe0393f216aa6020fc929272118eade5628636/src/script/interpreter.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/interpreter.cpp?ref=35fe0393f216aa6020fc929272118eade5628636",
+        "patch": "@@ -1134,14 +1134,14 @@ uint256 GetOutputsHash(const CTransaction& txTo) {\n \n } // anon namespace\n \n-CachedHashes::CachedHashes(const CTransaction& txTo)\n+PrecomputedTransactionData::PrecomputedTransactionData(const CTransaction& txTo)\n {\n     hashPrevouts = GetPrevoutHash(txTo);\n     hashSequence = GetSequenceHash(txTo);\n     hashOutputs = GetOutputsHash(txTo);\n }\n \n-uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType, const CAmount& amount, SigVersion sigversion, const CachedHashes* cache)\n+uint256 SignatureHash(const CScript& scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType, const CAmount& amount, SigVersion sigversion, const PrecomputedTransactionData* cache)\n {\n     if (sigversion == SIGVERSION_WITNESS_V0) {\n         uint256 hashPrevouts;\n@@ -1229,7 +1229,7 @@ bool TransactionSignatureChecker::CheckSig(const vector<unsigned char>& vchSigIn\n     int nHashType = vchSig.back();\n     vchSig.pop_back();\n \n-    uint256 sighash = SignatureHash(scriptCode, *txTo, nIn, nHashType, amount, sigversion, this->cachedHashes);\n+    uint256 sighash = SignatureHash(scriptCode, *txTo, nIn, nHashType, amount, sigversion, this->txdata);\n \n     if (!VerifySignature(vchSig, pubkey, sighash))\n         return false;"
+      },
+      {
+        "sha": "e5d7865cd3de62d495ba382fc5485b488262260d",
+        "filename": "src/script/interpreter.h",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 6,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/35fe0393f216aa6020fc929272118eade5628636/src/script/interpreter.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/35fe0393f216aa6020fc929272118eade5628636/src/script/interpreter.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/interpreter.h?ref=35fe0393f216aa6020fc929272118eade5628636",
+        "patch": "@@ -98,11 +98,11 @@ enum\n \n bool CheckSignatureEncoding(const std::vector<unsigned char> &vchSig, unsigned int flags, ScriptError* serror);\n \n-struct CachedHashes\n+struct PrecomputedTransactionData\n {\n     uint256 hashPrevouts, hashSequence, hashOutputs;\n \n-    CachedHashes(const CTransaction& tx);\n+    PrecomputedTransactionData(const CTransaction& tx);\n };\n \n enum SigVersion\n@@ -111,7 +111,7 @@ enum SigVersion\n     SIGVERSION_WITNESS_V0 = 1,\n };\n \n-uint256 SignatureHash(const CScript &scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType, const CAmount& amount, SigVersion sigversion, const CachedHashes* cache = NULL);\n+uint256 SignatureHash(const CScript &scriptCode, const CTransaction& txTo, unsigned int nIn, int nHashType, const CAmount& amount, SigVersion sigversion, const PrecomputedTransactionData* cache = NULL);\n \n class BaseSignatureChecker\n {\n@@ -140,14 +140,14 @@ class TransactionSignatureChecker : public BaseSignatureChecker\n     const CTransaction* txTo;\n     unsigned int nIn;\n     const CAmount amount;\n-    const CachedHashes* cachedHashes;\n+    const PrecomputedTransactionData* txdata;\n \n protected:\n     virtual bool VerifySignature(const std::vector<unsigned char>& vchSig, const CPubKey& vchPubKey, const uint256& sighash) const;\n \n public:\n-    TransactionSignatureChecker(const CTransaction* txToIn, unsigned int nInIn, const CAmount& amountIn) : txTo(txToIn), nIn(nInIn), amount(amountIn), cachedHashes(NULL) {}\n-    TransactionSignatureChecker(const CTransaction* txToIn, unsigned int nInIn, const CAmount& amountIn, const CachedHashes& cachedHashesIn) : txTo(txToIn), nIn(nInIn), amount(amountIn), cachedHashes(&cachedHashesIn) {}\n+    TransactionSignatureChecker(const CTransaction* txToIn, unsigned int nInIn, const CAmount& amountIn) : txTo(txToIn), nIn(nInIn), amount(amountIn), txdata(NULL) {}\n+    TransactionSignatureChecker(const CTransaction* txToIn, unsigned int nInIn, const CAmount& amountIn, const PrecomputedTransactionData& txdataIn) : txTo(txToIn), nIn(nInIn), amount(amountIn), txdata(&txdataIn) {}\n     bool CheckSig(const std::vector<unsigned char>& scriptSig, const std::vector<unsigned char>& vchPubKey, const CScript& scriptCode, SigVersion sigversion) const;\n     bool CheckLockTime(const CScriptNum& nLockTime) const;\n     bool CheckSequence(const CScriptNum& nSequence) const;"
+      },
+      {
+        "sha": "44551ec2bc435b7ca746e8d63c1eb1073a2cbc77",
+        "filename": "src/script/sigcache.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/35fe0393f216aa6020fc929272118eade5628636/src/script/sigcache.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/35fe0393f216aa6020fc929272118eade5628636/src/script/sigcache.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/sigcache.h?ref=35fe0393f216aa6020fc929272118eade5628636",
+        "patch": "@@ -22,7 +22,7 @@ class CachingTransactionSignatureChecker : public TransactionSignatureChecker\n     bool store;\n \n public:\n-    CachingTransactionSignatureChecker(const CTransaction* txToIn, unsigned int nInIn, const CAmount& amount, bool storeIn, CachedHashes& cachedHashesIn) : TransactionSignatureChecker(txToIn, nInIn, amount, cachedHashesIn), store(storeIn) {}\n+    CachingTransactionSignatureChecker(const CTransaction* txToIn, unsigned int nInIn, const CAmount& amount, bool storeIn, PrecomputedTransactionData& txdataIn) : TransactionSignatureChecker(txToIn, nInIn, amount, txdataIn), store(storeIn) {}\n \n     bool VerifySignature(const std::vector<unsigned char>& vchSig, const CPubKey& vchPubKey, const uint256& sighash) const;\n };"
+      },
+      {
+        "sha": "1a01593a8e16339c759d39cfe2882088e22f1f95",
+        "filename": "src/test/script_P2SH_tests.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/35fe0393f216aa6020fc929272118eade5628636/src/test/script_P2SH_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/35fe0393f216aa6020fc929272118eade5628636/src/test/script_P2SH_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/script_P2SH_tests.cpp?ref=35fe0393f216aa6020fc929272118eade5628636",
+        "patch": "@@ -108,12 +108,12 @@ BOOST_AUTO_TEST_CASE(sign)\n     // All of the above should be OK, and the txTos have valid signatures\n     // Check to make sure signature verification fails if we use the wrong ScriptSig:\n     for (int i = 0; i < 8; i++) {\n-        CachedHashes cachedHashes(txTo[i]);\n+        PrecomputedTransactionData txdata(txTo[i]);\n         for (int j = 0; j < 8; j++)\n         {\n             CScript sigSave = txTo[i].vin[0].scriptSig;\n             txTo[i].vin[0].scriptSig = txTo[j].vin[0].scriptSig;\n-            bool sigOK = CScriptCheck(CCoins(txFrom, 0), txTo[i], 0, SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC, false, &cachedHashes)();\n+            bool sigOK = CScriptCheck(CCoins(txFrom, 0), txTo[i], 0, SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC, false, &txdata)();\n             if (i == j)\n                 BOOST_CHECK_MESSAGE(sigOK, strprintf(\"VerifySignature %d %d\", i, j));\n             else"
+      },
+      {
+        "sha": "b5af400bc54b5544320efaed33b6a667a5b01e49",
+        "filename": "src/test/transaction_tests.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 6,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/35fe0393f216aa6020fc929272118eade5628636/src/test/transaction_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/35fe0393f216aa6020fc929272118eade5628636/src/test/transaction_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/transaction_tests.cpp?ref=35fe0393f216aa6020fc929272118eade5628636",
+        "patch": "@@ -154,7 +154,7 @@ BOOST_AUTO_TEST_CASE(tx_valid)\n             BOOST_CHECK_MESSAGE(CheckTransaction(tx, state), strTest);\n             BOOST_CHECK(state.IsValid());\n \n-            CachedHashes cachedHashes(tx);\n+            PrecomputedTransactionData txdata(tx);\n             for (unsigned int i = 0; i < tx.vin.size(); i++)\n             {\n                 if (!mapprevOutScriptPubKeys.count(tx.vin[i].prevout))\n@@ -170,7 +170,7 @@ BOOST_AUTO_TEST_CASE(tx_valid)\n                 unsigned int verify_flags = ParseScriptFlags(test[2].get_str());\n                 const CScriptWitness *witness = (i < tx.wit.vtxinwit.size()) ? &tx.wit.vtxinwit[i].scriptWitness : NULL;\n                 BOOST_CHECK_MESSAGE(VerifyScript(tx.vin[i].scriptSig, mapprevOutScriptPubKeys[tx.vin[i].prevout],\n-                                                 witness, verify_flags, TransactionSignatureChecker(&tx, i, amount, cachedHashes), &err),\n+                                                 witness, verify_flags, TransactionSignatureChecker(&tx, i, amount, txdata), &err),\n                                     strTest);\n                 BOOST_CHECK_MESSAGE(err == SCRIPT_ERR_OK, ScriptErrorString(err));\n             }\n@@ -239,7 +239,7 @@ BOOST_AUTO_TEST_CASE(tx_invalid)\n             CValidationState state;\n             fValid = CheckTransaction(tx, state) && state.IsValid();\n \n-            CachedHashes cachedHashes(tx);\n+            PrecomputedTransactionData txdata(tx);\n             for (unsigned int i = 0; i < tx.vin.size() && fValid; i++)\n             {\n                 if (!mapprevOutScriptPubKeys.count(tx.vin[i].prevout))\n@@ -255,7 +255,7 @@ BOOST_AUTO_TEST_CASE(tx_invalid)\n                 }\n                 const CScriptWitness *witness = (i < tx.wit.vtxinwit.size()) ? &tx.wit.vtxinwit[i].scriptWitness : NULL;\n                 fValid = VerifyScript(tx.vin[i].scriptSig, mapprevOutScriptPubKeys[tx.vin[i].prevout],\n-                                      witness, verify_flags, TransactionSignatureChecker(&tx, i, amount, cachedHashes), &err);\n+                                      witness, verify_flags, TransactionSignatureChecker(&tx, i, amount, txdata), &err);\n             }\n             BOOST_CHECK_MESSAGE(!fValid, strTest);\n             BOOST_CHECK_MESSAGE(err != SCRIPT_ERR_OK, ScriptErrorString(err));\n@@ -469,7 +469,7 @@ BOOST_AUTO_TEST_CASE(test_big_witness_transaction) {\n     WithOrVersion(&ssout, 0) >> tx;\n \n     // check all inputs concurrently, with the cache\n-    CachedHashes cachedHashes(tx);\n+    PrecomputedTransactionData txdata(tx);\n     boost::thread_group threadGroup;\n     CCheckQueue<CScriptCheck> scriptcheckqueue(128);\n     CCheckQueueControl<CScriptCheck> control(&scriptcheckqueue);\n@@ -489,7 +489,7 @@ BOOST_AUTO_TEST_CASE(test_big_witness_transaction) {\n \n     for(uint32_t i = 0; i < mtx.vin.size(); i++) {\n         std::vector<CScriptCheck> vChecks;\n-        CScriptCheck check(coins, tx, i, SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_WITNESS, false, &cachedHashes);\n+        CScriptCheck check(coins, tx, i, SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_WITNESS, false, &txdata);\n         vChecks.push_back(CScriptCheck());\n         check.swap(vChecks.back());\n         control.Add(vChecks);"
+      }
+    ]
+  }
+]

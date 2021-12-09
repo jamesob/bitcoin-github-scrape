@@ -1,0 +1,344 @@
+[
+  {
+    "sha": "4dc94d1036576fe988a066fdabc047350ccddda9",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0ZGM5NGQxMDM2NTc2ZmU5ODhhMDY2ZmRhYmMwNDczNTBjY2RkZGE5",
+    "commit": {
+      "author": {
+        "name": "Alex Morcos",
+        "email": "morcos@chaincode.com",
+        "date": "2015-12-15T20:26:44Z"
+      },
+      "committer": {
+        "name": "Alex Morcos",
+        "email": "morcos@chaincode.com",
+        "date": "2016-05-18T18:11:12Z"
+      },
+      "message": "Refactor CreateNewBlock to be a method of the BlockAssembler class",
+      "tree": {
+        "sha": "f78d4e5795a752408f165356cafc8f7bce8f5852",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f78d4e5795a752408f165356cafc8f7bce8f5852"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/4dc94d1036576fe988a066fdabc047350ccddda9",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4dc94d1036576fe988a066fdabc047350ccddda9",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/4dc94d1036576fe988a066fdabc047350ccddda9",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4dc94d1036576fe988a066fdabc047350ccddda9/comments",
+    "author": {
+      "login": "morcos",
+      "id": 4360349,
+      "node_id": "MDQ6VXNlcjQzNjAzNDk=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4360349?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/morcos",
+      "html_url": "https://github.com/morcos",
+      "followers_url": "https://api.github.com/users/morcos/followers",
+      "following_url": "https://api.github.com/users/morcos/following{/other_user}",
+      "gists_url": "https://api.github.com/users/morcos/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/morcos/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/morcos/subscriptions",
+      "organizations_url": "https://api.github.com/users/morcos/orgs",
+      "repos_url": "https://api.github.com/users/morcos/repos",
+      "events_url": "https://api.github.com/users/morcos/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/morcos/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "morcos",
+      "id": 4360349,
+      "node_id": "MDQ6VXNlcjQzNjAzNDk=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4360349?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/morcos",
+      "html_url": "https://github.com/morcos",
+      "followers_url": "https://api.github.com/users/morcos/followers",
+      "following_url": "https://api.github.com/users/morcos/following{/other_user}",
+      "gists_url": "https://api.github.com/users/morcos/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/morcos/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/morcos/subscriptions",
+      "organizations_url": "https://api.github.com/users/morcos/orgs",
+      "repos_url": "https://api.github.com/users/morcos/repos",
+      "events_url": "https://api.github.com/users/morcos/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/morcos/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "239d4198645434542b01916dae5eebc7a3a7bbcc",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/239d4198645434542b01916dae5eebc7a3a7bbcc",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/239d4198645434542b01916dae5eebc7a3a7bbcc"
+      }
+    ],
+    "stats": {
+      "total": 534,
+      "additions": 328,
+      "deletions": 206
+    },
+    "files": [
+      {
+        "sha": "91e05f9ce48bfaeaeeda314d5790ad57a1b467ce",
+        "filename": "src/miner.cpp",
+        "status": "modified",
+        "additions": 256,
+        "deletions": 188,
+        "changes": 444,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4dc94d1036576fe988a066fdabc047350ccddda9/src/miner.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4dc94d1036576fe988a066fdabc047350ccddda9/src/miner.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/miner.cpp?ref=4dc94d1036576fe988a066fdabc047350ccddda9",
+        "patch": "@@ -71,231 +71,299 @@ int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParam\n     return nNewTime - nOldTime;\n }\n \n-CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, const CScript& scriptPubKeyIn)\n+BlockAssembler::BlockAssembler(const CChainParams& _chainparams)\n+    : chainparams(_chainparams)\n {\n-    // Create new block\n-    std::unique_ptr<CBlockTemplate> pblocktemplate(new CBlockTemplate());\n+   // Largest block you're willing to create:\n+    nBlockMaxSize = GetArg(\"-blockmaxsize\", DEFAULT_BLOCK_MAX_SIZE);\n+    // Limit to between 1K and MAX_BLOCK_SIZE-1K for sanity:\n+    nBlockMaxSize = std::max((unsigned int)1000, std::min((unsigned int)(MAX_BLOCK_SIZE-1000), nBlockMaxSize));\n+\n+    // Minimum block size you want to create; block will be filled with free transactions\n+    // until there are no more or the block reaches this size:\n+    nBlockMinSize = GetArg(\"-blockminsize\", DEFAULT_BLOCK_MIN_SIZE);\n+    nBlockMinSize = std::min(nBlockMaxSize, nBlockMinSize);\n+}\n+\n+void BlockAssembler::resetBlock()\n+{\n+    inBlock.clear();\n+\n+    // Reserve space for coinbase tx\n+    nBlockSize = 1000;\n+    nBlockSigOps = 100;\n+\n+    // These counters do not include coinbase tx\n+    nBlockTx = 0;\n+    nFees = 0;\n+\n+    lastFewTxs = 0;\n+    blockFinished = false;\n+}\n+\n+CBlockTemplate* BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn)\n+{\n+    resetBlock();\n+\n+    pblocktemplate.reset(new CBlockTemplate());\n+\n     if(!pblocktemplate.get())\n         return NULL;\n-    CBlock *pblock = &pblocktemplate->block; // pointer for convenience\n-\n-    // Create coinbase tx\n-    CMutableTransaction txNew;\n-    txNew.vin.resize(1);\n-    txNew.vin[0].prevout.SetNull();\n-    txNew.vout.resize(1);\n-    txNew.vout[0].scriptPubKey = scriptPubKeyIn;\n+    pblock = &pblocktemplate->block; // pointer for convenience\n \n     // Add dummy coinbase tx as first transaction\n     pblock->vtx.push_back(CTransaction());\n     pblocktemplate->vTxFees.push_back(-1); // updated at end\n     pblocktemplate->vTxSigOps.push_back(-1); // updated at end\n \n-    // Largest block you're willing to create:\n-    unsigned int nBlockMaxSize = GetArg(\"-blockmaxsize\", DEFAULT_BLOCK_MAX_SIZE);\n-    // Limit to between 1K and MAX_BLOCK_SIZE-1K for sanity:\n-    nBlockMaxSize = std::max((unsigned int)1000, std::min((unsigned int)(MAX_BLOCK_SIZE-1000), nBlockMaxSize));\n+    LOCK2(cs_main, mempool.cs);\n+    CBlockIndex* pindexPrev = chainActive.Tip();\n+    nHeight = pindexPrev->nHeight + 1;\n+\n+    pblock->nVersion = ComputeBlockVersion(pindexPrev, chainparams.GetConsensus());\n+    // -regtest only: allow overriding block.nVersion with\n+    // -blockversion=N to test forking scenarios\n+    if (chainparams.MineBlocksOnDemand())\n+        pblock->nVersion = GetArg(\"-blockversion\", pblock->nVersion);\n+\n+    pblock->nTime = GetAdjustedTime();\n+    const int64_t nMedianTimePast = pindexPrev->GetMedianTimePast();\n+\n+    nLockTimeCutoff = (STANDARD_LOCKTIME_VERIFY_FLAGS & LOCKTIME_MEDIAN_TIME_PAST)\n+                       ? nMedianTimePast\n+                       : pblock->GetBlockTime();\n+\n+    addPriorityTxs();\n+    addScoreTxs();\n+\n+    nLastBlockTx = nBlockTx;\n+    nLastBlockSize = nBlockSize;\n+    LogPrintf(\"CreateNewBlock(): total size %u txs: %u fees: %ld sigops %d\\n\", nBlockSize, nBlockTx, nFees, nBlockSigOps);\n+\n+    // Create coinbase transaction.\n+    CMutableTransaction coinbaseTx;\n+    coinbaseTx.vin.resize(1);\n+    coinbaseTx.vin[0].prevout.SetNull();\n+    coinbaseTx.vout.resize(1);\n+    coinbaseTx.vout[0].scriptPubKey = scriptPubKeyIn;\n+    coinbaseTx.vout[0].nValue = nFees + GetBlockSubsidy(nHeight, chainparams.GetConsensus());\n+    coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;\n+    pblock->vtx[0] = coinbaseTx;\n+    pblocktemplate->vTxFees[0] = -nFees;\n+\n+    // Fill in header\n+    pblock->hashPrevBlock  = pindexPrev->GetBlockHash();\n+    UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev);\n+    pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock, chainparams.GetConsensus());\n+    pblock->nNonce         = 0;\n+    pblocktemplate->vTxSigOps[0] = GetLegacySigOpCount(pblock->vtx[0]);\n+\n+    CValidationState state;\n+    if (!TestBlockValidity(state, chainparams, *pblock, pindexPrev, false, false)) {\n+        throw std::runtime_error(strprintf(\"%s: TestBlockValidity failed: %s\", __func__, FormatStateMessage(state)));\n+    }\n \n-    // How much of the block should be dedicated to high-priority transactions,\n-    // included regardless of the fees they pay\n-    unsigned int nBlockPrioritySize = GetArg(\"-blockprioritysize\", DEFAULT_BLOCK_PRIORITY_SIZE);\n-    nBlockPrioritySize = std::min(nBlockMaxSize, nBlockPrioritySize);\n+    return pblocktemplate.release();\n+}\n \n-    // Minimum block size you want to create; block will be filled with free transactions\n-    // until there are no more or the block reaches this size:\n-    unsigned int nBlockMinSize = GetArg(\"-blockminsize\", DEFAULT_BLOCK_MIN_SIZE);\n-    nBlockMinSize = std::min(nBlockMaxSize, nBlockMinSize);\n+bool BlockAssembler::isStillDependent(CTxMemPool::txiter iter)\n+{\n+    BOOST_FOREACH(CTxMemPool::txiter parent, mempool.GetMemPoolParents(iter))\n+    {\n+        if (!inBlock.count(parent)) {\n+            return true;\n+        }\n+    }\n+    return false;\n+}\n \n-    // Collect memory pool transactions into the block\n-    CTxMemPool::setEntries inBlock;\n-    CTxMemPool::setEntries waitSet;\n \n-    // This vector will be sorted into a priority queue:\n-    vector<TxCoinAgePriority> vecPriority;\n-    TxCoinAgePriorityCompare pricomparer;\n-    std::map<CTxMemPool::txiter, double, CTxMemPool::CompareIteratorByHash> waitPriMap;\n-    typedef std::map<CTxMemPool::txiter, double, CTxMemPool::CompareIteratorByHash>::iterator waitPriIter;\n-    double actualPriority = -1;\n \n-    std::priority_queue<CTxMemPool::txiter, std::vector<CTxMemPool::txiter>, ScoreCompare> clearedTxs;\n+bool BlockAssembler::TestForBlock(CTxMemPool::txiter iter)\n+{\n+    if (nBlockSize + iter->GetTxSize() >= nBlockMaxSize) {\n+        // If the block is so close to full that no more txs will fit\n+        // or if we've tried more than 50 times to fill remaining space\n+        // then flag that the block is finished\n+        if (nBlockSize >  nBlockMaxSize - 100 || lastFewTxs > 50) {\n+             blockFinished = true;\n+             return false;\n+        }\n+        // Once we're within 1000 bytes of a full block, only look at 50 more txs\n+        // to try to fill the remaining space.\n+        if (nBlockSize > nBlockMaxSize - 1000) {\n+            lastFewTxs++;\n+        }\n+        return false;\n+    }\n+\n+    if (nBlockSigOps + iter->GetSigOpCount() >= MAX_BLOCK_SIGOPS) {\n+        // If the block has room for no more sig ops then\n+        // flag that the block is finished\n+        if (nBlockSigOps > MAX_BLOCK_SIGOPS - 2) {\n+            blockFinished = true;\n+            return false;\n+        }\n+        // Otherwise attempt to find another tx with fewer sigops\n+        // to put in the block.\n+        return false;\n+    }\n+\n+    // Must check that lock times are still valid\n+    // This can be removed once MTP is always enforced\n+    // as long as reorgs keep the mempool consistent.\n+    if (!IsFinalTx(iter->GetTx(), nHeight, nLockTimeCutoff))\n+        return false;\n+\n+    return true;\n+}\n+\n+void BlockAssembler::AddToBlock(CTxMemPool::txiter iter)\n+{\n+    pblock->vtx.push_back(iter->GetTx());\n+    pblocktemplate->vTxFees.push_back(iter->GetFee());\n+    pblocktemplate->vTxSigOps.push_back(iter->GetSigOpCount());\n+    nBlockSize += iter->GetTxSize();\n+    ++nBlockTx;\n+    nBlockSigOps += iter->GetSigOpCount();\n+    nFees += iter->GetFee();\n+    inBlock.insert(iter);\n+\n     bool fPrintPriority = GetBoolArg(\"-printpriority\", DEFAULT_PRINTPRIORITY);\n-    uint64_t nBlockSize = 1000;\n-    uint64_t nBlockTx = 0;\n-    unsigned int nBlockSigOps = 100;\n-    int lastFewTxs = 0;\n-    CAmount nFees = 0;\n+    if (fPrintPriority) {\n+        double dPriority = iter->GetPriority(nHeight);\n+        CAmount dummy;\n+        mempool.ApplyDeltas(iter->GetTx().GetHash(), dPriority, dummy);\n+        LogPrintf(\"priority %.1f fee %s txid %s\\n\",\n+                  dPriority,\n+                  CFeeRate(iter->GetModifiedFee(), iter->GetTxSize()).ToString(),\n+                  iter->GetTx().GetHash().ToString());\n+    }\n+}\n \n+void BlockAssembler::addScoreTxs()\n+{\n+    std::priority_queue<CTxMemPool::txiter, std::vector<CTxMemPool::txiter>, ScoreCompare> clearedTxs;\n+    CTxMemPool::setEntries waitSet;\n+    CTxMemPool::indexed_transaction_set::index<mining_score>::type::iterator mi = mempool.mapTx.get<mining_score>().begin();\n+    CTxMemPool::txiter iter;\n+    while (!blockFinished && (mi != mempool.mapTx.get<mining_score>().end() || !clearedTxs.empty()))\n     {\n-        LOCK2(cs_main, mempool.cs);\n-        CBlockIndex* pindexPrev = chainActive.Tip();\n-        const int nHeight = pindexPrev->nHeight + 1;\n-        pblock->nTime = GetAdjustedTime();\n-        const int64_t nMedianTimePast = pindexPrev->GetMedianTimePast();\n-\n-        pblock->nVersion = ComputeBlockVersion(pindexPrev, chainparams.GetConsensus());\n-        // -regtest only: allow overriding block.nVersion with\n-        // -blockversion=N to test forking scenarios\n-        if (chainparams.MineBlocksOnDemand())\n-            pblock->nVersion = GetArg(\"-blockversion\", pblock->nVersion);\n-\n-        int64_t nLockTimeCutoff = (STANDARD_LOCKTIME_VERIFY_FLAGS & LOCKTIME_MEDIAN_TIME_PAST)\n-                                ? nMedianTimePast\n-                                : pblock->GetBlockTime();\n-\n-        bool fPriorityBlock = nBlockPrioritySize > 0;\n-        if (fPriorityBlock) {\n-            vecPriority.reserve(mempool.mapTx.size());\n-            for (CTxMemPool::indexed_transaction_set::iterator mi = mempool.mapTx.begin();\n-                 mi != mempool.mapTx.end(); ++mi)\n-            {\n-                double dPriority = mi->GetPriority(nHeight);\n-                CAmount dummy;\n-                mempool.ApplyDeltas(mi->GetTx().GetHash(), dPriority, dummy);\n-                vecPriority.push_back(TxCoinAgePriority(dPriority, mi));\n-            }\n-            std::make_heap(vecPriority.begin(), vecPriority.end(), pricomparer);\n+        // If no txs that were previously postponed are available to try\n+        // again, then try the next highest score tx\n+        if (clearedTxs.empty()) {\n+            iter = mempool.mapTx.project<0>(mi);\n+            mi++;\n+        }\n+        // If a previously postponed tx is available to try again, then it\n+        // has higher score than all untried so far txs\n+        else {\n+            iter = clearedTxs.top();\n+            clearedTxs.pop();\n         }\n \n-        CTxMemPool::indexed_transaction_set::index<mining_score>::type::iterator mi = mempool.mapTx.get<mining_score>().begin();\n-        CTxMemPool::txiter iter;\n-\n-        while (mi != mempool.mapTx.get<mining_score>().end() || !clearedTxs.empty())\n-        {\n-            bool priorityTx = false;\n-            if (fPriorityBlock && !vecPriority.empty()) { // add a tx from priority queue to fill the blockprioritysize\n-                priorityTx = true;\n-                iter = vecPriority.front().second;\n-                actualPriority = vecPriority.front().first;\n-                std::pop_heap(vecPriority.begin(), vecPriority.end(), pricomparer);\n-                vecPriority.pop_back();\n-            }\n-            else if (clearedTxs.empty()) { // add tx with next highest score\n-                iter = mempool.mapTx.project<0>(mi);\n-                mi++;\n-            }\n-            else {  // try to add a previously postponed child tx\n-                iter = clearedTxs.top();\n-                clearedTxs.pop();\n-            }\n+        // If tx is dependent on other mempool txs which haven't yet been included\n+        // then put it in the waitSet\n+        if (isStillDependent(iter)) {\n+            waitSet.insert(iter);\n+            continue;\n+        }\n \n-            if (inBlock.count(iter))\n-                continue; // could have been added to the priorityBlock\n+        // If the fee rate is below the min fee rate for mining, then we're done\n+        // adding txs based on score (fee rate)\n+        if (iter->GetModifiedFee() < ::minRelayTxFee.GetFee(iter->GetTxSize()) && nBlockSize >= nBlockMinSize) {\n+            return;\n+        }\n \n-            const CTransaction& tx = iter->GetTx();\n+        // If this tx fits in the block add it, otherwise keep looping\n+        if (TestForBlock(iter)) {\n+            AddToBlock(iter);\n \n-            bool fOrphan = false;\n-            BOOST_FOREACH(CTxMemPool::txiter parent, mempool.GetMemPoolParents(iter))\n+            // This tx was successfully added, so\n+            // add transactions that depend on this one to the priority queue to try again\n+            BOOST_FOREACH(CTxMemPool::txiter child, mempool.GetMemPoolChildren(iter))\n             {\n-                if (!inBlock.count(parent)) {\n-                    fOrphan = true;\n-                    break;\n+                if (waitSet.count(child)) {\n+                    clearedTxs.push(child);\n+                    waitSet.erase(child);\n                 }\n             }\n-            if (fOrphan) {\n-                if (priorityTx)\n-                    waitPriMap.insert(std::make_pair(iter,actualPriority));\n-                else\n-                    waitSet.insert(iter);\n-                continue;\n-            }\n+        }\n+    }\n+}\n \n-            unsigned int nTxSize = iter->GetTxSize();\n-            if (fPriorityBlock &&\n-                (nBlockSize + nTxSize >= nBlockPrioritySize || !AllowFree(actualPriority))) {\n-                fPriorityBlock = false;\n-                waitPriMap.clear();\n-            }\n-            if (!priorityTx &&\n-                (iter->GetModifiedFee() < ::minRelayTxFee.GetFee(nTxSize) && nBlockSize >= nBlockMinSize)) {\n-                break;\n-            }\n-            if (nBlockSize + nTxSize >= nBlockMaxSize) {\n-                if (nBlockSize >  nBlockMaxSize - 100 || lastFewTxs > 50) {\n-                    break;\n-                }\n-                // Once we're within 1000 bytes of a full block, only look at 50 more txs\n-                // to try to fill the remaining space.\n-                if (nBlockSize > nBlockMaxSize - 1000) {\n-                    lastFewTxs++;\n-                }\n-                continue;\n-            }\n+void BlockAssembler::addPriorityTxs()\n+{\n+    // How much of the block should be dedicated to high-priority transactions,\n+    // included regardless of the fees they pay\n+    unsigned int nBlockPrioritySize = GetArg(\"-blockprioritysize\", DEFAULT_BLOCK_PRIORITY_SIZE);\n+    nBlockPrioritySize = std::min(nBlockMaxSize, nBlockPrioritySize);\n \n-            if (!IsFinalTx(tx, nHeight, nLockTimeCutoff))\n-                continue;\n+    if (nBlockPrioritySize == 0) {\n+        return;\n+    }\n \n-            unsigned int nTxSigOps = iter->GetSigOpCount();\n-            if (nBlockSigOps + nTxSigOps >= MAX_BLOCK_SIGOPS) {\n-                if (nBlockSigOps > MAX_BLOCK_SIGOPS - 2) {\n-                    break;\n-                }\n-                continue;\n-            }\n+    // This vector will be sorted into a priority queue:\n+    vector<TxCoinAgePriority> vecPriority;\n+    TxCoinAgePriorityCompare pricomparer;\n+    std::map<CTxMemPool::txiter, double, CTxMemPool::CompareIteratorByHash> waitPriMap;\n+    typedef std::map<CTxMemPool::txiter, double, CTxMemPool::CompareIteratorByHash>::iterator waitPriIter;\n+    double actualPriority = -1;\n \n-            CAmount nTxFees = iter->GetFee();\n-            // Added\n-            pblock->vtx.push_back(tx);\n-            pblocktemplate->vTxFees.push_back(nTxFees);\n-            pblocktemplate->vTxSigOps.push_back(nTxSigOps);\n-            nBlockSize += nTxSize;\n-            ++nBlockTx;\n-            nBlockSigOps += nTxSigOps;\n-            nFees += nTxFees;\n-\n-            if (fPrintPriority)\n-            {\n-                double dPriority = iter->GetPriority(nHeight);\n-                CAmount dummy;\n-                mempool.ApplyDeltas(tx.GetHash(), dPriority, dummy);\n-                LogPrintf(\"priority %.1f fee %s txid %s\\n\",\n-                          dPriority , CFeeRate(iter->GetModifiedFee(), nTxSize).ToString(), tx.GetHash().ToString());\n-            }\n+    vecPriority.reserve(mempool.mapTx.size());\n+    for (CTxMemPool::indexed_transaction_set::iterator mi = mempool.mapTx.begin();\n+         mi != mempool.mapTx.end(); ++mi)\n+    {\n+        double dPriority = mi->GetPriority(nHeight);\n+        CAmount dummy;\n+        mempool.ApplyDeltas(mi->GetTx().GetHash(), dPriority, dummy);\n+        vecPriority.push_back(TxCoinAgePriority(dPriority, mi));\n+    }\n+    std::make_heap(vecPriority.begin(), vecPriority.end(), pricomparer);\n+\n+    CTxMemPool::txiter iter;\n+    while (!vecPriority.empty() && !blockFinished) { // add a tx from priority queue to fill the blockprioritysize\n+        iter = vecPriority.front().second;\n+        actualPriority = vecPriority.front().first;\n+        std::pop_heap(vecPriority.begin(), vecPriority.end(), pricomparer);\n+        vecPriority.pop_back();\n+\n+        // If tx already in block, skip\n+        if (inBlock.count(iter)) {\n+            assert(false); // shouldn't happen for priority txs\n+            continue;\n+        }\n+\n+        // If tx is dependent on other mempool txs which haven't yet been included\n+        // then put it in the waitSet\n+        if (isStillDependent(iter)) {\n+            waitPriMap.insert(std::make_pair(iter, actualPriority));\n+            continue;\n+        }\n \n-            inBlock.insert(iter);\n+        // If this tx fits in the block add it, otherwise keep looping\n+        if (TestForBlock(iter)) {\n+            AddToBlock(iter);\n \n-            // Add transactions that depend on this one to the priority queue\n+            // If now that this txs is added we've surpassed our desired priority size\n+            // or have dropped below the AllowFreeThreshold, then we're done adding priority txs\n+            if (nBlockSize + iter->GetTxSize() >= nBlockPrioritySize || !AllowFree(actualPriority)) {\n+                return;\n+            }\n+\n+            // This tx was successfully added, so\n+            // add transactions that depend on this one to the priority queue to try again\n             BOOST_FOREACH(CTxMemPool::txiter child, mempool.GetMemPoolChildren(iter))\n             {\n-                if (fPriorityBlock) {\n-                    waitPriIter wpiter = waitPriMap.find(child);\n-                    if (wpiter != waitPriMap.end()) {\n-                        vecPriority.push_back(TxCoinAgePriority(wpiter->second,child));\n-                        std::push_heap(vecPriority.begin(), vecPriority.end(), pricomparer);\n-                        waitPriMap.erase(wpiter);\n-                    }\n-                }\n-                else {\n-                    if (waitSet.count(child)) {\n-                        clearedTxs.push(child);\n-                        waitSet.erase(child);\n-                    }\n+                waitPriIter wpiter = waitPriMap.find(child);\n+                if (wpiter != waitPriMap.end()) {\n+                    vecPriority.push_back(TxCoinAgePriority(wpiter->second,child));\n+                    std::push_heap(vecPriority.begin(), vecPriority.end(), pricomparer);\n+                    waitPriMap.erase(wpiter);\n                 }\n             }\n         }\n-        nLastBlockTx = nBlockTx;\n-        nLastBlockSize = nBlockSize;\n-        LogPrintf(\"CreateNewBlock(): total size %u txs: %u fees: %ld sigops %d\\n\", nBlockSize, nBlockTx, nFees, nBlockSigOps);\n-\n-        // Compute final coinbase transaction.\n-        txNew.vout[0].nValue = nFees + GetBlockSubsidy(nHeight, chainparams.GetConsensus());\n-        txNew.vin[0].scriptSig = CScript() << nHeight << OP_0;\n-        pblock->vtx[0] = txNew;\n-        pblocktemplate->vTxFees[0] = -nFees;\n-\n-        // Fill in header\n-        pblock->hashPrevBlock  = pindexPrev->GetBlockHash();\n-        UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev);\n-        pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock, chainparams.GetConsensus());\n-        pblock->nNonce         = 0;\n-        pblocktemplate->vTxSigOps[0] = GetLegacySigOpCount(pblock->vtx[0]);\n-\n-        CValidationState state;\n-        if (!TestBlockValidity(state, chainparams, *pblock, pindexPrev, false, false)) {\n-            throw std::runtime_error(strprintf(\"%s: TestBlockValidity failed: %s\", __func__, FormatStateMessage(state)));\n-        }\n     }\n-\n-    return pblocktemplate.release();\n }\n \n void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned int& nExtraNonce)"
+      },
+      {
+        "sha": "74f19693c4b29f8b781de270658d7ae6f02c21e2",
+        "filename": "src/miner.h",
+        "status": "modified",
+        "additions": 55,
+        "deletions": 1,
+        "changes": 56,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4dc94d1036576fe988a066fdabc047350ccddda9/src/miner.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4dc94d1036576fe988a066fdabc047350ccddda9/src/miner.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/miner.h?ref=4dc94d1036576fe988a066fdabc047350ccddda9",
+        "patch": "@@ -7,14 +7,17 @@\n #define BITCOIN_MINER_H\n \n #include \"primitives/block.h\"\n+#include \"txmempool.h\"\n \n #include <stdint.h>\n+#include <memory>\n \n class CBlockIndex;\n class CChainParams;\n class CReserveKey;\n class CScript;\n class CWallet;\n+\n namespace Consensus { struct Params; };\n \n static const bool DEFAULT_PRINTPRIORITY = false;\n@@ -27,7 +30,58 @@ struct CBlockTemplate\n };\n \n /** Generate a new block, without valid proof-of-work */\n-CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, const CScript& scriptPubKeyIn);\n+class BlockAssembler\n+{\n+private:\n+    // The constructed block template\n+    std::unique_ptr<CBlockTemplate> pblocktemplate;\n+    // A convenience pointer that always refers to the CBlock in pblocktemplate\n+    CBlock* pblock;\n+\n+    // Configuration parameters for the block size\n+    unsigned int nBlockMaxSize, nBlockMinSize;\n+\n+    // Information on the current status of the block\n+    uint64_t nBlockSize;\n+    uint64_t nBlockTx;\n+    unsigned int nBlockSigOps;\n+    CAmount nFees;\n+    CTxMemPool::setEntries inBlock;\n+\n+    // Chain context for the block\n+    int nHeight;\n+    int64_t nLockTimeCutoff;\n+    const CChainParams& chainparams;\n+\n+    // Variables used for addScoreTxs and addPriorityTxs\n+    int lastFewTxs;\n+    bool blockFinished;\n+\n+public:\n+    BlockAssembler(const CChainParams& chainparams);\n+    /** Construct a new block template with coinbase to scriptPubKeyIn */\n+    CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn);\n+\n+private:\n+    // utility functions\n+    /** Clear the block's state and prepare for assembling a new block */\n+    void resetBlock();\n+    /** Add a tx to the block */\n+    void AddToBlock(CTxMemPool::txiter iter);\n+\n+    // Methods for how to add transactions to a block.\n+    /** Add transactions based on modified feerate */\n+    void addScoreTxs();\n+    /** Add transactions based on tx \"priority\" */\n+    void addPriorityTxs();\n+\n+    // helper function for addScoreTxs and addPriorityTxs\n+    /** Test if tx will still \"fit\" in the block */\n+    bool TestForBlock(CTxMemPool::txiter iter);\n+    /** Test if tx still has unconfirmed parents not yet in block */\n+    bool isStillDependent(CTxMemPool::txiter iter);\n+};\n+\n /** Modify the extranonce in a block */\n void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned int& nExtraNonce);\n int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev);"
+      },
+      {
+        "sha": "bd90cca1cc1892da397417b8e8d1171a99990640",
+        "filename": "src/rpc/mining.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4dc94d1036576fe988a066fdabc047350ccddda9/src/rpc/mining.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4dc94d1036576fe988a066fdabc047350ccddda9/src/rpc/mining.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/mining.cpp?ref=4dc94d1036576fe988a066fdabc047350ccddda9",
+        "patch": "@@ -111,7 +111,7 @@ UniValue generateBlocks(boost::shared_ptr<CReserveScript> coinbaseScript, int nG\n     UniValue blockHashes(UniValue::VARR);\n     while (nHeight < nHeightEnd)\n     {\n-        std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(Params(), coinbaseScript->reserveScript));\n+        std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(Params()).CreateNewBlock(coinbaseScript->reserveScript));\n         if (!pblocktemplate.get())\n             throw JSONRPCError(RPC_INTERNAL_ERROR, \"Couldn't create new block\");\n         CBlock *pblock = &pblocktemplate->block;\n@@ -493,7 +493,7 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)\n             pblocktemplate = NULL;\n         }\n         CScript scriptDummy = CScript() << OP_TRUE;\n-        pblocktemplate = CreateNewBlock(Params(), scriptDummy);\n+        pblocktemplate = BlockAssembler(Params()).CreateNewBlock(scriptDummy);\n         if (!pblocktemplate)\n             throw JSONRPCError(RPC_OUT_OF_MEMORY, \"Out of memory\");\n "
+      },
+      {
+        "sha": "329b488c0ab9dd89a81cc00dcc20631b310f53a9",
+        "filename": "src/test/miner_tests.cpp",
+        "status": "modified",
+        "additions": 14,
+        "deletions": 14,
+        "changes": 28,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4dc94d1036576fe988a066fdabc047350ccddda9/src/test/miner_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4dc94d1036576fe988a066fdabc047350ccddda9/src/test/miner_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/miner_tests.cpp?ref=4dc94d1036576fe988a066fdabc047350ccddda9",
+        "patch": "@@ -89,7 +89,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n     fCheckpointsEnabled = false;\n \n     // Simple block creation, nothing special yet:\n-    BOOST_CHECK(pblocktemplate = CreateNewBlock(chainparams, scriptPubKey));\n+    BOOST_CHECK(pblocktemplate = BlockAssembler(chainparams).CreateNewBlock(scriptPubKey));\n \n     // We can't make transactions until we have inputs\n     // Therefore, load 100 blocks :)\n@@ -121,7 +121,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n     delete pblocktemplate;\n \n     // Just to make sure we can still make simple blocks\n-    BOOST_CHECK(pblocktemplate = CreateNewBlock(chainparams, scriptPubKey));\n+    BOOST_CHECK(pblocktemplate = BlockAssembler(chainparams).CreateNewBlock(scriptPubKey));\n     delete pblocktemplate;\n \n     const CAmount BLOCKSUBSIDY = 50*COIN;\n@@ -146,7 +146,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n         mempool.addUnchecked(hash, entry.Fee(LOWFEE).Time(GetTime()).SpendsCoinbase(spendsCoinbase).FromTx(tx));\n         tx.vin[0].prevout.hash = hash;\n     }\n-    BOOST_CHECK_THROW(CreateNewBlock(chainparams, scriptPubKey), std::runtime_error);\n+    BOOST_CHECK_THROW(BlockAssembler(chainparams).CreateNewBlock(scriptPubKey), std::runtime_error);\n     mempool.clear();\n \n     tx.vin[0].prevout.hash = txFirst[0]->GetHash();\n@@ -160,7 +160,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n         mempool.addUnchecked(hash, entry.Fee(LOWFEE).Time(GetTime()).SpendsCoinbase(spendsCoinbase).SigOps(20).FromTx(tx));\n         tx.vin[0].prevout.hash = hash;\n     }\n-    BOOST_CHECK(pblocktemplate = CreateNewBlock(chainparams, scriptPubKey));\n+    BOOST_CHECK(pblocktemplate = BlockAssembler(chainparams).CreateNewBlock(scriptPubKey));\n     delete pblocktemplate;\n     mempool.clear();\n \n@@ -181,14 +181,14 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n         mempool.addUnchecked(hash, entry.Fee(LOWFEE).Time(GetTime()).SpendsCoinbase(spendsCoinbase).FromTx(tx));\n         tx.vin[0].prevout.hash = hash;\n     }\n-    BOOST_CHECK(pblocktemplate = CreateNewBlock(chainparams, scriptPubKey));\n+    BOOST_CHECK(pblocktemplate = BlockAssembler(chainparams).CreateNewBlock(scriptPubKey));\n     delete pblocktemplate;\n     mempool.clear();\n \n     // orphan in mempool, template creation fails\n     hash = tx.GetHash();\n     mempool.addUnchecked(hash, entry.Fee(LOWFEE).Time(GetTime()).FromTx(tx));\n-    BOOST_CHECK_THROW(CreateNewBlock(chainparams, scriptPubKey), std::runtime_error);\n+    BOOST_CHECK_THROW(BlockAssembler(chainparams).CreateNewBlock(scriptPubKey), std::runtime_error);\n     mempool.clear();\n \n     // child with higher priority than parent\n@@ -205,7 +205,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n     tx.vout[0].nValue = tx.vout[0].nValue+BLOCKSUBSIDY-HIGHERFEE; //First txn output + fresh coinbase - new txn fee\n     hash = tx.GetHash();\n     mempool.addUnchecked(hash, entry.Fee(HIGHERFEE).Time(GetTime()).SpendsCoinbase(true).FromTx(tx));\n-    BOOST_CHECK(pblocktemplate = CreateNewBlock(chainparams, scriptPubKey));\n+    BOOST_CHECK(pblocktemplate = BlockAssembler(chainparams).CreateNewBlock(scriptPubKey));\n     delete pblocktemplate;\n     mempool.clear();\n \n@@ -217,7 +217,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n     hash = tx.GetHash();\n     // give it a fee so it'll get mined\n     mempool.addUnchecked(hash, entry.Fee(LOWFEE).Time(GetTime()).SpendsCoinbase(false).FromTx(tx));\n-    BOOST_CHECK_THROW(CreateNewBlock(chainparams, scriptPubKey), std::runtime_error);\n+    BOOST_CHECK_THROW(BlockAssembler(chainparams).CreateNewBlock(scriptPubKey), std::runtime_error);\n     mempool.clear();\n \n     // invalid (pre-p2sh) txn in mempool, template creation fails\n@@ -234,7 +234,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n     tx.vout[0].nValue -= LOWFEE;\n     hash = tx.GetHash();\n     mempool.addUnchecked(hash, entry.Fee(LOWFEE).Time(GetTime()).SpendsCoinbase(false).FromTx(tx));\n-    BOOST_CHECK_THROW(CreateNewBlock(chainparams, scriptPubKey), std::runtime_error);\n+    BOOST_CHECK_THROW(BlockAssembler(chainparams).CreateNewBlock(scriptPubKey), std::runtime_error);\n     mempool.clear();\n \n     // double spend txn pair in mempool, template creation fails\n@@ -247,7 +247,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n     tx.vout[0].scriptPubKey = CScript() << OP_2;\n     hash = tx.GetHash();\n     mempool.addUnchecked(hash, entry.Fee(HIGHFEE).Time(GetTime()).SpendsCoinbase(true).FromTx(tx));\n-    BOOST_CHECK_THROW(CreateNewBlock(chainparams, scriptPubKey), std::runtime_error);\n+    BOOST_CHECK_THROW(BlockAssembler(chainparams).CreateNewBlock(scriptPubKey), std::runtime_error);\n     mempool.clear();\n \n     // subsidy changing\n@@ -263,7 +263,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n         next->BuildSkip();\n         chainActive.SetTip(next);\n     }\n-    BOOST_CHECK(pblocktemplate = CreateNewBlock(chainparams, scriptPubKey));\n+    BOOST_CHECK(pblocktemplate = BlockAssembler(chainparams).CreateNewBlock(scriptPubKey));\n     delete pblocktemplate;\n     // Extend to a 210000-long block chain.\n     while (chainActive.Tip()->nHeight < 210000) {\n@@ -276,7 +276,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n         next->BuildSkip();\n         chainActive.SetTip(next);\n     }\n-    BOOST_CHECK(pblocktemplate = CreateNewBlock(chainparams, scriptPubKey));\n+    BOOST_CHECK(pblocktemplate = BlockAssembler(chainparams).CreateNewBlock(scriptPubKey));\n     delete pblocktemplate;\n     // Delete the dummy blocks again.\n     while (chainActive.Tip()->nHeight > nHeight) {\n@@ -363,7 +363,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n     tx.vin[0].nSequence = CTxIn::SEQUENCE_LOCKTIME_TYPE_FLAG | 1;\n     BOOST_CHECK(!TestSequenceLocks(tx, flags)); // Sequence locks fail\n \n-    BOOST_CHECK(pblocktemplate = CreateNewBlock(chainparams, scriptPubKey));\n+    BOOST_CHECK(pblocktemplate = BlockAssembler(chainparams).CreateNewBlock(scriptPubKey));\n \n     // None of the of the absolute height/time locked tx should have made\n     // it into the template because we still check IsFinalTx in CreateNewBlock,\n@@ -377,7 +377,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n     chainActive.Tip()->nHeight++;\n     SetMockTime(chainActive.Tip()->GetMedianTimePast() + 1);\n \n-    BOOST_CHECK(pblocktemplate = CreateNewBlock(chainparams, scriptPubKey));\n+    BOOST_CHECK(pblocktemplate = BlockAssembler(chainparams).CreateNewBlock(scriptPubKey));\n     BOOST_CHECK_EQUAL(pblocktemplate->block.vtx.size(), 5);\n     delete pblocktemplate;\n "
+      },
+      {
+        "sha": "c68320ba8b8e6622afbf01682a6d9e35d8e625ee",
+        "filename": "src/test/test_bitcoin.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4dc94d1036576fe988a066fdabc047350ccddda9/src/test/test_bitcoin.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4dc94d1036576fe988a066fdabc047350ccddda9/src/test/test_bitcoin.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/test_bitcoin.cpp?ref=4dc94d1036576fe988a066fdabc047350ccddda9",
+        "patch": "@@ -98,7 +98,7 @@ CBlock\n TestChain100Setup::CreateAndProcessBlock(const std::vector<CMutableTransaction>& txns, const CScript& scriptPubKey)\n {\n     const CChainParams& chainparams = Params();\n-    CBlockTemplate *pblocktemplate = CreateNewBlock(chainparams, scriptPubKey);\n+    CBlockTemplate *pblocktemplate = BlockAssembler(chainparams).CreateNewBlock(scriptPubKey);\n     CBlock& block = pblocktemplate->block;\n \n     // Replace mempool-selected txns with just coinbase plus passed-in txns:"
+      }
+    ]
+  },
+  {
+    "sha": "a27876474819ffff80614f966fea06d5da2d5c15",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphMjc4NzY0NzQ4MTlmZmZmODA2MTRmOTY2ZmVhMDZkNWRhMmQ1YzE1",
+    "commit": {
+      "author": {
+        "name": "Alex Morcos",
+        "email": "morcos@chaincode.com",
+        "date": "2016-05-24T18:23:15Z"
+      },
+      "committer": {
+        "name": "Alex Morcos",
+        "email": "morcos@chaincode.com",
+        "date": "2016-05-24T19:01:14Z"
+      },
+      "message": "FIX: Account for txs already added to block in addPriorityTxs",
+      "tree": {
+        "sha": "ae4cc097a99dc4f8904596b0d9f4107dbf3ebf27",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/ae4cc097a99dc4f8904596b0d9f4107dbf3ebf27"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a27876474819ffff80614f966fea06d5da2d5c15",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a27876474819ffff80614f966fea06d5da2d5c15",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a27876474819ffff80614f966fea06d5da2d5c15",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a27876474819ffff80614f966fea06d5da2d5c15/comments",
+    "author": {
+      "login": "morcos",
+      "id": 4360349,
+      "node_id": "MDQ6VXNlcjQzNjAzNDk=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4360349?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/morcos",
+      "html_url": "https://github.com/morcos",
+      "followers_url": "https://api.github.com/users/morcos/followers",
+      "following_url": "https://api.github.com/users/morcos/following{/other_user}",
+      "gists_url": "https://api.github.com/users/morcos/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/morcos/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/morcos/subscriptions",
+      "organizations_url": "https://api.github.com/users/morcos/orgs",
+      "repos_url": "https://api.github.com/users/morcos/repos",
+      "events_url": "https://api.github.com/users/morcos/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/morcos/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "morcos",
+      "id": 4360349,
+      "node_id": "MDQ6VXNlcjQzNjAzNDk=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4360349?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/morcos",
+      "html_url": "https://github.com/morcos",
+      "followers_url": "https://api.github.com/users/morcos/followers",
+      "following_url": "https://api.github.com/users/morcos/following{/other_user}",
+      "gists_url": "https://api.github.com/users/morcos/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/morcos/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/morcos/subscriptions",
+      "organizations_url": "https://api.github.com/users/morcos/orgs",
+      "repos_url": "https://api.github.com/users/morcos/repos",
+      "events_url": "https://api.github.com/users/morcos/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/morcos/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "4dc94d1036576fe988a066fdabc047350ccddda9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4dc94d1036576fe988a066fdabc047350ccddda9",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/4dc94d1036576fe988a066fdabc047350ccddda9"
+      }
+    ],
+    "stats": {
+      "total": 7,
+      "additions": 6,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "1eab8f949d41df0f122dcd3dcc7de236988b576e",
+        "filename": "src/miner.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 1,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a27876474819ffff80614f966fea06d5da2d5c15/src/miner.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a27876474819ffff80614f966fea06d5da2d5c15/src/miner.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/miner.cpp?ref=a27876474819ffff80614f966fea06d5da2d5c15",
+        "patch": "@@ -74,7 +74,7 @@ int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParam\n BlockAssembler::BlockAssembler(const CChainParams& _chainparams)\n     : chainparams(_chainparams)\n {\n-   // Largest block you're willing to create:\n+    // Largest block you're willing to create:\n     nBlockMaxSize = GetArg(\"-blockmaxsize\", DEFAULT_BLOCK_MAX_SIZE);\n     // Limit to between 1K and MAX_BLOCK_SIZE-1K for sanity:\n     nBlockMaxSize = std::max((unsigned int)1000, std::min((unsigned int)(MAX_BLOCK_SIZE-1000), nBlockMaxSize));\n@@ -262,6 +262,11 @@ void BlockAssembler::addScoreTxs()\n             clearedTxs.pop();\n         }\n \n+        // If tx already in block, skip  (added by addPriorityTxs)\n+        if (inBlock.count(iter)) {\n+            continue;\n+        }\n+\n         // If tx is dependent on other mempool txs which haven't yet been included\n         // then put it in the waitSet\n         if (isStillDependent(iter)) {"
+      }
+    ]
+  },
+  {
+    "sha": "c2dd5a3c39156749e8ee24772d1fcb01404f2b6f",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjMmRkNWEzYzM5MTU2NzQ5ZThlZTI0NzcyZDFmY2IwMTQwNGYyYjZm",
+    "commit": {
+      "author": {
+        "name": "Alex Morcos",
+        "email": "morcos@chaincode.com",
+        "date": "2016-06-01T16:29:03Z"
+      },
+      "committer": {
+        "name": "Alex Morcos",
+        "email": "morcos@chaincode.com",
+        "date": "2016-06-01T16:29:03Z"
+      },
+      "message": "FIX: correctly measure size of priority block",
+      "tree": {
+        "sha": "8e6b62d05cc1399db28a8d00f634add8cee0df60",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/8e6b62d05cc1399db28a8d00f634add8cee0df60"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/c2dd5a3c39156749e8ee24772d1fcb01404f2b6f",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c2dd5a3c39156749e8ee24772d1fcb01404f2b6f",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/c2dd5a3c39156749e8ee24772d1fcb01404f2b6f",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c2dd5a3c39156749e8ee24772d1fcb01404f2b6f/comments",
+    "author": {
+      "login": "morcos",
+      "id": 4360349,
+      "node_id": "MDQ6VXNlcjQzNjAzNDk=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4360349?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/morcos",
+      "html_url": "https://github.com/morcos",
+      "followers_url": "https://api.github.com/users/morcos/followers",
+      "following_url": "https://api.github.com/users/morcos/following{/other_user}",
+      "gists_url": "https://api.github.com/users/morcos/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/morcos/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/morcos/subscriptions",
+      "organizations_url": "https://api.github.com/users/morcos/orgs",
+      "repos_url": "https://api.github.com/users/morcos/repos",
+      "events_url": "https://api.github.com/users/morcos/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/morcos/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "morcos",
+      "id": 4360349,
+      "node_id": "MDQ6VXNlcjQzNjAzNDk=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4360349?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/morcos",
+      "html_url": "https://github.com/morcos",
+      "followers_url": "https://api.github.com/users/morcos/followers",
+      "following_url": "https://api.github.com/users/morcos/following{/other_user}",
+      "gists_url": "https://api.github.com/users/morcos/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/morcos/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/morcos/subscriptions",
+      "organizations_url": "https://api.github.com/users/morcos/orgs",
+      "repos_url": "https://api.github.com/users/morcos/repos",
+      "events_url": "https://api.github.com/users/morcos/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/morcos/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "a27876474819ffff80614f966fea06d5da2d5c15",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a27876474819ffff80614f966fea06d5da2d5c15",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/a27876474819ffff80614f966fea06d5da2d5c15"
+      }
+    ],
+    "stats": {
+      "total": 2,
+      "additions": 1,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "99eb0a2ebd0f7e1bcc8c0587127c91d60b044147",
+        "filename": "src/miner.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c2dd5a3c39156749e8ee24772d1fcb01404f2b6f/src/miner.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c2dd5a3c39156749e8ee24772d1fcb01404f2b6f/src/miner.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/miner.cpp?ref=c2dd5a3c39156749e8ee24772d1fcb01404f2b6f",
+        "patch": "@@ -352,7 +352,7 @@ void BlockAssembler::addPriorityTxs()\n \n             // If now that this txs is added we've surpassed our desired priority size\n             // or have dropped below the AllowFreeThreshold, then we're done adding priority txs\n-            if (nBlockSize + iter->GetTxSize() >= nBlockPrioritySize || !AllowFree(actualPriority)) {\n+            if (nBlockSize >= nBlockPrioritySize || !AllowFree(actualPriority)) {\n                 return;\n             }\n "
+      }
+    ]
+  }
+]

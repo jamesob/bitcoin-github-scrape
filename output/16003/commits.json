@@ -1,0 +1,266 @@
+[
+  {
+    "sha": "20e6e0f89852882b099c845ddeac007b8a3492f7",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyMGU2ZTBmODk4NTI4ODJiMDk5Yzg0NWRkZWFjMDA3YjhhMzQ5MmY3",
+    "commit": {
+      "author": {
+        "name": "tryphe",
+        "email": "tryphe@noreply.github.com",
+        "date": "2019-05-08T08:34:01Z"
+      },
+      "committer": {
+        "name": "tryphe",
+        "email": "tryphe@noreply.github.com",
+        "date": "2019-05-10T13:42:51Z"
+      },
+      "message": "[init] reserve file descriptors for bind() and accept(), and fix the\namount of\ndescriptors requested\n\n[init] initialize more file descriptors based on number of bind\ninterfaces, MAX_OUTBOUND_CONNECTIONS, and\nCConnman::Options:nMaxFeeler\n\n[init] add verbose output for FD limits, cleanup lines.\n\n[init] cleanup LogPrintF to print FDs (oops), use better variable\nsemantics, include MAX_ADDNODE_CONNECTIONS in nUserMinConnections\n\n[init] addnode connections don't count towards maxconnections\n\n[init] correct soft limit for MAX_OUTBOUND_CONNECTIONS\n\n[init] connections are softcapped at 0\n\n[init] fix up descriptor commits, remove unused variables, add verbosity\n\n[init] fix up strings slightly\n\n[init] small refactor for better verbosity",
+      "tree": {
+        "sha": "3fe3a83e63359240a70fe3c37c69d205d2324f78",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/3fe3a83e63359240a70fe3c37c69d205d2324f78"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/20e6e0f89852882b099c845ddeac007b8a3492f7",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/20e6e0f89852882b099c845ddeac007b8a3492f7",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/20e6e0f89852882b099c845ddeac007b8a3492f7",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/20e6e0f89852882b099c845ddeac007b8a3492f7/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "d7d7d315060620446bd363ca50f95f79d3260db7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d7d7d315060620446bd363ca50f95f79d3260db7",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/d7d7d315060620446bd363ca50f95f79d3260db7"
+      }
+    ],
+    "stats": {
+      "total": 31,
+      "additions": 16,
+      "deletions": 15
+    },
+    "files": [
+      {
+        "sha": "4fc250731218853aa78d88baa863d281050fe63d",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 14,
+        "deletions": 15,
+        "changes": 29,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/20e6e0f89852882b099c845ddeac007b8a3492f7/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/20e6e0f89852882b099c845ddeac007b8a3492f7/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=20e6e0f89852882b099c845ddeac007b8a3492f7",
+        "patch": "@@ -998,25 +998,24 @@ bool AppInitParameterInteraction()\n     }\n \n     // Make sure enough file descriptors are available\n-    int nBind = std::max(nUserBind, size_t(1));\n     nUserMaxConnections = gArgs.GetArg(\"-maxconnections\", DEFAULT_MAX_PEER_CONNECTIONS);\n     nMaxConnections = std::max(nUserMaxConnections, 0);\n+    int nBind = std::max(nUserBind, size_t(1));\n+    int nRpcThreads = std::max(gArgs.GetArg(\"-rpcthreads\", DEFAULT_HTTP_THREADS), 1L);\n+    int nFDMin = MIN_CORE_FILEDESCRIPTORS + MAX_ADDNODE_CONNECTIONS + nBind + nRpcThreads;\n \n-    // Trim requested connection counts, to fit into system limitations\n-    // <int> in std::min<int>(...) to work around FreeBSD compilation issue described in #2695\n-    nFD = RaiseFileDescriptorLimit(nMaxConnections + MIN_CORE_FILEDESCRIPTORS + MAX_ADDNODE_CONNECTIONS);\n-#ifdef USE_POLL\n-    int fd_max = nFD;\n-#else\n-    int fd_max = FD_SETSIZE;\n-#endif\n-    nMaxConnections = std::max(std::min<int>(nMaxConnections, fd_max - nBind - MIN_CORE_FILEDESCRIPTORS - MAX_ADDNODE_CONNECTIONS), 0);\n-    if (nFD < MIN_CORE_FILEDESCRIPTORS)\n-        return InitError(_(\"Not enough file descriptors available.\"));\n-    nMaxConnections = std::min(nFD - MIN_CORE_FILEDESCRIPTORS - MAX_ADDNODE_CONNECTIONS, nMaxConnections);\n+    // Optimistically enforce minimum file descriptors\n+    nFD = RaiseFileDescriptorLimit(nFDMin + nUserMaxConnections);\n+    if (nFD < nFDMin)\n+        return InitError(strprintf(_(\"Not enough file descriptors available. %d available, %d required.\"), nFD, nFDMin));\n+\n+    // Calculate new -maxconnection count. Note: std::min<int>(...) to work around FreeBSD compilation issue described in #2695\n+    nMaxConnections = std::max(std::min<int>(nMaxConnections, nFD - nFDMin), 0);\n+    LogPrintf(\"There are %d file descriptors available, %d required, %d reserved, and %d requested.\\n\", nFD, nFDMin, nFDMin + nMaxConnections, nFDMin + nUserMaxConnections);\n \n+    // Display a warning if the number of total maximum connections was lowered\n     if (nMaxConnections < nUserMaxConnections)\n-        InitWarning(strprintf(_(\"Reducing -maxconnections from %d to %d, because of system limitations.\"), nUserMaxConnections, nMaxConnections));\n+        InitWarning(strprintf(_(\"Reducing -maxconnections from %d to %d, because of file descriptor limitations.\"), nUserMaxConnections, nMaxConnections));\n \n     // ********************************************************* Step 3: parameter-to-internal-flags\n     if (gArgs.IsArgSet(\"-debug\")) {\n@@ -1778,7 +1777,7 @@ bool AppInitMain(InitInterfaces& interfaces)\n     connOptions.nMaxConnections = nMaxConnections;\n     connOptions.nMaxOutbound = std::min(MAX_OUTBOUND_CONNECTIONS, connOptions.nMaxConnections);\n     connOptions.nMaxAddnode = MAX_ADDNODE_CONNECTIONS;\n-    connOptions.nMaxFeeler = 1;\n+    connOptions.nMaxFeeler = NUM_FEELER_CONNECTIONS;\n     connOptions.nBestHeight = chain_active_height;\n     connOptions.uiInterface = &uiInterface;\n     connOptions.m_banman = g_banman.get();"
+      },
+      {
+        "sha": "48bb00723032049359a073e192d41d0bd74a0d7a",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/20e6e0f89852882b099c845ddeac007b8a3492f7/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/20e6e0f89852882b099c845ddeac007b8a3492f7/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=20e6e0f89852882b099c845ddeac007b8a3492f7",
+        "patch": "@@ -59,6 +59,8 @@ static const unsigned int MAX_SUBVERSION_LENGTH = 256;\n static const int MAX_OUTBOUND_CONNECTIONS = 8;\n /** Maximum number of addnode outgoing nodes */\n static const int MAX_ADDNODE_CONNECTIONS = 8;\n+/** Number of feeler connections */\n+static const int NUM_FEELER_CONNECTIONS = 1;\n /** -listen default */\n static const bool DEFAULT_LISTEN = true;\n /** -upnp default */"
+      }
+    ]
+  },
+  {
+    "sha": "c45779cfef056ae55cd67f4cdfeb3ef086329170",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjNDU3NzljZmVmMDU2YWU1NWNkNjdmNGNkZmViM2VmMDg2MzI5MTcw",
+    "commit": {
+      "author": {
+        "name": "tryphe",
+        "email": "tryphe@noreply.github.com",
+        "date": "2019-05-10T13:59:56Z"
+      },
+      "committer": {
+        "name": "tryphe",
+        "email": "tryphe@noreply.github.com",
+        "date": "2019-07-18T20:30:35Z"
+      },
+      "message": "init: avoid string conflicts with #15329 (reversed)\ninit: nMaxConnections and (nFD-nFDMin) cannot be negative, don't check against 0\ninit: try to fix Travis note about deducing types\ninit: try to fix travis again \"deduced conflicting types\"\ninit: try a better way through the Travis problem\ninit: revert old init warning for drahtbot\nnet: name nit \"NUM\"->\"MAX\"_FEELER_CONNCTIONS\ninit: name nit \"NUM\"->\"MAX\"_FEELER_CONNCTIONS\ninit: fixup typo",
+      "tree": {
+        "sha": "f80b292d49021a33b65dbc30dece364553200515",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f80b292d49021a33b65dbc30dece364553200515"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/c45779cfef056ae55cd67f4cdfeb3ef086329170",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c45779cfef056ae55cd67f4cdfeb3ef086329170",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/c45779cfef056ae55cd67f4cdfeb3ef086329170",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c45779cfef056ae55cd67f4cdfeb3ef086329170/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "20e6e0f89852882b099c845ddeac007b8a3492f7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/20e6e0f89852882b099c845ddeac007b8a3492f7",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/20e6e0f89852882b099c845ddeac007b8a3492f7"
+      }
+    ],
+    "stats": {
+      "total": 10,
+      "additions": 5,
+      "deletions": 5
+    },
+    "files": [
+      {
+        "sha": "5abcb215f9f62ce39aeb1af3da9cff6c9901c3fc",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 4,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c45779cfef056ae55cd67f4cdfeb3ef086329170/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c45779cfef056ae55cd67f4cdfeb3ef086329170/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=c45779cfef056ae55cd67f4cdfeb3ef086329170",
+        "patch": "@@ -1001,7 +1001,7 @@ bool AppInitParameterInteraction()\n     nUserMaxConnections = gArgs.GetArg(\"-maxconnections\", DEFAULT_MAX_PEER_CONNECTIONS);\n     nMaxConnections = std::max(nUserMaxConnections, 0);\n     int nBind = std::max(nUserBind, size_t(1));\n-    int nRpcThreads = std::max(gArgs.GetArg(\"-rpcthreads\", DEFAULT_HTTP_THREADS), 1L);\n+    int nRpcThreads = std::max(gArgs.GetArg(\"-rpcthreads\", DEFAULT_HTTP_THREADS), int64_t(1));\n     int nFDMin = MIN_CORE_FILEDESCRIPTORS + MAX_ADDNODE_CONNECTIONS + nBind + nRpcThreads;\n \n     // Optimistically enforce minimum file descriptors\n@@ -1010,12 +1010,12 @@ bool AppInitParameterInteraction()\n         return InitError(strprintf(_(\"Not enough file descriptors available. %d available, %d required.\"), nFD, nFDMin));\n \n     // Calculate new -maxconnection count. Note: std::min<int>(...) to work around FreeBSD compilation issue described in #2695\n-    nMaxConnections = std::max(std::min<int>(nMaxConnections, nFD - nFDMin), 0);\n+    nMaxConnections = std::min<int>(nMaxConnections, nFD - nFDMin);\n     LogPrintf(\"There are %d file descriptors available, %d required, %d reserved, and %d requested.\\n\", nFD, nFDMin, nFDMin + nMaxConnections, nFDMin + nUserMaxConnections);\n \n     // Display a warning if the number of total maximum connections was lowered\n     if (nMaxConnections < nUserMaxConnections)\n-        InitWarning(strprintf(_(\"Reducing -maxconnections from %d to %d, because of file descriptor limitations.\"), nUserMaxConnections, nMaxConnections));\n+        InitWarning(strprintf(_(\"Reducing -maxconnections from %d to %d, because of system limitations.\"), nUserMaxConnections, nMaxConnections));\n \n     // ********************************************************* Step 3: parameter-to-internal-flags\n     if (gArgs.IsArgSet(\"-debug\")) {\n@@ -1777,7 +1777,7 @@ bool AppInitMain(InitInterfaces& interfaces)\n     connOptions.nMaxConnections = nMaxConnections;\n     connOptions.nMaxOutbound = std::min(MAX_OUTBOUND_CONNECTIONS, connOptions.nMaxConnections);\n     connOptions.nMaxAddnode = MAX_ADDNODE_CONNECTIONS;\n-    connOptions.nMaxFeeler = NUM_FEELER_CONNECTIONS;\n+    connOptions.nMaxFeeler = MAX_FEELER_CONNECTIONS;\n     connOptions.nBestHeight = chain_active_height;\n     connOptions.uiInterface = &uiInterface;\n     connOptions.m_banman = g_banman.get();"
+      },
+      {
+        "sha": "d31087fab411c6031e3f3ed3ee542497d9a44773",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c45779cfef056ae55cd67f4cdfeb3ef086329170/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c45779cfef056ae55cd67f4cdfeb3ef086329170/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=c45779cfef056ae55cd67f4cdfeb3ef086329170",
+        "patch": "@@ -60,7 +60,7 @@ static const int MAX_OUTBOUND_CONNECTIONS = 8;\n /** Maximum number of addnode outgoing nodes */\n static const int MAX_ADDNODE_CONNECTIONS = 8;\n /** Number of feeler connections */\n-static const int NUM_FEELER_CONNECTIONS = 1;\n+static const int MAX_FEELER_CONNECTIONS = 1;\n /** -listen default */\n static const bool DEFAULT_LISTEN = true;\n /** -upnp default */"
+      }
+    ]
+  },
+  {
+    "sha": "dcb63c9077d8f3be2fdd2ffa503b4e89d74ae0a0",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkY2I2M2M5MDc3ZDhmM2JlMmZkZDJmZmE1MDNiNGU4OWQ3NGFlMGEw",
+    "commit": {
+      "author": {
+        "name": "tryphe",
+        "email": "tryphe@noreply.github.com",
+        "date": "2019-07-18T20:36:34Z"
+      },
+      "committer": {
+        "name": "tryphe",
+        "email": "tryphe@noreply.github.com",
+        "date": "2019-07-18T20:36:34Z"
+      },
+      "message": "init: nit: revert InitWarning string change for log compat",
+      "tree": {
+        "sha": "a52cb5a407608a1a9671b73e99ba6bf5330a546c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/a52cb5a407608a1a9671b73e99ba6bf5330a546c"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/dcb63c9077d8f3be2fdd2ffa503b4e89d74ae0a0",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/dcb63c9077d8f3be2fdd2ffa503b4e89d74ae0a0",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/dcb63c9077d8f3be2fdd2ffa503b4e89d74ae0a0",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/dcb63c9077d8f3be2fdd2ffa503b4e89d74ae0a0/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "c45779cfef056ae55cd67f4cdfeb3ef086329170",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c45779cfef056ae55cd67f4cdfeb3ef086329170",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c45779cfef056ae55cd67f4cdfeb3ef086329170"
+      }
+    ],
+    "stats": {
+      "total": 2,
+      "additions": 1,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "7879cbfc8c7087f332cab2c461242de39b801df0",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/dcb63c9077d8f3be2fdd2ffa503b4e89d74ae0a0/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/dcb63c9077d8f3be2fdd2ffa503b4e89d74ae0a0/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=dcb63c9077d8f3be2fdd2ffa503b4e89d74ae0a0",
+        "patch": "@@ -1015,7 +1015,7 @@ bool AppInitParameterInteraction()\n \n     // Display a warning if the number of total maximum connections was lowered\n     if (nMaxConnections < nUserMaxConnections)\n-        InitWarning(strprintf(_(\"Reducing -maxconnections from %d to %d, because of system limitations.\"), nUserMaxConnections, nMaxConnections));\n+        InitWarning(strprintf(_(\"Reducing -maxconnections from %d to %d, because of file descriptor limitations.\"), nUserMaxConnections, nMaxConnections));\n \n     // ********************************************************* Step 3: parameter-to-internal-flags\n     if (gArgs.IsArgSet(\"-debug\")) {"
+      }
+    ]
+  },
+  {
+    "sha": "7cb1ad5f832fa03ef2a6e71deb1457fd2d6bc942",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3Y2IxYWQ1ZjgzMmZhMDNlZjJhNmU3MWRlYjE0NTdmZDJkNmJjOTQy",
+    "commit": {
+      "author": {
+        "name": "tryphe",
+        "email": "tryphe@noreply.github.com",
+        "date": "2019-07-18T20:42:31Z"
+      },
+      "committer": {
+        "name": "tryphe",
+        "email": "tryphe@noreply.github.com",
+        "date": "2019-07-18T20:42:31Z"
+      },
+      "message": "init: revert log correction for log compat (oops)",
+      "tree": {
+        "sha": "f80b292d49021a33b65dbc30dece364553200515",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f80b292d49021a33b65dbc30dece364553200515"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/7cb1ad5f832fa03ef2a6e71deb1457fd2d6bc942",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7cb1ad5f832fa03ef2a6e71deb1457fd2d6bc942",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/7cb1ad5f832fa03ef2a6e71deb1457fd2d6bc942",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7cb1ad5f832fa03ef2a6e71deb1457fd2d6bc942/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "dcb63c9077d8f3be2fdd2ffa503b4e89d74ae0a0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/dcb63c9077d8f3be2fdd2ffa503b4e89d74ae0a0",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/dcb63c9077d8f3be2fdd2ffa503b4e89d74ae0a0"
+      }
+    ],
+    "stats": {
+      "total": 2,
+      "additions": 1,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "5abcb215f9f62ce39aeb1af3da9cff6c9901c3fc",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7cb1ad5f832fa03ef2a6e71deb1457fd2d6bc942/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7cb1ad5f832fa03ef2a6e71deb1457fd2d6bc942/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=7cb1ad5f832fa03ef2a6e71deb1457fd2d6bc942",
+        "patch": "@@ -1015,7 +1015,7 @@ bool AppInitParameterInteraction()\n \n     // Display a warning if the number of total maximum connections was lowered\n     if (nMaxConnections < nUserMaxConnections)\n-        InitWarning(strprintf(_(\"Reducing -maxconnections from %d to %d, because of file descriptor limitations.\"), nUserMaxConnections, nMaxConnections));\n+        InitWarning(strprintf(_(\"Reducing -maxconnections from %d to %d, because of system limitations.\"), nUserMaxConnections, nMaxConnections));\n \n     // ********************************************************* Step 3: parameter-to-internal-flags\n     if (gArgs.IsArgSet(\"-debug\")) {"
+      }
+    ]
+  }
+]

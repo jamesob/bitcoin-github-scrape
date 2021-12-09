@@ -1,0 +1,74 @@
+[
+  {
+    "sha": "f82102121f7c48d94c218af0089a71dde497fa07",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmODIxMDIxMjFmN2M0OGQ5NGMyMThhZjAwODlhNzFkZGU0OTdmYTA3",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-11-27T21:20:43Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-11-27T21:20:43Z"
+      },
+      "message": "split of createTrayIconMenu() from createTrayIcon() in BitcoinGUI\n\n- this allows to setup the trayicon before we have and want a trayicon menu\n- should be of great use, when we remove that splash screen\n- fixes a small bug with the toggleHideAction icon, which is not only used with\n  trayicon but also with the Mac dock",
+      "tree": {
+        "sha": "734b3bc9bd493dc1f87b55f087450ba1d605d049",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/734b3bc9bd493dc1f87b55f087450ba1d605d049"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/f82102121f7c48d94c218af0089a71dde497fa07",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f82102121f7c48d94c218af0089a71dde497fa07",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/f82102121f7c48d94c218af0089a71dde497fa07",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f82102121f7c48d94c218af0089a71dde497fa07/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "0c50d8b007dd0b4064ddb912f5dd43c094c6e959",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0c50d8b007dd0b4064ddb912f5dd43c094c6e959",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/0c50d8b007dd0b4064ddb912f5dd43c094c6e959"
+      }
+    ],
+    "stats": {
+      "total": 33,
+      "additions": 24,
+      "deletions": 9
+    },
+    "files": [
+      {
+        "sha": "aa45716c482376f193acc9566e16a02c14978aa0",
+        "filename": "src/qt/bitcoingui.cpp",
+        "status": "modified",
+        "additions": 21,
+        "deletions": 8,
+        "changes": 29,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f82102121f7c48d94c218af0089a71dde497fa07/src/qt/bitcoingui.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f82102121f7c48d94c218af0089a71dde497fa07/src/qt/bitcoingui.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoingui.cpp?ref=f82102121f7c48d94c218af0089a71dde497fa07",
+        "patch": "@@ -90,7 +90,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):\n     // Create the toolbars\n     createToolBars();\n \n-    // Create the tray icon (or setup the dock icon)\n+    // Create system tray icon and notification\n     createTrayIcon();\n \n     // Create tabs\n@@ -354,12 +354,17 @@ void BitcoinGUI::setClientModel(ClientModel *clientModel)\n                 // Just attach \" [testnet]\" to the existing tooltip\n                 trayIcon->setToolTip(trayIcon->toolTip() + QString(\" \") + tr(\"[testnet]\"));\n                 trayIcon->setIcon(QIcon(\":/icons/toolbar_testnet\"));\n-                toggleHideAction->setIcon(QIcon(\":/icons/toolbar_testnet\"));\n             }\n \n+            toggleHideAction->setIcon(QIcon(\":/icons/toolbar_testnet\"));\n             aboutAction->setIcon(QIcon(\":/icons/toolbar_testnet\"));\n         }\n \n+        // Create system tray menu (or setup the dock menu) that late to prevent users from calling actions,\n+        // while the client has not yet fully loaded\n+        if(trayIcon)\n+            createTrayIconMenu();\n+\n         // Keep up to date with client\n         setNumConnections(clientModel->getNumConnections());\n         connect(clientModel, SIGNAL(numConnectionsChanged(int)), this, SLOT(setNumConnections(int)));\n@@ -407,16 +412,26 @@ void BitcoinGUI::setWalletModel(WalletModel *walletModel)\n \n void BitcoinGUI::createTrayIcon()\n {\n-    QMenu *trayIconMenu;\n #ifndef Q_OS_MAC\n     trayIcon = new QSystemTrayIcon(this);\n-    trayIconMenu = new QMenu(this);\n-    trayIcon->setContextMenu(trayIconMenu);\n+\n     trayIcon->setToolTip(tr(\"Bitcoin client\"));\n     trayIcon->setIcon(QIcon(\":/icons/toolbar\"));\n+    trayIcon->show();\n+#endif\n+\n+    notificator = new Notificator(qApp->applicationName(), trayIcon);\n+}\n+\n+void BitcoinGUI::createTrayIconMenu()\n+{\n+    QMenu *trayIconMenu;\n+#ifndef Q_OS_MAC\n+    trayIconMenu = new QMenu(this);\n+    trayIcon->setContextMenu(trayIconMenu);\n+\n     connect(trayIcon, SIGNAL(activated(QSystemTrayIcon::ActivationReason)),\n             this, SLOT(trayIconActivated(QSystemTrayIcon::ActivationReason)));\n-    trayIcon->show();\n #else\n     // Note: On Mac, the dock icon is used to provide the tray's functionality.\n     MacDockIconHandler *dockIconHandler = MacDockIconHandler::instance();\n@@ -438,8 +453,6 @@ void BitcoinGUI::createTrayIcon()\n     trayIconMenu->addSeparator();\n     trayIconMenu->addAction(quitAction);\n #endif\n-\n-    notificator = new Notificator(qApp->applicationName(), trayIcon);\n }\n \n #ifndef Q_OS_MAC"
+      },
+      {
+        "sha": "ecb3244ad53e906041f1591963a32875da4a9d50",
+        "filename": "src/qt/bitcoingui.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 1,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f82102121f7c48d94c218af0089a71dde497fa07/src/qt/bitcoingui.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f82102121f7c48d94c218af0089a71dde497fa07/src/qt/bitcoingui.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoingui.h?ref=f82102121f7c48d94c218af0089a71dde497fa07",
+        "patch": "@@ -105,8 +105,10 @@ class BitcoinGUI : public QMainWindow\n     void createMenuBar();\n     /** Create the toolbars */\n     void createToolBars();\n-    /** Create system tray (notification) icon */\n+    /** Create system tray icon and notification */\n     void createTrayIcon();\n+    /** Create system tray menu (or setup the dock menu) */\n+    void createTrayIconMenu();\n \n public slots:\n     /** Set number of connections shown in the UI */"
+      }
+    ]
+  }
+]

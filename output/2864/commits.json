@@ -1,0 +1,146 @@
+[
+  {
+    "sha": "8a37181fb5409a0d68ffb88f566f03f9ab5d4d3f",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4YTM3MTgxZmI1NDA5YTBkNjhmZmI4OGY1NjZmMDNmOWFiNWQ0ZDNm",
+    "commit": {
+      "author": {
+        "name": "danda",
+        "email": "danda",
+        "date": "2013-07-29T06:24:28Z"
+      },
+      "committer": {
+        "name": "danda",
+        "email": "danda",
+        "date": "2013-07-29T06:24:28Z"
+      },
+      "message": "add rpcipcmds config option to filter which rpc commands can be called by clients, per IP",
+      "tree": {
+        "sha": "cb833a4632d4518b5bb5ee03f0d5d0d5a1016551",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/cb833a4632d4518b5bb5ee03f0d5d0d5a1016551"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/8a37181fb5409a0d68ffb88f566f03f9ab5d4d3f",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8a37181fb5409a0d68ffb88f566f03f9ab5d4d3f",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/8a37181fb5409a0d68ffb88f566f03f9ab5d4d3f",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8a37181fb5409a0d68ffb88f566f03f9ab5d4d3f/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "c4316fefa5f56d62eeceb710ee18313bd9be1128",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c4316fefa5f56d62eeceb710ee18313bd9be1128",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c4316fefa5f56d62eeceb710ee18313bd9be1128"
+      }
+    ],
+    "stats": {
+      "total": 79,
+      "additions": 78,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "61a15c9d2681d2794ca8b8e33fff7050c49d8ba9",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 76,
+        "deletions": 1,
+        "changes": 77,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8a37181fb5409a0d68ffb88f566f03f9ab5d4d3f/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8a37181fb5409a0d68ffb88f566f03f9ab5d4d3f/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=8a37181fb5409a0d68ffb88f566f03f9ab5d4d3f",
+        "patch": "@@ -527,6 +527,58 @@ void ErrorReply(std::ostream& stream, const Object& objError, const Value& id)\n     stream << HTTPReply(nStatus, strReply, false) << std::flush;\n }\n \n+bool ClientAllowedForMethod(const boost::asio::ip::address& address, string strMethod) {\n+\n+    // Make sure that IPv4-compatible and IPv4-mapped IPv6 addresses are treated as IPv4 addresses\n+    if (address.is_v6()\n+     && (address.to_v6().is_v4_compatible()\n+      || address.to_v6().is_v4_mapped()))\n+        return ClientAllowedForMethod(address.to_v6().to_v4(), strMethod);\n+\n+    const string strAddress = address.to_string();\n+    const vector<string>& vAllow = mapMultiArgs[\"-rpcipcmds\"];\n+    \n+    printf( \"ClientAllowedForMethod(%s, %s)\", strAddress.c_str(), strMethod.c_str() );\n+    \n+    if( vAllow.empty() ) {\n+        return true;\n+    }\n+\n+    bool found_ip = false;\n+    \n+    // config lines look like:\n+    //   rpcipcmds=127.0.0.1,sendtoaddress,listtransactions,gettransaction,getinfo,getbalance,stop\n+    //   rpipcmds=YYY.YYY.YYY.*,getnewaddress,validateaddress\n+    BOOST_FOREACH(string strAllow, vAllow) {\n+        vector<string> strs;\n+        boost::split(strs,strAllow,boost::is_any_of(\",\"));\n+\n+        int count = 0;\n+        string strIP;\n+        BOOST_FOREACH(string strNext, strs) {\n+            if( count++ == 0 ) {\n+                strIP = strNext;\n+                if ( !WildcardMatch(strAddress, strIP) ) {\n+                    break;  // not our IP, move on to next config setting.\n+                }\n+            }\n+            else {\n+                found_ip = true;\n+                if( strNext == strMethod )\n+                    return true;  // method is allowed for this IP.\n+            }\n+        }\n+    }\n+    \n+    // If there is no rpcallowmethodsforip entry matching our IP, then we allow\n+    // the rpc call to proceed.  Otherwise, it would require listing all allowed\n+    // methods for all IPs in the config, even if we only want to restrict\n+    // method calls for one IP.\n+    \n+    return found_ip ? false : true;\n+}\n+\n+\n bool ClientAllowed(const boost::asio::ip::address& address)\n {\n     // Make sure that IPv4-compatible and IPv4-mapped IPv6 addresses are treated as IPv4 addresses\n@@ -997,19 +1049,42 @@ void ServiceConnection(AcceptedConnection *conn)\n                 throw JSONRPCError(RPC_PARSE_ERROR, \"Parse error\");\n \n             string strReply;\n+            AcceptedConnectionImpl<ip::tcp>* tcp_conn = dynamic_cast< AcceptedConnectionImpl<ip::tcp>* >(conn);\n \n             // singleton request\n             if (valRequest.type() == obj_type) {\n                 jreq.parse(valRequest);\n \n+                if( !ClientAllowedForMethod(tcp_conn->peer.address(), jreq.strMethod) ) {\n+                    throw JSONRPCError(RPC_FORBIDDEN_BY_IP, \"Method not allowed for client IP.\");\n+                }\n+                \n                 Value result = tableRPC.execute(jreq.strMethod, jreq.params);\n \n                 // Send reply\n                 strReply = JSONRPCReply(result, Value::null, jreq.id);\n \n             // array of requests\n-            } else if (valRequest.type() == array_type)\n+            } else if (valRequest.type() == array_type) {\n+\n+                // Verify that all methods are allowed for this IP before we execute any method.\n+                // We only do these checks if -rpcallowmethodsforip is specified.\n+                const vector<string>& vAllow = mapMultiArgs[\"-rpcipcmds\"];\n+                \n+                if( !vAllow.empty() ) {\n+                \n+                    const Array& vReq = valRequest.get_array();\n+                    for (unsigned int reqIdx = 0; reqIdx < vReq.size(); reqIdx++) {\n+                        jreq.parse( vReq[reqIdx] );\n+    \n+                        if( !ClientAllowedForMethod(tcp_conn->peer.address(), jreq.strMethod) ) {\n+                            throw JSONRPCError(RPC_FORBIDDEN_BY_IP, \"Method not allowed for client IP.\");\n+                        }\n+                    }\n+                }\n+                \n                 strReply = JSONRPCExecBatch(valRequest.get_array());\n+            }\n             else\n                 throw JSONRPCError(RPC_PARSE_ERROR, \"Top-level object parse error\");\n "
+      },
+      {
+        "sha": "6ddab6fdb90d162ae91666b1c109cb3c145a816c",
+        "filename": "src/bitcoinrpc.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8a37181fb5409a0d68ffb88f566f03f9ab5d4d3f/src/bitcoinrpc.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8a37181fb5409a0d68ffb88f566f03f9ab5d4d3f/src/bitcoinrpc.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.h?ref=8a37181fb5409a0d68ffb88f566f03f9ab5d4d3f",
+        "patch": "@@ -49,6 +49,7 @@ enum RPCErrorCode\n     RPC_INVALID_PARAMETER           = -8,  // Invalid, missing or duplicate parameter\n     RPC_DATABASE_ERROR              = -20, // Database error\n     RPC_DESERIALIZATION_ERROR       = -22, // Error parsing or validating structure in raw format\n+    RPC_FORBIDDEN_BY_IP             = -23, // Remote IP not allowed to access this RPC method.\n \n     // P2P client errors\n     RPC_CLIENT_NOT_CONNECTED        = -9,  // Bitcoin is not connected"
+      },
+      {
+        "sha": "c22eb602f661b4143b4349b93fcbd4565cb2c137",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8a37181fb5409a0d68ffb88f566f03f9ab5d4d3f/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8a37181fb5409a0d68ffb88f566f03f9ab5d4d3f/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=8a37181fb5409a0d68ffb88f566f03f9ab5d4d3f",
+        "patch": "@@ -222,6 +222,7 @@ std::string HelpMessage()\n     strUsage += \"  -rpcpassword=<pw>      \" + _(\"Password for JSON-RPC connections\") + \"\\n\";\n     strUsage += \"  -rpcport=<port>        \" + _(\"Listen for JSON-RPC connections on <port> (default: 8332 or testnet: 18332)\") + \"\\n\";\n     strUsage += \"  -rpcallowip=<ip>       \" + _(\"Allow JSON-RPC connections from specified IP address\") + \"\\n\";\n+    strUsage += \"  -rpcipcmds=<ip>,<cmd>  \" + _(\"Allow only specific commands from specified IP address. <ip>,<cmd1>,<cmd2>,<cmd3>...\") + \"\\n\";\n     if (!fHaveGUI)\n         strUsage += \"  -rpcconnect=<ip>       \" + _(\"Send commands to node running on <ip> (default: 127.0.0.1)\") + \"\\n\";\n     strUsage += \"  -rpcthreads=<n>        \" + _(\"Set the number of threads to service RPC calls (default: 4)\") + \"\\n\";"
+      }
+    ]
+  },
+  {
+    "sha": "716031385b45db9448a24718931e72a7f405e7ed",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3MTYwMzEzODViNDVkYjk0NDhhMjQ3MTg5MzFlNzJhN2Y0MDVlN2Vk",
+    "commit": {
+      "author": {
+        "name": "danda",
+        "email": "danda",
+        "date": "2013-07-29T06:30:25Z"
+      },
+      "committer": {
+        "name": "danda",
+        "email": "danda",
+        "date": "2013-07-29T06:30:25Z"
+      },
+      "message": "-rpcallowmethodsforip --> -rpcipcmds  in comment text.",
+      "tree": {
+        "sha": "905207a32ae0939c161bd15306b463e9e4a50067",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/905207a32ae0939c161bd15306b463e9e4a50067"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/716031385b45db9448a24718931e72a7f405e7ed",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/716031385b45db9448a24718931e72a7f405e7ed",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/716031385b45db9448a24718931e72a7f405e7ed",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/716031385b45db9448a24718931e72a7f405e7ed/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "8a37181fb5409a0d68ffb88f566f03f9ab5d4d3f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8a37181fb5409a0d68ffb88f566f03f9ab5d4d3f",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/8a37181fb5409a0d68ffb88f566f03f9ab5d4d3f"
+      }
+    ],
+    "stats": {
+      "total": 4,
+      "additions": 2,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "4e0e42ceef7554ddc3e55daff1fa928235eb4e7c",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/716031385b45db9448a24718931e72a7f405e7ed/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/716031385b45db9448a24718931e72a7f405e7ed/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=716031385b45db9448a24718931e72a7f405e7ed",
+        "patch": "@@ -570,7 +570,7 @@ bool ClientAllowedForMethod(const boost::asio::ip::address& address, string strM\n         }\n     }\n     \n-    // If there is no rpcallowmethodsforip entry matching our IP, then we allow\n+    // If there is no rpcipcmds entry matching our IP, then we allow\n     // the rpc call to proceed.  Otherwise, it would require listing all allowed\n     // methods for all IPs in the config, even if we only want to restrict\n     // method calls for one IP.\n@@ -1068,7 +1068,7 @@ void ServiceConnection(AcceptedConnection *conn)\n             } else if (valRequest.type() == array_type) {\n \n                 // Verify that all methods are allowed for this IP before we execute any method.\n-                // We only do these checks if -rpcallowmethodsforip is specified.\n+                // We only do these checks if -rpcipcmds is specified.\n                 const vector<string>& vAllow = mapMultiArgs[\"-rpcipcmds\"];\n                 \n                 if( !vAllow.empty() ) {"
+      }
+    ]
+  }
+]

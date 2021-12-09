@@ -1,0 +1,100 @@
+[
+  {
+    "sha": "74f28bf1fdf4a22bbdf3c894132e47d01cd108ed",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3NGYyOGJmMWZkZjRhMjJiYmRmM2M4OTQxMzJlNDdkMDFjZDEwOGVk",
+    "commit": {
+      "author": {
+        "name": "Chris Moore",
+        "email": "dooglus@gmail.com",
+        "date": "2012-02-09T13:21:41Z"
+      },
+      "committer": {
+        "name": "Chris Moore",
+        "email": "dooglus@gmail.com",
+        "date": "2012-02-09T13:21:41Z"
+      },
+      "message": "Fix #794.  Only remove transactions from memory pool when they're actually in the memory pool.",
+      "tree": {
+        "sha": "73fb54db58c992a4265c12664d2949a047c990c6",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/73fb54db58c992a4265c12664d2949a047c990c6"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/74f28bf1fdf4a22bbdf3c894132e47d01cd108ed",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/74f28bf1fdf4a22bbdf3c894132e47d01cd108ed",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/74f28bf1fdf4a22bbdf3c894132e47d01cd108ed",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/74f28bf1fdf4a22bbdf3c894132e47d01cd108ed/comments",
+    "author": {
+      "login": "dooglus",
+      "id": 573356,
+      "node_id": "MDQ6VXNlcjU3MzM1Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/573356?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/dooglus",
+      "html_url": "https://github.com/dooglus",
+      "followers_url": "https://api.github.com/users/dooglus/followers",
+      "following_url": "https://api.github.com/users/dooglus/following{/other_user}",
+      "gists_url": "https://api.github.com/users/dooglus/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/dooglus/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/dooglus/subscriptions",
+      "organizations_url": "https://api.github.com/users/dooglus/orgs",
+      "repos_url": "https://api.github.com/users/dooglus/repos",
+      "events_url": "https://api.github.com/users/dooglus/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/dooglus/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "dooglus",
+      "id": 573356,
+      "node_id": "MDQ6VXNlcjU3MzM1Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/573356?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/dooglus",
+      "html_url": "https://github.com/dooglus",
+      "followers_url": "https://api.github.com/users/dooglus/followers",
+      "following_url": "https://api.github.com/users/dooglus/following{/other_user}",
+      "gists_url": "https://api.github.com/users/dooglus/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/dooglus/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/dooglus/subscriptions",
+      "organizations_url": "https://api.github.com/users/dooglus/orgs",
+      "repos_url": "https://api.github.com/users/dooglus/repos",
+      "events_url": "https://api.github.com/users/dooglus/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/dooglus/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "328b26d40b2ea046144a487a6b4927a630e91fb9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/328b26d40b2ea046144a487a6b4927a630e91fb9",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/328b26d40b2ea046144a487a6b4927a630e91fb9"
+      }
+    ],
+    "stats": {
+      "total": 14,
+      "additions": 9,
+      "deletions": 5
+    },
+    "files": [
+      {
+        "sha": "e4c6714eaefcd07e306784c9226f1ac7e70b8a69",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 5,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/74f28bf1fdf4a22bbdf3c894132e47d01cd108ed/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/74f28bf1fdf4a22bbdf3c894132e47d01cd108ed/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=74f28bf1fdf4a22bbdf3c894132e47d01cd108ed",
+        "patch": "@@ -618,11 +618,15 @@ bool CTransaction::RemoveFromMemoryPool()\n     // Remove transaction from memory pool\n     CRITICAL_BLOCK(cs_mapTransactions)\n     {\n-        BOOST_FOREACH(const CTxIn& txin, vin)\n-            mapNextTx.erase(txin.prevout);\n-        mapTransactions.erase(GetHash());\n-        nTransactionsUpdated++;\n-        --nPooledTx;\n+        uint256 hash = GetHash();\n+        if (mapTransactions.count(hash))\n+        {\n+            BOOST_FOREACH(const CTxIn& txin, vin)\n+                mapNextTx.erase(txin.prevout);\n+            mapTransactions.erase(hash);\n+            nTransactionsUpdated++;\n+            --nPooledTx;\n+        }\n     }\n     return true;\n }"
+      }
+    ]
+  }
+]

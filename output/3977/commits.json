@@ -1,0 +1,263 @@
+[
+  {
+    "sha": "aa40730b142d3f9566845cd516ed0ce7dcca16f8",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphYTQwNzMwYjE0MmQzZjk1NjY4NDVjZDUxNmVkMGNlN2RjY2ExNmY4",
+    "commit": {
+      "author": {
+        "name": "Mark Friedenbach",
+        "email": "mark@friedenbach.org",
+        "date": "2014-03-28T02:10:18Z"
+      },
+      "committer": {
+        "name": "Mark Friedenbach",
+        "email": "mark@blockstream.io",
+        "date": "2014-11-05T03:07:41Z"
+      },
+      "message": "Add coinbase commitments\n\nThis provides infrastructure for soft-forking bitcoin to include extra per-block committed data in transactions separate from the coinbase, so that Merkle proofs of these commitments do not have to include the entire coinbase transaction. This is accomplished by means of anyone-can-spend outputs in the coinbase which are spent COINBASE_MATURITY blocks later by the miner who finds the block, embedding the block's commitment in an OP_RETURN output of that spending transaction.\n\nIncludes one such commitment with no attached validation rules, suitable for document time-stamping, merged mining, and other free-form miner-committed data applications.",
+      "tree": {
+        "sha": "c86fb1e8879e4549878078058eabb33f15c02810",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/c86fb1e8879e4549878078058eabb33f15c02810"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/aa40730b142d3f9566845cd516ed0ce7dcca16f8",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/aa40730b142d3f9566845cd516ed0ce7dcca16f8",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/aa40730b142d3f9566845cd516ed0ce7dcca16f8",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/aa40730b142d3f9566845cd516ed0ce7dcca16f8/comments",
+    "author": {
+      "login": "maaku",
+      "id": 69154,
+      "node_id": "MDQ6VXNlcjY5MTU0",
+      "avatar_url": "https://avatars.githubusercontent.com/u/69154?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/maaku",
+      "html_url": "https://github.com/maaku",
+      "followers_url": "https://api.github.com/users/maaku/followers",
+      "following_url": "https://api.github.com/users/maaku/following{/other_user}",
+      "gists_url": "https://api.github.com/users/maaku/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/maaku/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/maaku/subscriptions",
+      "organizations_url": "https://api.github.com/users/maaku/orgs",
+      "repos_url": "https://api.github.com/users/maaku/repos",
+      "events_url": "https://api.github.com/users/maaku/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/maaku/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": null,
+    "parents": [
+      {
+        "sha": "06037f3f46463e65ab74e0f34ba5f7a869d053fd",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/06037f3f46463e65ab74e0f34ba5f7a869d053fd",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/06037f3f46463e65ab74e0f34ba5f7a869d053fd"
+      }
+    ],
+    "stats": {
+      "total": 197,
+      "additions": 190,
+      "deletions": 7
+    },
+    "files": [
+      {
+        "sha": "b17a2b6fa7688b1794cf369002dc458ef42b5e46",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 148,
+        "deletions": 7,
+        "changes": 155,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/aa40730b142d3f9566845cd516ed0ce7dcca16f8/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/aa40730b142d3f9566845cd516ed0ce7dcca16f8/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=aa40730b142d3f9566845cd516ed0ce7dcca16f8",
+        "patch": "@@ -2334,6 +2334,82 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo\n     return true;\n }\n \n+void ExtractCommitmentOutPoints(const CTransaction& tx, map<vector<unsigned char>, COutPoint>& mapCommitmentOutPoints)\n+{\n+    uint256 txid = tx.GetHash();\n+    uint32_t n = 0;\n+    BOOST_FOREACH(const CTxOut& txout, tx.vout)\n+    {\n+        const CScript& script = txout.scriptPubKey;\n+        CScript::const_iterator pc = script.begin();\n+        opcodetype opcode; vector<unsigned char> pushdata;\n+        if (script.GetOp2(pc, opcode, &pushdata) && 0<=opcode && opcode<=OP_PUSHDATA4 &&\n+            script.GetOp2(pc, opcode, NULL) && opcode==OP_EQUAL && pc==script.end())\n+        {\n+            mapCommitmentOutPoints.insert(make_pair(pushdata, COutPoint(txid, n)));\n+        }\n+        ++n;\n+    }\n+}\n+\n+bool FetchMaturedCoinbase(const CBlockIndex* pindex, CTransaction& tx, int nMaturityPeriod)\n+{\n+    // Rewind to the block whose coinbase outputs are first spendable\n+    // in this block.\n+    const CBlockIndex* pindexMature = pindex;\n+    for (int i = 0; pindexMature && i < nMaturityPeriod; ++i)\n+        pindexMature = pindexMature->pprev;\n+\n+    // For the initial blocks it is not possible to rewind\n+    // COINBASE_MATURITY blocks back. This is indicated by clearing\n+    // the transaction of inputs and outputs, which causes tx.IsNull()\n+    // to return true.\n+    if (!pindexMature)\n+        tx = CTransaction();\n+\n+    else {\n+        // Fetch the block containing the coinbase which just matured\n+        CBlock blockMature;\n+        if (!ReadBlockFromDisk(blockMature, pindexMature)) {\n+            LogPrintf(\"FetchMaturedCoinbase() : maturing coinbase block not found: %s\", pindexMature->GetBlockHash().ToString());\n+            return false;\n+        }\n+\n+        tx = blockMature.vtx[0];\n+    }\n+\n+    return true;\n+}\n+\n+void FilterRequiredCommitments(const CTransaction& txMature, set<vector<unsigned char> >& setRequiredCommitments, map<vector<unsigned char>, COutPoint>& mapCommitmentOutPoints)\n+{\n+    // Special case for the initial blocks, for which it is\n+    // not possible to rewind COINBASE_MATURITY blocks\n+    // back. By consequence, neither is it possible to spend a\n+    // maturing coinbase output, nor is there a requirement to\n+    // do so, so we clear the list of required commitments.\n+    if (txMature.IsNull())\n+        setRequiredCommitments.clear();\n+\n+    else {\n+        ExtractCommitmentOutPoints(txMature, mapCommitmentOutPoints);\n+\n+        // If there does not exist an appropriate commitment\n+        // output from the prior coinbase, then remove from the\n+        // list of required outputs since the spend-prior-coinbase\n+        // construction is obviously not possible.\n+        set<vector<unsigned char> >::iterator itr, nxt;\n+        for (itr  = setRequiredCommitments.begin();\n+             itr != setRequiredCommitments.end();\n+             itr  = nxt)\n+        {\n+            nxt = next(itr);\n+            if (!mapCommitmentOutPoints.count(*itr))\n+                setRequiredCommitments.erase(itr);\n+        }\n+    }\n+}\n+\n bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state, CBlockIndex** ppindex)\n {\n     AssertLockHeld(cs_main);\n@@ -2382,12 +2458,15 @@ bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state, CBloc\n         if (pcheckpoint && nHeight < pcheckpoint->nHeight)\n             return state.DoS(100, error(\"%s : forked chain older than last checkpoint (height %d)\", __func__, nHeight));\n \n-        // Reject block.nVersion=1 blocks when 95% (75% on testnet) of the network has upgraded:\n-        if (block.nVersion < 2 && \n-            CBlockIndex::IsSuperMajority(2, pindexPrev, Params().RejectBlockOutdatedMajority()))\n-        {\n-            return state.Invalid(error(\"%s : rejected nVersion=1 block\", __func__),\n-                                 REJECT_OBSOLETE, \"bad-version\");\n+        // Reject block.nVersion=N blocks when 95% (75% on testnet) of\n+        // the network has upgraded:\n+        for (int i = 2; i <= 3; ++i) {\n+            if (block.nVersion < i &&\n+                CBlockIndex::IsSuperMajority(i, pindexPrev, Params().RejectBlockOutdatedMajority()))\n+            {\n+                return state.Invalid(error(\"%s : rejected nVersion=%d block\", __func__, i),\n+                                     REJECT_OBSOLETE, \"bad-version\");\n+            }\n         }\n     }\n \n@@ -2424,14 +2503,76 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CBlockIndex** ppindex,\n \n     int nHeight = pindex->nHeight;\n \n-    // Check that all transactions are finalized\n+    // Determine if commitment enforcement is required, and prepare\n+    // the list of required commitments\n+    set<vector<unsigned char> > setRequiredCommitments;\n+    bool fEnforceUniqueCommitments = false;\n+    if (block.nVersion >= 3 &&\n+        CBlockIndex::IsSuperMajority(3, pindex->pprev, Params().EnforceBlockUpgradeMajority()))\n+    {\n+        fEnforceUniqueCommitments = true;\n+        setRequiredCommitments.insert(vector<unsigned char>());\n+    }\n+\n+    if (fEnforceUniqueCommitments)\n+    {\n+        // Check that coinbase outputs are present for each required\n+        // commitment.\n+        map<vector<unsigned char>, COutPoint> mapCommitmentOutPoints;\n+        ExtractCommitmentOutPoints(block.vtx[0], mapCommitmentOutPoints);\n+        BOOST_FOREACH(const vector<unsigned char>& pushdata, setRequiredCommitments)\n+        {\n+            if (!mapCommitmentOutPoints.count(pushdata))\n+                return state.DoS(10, error(\"AcceptBlock() : missing required coinbase output for data commitment \\\"%s\\\"\",\n+                                           HexStr(pushdata)),\n+                                 REJECT_INVALID, \"missing-coinbase-output-for-commitment\");\n+        }\n+        mapCommitmentOutPoints.clear(); // for reuse\n+\n+        CTransaction txMature;\n+        if (!FetchMaturedCoinbase(pindex, txMature))\n+            return state.Abort(\"AcceptBlock() : maturing coinbase block not found\");\n+\n+        FilterRequiredCommitments(txMature, setRequiredCommitments, mapCommitmentOutPoints);\n+    }\n+\n+    // Check that all transactions are finalized, and that commitments\n+    // are not duplicated.\n+    map<vector<unsigned char>, const CTransaction&> mapCommitments;\n     BOOST_FOREACH(const CTransaction& tx, block.vtx)\n+    {\n         if (!IsFinalTx(tx, nHeight, block.GetBlockTime())) {\n             pindex->nStatus |= BLOCK_FAILED_VALID;\n             return state.DoS(10, error(\"AcceptBlock() : contains a non-final transaction\"),\n                              REJECT_INVALID, \"bad-txns-nonfinal\");\n         }\n \n+        if (fEnforceUniqueCommitments && !tx.IsCoinBase() && tx.vin.size()==1)\n+        {\n+            const CScript& script = tx.vin[0].scriptSig;\n+            CScript::const_iterator pc = script.begin();\n+            opcodetype opcode; vector<unsigned char> pushdata;\n+            if (script.GetOp2(pc, opcode, &pushdata) && 0 <= opcode && opcode <= OP_PUSHDATA4 && pc==script.end())\n+            {\n+                std::pair<map<vector<unsigned char>, const CTransaction&>::iterator, bool> res =\n+                    mapCommitments.insert(make_pair(pushdata, tx));\n+                if (!res.second)\n+                    return state.DoS(10, error(\"AcceptBlock() : multiple commitments to the push string \\\"%s\\\": %s, %s\",\n+                                                HexStr(pushdata),\n+                                                res.first->second.GetHash().ToString(),\n+                                                tx.GetHash().ToString()),\n+                                     REJECT_INVALID, \"repeat-data-commitment\");\n+            }\n+        }\n+    }\n+\n+    // Check that the necessary coinbase commitments are present\n+    BOOST_FOREACH(const vector<unsigned char>& pushdata, setRequiredCommitments)\n+        if (!mapCommitments.count(pushdata))\n+            return state.DoS(10, error(\"AcceptBlock() : missing commitment to the push string \\\"%s\\\"\",\n+                                       HexStr(pushdata)),\n+                             REJECT_INVALID, \"missing-commitment\");\n+\n     // Enforce block.nVersion=2 rule that the coinbase starts with serialized block height\n     // if 750 of the last 1,000 blocks are version 2 or greater (51/100 if testnet):\n     if (block.nVersion >= 2 && "
+      },
+      {
+        "sha": "98521b6baadf354f29fb707c015a834d4fe00ac7",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 0,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/aa40730b142d3f9566845cd516ed0ce7dcca16f8/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/aa40730b142d3f9566845cd516ed0ce7dcca16f8/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=aa40730b142d3f9566845cd516ed0ce7dcca16f8",
+        "patch": "@@ -468,6 +468,17 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW = t\n bool AcceptBlock(CBlock& block, CValidationState& state, CBlockIndex **pindex, CDiskBlockPos* dbp = NULL);\n bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state, CBlockIndex **ppindex= NULL);\n \n+// Identify outputs of the passed in transaction which meet the\n+// commitment protocol, and fill an STL map identifying the OutPoints\n+// for a given commitment type.\n+void ExtractCommitmentOutPoints(const CTransaction& tx, std::map<std::vector<unsigned char>, COutPoint>& mapCommitmentOutPoints);\n+// Fetch the coinbase of a block nMaturityPeriod blocks back.\n+bool FetchMaturedCoinbase(const CBlockIndex* pindex, CTransaction& tx, int nMaturityPeriod = COINBASE_MATURITY);\n+// Prune a list of commitment types based on the the availability of\n+// spendable outputs in the transaction passed in (typically the\n+// transaction returned by FetchMaturedCoinbase).\n+void FilterRequiredCommitments(const CTransaction& tx, std::set<std::vector<unsigned char> >& setRequiredCommitments, std::map<std::vector<unsigned char>, COutPoint>& mapCommitmentOutPoints);\n+\n \n \n class CBlockFileInfo"
+      },
+      {
+        "sha": "2e6fb78ca8567b782b6ba48a6d940f91be31a892",
+        "filename": "src/miner.cpp",
+        "status": "modified",
+        "additions": 31,
+        "deletions": 0,
+        "changes": 31,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/aa40730b142d3f9566845cd516ed0ce7dcca16f8/src/miner.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/aa40730b142d3f9566845cd516ed0ce7dcca16f8/src/miner.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/miner.cpp?ref=aa40730b142d3f9566845cd516ed0ce7dcca16f8",
+        "patch": "@@ -126,6 +126,37 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)\n         CBlockIndex* pindexPrev = chainActive.Tip();\n         CCoinsViewCache view(pcoinsTip);\n \n+        set<vector<unsigned char> > setRequiredCommitments;\n+        if (pblock->nVersion >= 3 &&\n+            CBlockIndex::IsSuperMajority(3, pindexPrev, Params().EnforceBlockUpgradeMajority()))\n+        {\n+            setRequiredCommitments.insert(vector<unsigned char>());\n+        }\n+\n+        // Insert coinbase commitment outputs\n+        txNew.vout.reserve(txNew.vout.size() + setRequiredCommitments.size());\n+        BOOST_FOREACH(const vector<unsigned char>& pushdata, setRequiredCommitments)\n+            txNew.vout.push_back(CTxOut(0, CScript() << pushdata << OP_EQUAL));\n+\n+        CTransaction txMature;\n+        map<vector<unsigned char>, COutPoint> mapCommitmentOutPoints;\n+        if (FetchMaturedCoinbase(pindexPrev, txMature, COINBASE_MATURITY-1))\n+            FilterRequiredCommitments(txMature, setRequiredCommitments, mapCommitmentOutPoints);\n+\n+        // Insert data commitment transaction\n+        if (mapCommitmentOutPoints.count(vector<unsigned char>()))\n+        {\n+            CMutableTransaction tx;\n+            tx.vin.resize(1);\n+            tx.vin[0].prevout = mapCommitmentOutPoints[vector<unsigned char>()];\n+            tx.vin[0].scriptSig = CScript() << vector<unsigned char>();\n+            tx.vout.resize(1);\n+            tx.vout[0].nValue = 0;\n+            tx.vout[0].scriptPubKey = CScript() << OP_RETURN;\n+            tx.nLockTime = pindexPrev->nHeight + 1;\n+            pblock->vtx.push_back(tx);\n+        }\n+\n         // Priority order to process transactions\n         list<COrphan> vOrphan; // list memory doesn't move\n         map<uint256, vector<COrphan*> > mapDependers;"
+      }
+    ]
+  },
+  {
+    "sha": "8b95e60f2b33dbb0bea96b0e4e76cd8329cd4d2f",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4Yjk1ZTYwZjJiMzNkYmIwYmVhOTZiMGU0ZTc2Y2Q4MzI5Y2Q0ZDJm",
+    "commit": {
+      "author": {
+        "name": "Mark Friedenbach",
+        "email": "mark@friedenbach.org",
+        "date": "2014-03-29T02:14:18Z"
+      },
+      "committer": {
+        "name": "Mark Friedenbach",
+        "email": "mark@blockstream.io",
+        "date": "2014-11-05T03:07:41Z"
+      },
+      "message": "Add 'budget' field to getblocktemplate which reports required coinbase outputs other than the miner payout.",
+      "tree": {
+        "sha": "335fbf8548ae5cf541e44f86470b5f90aef8981e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/335fbf8548ae5cf541e44f86470b5f90aef8981e"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/8b95e60f2b33dbb0bea96b0e4e76cd8329cd4d2f",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8b95e60f2b33dbb0bea96b0e4e76cd8329cd4d2f",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/8b95e60f2b33dbb0bea96b0e4e76cd8329cd4d2f",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8b95e60f2b33dbb0bea96b0e4e76cd8329cd4d2f/comments",
+    "author": {
+      "login": "maaku",
+      "id": 69154,
+      "node_id": "MDQ6VXNlcjY5MTU0",
+      "avatar_url": "https://avatars.githubusercontent.com/u/69154?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/maaku",
+      "html_url": "https://github.com/maaku",
+      "followers_url": "https://api.github.com/users/maaku/followers",
+      "following_url": "https://api.github.com/users/maaku/following{/other_user}",
+      "gists_url": "https://api.github.com/users/maaku/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/maaku/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/maaku/subscriptions",
+      "organizations_url": "https://api.github.com/users/maaku/orgs",
+      "repos_url": "https://api.github.com/users/maaku/repos",
+      "events_url": "https://api.github.com/users/maaku/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/maaku/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": null,
+    "parents": [
+      {
+        "sha": "aa40730b142d3f9566845cd516ed0ce7dcca16f8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/aa40730b142d3f9566845cd516ed0ce7dcca16f8",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/aa40730b142d3f9566845cd516ed0ce7dcca16f8"
+      }
+    ],
+    "stats": {
+      "total": 13,
+      "additions": 13,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "633fc17b8cfaac5445684b40ccf77e373f04b34d",
+        "filename": "src/rpcmining.cpp",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 0,
+        "changes": 13,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8b95e60f2b33dbb0bea96b0e4e76cd8329cd4d2f/src/rpcmining.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8b95e60f2b33dbb0bea96b0e4e76cd8329cd4d2f/src/rpcmining.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcmining.cpp?ref=8b95e60f2b33dbb0bea96b0e4e76cd8329cd4d2f",
+        "patch": "@@ -28,6 +28,8 @@\n using namespace json_spirit;\n using namespace std;\n \n+extern void ScriptPubKeyToJSON(const CScript& scriptPubKey, Object& out, bool fIncludeHex);\n+\n // Return average network hashes per second based on the last 'lookup' blocks,\n // or from the last difficulty change if 'lookup' is nonpositive.\n // If 'height' is nonnegative, compute the estimate at the time when a given block was found.\n@@ -326,6 +328,7 @@ Value getblocktemplate(const Array& params, bool fHelp)\n             \"  },\\n\"\n             \"  \\\"coinbasevalue\\\" : n,               (numeric) maximum allowable input to coinbase transaction, including the generation award and transaction fees (in Satoshis)\\n\"\n             \"  \\\"coinbasetxn\\\" : { ... },           (json object) information for coinbase transaction\\n\"\n+            \"  \\\"budget\\\" : { ... }                 (json object) required outputs of the coinbase transaction\\n\"\n             \"  \\\"target\\\" : \\\"xxxx\\\",               (string) The hash target\\n\"\n             \"  \\\"mintime\\\" : xxx,                   (numeric) The minimum timestamp appropriate for next block time in seconds since epoch (Jan 1 1970 GMT)\\n\"\n             \"  \\\"mutable\\\" : [                      (array of string) list of ways the block template may be changed \\n\"\n@@ -513,6 +516,16 @@ Value getblocktemplate(const Array& params, bool fHelp)\n     result.push_back(Pair(\"transactions\", transactions));\n     result.push_back(Pair(\"coinbaseaux\", aux));\n     result.push_back(Pair(\"coinbasevalue\", (int64_t)pblock->vtx[0].vout[0].nValue));\n+    Array aBudget;\n+    BOOST_FOREACH(const CTxOut& txout, pblock->vtx[0].vout)\n+    {\n+        Object entry, script;\n+        ScriptPubKeyToJSON(txout.scriptPubKey, script, true);\n+        entry.push_back(Pair(\"scriptPubKey\", script));\n+        entry.push_back(Pair(\"value\", (int64_t)txout.nValue));\n+        aBudget.push_back(entry);\n+    }\n+    result.push_back(Pair(\"budget\", aBudget));\n     result.push_back(Pair(\"longpollid\", chainActive.Tip()->GetBlockHash().GetHex() + i64tostr(nTransactionsUpdatedLast)));\n     result.push_back(Pair(\"target\", hashTarget.GetHex()));\n     result.push_back(Pair(\"mintime\", (int64_t)pindexPrev->GetMedianTimePast()+1));"
+      }
+    ]
+  },
+  {
+    "sha": "4abd9f8b09e706a170443aa3a38fb523ada33ed8",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0YWJkOWY4YjA5ZTcwNmExNzA0NDNhYTNhMzhmYjUyM2FkYTMzZWQ4",
+    "commit": {
+      "author": {
+        "name": "Mark Friedenbach",
+        "email": "mark@friedenbach.org",
+        "date": "2014-03-28T02:11:35Z"
+      },
+      "committer": {
+        "name": "Mark Friedenbach",
+        "email": "mark@blockstream.io",
+        "date": "2014-11-05T03:09:44Z"
+      },
+      "message": "Update CBlock::CURRENT_VERSION to 3, a vote for coinbase commitments.",
+      "tree": {
+        "sha": "d3f01a0dbaf1fcf301a63cef0bd31c982b935676",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/d3f01a0dbaf1fcf301a63cef0bd31c982b935676"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/4abd9f8b09e706a170443aa3a38fb523ada33ed8",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4abd9f8b09e706a170443aa3a38fb523ada33ed8",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/4abd9f8b09e706a170443aa3a38fb523ada33ed8",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4abd9f8b09e706a170443aa3a38fb523ada33ed8/comments",
+    "author": {
+      "login": "maaku",
+      "id": 69154,
+      "node_id": "MDQ6VXNlcjY5MTU0",
+      "avatar_url": "https://avatars.githubusercontent.com/u/69154?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/maaku",
+      "html_url": "https://github.com/maaku",
+      "followers_url": "https://api.github.com/users/maaku/followers",
+      "following_url": "https://api.github.com/users/maaku/following{/other_user}",
+      "gists_url": "https://api.github.com/users/maaku/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/maaku/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/maaku/subscriptions",
+      "organizations_url": "https://api.github.com/users/maaku/orgs",
+      "repos_url": "https://api.github.com/users/maaku/repos",
+      "events_url": "https://api.github.com/users/maaku/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/maaku/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": null,
+    "parents": [
+      {
+        "sha": "8b95e60f2b33dbb0bea96b0e4e76cd8329cd4d2f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8b95e60f2b33dbb0bea96b0e4e76cd8329cd4d2f",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/8b95e60f2b33dbb0bea96b0e4e76cd8329cd4d2f"
+      }
+    ],
+    "stats": {
+      "total": 2,
+      "additions": 1,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "5863995def418b0f1b5d2dda52e21158b4329c75",
+        "filename": "src/core/block.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4abd9f8b09e706a170443aa3a38fb523ada33ed8/src/core/block.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4abd9f8b09e706a170443aa3a38fb523ada33ed8/src/core/block.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/core/block.h?ref=4abd9f8b09e706a170443aa3a38fb523ada33ed8",
+        "patch": "@@ -21,7 +21,7 @@ class CBlockHeader\n {\n public:\n     // header\n-    static const int32_t CURRENT_VERSION=2;\n+    static const int32_t CURRENT_VERSION=3;\n     int32_t nVersion;\n     uint256 hashPrevBlock;\n     uint256 hashMerkleRoot;"
+      }
+    ]
+  }
+]

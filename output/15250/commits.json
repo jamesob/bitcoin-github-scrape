@@ -1,0 +1,112 @@
+[
+  {
+    "sha": "1435fabc19d2143187efb493cbe23225eaf851ae",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxNDM1ZmFiYzE5ZDIxNDMxODdlZmI0OTNjYmUyMzIyNWVhZjg1MWFl",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2019-01-25T02:40:02Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2019-02-04T01:34:26Z"
+      },
+      "message": "Use RdSeed when available, and reduce RdRand load\n\nThis introduces support for autodetecting and using the RdSeed instruction.\n\nIn addition:\n* In SeedFast, only 64 bits of entropy are generated through RdRand (256 was relatively slow).\n* In SeedStartup, 256 bits of entropy are generated, using RdSeed (preferably) or RdRand (otherwise).",
+      "tree": {
+        "sha": "618b087accfdca7c0d5e9f7a3eeda51ce5c8b1f9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/618b087accfdca7c0d5e9f7a3eeda51ce5c8b1f9"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/1435fabc19d2143187efb493cbe23225eaf851ae",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1435fabc19d2143187efb493cbe23225eaf851ae",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/1435fabc19d2143187efb493cbe23225eaf851ae",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1435fabc19d2143187efb493cbe23225eaf851ae/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "72bd4ab867e3be0d8410403d9641c08288d343e3",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/72bd4ab867e3be0d8410403d9641c08288d343e3",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/72bd4ab867e3be0d8410403d9641c08288d343e3"
+      }
+    ],
+    "stats": {
+      "total": 175,
+      "additions": 136,
+      "deletions": 39
+    },
+    "files": [
+      {
+        "sha": "2b77d5b685a78150818bde9903d3e14ea3071f7f",
+        "filename": "src/random.cpp",
+        "status": "modified",
+        "additions": 134,
+        "deletions": 38,
+        "changes": 172,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1435fabc19d2143187efb493cbe23225eaf851ae/src/random.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1435fabc19d2143187efb493cbe23225eaf851ae/src/random.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/random.cpp?ref=1435fabc19d2143187efb493cbe23225eaf851ae",
+        "patch": "@@ -78,25 +78,119 @@ static inline int64_t GetPerformanceCounter() noexcept\n }\n \n #if defined(__x86_64__) || defined(__amd64__) || defined(__i386__)\n-static bool rdrand_supported = false;\n+static bool g_rdrand_supported = false;\n+static bool g_rdseed_supported = false;\n static constexpr uint32_t CPUID_F1_ECX_RDRAND = 0x40000000;\n+static constexpr uint32_t CPUID_F7_EBX_RDSEED = 0x00040000;\n+#ifdef bit_RDRND\n+static_assert(CPUID_F1_ECX_RDRAND == bit_RDRND, \"Unexpected value for bit_RDRND\");\n+#endif\n+#ifdef bit_RDSEED\n+static_assert(CPUID_F7_EBX_RDSEED == bit_RDSEED, \"Unexpected value for bit_RDSEED\");\n+#endif\n+static void inline GetCPUID(uint32_t leaf, uint32_t subleaf, uint32_t& a, uint32_t& b, uint32_t& c, uint32_t& d)\n+{\n+    // We can't use __get_cpuid as it doesn't support subleafs.\n+#ifdef __GNUC__\n+    __cpuid_count(leaf, subleaf, a, b, c, d);\n+#else\n+    __asm__ (\"cpuid\" : \"=a\"(a), \"=b\"(b), \"=c\"(c), \"=d\"(d) : \"0\"(leaf), \"2\"(subleaf));\n+#endif\n+}\n+\n static void InitHardwareRand()\n {\n     uint32_t eax, ebx, ecx, edx;\n-    if (__get_cpuid(1, &eax, &ebx, &ecx, &edx) && (ecx & CPUID_F1_ECX_RDRAND)) {\n-        rdrand_supported = true;\n+    GetCPUID(1, 0, eax, ebx, ecx, edx);\n+    if (ecx & CPUID_F1_ECX_RDRAND) {\n+        g_rdrand_supported = true;\n+    }\n+    GetCPUID(7, 0, eax, ebx, ecx, edx);\n+    if (ebx & CPUID_F7_EBX_RDSEED) {\n+        g_rdseed_supported = true;\n     }\n }\n \n static void ReportHardwareRand()\n {\n-    if (rdrand_supported) {\n-        // This must be done in a separate function, as HWRandInit() may be indirectly called\n-        // from global constructors, before logging is initialized.\n+    // This must be done in a separate function, as HWRandInit() may be indirectly called\n+    // from global constructors, before logging is initialized.\n+    if (g_rdseed_supported) {\n+        LogPrintf(\"Using RdSeed as additional entropy source\\n\");\n+    }\n+    if (g_rdrand_supported) {\n         LogPrintf(\"Using RdRand as an additional entropy source\\n\");\n     }\n }\n \n+/** Read 64 bits of entropy using rdrand.\n+ *\n+ * Must only be called when RdRand is supported.\n+ */\n+static uint64_t GetRdRand() noexcept\n+{\n+    // RdRand may very rarely fail. Invoke it up to 10 times in a loop to reduce this risk.\n+#ifdef __i386__\n+    uint8_t ok;\n+    uint32_t r1, r2;\n+    for (int i = 0; i < 10; ++i) {\n+        __asm__ volatile (\".byte 0x0f, 0xc7, 0xf0; setc %1\" : \"=a\"(r1), \"=q\"(ok) :: \"cc\"); // rdrand %eax\n+        if (ok) break;\n+    }\n+    for (int i = 0; i < 10; ++i) {\n+        __asm__ volatile (\".byte 0x0f, 0xc7, 0xf0; setc %1\" : \"=a\"(r2), \"=q\"(ok) :: \"cc\"); // rdrand %eax\n+        if (ok) break;\n+    }\n+    return (((uint64_t)r2) << 32) | r1;\n+#elif defined(__x86_64__) || defined(__amd64__)\n+    uint8_t ok;\n+    uint64_t r1;\n+    for (int i = 0; i < 10; ++i) {\n+        __asm__ volatile (\".byte 0x48, 0x0f, 0xc7, 0xf0; setc %1\" : \"=a\"(r1), \"=q\"(ok) :: \"cc\"); // rdrand %rax\n+        if (ok) break;\n+    }\n+    return r1;\n+#else\n+#error \"RdRand is only supported on x86 and x86_64\"\n+#endif\n+}\n+\n+/** Read 64 bits of entropy using rdseed.\n+ *\n+ * Must only be called when RdSeed is supported.\n+ */\n+static uint64_t GetRdSeed() noexcept\n+{\n+    // RdSeed may fail when the HW RNG is overloaded. Loop indefinitely until enough entropy is gathered,\n+    // but pause after every failure.\n+#ifdef __i386__\n+    uint8_t ok;\n+    uint32_t r1, r2;\n+    do {\n+        __asm__ volatile (\".byte 0x0f, 0xc7, 0xf8; setc %1\" : \"=a\"(r1), \"=q\"(ok) :: \"cc\"); // rdseed %eax\n+        if (ok) break;\n+        __asm__ volatile (\"pause\");\n+    } while(true);\n+    do {\n+        __asm__ volatile (\".byte 0x0f, 0xc7, 0xf8; setc %1\" : \"=a\"(r2), \"=q\"(ok) :: \"cc\"); // rdseed %eax\n+        if (ok) break;\n+        __asm__ volatile (\"pause\");\n+    } while(true);\n+    return (((uint64_t)r2) << 32) | r1;\n+#elif defined(__x86_64__) || defined(__amd64__)\n+    uint8_t ok;\n+    uint64_t r1;\n+    do {\n+        __asm__ volatile (\".byte 0x48, 0x0f, 0xc7, 0xf8; setc %1\" : \"=a\"(r1), \"=q\"(ok) :: \"cc\"); // rdseed %rax\n+        if (ok) break;\n+        __asm__ volatile (\"pause\");\n+    } while(true);\n+    return r1;\n+#else\n+#error \"RdSeed is only supported on x86 and x86_64\"\n+#endif\n+}\n+\n #else\n /* Access to other hardware random number generators could be added here later,\n  * assuming it is sufficiently fast (in the order of a few hundred CPU cycles).\n@@ -107,40 +201,40 @@ static void InitHardwareRand() {}\n static void ReportHardwareRand() {}\n #endif\n \n-static bool GetHardwareRand(unsigned char* ent32) noexcept {\n+/** Add 64 bits of entropy gathered from hardware to hasher. Do nothing if not supported. */\n+static void SeedHardwareFast(CSHA512& hasher) noexcept {\n #if defined(__x86_64__) || defined(__amd64__) || defined(__i386__)\n-    if (rdrand_supported) {\n-        uint8_t ok;\n-        // Not all assemblers support the rdrand instruction, write it in hex.\n-#ifdef __i386__\n-        for (int iter = 0; iter < 4; ++iter) {\n-            uint32_t r1, r2;\n-            __asm__ volatile (\".byte 0x0f, 0xc7, 0xf0;\" // rdrand %eax\n-                              \".byte 0x0f, 0xc7, 0xf2;\" // rdrand %edx\n-                              \"setc %2\" :\n-                              \"=a\"(r1), \"=d\"(r2), \"=q\"(ok) :: \"cc\");\n-            if (!ok) return false;\n-            WriteLE32(ent32 + 8 * iter, r1);\n-            WriteLE32(ent32 + 8 * iter + 4, r2);\n-        }\n-#else\n-        uint64_t r1, r2, r3, r4;\n-        __asm__ volatile (\".byte 0x48, 0x0f, 0xc7, 0xf0, \" // rdrand %rax\n-                                \"0x48, 0x0f, 0xc7, 0xf3, \" // rdrand %rbx\n-                                \"0x48, 0x0f, 0xc7, 0xf1, \" // rdrand %rcx\n-                                \"0x48, 0x0f, 0xc7, 0xf2; \" // rdrand %rdx\n-                          \"setc %4\" :\n-                          \"=a\"(r1), \"=b\"(r2), \"=c\"(r3), \"=d\"(r4), \"=q\"(ok) :: \"cc\");\n-        if (!ok) return false;\n-        WriteLE64(ent32, r1);\n-        WriteLE64(ent32 + 8, r2);\n-        WriteLE64(ent32 + 16, r3);\n-        WriteLE64(ent32 + 24, r4);\n+    if (g_rdrand_supported) {\n+        uint64_t out = GetRdRand();\n+        hasher.Write((const unsigned char*)&out, sizeof(out));\n+        return;\n+    }\n #endif\n-        return true;\n+}\n+\n+/** Add 256 bits of entropy gathered from hardware to hasher. Do nothing if not supported. */\n+static void SeedHardwareSlow(CSHA512& hasher) noexcept {\n+#if defined(__x86_64__) || defined(__amd64__) || defined(__i386__)\n+    // When we want 256 bits of entropy, prefer RdSeed over RdRand, as it's\n+    // guaranteed to produce independent randomness on every call.\n+    if (g_rdseed_supported) {\n+        for (int i = 0; i < 4; ++i) {\n+            uint64_t out = GetRdSeed();\n+            hasher.Write((const unsigned char*)&out, sizeof(out));\n+        }\n+        return;\n+    }\n+    // When falling back to RdRand, XOR the result of 1024 results.\n+    // This guarantees a reseeding occurs between each.\n+    if (g_rdrand_supported) {\n+        for (int i = 0; i < 4; ++i) {\n+            uint64_t out = 0;\n+            for (int j = 0; j < 1024; ++j) out ^= GetRdRand();\n+            hasher.Write((const unsigned char*)&out, sizeof(out));\n+        }\n+        return;\n     }\n #endif\n-    return false;\n }\n \n static void RandAddSeedPerfmon(CSHA512& hasher)\n@@ -407,8 +501,7 @@ static void SeedFast(CSHA512& hasher) noexcept\n     hasher.Write((const unsigned char*)&ptr, sizeof(ptr));\n \n     // Hardware randomness is very fast when available; use it always.\n-    bool have_hw_rand = GetHardwareRand(buffer);\n-    if (have_hw_rand) hasher.Write(buffer, sizeof(buffer));\n+    SeedHardwareFast(hasher);\n \n     // High-precision timestamp\n     SeedTimestamp(hasher);\n@@ -460,6 +553,9 @@ static void SeedStartup(CSHA512& hasher) noexcept\n     RAND_screen();\n #endif\n \n+    // Gather 256 bits of hardware randomness, if available\n+    SeedHardwareSlow(hasher);\n+\n     // Everything that the 'slow' seeder includes.\n     SeedSlow(hasher);\n "
+      },
+      {
+        "sha": "1c035f87bae1468b1fe7a757f65fdd81f7be254e",
+        "filename": "src/random.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 1,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1435fabc19d2143187efb493cbe23225eaf851ae/src/random.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1435fabc19d2143187efb493cbe23225eaf851ae/src/random.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/random.h?ref=1435fabc19d2143187efb493cbe23225eaf851ae",
+        "patch": "@@ -24,7 +24,7 @@\n  *   perform 'fast' seeding, consisting of mixing in:\n  *   - A stack pointer (indirectly committing to calling thread and call stack)\n  *   - A high-precision timestamp (rdtsc when available, c++ high_resolution_clock otherwise)\n- *   - Hardware RNG (rdrand) when available.\n+ *   - 64 bits from the hardware RNG (rdrand) when available.\n  *   These entropy sources are very fast, and only designed to protect against situations\n  *   where a VM state restore/copy results in multiple systems with the same randomness.\n  *   FastRandomContext on the other hand does not protect against this once created, but\n@@ -48,6 +48,7 @@\n  *\n  * On first use of the RNG (regardless of what function is called first), all entropy\n  * sources used in the 'slow' seeder are included, but also:\n+ * - 256 bits from the hardware RNG (rdseed or rdrand) when available.\n  * - (On Windows) Performance monitoring data from the OS.\n  * - (On Windows) Through OpenSSL, the screen contents.\n  *"
+      }
+    ]
+  }
+]

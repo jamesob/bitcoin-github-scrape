@@ -1,0 +1,74 @@
+[
+  {
+    "sha": "bd70562f660552973dcf99e00c7897ae884661da",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiZDcwNTYyZjY2MDU1Mjk3M2RjZjk5ZTAwYzc4OTdhZTg4NDY2MWRh",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-12-09T09:48:14Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-12-10T10:04:37Z"
+      },
+      "message": "[Qt] add messages when handling local payment request files\n\n- important for the open URI dialog to give users feedback\n  when a file is invalid etc.",
+      "tree": {
+        "sha": "1ba3b7c073cf8c7fc2eaf06994bb10f6ff3accdf",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/1ba3b7c073cf8c7fc2eaf06994bb10f6ff3accdf"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/bd70562f660552973dcf99e00c7897ae884661da",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/bd70562f660552973dcf99e00c7897ae884661da",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/bd70562f660552973dcf99e00c7897ae884661da",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/bd70562f660552973dcf99e00c7897ae884661da/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "fb96e28b29487f4fdff81b8852d03da5e3110345",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fb96e28b29487f4fdff81b8852d03da5e3110345",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/fb96e28b29487f4fdff81b8852d03da5e3110345"
+      }
+    ],
+    "stats": {
+      "total": 54,
+      "additions": 37,
+      "deletions": 17
+    },
+    "files": [
+      {
+        "sha": "120831fc90c31cc69ed845d41efafe32aff25e0e",
+        "filename": "src/qt/paymentserver.cpp",
+        "status": "modified",
+        "additions": 36,
+        "deletions": 16,
+        "changes": 52,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/bd70562f660552973dcf99e00c7897ae884661da/src/qt/paymentserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/bd70562f660552973dcf99e00c7897ae884661da/src/qt/paymentserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.cpp?ref=bd70562f660552973dcf99e00c7897ae884661da",
+        "patch": "@@ -373,40 +373,52 @@ void PaymentServer::handleURIOrFile(const QString& s)\n #else\n         QUrlQuery uri((QUrl(s)));\n #endif\n-        if (uri.hasQueryItem(\"r\"))\n+        if (uri.hasQueryItem(\"r\")) // payment request URI\n         {\n             QByteArray temp;\n             temp.append(uri.queryItemValue(\"r\"));\n             QString decoded = QUrl::fromPercentEncoding(temp);\n             QUrl fetchUrl(decoded, QUrl::StrictMode);\n \n-            qDebug() << \"PaymentServer::handleURIOrFile : fetchRequest(\" << fetchUrl << \")\";\n-\n             if (fetchUrl.isValid())\n+            {\n+                qDebug() << \"PaymentServer::handleURIOrFile : fetchRequest(\" << fetchUrl << \")\";\n                 fetchRequest(fetchUrl);\n+            }\n             else\n+            {\n                 qDebug() << \"PaymentServer::handleURIOrFile : Invalid URL: \" << fetchUrl;\n+                emit message(tr(\"URI handling\"),\n+                    tr(\"Payment request fetch URL is invalid: %1\").arg(fetchUrl.toString()),\n+                    CClientUIInterface::ICON_WARNING);\n+            }\n \n             return;\n         }\n+        else // normal URI\n+        {\n+            SendCoinsRecipient recipient;\n+            if (GUIUtil::parseBitcoinURI(s, &recipient))\n+                emit receivedPaymentRequest(recipient);\n+            else\n+                emit message(tr(\"URI handling\"),\n+                    tr(\"URI can not be parsed! This can be caused by an invalid Bitcoin address or malformed URI parameters.\"),\n+                    CClientUIInterface::ICON_WARNING);\n \n-        SendCoinsRecipient recipient;\n-        if (GUIUtil::parseBitcoinURI(s, &recipient))\n-            emit receivedPaymentRequest(recipient);\n-        else\n-            emit message(tr(\"URI handling\"),\n-                tr(\"URI can not be parsed! This can be caused by an invalid Bitcoin address or malformed URI parameters.\"),\n-                CClientUIInterface::ICON_WARNING);\n-\n-        return;\n+            return;\n+        }\n     }\n \n-    if (QFile::exists(s))\n+    if (QFile::exists(s)) // payment request file\n     {\n         PaymentRequestPlus request;\n         SendCoinsRecipient recipient;\n         if (readPaymentRequest(s, request) && processPaymentRequest(request, recipient))\n             emit receivedPaymentRequest(recipient);\n+        else\n+            emit message(tr(\"Payment request file handling\"),\n+                tr(\"Payment request file can not be read or processed! This can be caused by an invalid payment request file.\"),\n+                CClientUIInterface::ICON_WARNING);\n \n         return;\n     }\n@@ -584,7 +596,7 @@ void PaymentServer::netRequestFinished(QNetworkReply* reply)\n             .arg(reply->errorString());\n \n         qDebug() << \"PaymentServer::netRequestFinished : \" << msg;\n-        emit message(tr(\"Network request error\"), msg, CClientUIInterface::MSG_ERROR);\n+        emit message(tr(\"Payment request error\"), msg, CClientUIInterface::MSG_ERROR);\n         return;\n     }\n \n@@ -596,9 +608,16 @@ void PaymentServer::netRequestFinished(QNetworkReply* reply)\n         PaymentRequestPlus request;\n         SendCoinsRecipient recipient;\n         if (request.parse(data) && processPaymentRequest(request, recipient))\n+        {\n             emit receivedPaymentRequest(recipient);\n+        }\n         else\n+        {\n             qDebug() << \"PaymentServer::netRequestFinished : Error processing payment request\";\n+            emit message(tr(\"Payment request error\"),\n+                tr(\"Payment request can not be parsed or processed!\"),\n+                CClientUIInterface::MSG_ERROR);\n+        }\n \n         return;\n     }\n@@ -611,9 +630,10 @@ void PaymentServer::netRequestFinished(QNetworkReply* reply)\n                 .arg(reply->request().url().toString());\n \n             qDebug() << \"PaymentServer::netRequestFinished : \" << msg;\n-            emit message(tr(\"Network request error\"), msg, CClientUIInterface::MSG_ERROR);\n+            emit message(tr(\"Payment request error\"), msg, CClientUIInterface::MSG_ERROR);\n         }\n-        else {\n+        else\n+        {\n             emit receivedPaymentACK(GUIUtil::HtmlEscape(paymentACK.memo()));\n         }\n     }"
+      },
+      {
+        "sha": "da9923f9f1d90804d788619b1a23e684ecffb1e8",
+        "filename": "src/qt/paymentserver.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/bd70562f660552973dcf99e00c7897ae884661da/src/qt/paymentserver.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/bd70562f660552973dcf99e00c7897ae884661da/src/qt/paymentserver.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.h?ref=bd70562f660552973dcf99e00c7897ae884661da",
+        "patch": "@@ -98,7 +98,7 @@ public slots:\n     // Submit Payment message to a merchant, get back PaymentACK:\n     void fetchPaymentACK(CWallet* wallet, SendCoinsRecipient recipient, QByteArray transaction);\n \n-    // Handle an incoming URI or file\n+    // Handle an incoming URI, URI with local file scheme or file\n     void handleURIOrFile(const QString& s);\n \n private slots:"
+      }
+    ]
+  }
+]

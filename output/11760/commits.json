@@ -1,0 +1,146 @@
+[
+  {
+    "sha": "4ea5d6a7612af7360d86a1bbaf69fd17a48eebe4",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0ZWE1ZDZhNzYxMmFmNzM2MGQ4NmExYmJhZjY5ZmQxN2E0OGVlYmU0",
+    "commit": {
+      "author": {
+        "name": "Lenny Maiorani",
+        "email": "ldm5180@gmail.com",
+        "date": "2017-11-23T19:52:09Z"
+      },
+      "committer": {
+        "name": "Lenny Maiorani",
+        "email": "ldm5180@gmail.com",
+        "date": "2017-11-23T20:02:38Z"
+      },
+      "message": "[crypto] Refactor HMAC_SHA to eliminate code duplication\n\nProblem:\n- HMAC_SHA256 and HMAC_SHA512 almost the same. Differences are:\n  - `OUTPUT_SIZE` of the hash\n  - magic number constants which can be derived from `OUTPUT_SIZE`\n- Code duplication is error prone and causes maintenance issues.\n\nSolution:\n- Eliminate magic numbers by making `OUTPUT_SIZE` a compile-time\n  constant and deriving the other constants from it.\n- Compile-time constants permit container type creation, type-based\n  bounds checking, and range-based iteration instead of run-time\n  branching.\n- Elimination of run-time eval and magic numbers allows templatization\n  to reduce code duplication.\n- Old type names and header files are preserved via `using`\n  declarations to limit the scope of the change.",
+      "tree": {
+        "sha": "3dd5a3f987de57591751fd86b0b5fa723dcf60b9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/3dd5a3f987de57591751fd86b0b5fa723dcf60b9"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/4ea5d6a7612af7360d86a1bbaf69fd17a48eebe4",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4ea5d6a7612af7360d86a1bbaf69fd17a48eebe4",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/4ea5d6a7612af7360d86a1bbaf69fd17a48eebe4",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4ea5d6a7612af7360d86a1bbaf69fd17a48eebe4/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "84fa64598e8b7d6901c546e938fb0eeda625a8e8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/84fa64598e8b7d6901c546e938fb0eeda625a8e8",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/84fa64598e8b7d6901c546e938fb0eeda625a8e8"
+      }
+    ],
+    "stats": {
+      "total": 182,
+      "additions": 66,
+      "deletions": 116
+    },
+    "files": [
+      {
+        "sha": "1778bb503e2230acd1d32cfcd97a94c6642b8335",
+        "filename": "src/Makefile.am",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 2,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4ea5d6a7612af7360d86a1bbaf69fd17a48eebe4/src/Makefile.am",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4ea5d6a7612af7360d86a1bbaf69fd17a48eebe4/src/Makefile.am",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/Makefile.am?ref=4ea5d6a7612af7360d86a1bbaf69fd17a48eebe4",
+        "patch": "@@ -262,9 +262,8 @@ crypto_libbitcoin_crypto_a_SOURCES = \\\n   crypto/chacha20.h \\\n   crypto/chacha20.cpp \\\n   crypto/common.h \\\n-  crypto/hmac_sha256.cpp \\\n+  crypto/hmac_sha.h \\\n   crypto/hmac_sha256.h \\\n-  crypto/hmac_sha512.cpp \\\n   crypto/hmac_sha512.h \\\n   crypto/ripemd160.cpp \\\n   crypto/ripemd160.h \\"
+      },
+      {
+        "sha": "4612b710f0eb688c6e37933073c04b79d67f89ae",
+        "filename": "src/crypto/hmac_sha.h",
+        "status": "added",
+        "additions": 59,
+        "deletions": 0,
+        "changes": 59,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4ea5d6a7612af7360d86a1bbaf69fd17a48eebe4/src/crypto/hmac_sha.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4ea5d6a7612af7360d86a1bbaf69fd17a48eebe4/src/crypto/hmac_sha.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/crypto/hmac_sha.h?ref=4ea5d6a7612af7360d86a1bbaf69fd17a48eebe4",
+        "patch": "@@ -0,0 +1,59 @@\n+// Copyright (c) 2014 The Bitcoin Core developers\n+// Distributed under the MIT software license, see the accompanying\n+// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+#ifndef BITCOIN_CRYPTO_HMAC_SHA_H\n+#define BITCOIN_CRYPTO_HMAC_SHA_H\n+\n+#include <crypto/sha256.h>\n+#include <crypto/sha512.h>\n+\n+#include <algorithm>\n+#include <array>\n+#include <cstdint>\n+#include <cstdlib>\n+#include <cstring>\n+\n+/** A generic hasher class for HMAC-SHA-*. */\n+template <typename CSHA>\n+class CHMAC_SHA\n+{\n+private:\n+    CSHA outer{};\n+    CSHA inner{};\n+\n+public:\n+    static constexpr const size_t OUTPUT_SIZE = CSHA::OUTPUT_SIZE;\n+\n+    CHMAC_SHA(const unsigned char* key, size_t keylen)\n+    {\n+        std::array<unsigned char, OUTPUT_SIZE * 2> rkey{};\n+        if (keylen <= rkey.size()) {\n+            std::memcpy(rkey.data(), key, keylen);\n+            std::fill(rkey.begin() + keylen, rkey.end(), 0);\n+        } else {\n+            CSHA{}.Write(key, keylen).Finalize(rkey.data());\n+            std::fill(rkey.begin() + OUTPUT_SIZE, rkey.end(), 0);\n+        }\n+\n+        std::transform(rkey.begin(), rkey.end(), rkey.begin(), [](const unsigned char c) { return c ^ 0x5c; });\n+        outer.Write(rkey.data(), rkey.size());\n+\n+        std::transform(rkey.begin(), rkey.end(), rkey.begin(), [](const unsigned char c) { return c ^ (0x5c ^ 0x36); });\n+        inner.Write(rkey.data(), rkey.size());\n+    }\n+\n+    CHMAC_SHA& Write(const unsigned char* data, size_t len)\n+    {\n+        inner.Write(data, len);\n+        return *this;\n+    }\n+    void Finalize(unsigned char hash[OUTPUT_SIZE])\n+    {\n+        std::array<unsigned char, OUTPUT_SIZE> temp{};\n+        inner.Finalize(temp.data());\n+        outer.Write(temp.data(), temp.size()).Finalize(hash);\n+    }\n+};\n+\n+#endif // BITCOIN_CRYPTO_HMAC_SHA_H"
+      },
+      {
+        "sha": "9366e216c2de729e43ed7c1b676c2d728a770d14",
+        "filename": "src/crypto/hmac_sha256.cpp",
+        "status": "removed",
+        "additions": 0,
+        "deletions": 34,
+        "changes": 34,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/84fa64598e8b7d6901c546e938fb0eeda625a8e8/src/crypto/hmac_sha256.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/84fa64598e8b7d6901c546e938fb0eeda625a8e8/src/crypto/hmac_sha256.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/crypto/hmac_sha256.cpp?ref=84fa64598e8b7d6901c546e938fb0eeda625a8e8",
+        "patch": "@@ -1,34 +0,0 @@\n-// Copyright (c) 2014 The Bitcoin Core developers\n-// Distributed under the MIT software license, see the accompanying\n-// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n-\n-#include <crypto/hmac_sha256.h>\n-\n-#include <string.h>\n-\n-CHMAC_SHA256::CHMAC_SHA256(const unsigned char* key, size_t keylen)\n-{\n-    unsigned char rkey[64];\n-    if (keylen <= 64) {\n-        memcpy(rkey, key, keylen);\n-        memset(rkey + keylen, 0, 64 - keylen);\n-    } else {\n-        CSHA256().Write(key, keylen).Finalize(rkey);\n-        memset(rkey + 32, 0, 32);\n-    }\n-\n-    for (int n = 0; n < 64; n++)\n-        rkey[n] ^= 0x5c;\n-    outer.Write(rkey, 64);\n-\n-    for (int n = 0; n < 64; n++)\n-        rkey[n] ^= 0x5c ^ 0x36;\n-    inner.Write(rkey, 64);\n-}\n-\n-void CHMAC_SHA256::Finalize(unsigned char hash[OUTPUT_SIZE])\n-{\n-    unsigned char temp[32];\n-    inner.Finalize(temp);\n-    outer.Write(temp, 32).Finalize(hash);\n-}"
+      },
+      {
+        "sha": "8d5dd03da3899c553482262ab9f7ed6b93a30e41",
+        "filename": "src/crypto/hmac_sha256.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 22,
+        "changes": 24,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4ea5d6a7612af7360d86a1bbaf69fd17a48eebe4/src/crypto/hmac_sha256.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4ea5d6a7612af7360d86a1bbaf69fd17a48eebe4/src/crypto/hmac_sha256.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/crypto/hmac_sha256.h?ref=4ea5d6a7612af7360d86a1bbaf69fd17a48eebe4",
+        "patch": "@@ -5,28 +5,8 @@\n #ifndef BITCOIN_CRYPTO_HMAC_SHA256_H\n #define BITCOIN_CRYPTO_HMAC_SHA256_H\n \n-#include <crypto/sha256.h>\n+#include <crypto/hmac_sha.h>\n \n-#include <stdint.h>\n-#include <stdlib.h>\n-\n-/** A hasher class for HMAC-SHA-256. */\n-class CHMAC_SHA256\n-{\n-private:\n-    CSHA256 outer;\n-    CSHA256 inner;\n-\n-public:\n-    static const size_t OUTPUT_SIZE = 32;\n-\n-    CHMAC_SHA256(const unsigned char* key, size_t keylen);\n-    CHMAC_SHA256& Write(const unsigned char* data, size_t len)\n-    {\n-        inner.Write(data, len);\n-        return *this;\n-    }\n-    void Finalize(unsigned char hash[OUTPUT_SIZE]);\n-};\n+using CHMAC_SHA256 = CHMAC_SHA<CSHA256>;\n \n #endif // BITCOIN_CRYPTO_HMAC_SHA256_H"
+      },
+      {
+        "sha": "f984201f6a948b61f7a4fd19bb408bdb9ec0e6f6",
+        "filename": "src/crypto/hmac_sha512.cpp",
+        "status": "removed",
+        "additions": 0,
+        "deletions": 34,
+        "changes": 34,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/84fa64598e8b7d6901c546e938fb0eeda625a8e8/src/crypto/hmac_sha512.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/84fa64598e8b7d6901c546e938fb0eeda625a8e8/src/crypto/hmac_sha512.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/crypto/hmac_sha512.cpp?ref=84fa64598e8b7d6901c546e938fb0eeda625a8e8",
+        "patch": "@@ -1,34 +0,0 @@\n-// Copyright (c) 2014 The Bitcoin Core developers\n-// Distributed under the MIT software license, see the accompanying\n-// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n-\n-#include <crypto/hmac_sha512.h>\n-\n-#include <string.h>\n-\n-CHMAC_SHA512::CHMAC_SHA512(const unsigned char* key, size_t keylen)\n-{\n-    unsigned char rkey[128];\n-    if (keylen <= 128) {\n-        memcpy(rkey, key, keylen);\n-        memset(rkey + keylen, 0, 128 - keylen);\n-    } else {\n-        CSHA512().Write(key, keylen).Finalize(rkey);\n-        memset(rkey + 64, 0, 64);\n-    }\n-\n-    for (int n = 0; n < 128; n++)\n-        rkey[n] ^= 0x5c;\n-    outer.Write(rkey, 128);\n-\n-    for (int n = 0; n < 128; n++)\n-        rkey[n] ^= 0x5c ^ 0x36;\n-    inner.Write(rkey, 128);\n-}\n-\n-void CHMAC_SHA512::Finalize(unsigned char hash[OUTPUT_SIZE])\n-{\n-    unsigned char temp[64];\n-    inner.Finalize(temp);\n-    outer.Write(temp, 64).Finalize(hash);\n-}"
+      },
+      {
+        "sha": "e4bf018d65159adf917429f24766bc4b004e9577",
+        "filename": "src/crypto/hmac_sha512.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 22,
+        "changes": 24,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4ea5d6a7612af7360d86a1bbaf69fd17a48eebe4/src/crypto/hmac_sha512.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4ea5d6a7612af7360d86a1bbaf69fd17a48eebe4/src/crypto/hmac_sha512.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/crypto/hmac_sha512.h?ref=4ea5d6a7612af7360d86a1bbaf69fd17a48eebe4",
+        "patch": "@@ -5,28 +5,8 @@\n #ifndef BITCOIN_CRYPTO_HMAC_SHA512_H\n #define BITCOIN_CRYPTO_HMAC_SHA512_H\n \n-#include <crypto/sha512.h>\n+#include <crypto/hmac_sha.h>\n \n-#include <stdint.h>\n-#include <stdlib.h>\n-\n-/** A hasher class for HMAC-SHA-512. */\n-class CHMAC_SHA512\n-{\n-private:\n-    CSHA512 outer;\n-    CSHA512 inner;\n-\n-public:\n-    static const size_t OUTPUT_SIZE = 64;\n-\n-    CHMAC_SHA512(const unsigned char* key, size_t keylen);\n-    CHMAC_SHA512& Write(const unsigned char* data, size_t len)\n-    {\n-        inner.Write(data, len);\n-        return *this;\n-    }\n-    void Finalize(unsigned char hash[OUTPUT_SIZE]);\n-};\n+using CHMAC_SHA512 = CHMAC_SHA<CSHA512>;\n \n #endif // BITCOIN_CRYPTO_HMAC_SHA512_H"
+      },
+      {
+        "sha": "cea280d81387660c09df13a46a0d48cc8ad0c50e",
+        "filename": "src/crypto/sha256.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4ea5d6a7612af7360d86a1bbaf69fd17a48eebe4/src/crypto/sha256.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4ea5d6a7612af7360d86a1bbaf69fd17a48eebe4/src/crypto/sha256.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/crypto/sha256.h?ref=4ea5d6a7612af7360d86a1bbaf69fd17a48eebe4",
+        "patch": "@@ -18,7 +18,7 @@ class CSHA256\n     uint64_t bytes;\n \n public:\n-    static const size_t OUTPUT_SIZE = 32;\n+    static constexpr const size_t OUTPUT_SIZE = 32;\n \n     CSHA256();\n     CSHA256& Write(const unsigned char* data, size_t len);"
+      },
+      {
+        "sha": "f543ef60e008401a4e9fcb0c4a42fe9e2158fbcc",
+        "filename": "src/crypto/sha512.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4ea5d6a7612af7360d86a1bbaf69fd17a48eebe4/src/crypto/sha512.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4ea5d6a7612af7360d86a1bbaf69fd17a48eebe4/src/crypto/sha512.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/crypto/sha512.h?ref=4ea5d6a7612af7360d86a1bbaf69fd17a48eebe4",
+        "patch": "@@ -17,7 +17,7 @@ class CSHA512\n     uint64_t bytes;\n \n public:\n-    static const size_t OUTPUT_SIZE = 64;\n+    static constexpr const size_t OUTPUT_SIZE = 64;\n \n     CSHA512();\n     CSHA512& Write(const unsigned char* data, size_t len);"
+      }
+    ]
+  }
+]

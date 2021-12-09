@@ -1,0 +1,206 @@
+[
+  {
+    "sha": "416f60d0a844266e8cc9c4ba91b35e7f48509995",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0MTZmNjBkMGE4NDQyNjZlOGNjOWM0YmE5MWIzNWU3ZjQ4NTA5OTk1",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-08-08T03:24:35Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-08-08T03:24:35Z"
+      },
+      "message": "Advertise other services also available at this node.",
+      "tree": {
+        "sha": "9af4bec0e29b7e9c13c611997af4ddae3bf99469",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/9af4bec0e29b7e9c13c611997af4ddae3bf99469"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/416f60d0a844266e8cc9c4ba91b35e7f48509995",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/416f60d0a844266e8cc9c4ba91b35e7f48509995",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/416f60d0a844266e8cc9c4ba91b35e7f48509995",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/416f60d0a844266e8cc9c4ba91b35e7f48509995/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "003bbd5f7672d7fd4f40478fd57cc4e03c30f933",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/003bbd5f7672d7fd4f40478fd57cc4e03c30f933",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/003bbd5f7672d7fd4f40478fd57cc4e03c30f933"
+      }
+    ],
+    "stats": {
+      "total": 276,
+      "additions": 276,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "e5c0a527bd646a5e0841703cd87472826112b068",
+        "filename": "src/Makefile.am",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/416f60d0a844266e8cc9c4ba91b35e7f48509995/src/Makefile.am",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/416f60d0a844266e8cc9c4ba91b35e7f48509995/src/Makefile.am",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/Makefile.am?ref=416f60d0a844266e8cc9c4ba91b35e7f48509995",
+        "patch": "@@ -83,6 +83,7 @@ BITCOIN_CORE_H = \\\n   core_io.h \\\n   crypter.h \\\n   db.h \\\n+  extservices.h \\\n   hash.h \\\n   init.h \\\n   key.h \\\n@@ -141,6 +142,7 @@ libbitcoin_server_a_SOURCES = \\\n   alert.cpp \\\n   bloom.cpp \\\n   checkpoints.cpp \\\n+  extservices.cpp \\\n   init.cpp \\\n   leveldbwrapper.cpp \\\n   main.cpp \\"
+      },
+      {
+        "sha": "11b266ae4b6ec72f60e98c8501f24883fce1ffb2",
+        "filename": "src/extservices.cpp",
+        "status": "added",
+        "additions": 195,
+        "deletions": 0,
+        "changes": 195,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/416f60d0a844266e8cc9c4ba91b35e7f48509995/src/extservices.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/416f60d0a844266e8cc9c4ba91b35e7f48509995/src/extservices.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/extservices.cpp?ref=416f60d0a844266e8cc9c4ba91b35e7f48509995",
+        "patch": "@@ -0,0 +1,195 @@\n+\n+#include <vector>\n+#include \"serialize.h\"\n+#include \"util.h\"\n+#include \"version.h\"\n+#include \"net.h\"\n+#include \"extservices.h\"\n+#include <boost/foreach.hpp>\n+#include \"json/json_spirit_value.h\"\n+#include \"json/json_spirit_reader_template.h\"\n+#include \"json/json_spirit_utils.h\"\n+\n+using namespace std;\n+using namespace json_spirit;\n+\n+static const unsigned int MAX_JSON_SRV_SZ = (640 * 1024); // enough for anybody\n+\n+class CExtServices {\n+private:\n+    vector<CExtService> srvList;\n+\n+public:\n+    void getArray(Array& arr);\n+    void getVec(vector<CExtService>& vec);\n+    void add(const CExtService& val) { srvList.push_back(val); }\n+    size_t count() const { return srvList.size(); }\n+};\n+\n+static CExtServices extServices;\n+\n+bool CExtService::parseValue(const Value& val)\n+{\n+    if (val.type() != obj_type)\n+        return false;\n+\n+    const Object& srvObj = val.get_obj();\n+\n+    const Value& vName = find_value(srvObj, \"name\");\n+    if (vName.type() != str_type)\n+        return false;\n+\n+    name = vName.get_str();\n+\n+    const Value& vPort = find_value(srvObj, \"port\");\n+    if (vPort.type() == null_type) {\n+        // do nothing\n+    } else if (vPort.type() == int_type) {\n+        int i = vPort.get_int();\n+        if (i < 1 || i > 65535)\n+            return false;\n+\n+        port = i;\n+    } else\n+        return false;\n+\n+    const Value& vAttrib = find_value(srvObj, \"attrib\");\n+    if (vAttrib.type() == null_type) {\n+        // do nothing\n+    } else if (vAttrib.type() == obj_type) {\n+        const Object& attribObj = vAttrib.get_obj();\n+        BOOST_FOREACH(const Pair& s, attribObj) {\n+            const Value& av = s.value_;\n+            if (av.type() != str_type)\n+                return false;\n+\n+            CKeyValue kv(s.name_, av.get_str());\n+            if (kv.key.size() < 1 || kv.key.size() > 100 ||\n+                kv.value.size() > 1000)\n+                return false;\n+\n+            attrib.push_back(kv);\n+        }\n+    } else\n+        return false;\n+\n+    return true;\n+}\n+\n+void CExtServices::getArray(Array& arr)\n+{\n+    BOOST_FOREACH(const CExtService& srv, srvList) {\n+        Object obj;\n+        obj.push_back(Pair(\"name\", srv.name));\n+        if (srv.port > 0)\n+            obj.push_back(Pair(\"port\", srv.port));\n+\n+        arr.push_back(obj);\n+    }\n+}\n+\n+void CExtServices::getVec(vector<CExtService>& vec)\n+{\n+    BOOST_FOREACH(const CExtService& srv, srvList) {\n+        vec.push_back(srv);\n+    }\n+}\n+\n+static bool ReadJsonFile(const string& filename, size_t maxSz,\n+                         Value& valOut, string& strErr)\n+{\n+    CAutoFile srvfile(fopen(filename.c_str(), \"r\"), SER_DISK, CLIENT_VERSION);\n+    if (!srvfile) {\n+        strErr = strprintf(\"Cannot open %s\\n\", filename);\n+        return false;\n+    }\n+\n+    string rawJson;\n+    while (1) {\n+        char buf[4096];\n+\n+        size_t bread = fread(buf, 1, sizeof(buf), srvfile);\n+        rawJson.append(buf, bread);\n+\n+        if (maxSz && (rawJson.size() > maxSz)) {\n+            strErr = strprintf(\"Error reading %s, too large\\n\", filename);\n+            return false;\n+        }\n+\n+        if (bread < sizeof(buf)) {\n+            if (ferror(srvfile)) {\n+                strErr = strprintf(\"Error reading %s\\n\", filename);\n+                return false;\n+            }\n+\n+            // eof\n+            break;\n+        }\n+    }\n+\n+    if (!read_string(rawJson, valOut) ||\n+        (valOut.type() != obj_type)) {\n+        strErr = strprintf(\"Error parsing JSON in %s\\n\", filename);\n+        return false;\n+    }\n+\n+    return true;\n+}\n+\n+static bool ReadExtServiceFile(const string& filename)\n+{\n+    Value valSrv;\n+    string strErr;\n+    if (!ReadJsonFile(filename, MAX_JSON_SRV_SZ, valSrv, strErr)) {\n+        LogPrintf(\"%s: %s\", filename, strErr);\n+        return false;\n+    }\n+\n+    CExtService srv;\n+    if (!srv.parseValue(valSrv) ||\n+        (valSrv.type() != array_type)) {\n+        LogPrintf(\"Unable to parse value in %s\\n\", filename);\n+        return false;\n+    }\n+\n+    const Array& serviceList = valSrv.get_array();\n+    for (unsigned int i = 0; i < serviceList.size(); i++) {\n+        if (serviceList[i].type() != obj_type) {\n+            LogPrintf(\"Service list member not object\\n\");\n+            return false;\n+        }\n+\n+        CExtService srv;\n+        if (!srv.parseValue(serviceList[i]))\n+            return false;\n+\n+        extServices.add(srv);\n+    }\n+\n+    return true;\n+}\n+\n+bool ReadExtServices()\n+{\n+    if (!mapArgs.count(\"-extservices\"))\n+        return true;\n+    if (!ReadExtServiceFile(mapArgs[\"-extservice\"]))\n+        return false;\n+\n+    if (extServices.count() > 0)\n+        nLocalServices |= NODE_EXT_SERVICES;\n+\n+    return true;\n+}\n+\n+Array ListExtServices()\n+{\n+    Array ret;\n+    extServices.getArray(ret);\n+    return ret;\n+}\n+\n+void GetExtServicesVec(vector<CExtService>& vec)\n+{\n+    extServices.getVec(vec);\n+}"
+      },
+      {
+        "sha": "5bb380512a52e7a42558e3e01af22b00f0655134",
+        "filename": "src/extservices.h",
+        "status": "added",
+        "additions": 62,
+        "deletions": 0,
+        "changes": 62,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/416f60d0a844266e8cc9c4ba91b35e7f48509995/src/extservices.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/416f60d0a844266e8cc9c4ba91b35e7f48509995/src/extservices.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/extservices.h?ref=416f60d0a844266e8cc9c4ba91b35e7f48509995",
+        "patch": "@@ -0,0 +1,62 @@\n+#ifndef __BITCOIN_EXTSERVICES_H__\n+#define __BITCOIN_EXTSERVICES_H__\n+\n+#include <stdint.h>\n+#include <string>\n+#include <vector>\n+#include \"json/json_spirit_value.h\"\n+#include \"serialize.h\"\n+\n+class CKeyValue {\n+public:\n+    std::string key;\n+    std::string value;\n+\n+    CKeyValue()\n+    {\n+        SetNull();\n+    }\n+    CKeyValue(std::string key_, std::string value_)\n+    {\n+        key = key_;\n+\tvalue = value_;\n+    }\n+\n+    IMPLEMENT_SERIALIZE\n+    (\n+        READWRITE(key);\n+        READWRITE(value);\n+    )\n+\n+    void SetNull()\n+    {\n+        key.clear();\n+        value.clear();\n+    }\n+};\n+\n+class CExtService {\n+public:\n+    std::string name;\n+    int32_t port;\n+    std::vector<CKeyValue> attrib;\n+\n+    CExtService(const std::string& name_ = \"\", int32_t port_ = -1) {\n+        name = name_;\n+        port = port_;\n+    }\n+    bool parseValue(const json_spirit::Value& val);\n+\n+    IMPLEMENT_SERIALIZE\n+    (\n+        READWRITE(name);\n+        READWRITE(port);\n+        READWRITE(attrib);\n+    )\n+};\n+\n+extern bool ReadExtServices();\n+extern json_spirit::Array ListExtServices();\n+extern void GetExtServicesVec(std::vector<CExtService>& vec);\n+\n+#endif // __BITCOIN_EXTSERVICES_H__"
+      },
+      {
+        "sha": "eb3e28812525c7dccf0953397fa226be684d5f76",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 0,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/416f60d0a844266e8cc9c4ba91b35e7f48509995/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/416f60d0a844266e8cc9c4ba91b35e7f48509995/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=416f60d0a844266e8cc9c4ba91b35e7f48509995",
+        "patch": "@@ -19,6 +19,7 @@\n #include \"txdb.h\"\n #include \"ui_interface.h\"\n #include \"util.h\"\n+#include \"extservices.h\"\n #ifdef ENABLE_WALLET\n #include \"db.h\"\n #include \"wallet.h\"\n@@ -241,6 +242,7 @@ std::string HelpMessage(HelpMessageMode mode)\n     strUsage += \"  -dns                   \" + _(\"Allow DNS lookups for -addnode, -seednode and -connect\") + \" \" + _(\"(default: 1)\") + \"\\n\";\n     strUsage += \"  -dnsseed               \" + _(\"Query for peer addresses via DNS lookup, if low on addresses (default: 1 unless -connect)\") + \"\\n\";\n     strUsage += \"  -externalip=<ip>       \" + _(\"Specify your own public address\") + \"\\n\";\n+    strUsage += \"  -extservices=<file>    \" + _(\"Specify JSON file containing array of external/extended service descriptions\") + \"\\n\";\n     strUsage += \"  -forcednsseed          \" + _(\"Always query for peer addresses via DNS lookup (default: 0)\") + \"\\n\";\n     strUsage += \"  -listen                \" + _(\"Accept connections from outside (default: 1 if no -proxy or -connect)\") + \"\\n\";\n     strUsage += \"  -maxconnections=<n>    \" + _(\"Maintain at most <n> connections to peers (default: 125)\") + \"\\n\";\n@@ -1045,6 +1047,9 @@ bool AppInit2(boost::thread_group& threadGroup)\n     if (est_filein)\n         mempool.ReadFeeEstimates(est_filein);\n \n+    if (!ReadExtServices())\n+        return false;\n+\n     // ********************************************************* Step 8: load wallet\n #ifdef ENABLE_WALLET\n     if (fDisableWallet) {"
+      },
+      {
+        "sha": "1f757da07b61505d81e82f612110708f051e1a5f",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 0,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/416f60d0a844266e8cc9c4ba91b35e7f48509995/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/416f60d0a844266e8cc9c4ba91b35e7f48509995/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=416f60d0a844266e8cc9c4ba91b35e7f48509995",
+        "patch": "@@ -17,6 +17,7 @@\n #include \"txmempool.h\"\n #include \"ui_interface.h\"\n #include \"util.h\"\n+#include \"extservices.h\"\n \n #include <sstream>\n \n@@ -3655,6 +3656,14 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv,\n     }\n \n \n+    else if ((strCommand == \"getextsrv\") && (nLocalServices & NODE_EXT_SERVICES))\n+    {\n+        vector<CExtService> vSrv;\n+        GetExtServicesVec(vSrv);\n+        pfrom->PushMessage(\"extservices\", vSrv);\n+    }\n+\n+\n     else if (strCommand == \"addr\")\n     {\n         vector<CAddress> vAddr;"
+      },
+      {
+        "sha": "7099ead953abd4d9e85e03cc29fb5ff090d3b33a",
+        "filename": "src/protocol.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/416f60d0a844266e8cc9c4ba91b35e7f48509995/src/protocol.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/416f60d0a844266e8cc9c4ba91b35e7f48509995/src/protocol.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/protocol.h?ref=416f60d0a844266e8cc9c4ba91b35e7f48509995",
+        "patch": "@@ -64,6 +64,7 @@ class CMessageHeader\n enum\n {\n     NODE_NETWORK = (1 << 0),\n+    NODE_EXT_SERVICES = (1 << 1),\n \n     // Bits 24-31 are reserved for temporary experiments. Just pick a bit that\n     // isn't getting used, or one not being used much, and notify the"
+      },
+      {
+        "sha": "83dc5592f8da434214d37c13c28090139bbd888a",
+        "filename": "src/rpcnet.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/416f60d0a844266e8cc9c4ba91b35e7f48509995/src/rpcnet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/416f60d0a844266e8cc9c4ba91b35e7f48509995/src/rpcnet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcnet.cpp?ref=416f60d0a844266e8cc9c4ba91b35e7f48509995",
+        "patch": "@@ -11,6 +11,7 @@\n #include \"sync.h\"\n #include \"timedata.h\"\n #include \"util.h\"\n+#include \"extservices.h\"\n \n #include <boost/foreach.hpp>\n #include \"json/json_spirit_value.h\"\n@@ -371,6 +372,7 @@ Value getnetworkinfo(const Array& params, bool fHelp)\n     obj.push_back(Pair(\"version\",       (int)CLIENT_VERSION));\n     obj.push_back(Pair(\"protocolversion\",(int)PROTOCOL_VERSION));\n     obj.push_back(Pair(\"localservices\",       strprintf(\"%016x\", nLocalServices)));\n+    obj.push_back(Pair(\"extservices\",   ListExtServices()));\n     obj.push_back(Pair(\"timeoffset\",    GetTimeOffset()));\n     obj.push_back(Pair(\"connections\",   (int)vNodes.size()));\n     obj.push_back(Pair(\"proxy\",         (proxy.IsValid() ? proxy.ToStringIPPort() : string())));"
+      }
+    ]
+  },
+  {
+    "sha": "ee3274f94d94833efe364346d2c74d8be6a18a83",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplZTMyNzRmOTRkOTQ4MzNlZmUzNjQzNDZkMmM3NGQ4YmU2YTE4YTgz",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-08-08T11:34:59Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-08-08T11:34:59Z"
+      },
+      "message": "NODE_EXT_SERVICES: Fix bug.  Avoid bit #1, used by conflicting proposal.",
+      "tree": {
+        "sha": "69519ac1815fb67768f40d8d0773c8f079c65805",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/69519ac1815fb67768f40d8d0773c8f079c65805"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/ee3274f94d94833efe364346d2c74d8be6a18a83",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ee3274f94d94833efe364346d2c74d8be6a18a83",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/ee3274f94d94833efe364346d2c74d8be6a18a83",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ee3274f94d94833efe364346d2c74d8be6a18a83/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "416f60d0a844266e8cc9c4ba91b35e7f48509995",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/416f60d0a844266e8cc9c4ba91b35e7f48509995",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/416f60d0a844266e8cc9c4ba91b35e7f48509995"
+      }
+    ],
+    "stats": {
+      "total": 8,
+      "additions": 3,
+      "deletions": 5
+    },
+    "files": [
+      {
+        "sha": "6ee7ed0cfa23fec89b5fece5810264807ae8c52a",
+        "filename": "src/extservices.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 4,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ee3274f94d94833efe364346d2c74d8be6a18a83/src/extservices.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ee3274f94d94833efe364346d2c74d8be6a18a83/src/extservices.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/extservices.cpp?ref=ee3274f94d94833efe364346d2c74d8be6a18a83",
+        "patch": "@@ -145,10 +145,8 @@ static bool ReadExtServiceFile(const string& filename)\n         return false;\n     }\n \n-    CExtService srv;\n-    if (!srv.parseValue(valSrv) ||\n-        (valSrv.type() != array_type)) {\n-        LogPrintf(\"Unable to parse value in %s\\n\", filename);\n+    if (valSrv.type() != array_type) {\n+        LogPrintf(\"Unable to parse array in %s\\n\", filename);\n         return false;\n     }\n "
+      },
+      {
+        "sha": "24bc089ed980a4b4bccd3798088a7e101e5c9dfb",
+        "filename": "src/protocol.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ee3274f94d94833efe364346d2c74d8be6a18a83/src/protocol.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ee3274f94d94833efe364346d2c74d8be6a18a83/src/protocol.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/protocol.h?ref=ee3274f94d94833efe364346d2c74d8be6a18a83",
+        "patch": "@@ -64,7 +64,7 @@ class CMessageHeader\n enum\n {\n     NODE_NETWORK = (1 << 0),\n-    NODE_EXT_SERVICES = (1 << 1),\n+    NODE_EXT_SERVICES = (1 << 2),\n \n     // Bits 24-31 are reserved for temporary experiments. Just pick a bit that\n     // isn't getting used, or one not being used much, and notify the"
+      }
+    ]
+  }
+]

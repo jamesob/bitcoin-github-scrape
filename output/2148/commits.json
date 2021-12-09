@@ -1,0 +1,86 @@
+[
+  {
+    "sha": "54413aab135aa84f60bfcb477a4d2ecfb72edbac",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1NDQxM2FhYjEzNWFhODRmNjBiZmNiNDc3YTRkMmVjZmI3MmVkYmFj",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-01-03T21:13:24Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-01-04T16:21:40Z"
+      },
+      "message": "Bitcoin-Qt: never display own block count > estimated block count\n\n- some users reported it as weird, that the estimated block count could be\n  lower than our own nodes block number (which is indeed true and not good)\n- this pull adds a new default behaviour, which displays our own block\n  number as estimated block number, if own >= est. block count\n- the pull raises space for nodes block counts in cPeerBlockCounts to 8 to\n  be more accurate\n- also removes a reduntant setNumBlocks() call in RPCConsole and moves\n  initialisation of numBlocksAtStartup in ClientModel, where it belongs",
+      "tree": {
+        "sha": "9388d6c4413a5fdc747af84be8b787af66aa0b16",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/9388d6c4413a5fdc747af84be8b787af66aa0b16"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/54413aab135aa84f60bfcb477a4d2ecfb72edbac",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/54413aab135aa84f60bfcb477a4d2ecfb72edbac",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/54413aab135aa84f60bfcb477a4d2ecfb72edbac",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/54413aab135aa84f60bfcb477a4d2ecfb72edbac/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "ea9788517bfa3e53e192c5af9e64e73625f9db74",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ea9788517bfa3e53e192c5af9e64e73625f9db74",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/ea9788517bfa3e53e192c5af9e64e73625f9db74"
+      }
+    ],
+    "stats": {
+      "total": 18,
+      "additions": 6,
+      "deletions": 12
+    },
+    "files": [
+      {
+        "sha": "28fbc8b450f6fab4e0988209c0346fb32ac980ef",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/54413aab135aa84f60bfcb477a4d2ecfb72edbac/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/54413aab135aa84f60bfcb477a4d2ecfb72edbac/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=54413aab135aa84f60bfcb477a4d2ecfb72edbac",
+        "patch": "@@ -45,7 +45,7 @@ bool fReindex = false;\n bool fBenchmark = false;\n unsigned int nCoinCacheSize = 5000;\n \n-CMedianFilter<int> cPeerBlockCounts(5, 0); // Amount of blocks that other nodes claim to have\n+CMedianFilter<int> cPeerBlockCounts(8, 0); // Amount of blocks that other nodes claim to have\n \n map<uint256, CBlock*> mapOrphanBlocks;\n multimap<uint256, CBlock*> mapOrphanBlocksByPrev;"
+      },
+      {
+        "sha": "12bd989338b5f0c6e754a92d7d8e1ae823533c12",
+        "filename": "src/qt/clientmodel.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 4,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/54413aab135aa84f60bfcb477a4d2ecfb72edbac/src/qt/clientmodel.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/54413aab135aa84f60bfcb477a4d2ecfb72edbac/src/qt/clientmodel.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/clientmodel.cpp?ref=54413aab135aa84f60bfcb477a4d2ecfb72edbac",
+        "patch": "@@ -15,10 +15,8 @@ static const int64 nClientStartupTime = GetTime();\n \n ClientModel::ClientModel(OptionsModel *optionsModel, QObject *parent) :\n     QObject(parent), optionsModel(optionsModel),\n-    cachedNumBlocks(0), cachedNumBlocksOfPeers(0), pollTimer(0)\n+    cachedNumBlocks(0), cachedNumBlocksOfPeers(0), numBlocksAtStartup(-1), pollTimer(0)\n {\n-    numBlocksAtStartup = -1;\n-\n     pollTimer = new QTimer(this);\n     pollTimer->setInterval(MODEL_UPDATE_DELAY);\n     pollTimer->start();\n@@ -65,7 +63,8 @@ void ClientModel::updateTimer()\n         cachedNumBlocks = newNumBlocks;\n         cachedNumBlocksOfPeers = newNumBlocksOfPeers;\n \n-        emit numBlocksChanged(newNumBlocks, newNumBlocksOfPeers);\n+        // ensure we return the maximum of newNumBlocksOfPeers and newNumBlocks to not create weird displays in the GUI\n+        emit numBlocksChanged(newNumBlocks, std::max(newNumBlocksOfPeers, newNumBlocks));\n     }\n }\n "
+      },
+      {
+        "sha": "7cf2d41962702eca7d3565df6cc3d3be0e099d68",
+        "filename": "src/qt/rpcconsole.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 7,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/54413aab135aa84f60bfcb477a4d2ecfb72edbac/src/qt/rpcconsole.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/54413aab135aa84f60bfcb477a4d2ecfb72edbac/src/qt/rpcconsole.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/rpcconsole.cpp?ref=54413aab135aa84f60bfcb477a4d2ecfb72edbac",
+        "patch": "@@ -269,8 +269,6 @@ void RPCConsole::setClientModel(ClientModel *model)\n \n         setNumConnections(model->getNumConnections());\n         ui->isTestNet->setChecked(model->isTestNet());\n-\n-        setNumBlocks(model->getNumBlocks(), model->getNumBlocksOfPeers());\n     }\n }\n \n@@ -342,13 +340,10 @@ void RPCConsole::setNumConnections(int count)\n void RPCConsole::setNumBlocks(int count, int countOfPeers)\n {\n     ui->numberOfBlocks->setText(QString::number(count));\n-    ui->totalBlocks->setText(QString::number(countOfPeers));\n+    // If there is no current countOfPeers available display N/A instead of 0, which can't ever be true\n+    ui->totalBlocks->setText(countOfPeers == 0 ? tr(\"N/A\") : QString::number(countOfPeers));\n     if(clientModel)\n-    {\n-        // If there is no current number available display N/A instead of 0, which can't ever be true\n-        ui->totalBlocks->setText(clientModel->getNumBlocksOfPeers() == 0 ? tr(\"N/A\") : QString::number(clientModel->getNumBlocksOfPeers()));\n         ui->lastBlockTime->setText(clientModel->getLastBlockDate().toString());\n-    }\n }\n \n void RPCConsole::on_lineEdit_returnPressed()"
+      }
+    ]
+  }
+]

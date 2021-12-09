@@ -1,0 +1,320 @@
+[
+  {
+    "sha": "6a69dd267e4b96e6657de7b77521311994b2a902",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2YTY5ZGQyNjdlNGI5NmU2NjU3ZGU3Yjc3NTIxMzExOTk0YjJhOTAy",
+    "commit": {
+      "author": {
+        "name": "Jonas Schnelli",
+        "email": "dev@jonasschnelli.ch",
+        "date": "2021-01-08T10:40:49Z"
+      },
+      "committer": {
+        "name": "Jonas Schnelli",
+        "email": "dev@jonasschnelli.ch",
+        "date": "2021-03-04T09:52:56Z"
+      },
+      "message": "Add scanblocks RPC call - scan for relevant blocks with descriptors",
+      "tree": {
+        "sha": "274050837909a1cb8c1d21a8980460fc2310c08f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/274050837909a1cb8c1d21a8980460fc2310c08f"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/6a69dd267e4b96e6657de7b77521311994b2a902",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6a69dd267e4b96e6657de7b77521311994b2a902",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/6a69dd267e4b96e6657de7b77521311994b2a902",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6a69dd267e4b96e6657de7b77521311994b2a902/comments",
+    "author": {
+      "login": "jonasschnelli",
+      "id": 178464,
+      "node_id": "MDQ6VXNlcjE3ODQ2NA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/178464?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jonasschnelli",
+      "html_url": "https://github.com/jonasschnelli",
+      "followers_url": "https://api.github.com/users/jonasschnelli/followers",
+      "following_url": "https://api.github.com/users/jonasschnelli/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jonasschnelli/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jonasschnelli/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jonasschnelli/subscriptions",
+      "organizations_url": "https://api.github.com/users/jonasschnelli/orgs",
+      "repos_url": "https://api.github.com/users/jonasschnelli/repos",
+      "events_url": "https://api.github.com/users/jonasschnelli/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jonasschnelli/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "jonasschnelli",
+      "id": 178464,
+      "node_id": "MDQ6VXNlcjE3ODQ2NA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/178464?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jonasschnelli",
+      "html_url": "https://github.com/jonasschnelli",
+      "followers_url": "https://api.github.com/users/jonasschnelli/followers",
+      "following_url": "https://api.github.com/users/jonasschnelli/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jonasschnelli/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jonasschnelli/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jonasschnelli/subscriptions",
+      "organizations_url": "https://api.github.com/users/jonasschnelli/orgs",
+      "repos_url": "https://api.github.com/users/jonasschnelli/repos",
+      "events_url": "https://api.github.com/users/jonasschnelli/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jonasschnelli/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "92b7efcf54d3154e4b31c9a6eae60f27e349f45e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/92b7efcf54d3154e4b31c9a6eae60f27e349f45e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/92b7efcf54d3154e4b31c9a6eae60f27e349f45e"
+      }
+    ],
+    "stats": {
+      "total": 196,
+      "additions": 196,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "65b3a985114ae839280eb020c54849af1bf5e176",
+        "filename": "src/rpc/blockchain.cpp",
+        "status": "modified",
+        "additions": 193,
+        "deletions": 0,
+        "changes": 193,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6a69dd267e4b96e6657de7b77521311994b2a902/src/rpc/blockchain.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6a69dd267e4b96e6657de7b77521311994b2a902/src/rpc/blockchain.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/blockchain.cpp?ref=6a69dd267e4b96e6657de7b77521311994b2a902",
+        "patch": "@@ -2288,6 +2288,198 @@ static RPCHelpMan scantxoutset()\n     };\n }\n \n+/** RAII object to prevent concurrency issue when scanning blockfilters */\n+static std::atomic<int> g_scanfilter_progress;\n+static std::atomic<int> g_scanfilter_progress_height;\n+static std::atomic<bool> g_scanfilter_in_progress;\n+static std::atomic<bool> g_scanfilter_should_abort_scan;\n+class BlockFiltersScanReserver\n+{\n+private:\n+    bool m_could_reserve;\n+public:\n+    explicit BlockFiltersScanReserver() : m_could_reserve(false) {}\n+\n+    bool reserve() {\n+        CHECK_NONFATAL(!m_could_reserve);\n+        if (g_scanfilter_in_progress.exchange(true)) {\n+            return false;\n+        }\n+        m_could_reserve = true;\n+        return true;\n+    }\n+\n+    ~BlockFiltersScanReserver() {\n+        if (m_could_reserve) {\n+            g_scanfilter_in_progress = false;\n+        }\n+    }\n+};\n+\n+static RPCHelpMan scanblocks()\n+{\n+    return RPCHelpMan{\"scanblocks\",\n+                \"\\nReturn relevant blockhashes for given descriptors.\\n\"\n+                \"This call may take serval minutes. Make sure to use no RPC timeout (bitcoin-cli -rpcclienttimeout=0)\",\n+                {\n+                    {\"action\", RPCArg::Type::STR, RPCArg::Optional::NO, \"The action to execute\\n\"\n+            \"                                      \\\"start\\\" for starting a scan\\n\"\n+            \"                                      \\\"abort\\\" for aborting the current scan (returns true when abort was successful)\\n\"\n+            \"                                      \\\"status\\\" for progress report (in %) of the current scan (returns Null if there is no ongoing scan)\"},\n+                    {\"scanobjects\", RPCArg::Type::ARR, RPCArg::Optional::OMITTED, \"Array of scan objects.\\n\"\n+            \"                                  Every scan object is either a string descriptor or an object:\",\n+                        {\n+                            {\"descriptor\", RPCArg::Type::STR, RPCArg::Optional::OMITTED, \"An output descriptor\"},\n+                            {\"\", RPCArg::Type::OBJ, RPCArg::Optional::OMITTED, \"An object with output descriptor and metadata\",\n+                                {\n+                                    {\"desc\", RPCArg::Type::STR, RPCArg::Optional::NO, \"An output descriptor\"},\n+                                    {\"range\", RPCArg::Type::RANGE, /* default */ \"1000\", \"The range of HD chain indexes to explore (either end or [begin,end])\"},\n+                                },\n+                            },\n+                        },\n+                        \"[scanobjects,...]\"},\n+                    {\"start_height\", RPCArg::Type::NUM, /*default*/ \"0\", \"height to start to filter from\"},\n+                    {\"stop_height\", RPCArg::Type::NUM, /*default*/ \"<tip>\", \"height to stop to scan\"},\n+                    {\"filtertype\", RPCArg::Type::STR, /*default*/ \"basic\", \"The type name of the filter\"}\n+                },\n+                RPCResult{\n+                    RPCResult::Type::ARR, \"\", \"\",\n+                    {\n+                        {RPCResult::Type::STR_HEX, \"\", \"The blockhash\"},\n+                    }},\n+                RPCExamples{\n+                    HelpExampleCli(\"scanblocks\", \"\\\"[\\\"addr(bcrt1q4u4nsgk6ug0sqz7r3rj9tykjxrsl0yy4d0wwte)\\\"]\\\" 300000\") +\n+                    HelpExampleRpc(\"scanblocks\", \"\\\"[\\\"addr(bcrt1q4u4nsgk6ug0sqz7r3rj9tykjxrsl0yy4d0wwte)\\\"]\\\" 300000\")\n+                },\n+        [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue\n+{\n+    UniValue ret(UniValue::VOBJ);\n+    if (request.params[0].get_str() == \"status\") {\n+        BlockFiltersScanReserver reserver;\n+        if (reserver.reserve()) {\n+            // no scan in progress\n+            return NullUniValue;\n+        }\n+        ret.pushKV(\"progress\", g_scanfilter_progress);\n+        ret.pushKV(\"current_height\", g_scanfilter_progress_height);\n+        return ret;\n+    } else if (request.params[0].get_str() == \"abort\") {\n+        BlockFiltersScanReserver reserver;\n+        if (reserver.reserve()) {\n+            // reserve was possible which means no scan was running\n+            return false;\n+        }\n+        // set the abort flag\n+        g_scanfilter_should_abort_scan = true;\n+        return true;\n+    }\n+    else if (request.params[0].get_str() == \"start\") {\n+        BlockFiltersScanReserver reserver;\n+        if (!reserver.reserve()) {\n+            throw JSONRPCError(RPC_INVALID_PARAMETER, \"Scan already in progress, use action \\\"abort\\\" or \\\"status\\\"\");\n+        }\n+        const std::string filtertype_name{request.params[4].isNull() ? \"basic\" : request.params[4].get_str()};\n+\n+        BlockFilterType filtertype;\n+        if (!BlockFilterTypeByName(filtertype_name, filtertype)) {\n+            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, \"Unknown filtertype\");\n+        }\n+\n+        BlockFilterIndex* index = GetBlockFilterIndex(filtertype);\n+        if (!index) {\n+            throw JSONRPCError(RPC_MISC_ERROR, \"Index is not enabled for filtertype \" + filtertype_name);\n+        }\n+\n+        // set the start-height\n+        const CBlockIndex* block = nullptr;\n+        const CBlockIndex* stop_block = nullptr;\n+        {\n+            LOCK(cs_main);\n+            block = ::ChainActive().Genesis();\n+            stop_block = ::ChainActive().Tip();\n+            if (!request.params[2].isNull()) {\n+                block = ::ChainActive()[request.params[2].get_int()];\n+                if (!block) {\n+                    throw JSONRPCError(RPC_MISC_ERROR, \"Invalid start_height\");\n+                }\n+            }\n+            if (!request.params[3].isNull()) {\n+                stop_block = ::ChainActive()[request.params[3].get_int()];\n+                if (!stop_block || stop_block->nHeight < block->nHeight) {\n+                    throw JSONRPCError(RPC_MISC_ERROR, \"Invalid stop_height\");\n+                }\n+            }\n+        }\n+        CHECK_NONFATAL(block);\n+\n+        // loop through the scan objects, add scripts to the needle_set\n+        GCSFilter::ElementSet needle_set;\n+        for (const UniValue& scanobject : request.params[1].get_array().getValues()) {\n+            FlatSigningProvider provider;\n+            std::vector<CScript> scripts = EvalDescriptorStringOrObject(scanobject, provider);\n+            for (const CScript& script : scripts) {\n+                needle_set.emplace(script.begin(), script.end());\n+            }\n+        }\n+        NodeContext& node = EnsureNodeContext(request.context);\n+        UniValue blocks(UniValue::VARR);\n+        const int amount_per_chunk = 10000;\n+        const CBlockIndex* start_index = block; // for remembering the start of a blockfilter range\n+        std::vector<BlockFilter> filters;\n+        const CBlockIndex* start_block = block; // for progress reporting\n+        const CBlockIndex* last_scanned_block = block;\n+        g_scanfilter_should_abort_scan = false;\n+        g_scanfilter_progress = 0;\n+        g_scanfilter_progress_height = start_block->nHeight;\n+        while (block) {\n+            node.rpc_interruption_point(); // allow a clean shutdown\n+            if (g_scanfilter_should_abort_scan) {\n+                break;\n+            }\n+            const CBlockIndex* next = nullptr;\n+            {\n+                LOCK(cs_main);\n+                next = ChainActive().Next(block);\n+                if (block == stop_block) next = nullptr;\n+            }\n+            if (start_index->nHeight + amount_per_chunk == block->nHeight || next == nullptr) {\n+                LogPrint(BCLog::RPC, \"Fetching blockfilters from height %d to height %d.\\n\", start_index->nHeight, block->nHeight);\n+                if (index->LookupFilterRange(start_index->nHeight, block, filters)) {\n+                    for (const BlockFilter& filter : filters) {\n+                        // compare the elements-set with each filter\n+                        if (filter.GetFilter().MatchAny(needle_set)) {\n+                            blocks.push_back(filter.GetBlockHash().GetHex());\n+                            LogPrint(BCLog::RPC, \"scanblocks: found match in %s\\n\", filter.GetBlockHash().GetHex());\n+                        }\n+                    }\n+                }\n+                start_index = block;\n+\n+                // update progress\n+                int blocks_processed = block->nHeight - start_block->nHeight;\n+                int total_blocks_to_process = stop_block->nHeight - start_block->nHeight;\n+                if (total_blocks_to_process > 0) { // avoid division by zero\n+                    g_scanfilter_progress = (int)(100.0 / total_blocks_to_process * blocks_processed);\n+                } else {\n+                    g_scanfilter_progress = 100;\n+                }\n+                g_scanfilter_progress_height = block->nHeight;\n+            }\n+            last_scanned_block = block;\n+            block = next;\n+        }\n+        ret.pushKV(\"from_height\", start_block->nHeight);\n+        ret.pushKV(\"to_height\", last_scanned_block->nHeight);\n+        ret.pushKV(\"relevant_blocks\", blocks);\n+    }\n+    else {\n+        throw JSONRPCError(RPC_INVALID_PARAMETER, \"Invalid action argument\");\n+    }\n+    return ret;\n+},\n+    };\n+}\n+\n static RPCHelpMan getblockfilter()\n {\n     return RPCHelpMan{\"getblockfilter\",\n@@ -2511,6 +2703,7 @@ static const CRPCCommand commands[] =\n \n     { \"blockchain\",         &preciousblock,                      },\n     { \"blockchain\",         &scantxoutset,                       },\n+    { \"blockchain\",         &scanblocks,                         },\n     { \"blockchain\",         &getblockfilter,                     },\n \n     /* Not shown in help */"
+      },
+      {
+        "sha": "2cf71b0665ca5a691fbb8dde42df5c7133fd07b1",
+        "filename": "src/rpc/client.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6a69dd267e4b96e6657de7b77521311994b2a902/src/rpc/client.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6a69dd267e4b96e6657de7b77521311994b2a902/src/rpc/client.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/client.cpp?ref=6a69dd267e4b96e6657de7b77521311994b2a902",
+        "patch": "@@ -77,6 +77,9 @@ static const CRPCConvertParam vRPCConvertParams[] =\n     { \"sendmany\", 8, \"fee_rate\"},\n     { \"sendmany\", 9, \"verbose\" },\n     { \"deriveaddresses\", 1, \"range\" },\n+    { \"scanblocks\", 1, \"scanobjects\" },\n+    { \"scanblocks\", 2, \"start_height\" },\n+    { \"scanblocks\", 3, \"stop_height\" },\n     { \"scantxoutset\", 1, \"scanobjects\" },\n     { \"addmultisigaddress\", 0, \"nrequired\" },\n     { \"addmultisigaddress\", 1, \"keys\" },"
+      }
+    ]
+  },
+  {
+    "sha": "4c8ac1c6c5ee6a5091d72321f54637f7dce880c7",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0YzhhYzFjNmM1ZWU2YTUwOTFkNzIzMjFmNTQ2MzdmN2RjZTg4MGM3",
+    "commit": {
+      "author": {
+        "name": "Jonas Schnelli",
+        "email": "dev@jonasschnelli.ch",
+        "date": "2021-03-04T09:53:24Z"
+      },
+      "committer": {
+        "name": "Jonas Schnelli",
+        "email": "dev@jonasschnelli.ch",
+        "date": "2021-03-04T09:53:24Z"
+      },
+      "message": "Unify \"invalid action argument\" error (fix scantxoutset)",
+      "tree": {
+        "sha": "6ffe6a718a4f8c76c2f75cea597bd99408c40d9d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/6ffe6a718a4f8c76c2f75cea597bd99408c40d9d"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/4c8ac1c6c5ee6a5091d72321f54637f7dce880c7",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4c8ac1c6c5ee6a5091d72321f54637f7dce880c7",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/4c8ac1c6c5ee6a5091d72321f54637f7dce880c7",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4c8ac1c6c5ee6a5091d72321f54637f7dce880c7/comments",
+    "author": {
+      "login": "jonasschnelli",
+      "id": 178464,
+      "node_id": "MDQ6VXNlcjE3ODQ2NA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/178464?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jonasschnelli",
+      "html_url": "https://github.com/jonasschnelli",
+      "followers_url": "https://api.github.com/users/jonasschnelli/followers",
+      "following_url": "https://api.github.com/users/jonasschnelli/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jonasschnelli/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jonasschnelli/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jonasschnelli/subscriptions",
+      "organizations_url": "https://api.github.com/users/jonasschnelli/orgs",
+      "repos_url": "https://api.github.com/users/jonasschnelli/repos",
+      "events_url": "https://api.github.com/users/jonasschnelli/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jonasschnelli/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "jonasschnelli",
+      "id": 178464,
+      "node_id": "MDQ6VXNlcjE3ODQ2NA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/178464?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jonasschnelli",
+      "html_url": "https://github.com/jonasschnelli",
+      "followers_url": "https://api.github.com/users/jonasschnelli/followers",
+      "following_url": "https://api.github.com/users/jonasschnelli/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jonasschnelli/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jonasschnelli/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jonasschnelli/subscriptions",
+      "organizations_url": "https://api.github.com/users/jonasschnelli/orgs",
+      "repos_url": "https://api.github.com/users/jonasschnelli/repos",
+      "events_url": "https://api.github.com/users/jonasschnelli/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jonasschnelli/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "6a69dd267e4b96e6657de7b77521311994b2a902",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6a69dd267e4b96e6657de7b77521311994b2a902",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/6a69dd267e4b96e6657de7b77521311994b2a902"
+      }
+    ],
+    "stats": {
+      "total": 2,
+      "additions": 1,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "754f24ee48ea70f5bfe41b09a36d532dec987fa2",
+        "filename": "src/rpc/blockchain.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4c8ac1c6c5ee6a5091d72321f54637f7dce880c7/src/rpc/blockchain.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4c8ac1c6c5ee6a5091d72321f54637f7dce880c7/src/rpc/blockchain.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/blockchain.cpp?ref=4c8ac1c6c5ee6a5091d72321f54637f7dce880c7",
+        "patch": "@@ -2281,7 +2281,7 @@ static RPCHelpMan scantxoutset()\n         result.pushKV(\"unspents\", unspents);\n         result.pushKV(\"total_amount\", ValueFromAmount(total_in));\n     } else {\n-        throw JSONRPCError(RPC_INVALID_PARAMETER, \"Invalid command\");\n+        throw JSONRPCError(RPC_INVALID_PARAMETER, \"Invalid action argument\");\n     }\n     return result;\n },"
+      }
+    ]
+  },
+  {
+    "sha": "71b7cdb460e2d0179aa87bdd0d30a82a821f6d05",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3MWI3Y2RiNDYwZTJkMDE3OWFhODdiZGQwZDMwYTgyYTgyMWY2ZDA1",
+    "commit": {
+      "author": {
+        "name": "Jonas Schnelli",
+        "email": "dev@jonasschnelli.ch",
+        "date": "2021-01-08T10:41:25Z"
+      },
+      "committer": {
+        "name": "Jonas Schnelli",
+        "email": "dev@jonasschnelli.ch",
+        "date": "2021-03-04T10:45:00Z"
+      },
+      "message": "Add scanblock functional test",
+      "tree": {
+        "sha": "1748c0184797434f6eb00b575c1036224d5f21bd",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/1748c0184797434f6eb00b575c1036224d5f21bd"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/71b7cdb460e2d0179aa87bdd0d30a82a821f6d05",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/71b7cdb460e2d0179aa87bdd0d30a82a821f6d05",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/71b7cdb460e2d0179aa87bdd0d30a82a821f6d05",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/71b7cdb460e2d0179aa87bdd0d30a82a821f6d05/comments",
+    "author": {
+      "login": "jonasschnelli",
+      "id": 178464,
+      "node_id": "MDQ6VXNlcjE3ODQ2NA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/178464?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jonasschnelli",
+      "html_url": "https://github.com/jonasschnelli",
+      "followers_url": "https://api.github.com/users/jonasschnelli/followers",
+      "following_url": "https://api.github.com/users/jonasschnelli/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jonasschnelli/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jonasschnelli/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jonasschnelli/subscriptions",
+      "organizations_url": "https://api.github.com/users/jonasschnelli/orgs",
+      "repos_url": "https://api.github.com/users/jonasschnelli/repos",
+      "events_url": "https://api.github.com/users/jonasschnelli/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jonasschnelli/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "jonasschnelli",
+      "id": 178464,
+      "node_id": "MDQ6VXNlcjE3ODQ2NA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/178464?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jonasschnelli",
+      "html_url": "https://github.com/jonasschnelli",
+      "followers_url": "https://api.github.com/users/jonasschnelli/followers",
+      "following_url": "https://api.github.com/users/jonasschnelli/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jonasschnelli/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jonasschnelli/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jonasschnelli/subscriptions",
+      "organizations_url": "https://api.github.com/users/jonasschnelli/orgs",
+      "repos_url": "https://api.github.com/users/jonasschnelli/repos",
+      "events_url": "https://api.github.com/users/jonasschnelli/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jonasschnelli/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "4c8ac1c6c5ee6a5091d72321f54637f7dce880c7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4c8ac1c6c5ee6a5091d72321f54637f7dce880c7",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/4c8ac1c6c5ee6a5091d72321f54637f7dce880c7"
+      }
+    ],
+    "stats": {
+      "total": 74,
+      "additions": 74,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "7a40bb994f677c41cf7ab0055084c25ac2e279fc",
+        "filename": "test/functional/rpc_scanblockfilters.py",
+        "status": "added",
+        "additions": 73,
+        "deletions": 0,
+        "changes": 73,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/71b7cdb460e2d0179aa87bdd0d30a82a821f6d05/test/functional/rpc_scanblockfilters.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/71b7cdb460e2d0179aa87bdd0d30a82a821f6d05/test/functional/rpc_scanblockfilters.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/rpc_scanblockfilters.py?ref=71b7cdb460e2d0179aa87bdd0d30a82a821f6d05",
+        "patch": "@@ -0,0 +1,73 @@\n+#!/usr/bin/env python3\n+# Copyright (c) 2021 The Bitcoin Core developers\n+# Distributed under the MIT software license, see the accompanying\n+# file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\"\"\"Test the scanblocks rpc call.\"\"\"\n+from test_framework.test_framework import BitcoinTestFramework\n+from test_framework.util import assert_equal, assert_raises_rpc_error\n+\n+class scanblocksTest(BitcoinTestFramework):\n+    def set_test_params(self):\n+        self.num_nodes = 2\n+        self.extra_args = [[\"-blockfilterindex=1\"],[]]\n+\n+    def skip_test_if_missing_module(self):\n+        self.skip_if_no_wallet()\n+\n+    def run_test(self):\n+        # send 1.0, mempool only\n+        addr_1 = self.nodes[0].getnewaddress()\n+        self.nodes[0].sendtoaddress(addr_1, 1.0)\n+\n+        # send 1.0, mempool only\n+        self.nodes[0].sendtoaddress(\"mkS4HXoTYWRTescLGaUTGbtTTYX5EjJyEE\", 1.0) # childkey 5 of tpubD6NzVbkrYhZ4WaWSyoBvQwbpLkojyoTZPRsgXELWz3Popb3qkjcJyJUGLnL4qHHoQvao8ESaAstxYSnhyswJ76uZPStJRJCTKvosUCJZL5B\n+\n+        # mine a block and assure that the mined blockhash is in the filterresult\n+        blockhash = self.nodes[0].generate(1)[0]\n+        out = self.nodes[0].scanblocks(\"start\", [\"addr(\"+addr_1+\")\"])\n+        assert(blockhash in out['relevant_blocks'])\n+        assert_equal(self.nodes[0].getblockheader(blockhash)['height'], out['to_height'])\n+        assert_equal(0, out['from_height'])\n+\n+        # mine another block\n+        blockhash_new = self.nodes[0].generate(1)[0]\n+\n+        # make sure the blockhash is not in the filter result if we set the start_height to the just mined block (unlikely to hit a false positive)\n+        assert(blockhash not in self.nodes[0].scanblocks(\"start\", [\"addr(\"+addr_1+\")\"], self.nodes[0].getblockheader(blockhash_new)['height'])['relevant_blocks'])\n+\n+        # make sure the blockhash is present when using the first mined block as start_height\n+        assert(blockhash in self.nodes[0].scanblocks(\"start\", [\"addr(\"+addr_1+\")\"], self.nodes[0].getblockheader(blockhash)['height'])['relevant_blocks'])\n+\n+        # also test the stop height\n+        assert(blockhash in self.nodes[0].scanblocks(\"start\", [\"addr(\"+addr_1+\")\"], self.nodes[0].getblockheader(blockhash)['height'], self.nodes[0].getblockheader(blockhash)['height'])['relevant_blocks'])\n+\n+        # use the stop_height to exclude the relevent block\n+        assert(blockhash not in self.nodes[0].scanblocks(\"start\", [\"addr(\"+addr_1+\")\"], 0, self.nodes[0].getblockheader(blockhash)['height']-1)['relevant_blocks'])\n+\n+        # make sure the blockhash is present when using the first mined block as start_height\n+        assert(blockhash in self.nodes[0].scanblocks(\"start\", [{\"desc\": \"pkh(tpubD6NzVbkrYhZ4WaWSyoBvQwbpLkojyoTZPRsgXELWz3Popb3qkjcJyJUGLnL4qHHoQvao8ESaAstxYSnhyswJ76uZPStJRJCTKvosUCJZL5B/*)\", \"range\": [0,100]}], self.nodes[0].getblockheader(blockhash)['height'])['relevant_blocks'])\n+\n+        # test node with disabled blockfilterindex\n+        assert_raises_rpc_error(-1, \"Index is not enabled for filtertype basic\", self.nodes[1].scanblocks, \"start\", [\"addr(\"+addr_1+\")\"])\n+\n+        # test unknown filtertype\n+        assert_raises_rpc_error(-5, \"Unknown filtertype\", self.nodes[0].scanblocks, \"start\", [\"addr(\"+addr_1+\")\"], 0, 10, \"extended\")\n+\n+        # test invalid start_height\n+        assert_raises_rpc_error(-1, \"Invalid start_height\", self.nodes[0].scanblocks, \"start\", [\"addr(\"+addr_1+\")\"], 100000000)\n+\n+        # test invalid stop_height\n+        assert_raises_rpc_error(-1, \"Invalid stop_height\", self.nodes[0].scanblocks, \"start\", [\"addr(\"+addr_1+\")\"], 10, 0)\n+        assert_raises_rpc_error(-1, \"Invalid stop_height\", self.nodes[0].scanblocks, \"start\", [\"addr(\"+addr_1+\")\"], 10, 100000000)\n+\n+        # test accessing the status (must be empty)\n+        assert_equal(self.nodes[0].scanblocks(\"status\"), None)\n+\n+        # test aborting the current scan (there is no, must return false)\n+        assert_equal(self.nodes[0].scanblocks(\"abort\"), False)\n+\n+        # test invalid command\n+        assert_raises_rpc_error(-8, \"Invalid action argument\", self.nodes[0].scanblocks, \"foobar\")\n+\n+if __name__ == '__main__':\n+    scanblocksTest().main()"
+      },
+      {
+        "sha": "f53c184150079153cd22e0434a76d40ded64b165",
+        "filename": "test/functional/test_runner.py",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/71b7cdb460e2d0179aa87bdd0d30a82a821f6d05/test/functional/test_runner.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/71b7cdb460e2d0179aa87bdd0d30a82a821f6d05/test/functional/test_runner.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/test_runner.py?ref=71b7cdb460e2d0179aa87bdd0d30a82a821f6d05",
+        "patch": "@@ -277,6 +277,7 @@\n     'rpc_deriveaddresses.py',\n     'rpc_deriveaddresses.py --usecli',\n     'p2p_ping.py',\n+    'rpc_scanblockfilters.py',\n     'rpc_scantxoutset.py',\n     'feature_logging.py',\n     'p2p_node_network_limited.py',"
+      }
+    ]
+  }
+]

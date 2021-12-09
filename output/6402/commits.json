@@ -1,0 +1,206 @@
+[
+  {
+    "sha": "e459798a3c94e43c40325403d648ef1ec4031888",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplNDU5Nzk4YTNjOTRlNDNjNDAzMjU0MDNkNjQ4ZWYxZWM0MDMxODg4",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2015-07-09T03:03:48Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2015-07-09T03:03:48Z"
+      },
+      "message": "Floating network relay fee increase, if memory pool grows too large.\n\nCreate a relay fee that adjusts to floods which cause the memory pool to\ngrow too large.  A periodic memory pool janitor runs, scanning the\nmemory pool total byte size.\n\nIf the memory pool is below a \"low water\" byte size limit, the\n-minrelaytxfee minimum relay fee setting is used.\n\nIf the memory pool is above a \"high water\" byte size limit, the\nminimum relay fee setting is increased according to the following\nalgorithm:\n- take the top half of the mempool in terms of fee/kb - fee rate\n- take the lowest fee rate as the minimum relay fee\n\nThe memory pool may continue to grow beyond the high water mark, though\nfees to further fill memory pools become increasingly more expensive,\nuntil new blocks reduce the pressure.\n\nThe newly increased relay fee remains intact until the memory pool\nsize falls below the \"low water\" limit.\n\nThe default \"low water\" limit is 1/2 of the supplied \"high water\" limit.",
+      "tree": {
+        "sha": "e64caf2e958941207a40ec29785220d369cece13",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/e64caf2e958941207a40ec29785220d369cece13"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/e459798a3c94e43c40325403d648ef1ec4031888",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e459798a3c94e43c40325403d648ef1ec4031888",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/e459798a3c94e43c40325403d648ef1ec4031888",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e459798a3c94e43c40325403d648ef1ec4031888/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "11576a57d2ee37aa421e0fce69e70751b5af9a61",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/11576a57d2ee37aa421e0fce69e70751b5af9a61",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/11576a57d2ee37aa421e0fce69e70751b5af9a61"
+      }
+    ],
+    "stats": {
+      "total": 127,
+      "additions": 127,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "a929f8a13a277266106445c352117dca3f8f6fb4",
+        "filename": "src/Makefile.am",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e459798a3c94e43c40325403d648ef1ec4031888/src/Makefile.am",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e459798a3c94e43c40325403d648ef1ec4031888/src/Makefile.am",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/Makefile.am?ref=e459798a3c94e43c40325403d648ef1ec4031888",
+        "patch": "@@ -112,6 +112,7 @@ BITCOIN_CORE_H = \\\n   noui.h \\\n   policy/fees.h \\\n   policy/policy.h \\\n+  poolman.h \\\n   pow.h \\\n   primitives/block.h \\\n   primitives/transaction.h \\\n@@ -178,6 +179,7 @@ libbitcoin_server_a_SOURCES = \\\n   noui.cpp \\\n   policy/fees.cpp \\\n   policy/policy.cpp \\\n+  poolman.cpp \\\n   pow.cpp \\\n   rest.cpp \\\n   rpcblockchain.cpp \\"
+      },
+      {
+        "sha": "3b94caeb73711a0d50ba43bb9e2e7c2979225884",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 0,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e459798a3c94e43c40325403d648ef1ec4031888/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e459798a3c94e43c40325403d648ef1ec4031888/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=e459798a3c94e43c40325403d648ef1ec4031888",
+        "patch": "@@ -19,6 +19,7 @@\n #include \"miner.h\"\n #include \"net.h\"\n #include \"policy/policy.h\"\n+#include \"poolman.h\"\n #include \"rpcserver.h\"\n #include \"script/standard.h\"\n #include \"scheduler.h\"\n@@ -281,8 +282,11 @@ std::string HelpMessage(HelpMessageMode mode)\n     }\n     strUsage += HelpMessageOpt(\"-datadir=<dir>\", _(\"Specify data directory\"));\n     strUsage += HelpMessageOpt(\"-dbcache=<n>\", strprintf(_(\"Set database cache size in megabytes (%d to %d, default: %d)\"), nMinDbCache, nMaxDbCache, nDefaultDbCache));\n+    strUsage += HelpMessageOpt(\"-janitorinterval=<n>\", _(\"Number of seconds between each mempool janitor run (default: 10 minutes, 0=disable)\"));\n     strUsage += HelpMessageOpt(\"-loadblock=<file>\", _(\"Imports blocks from external blk000??.dat file\") + \" \" + _(\"on startup\"));\n     strUsage += HelpMessageOpt(\"-maxorphantx=<n>\", strprintf(_(\"Keep at most <n> unconnectable transactions in memory (default: %u)\"), DEFAULT_MAX_ORPHAN_TRANSACTIONS));\n+    strUsage += HelpMessageOpt(\"-mempoollowwater=<n>\", _(\"When mempool TX bytes decreases below size <n>, set relay fee back to default; stop floating relay fee (default=-1=mempoolhighwater/2, 0=always float)\"));\n+    strUsage += HelpMessageOpt(\"-mempoolhighwater=<n>\", _(\"When mempool TX bytes exceeds size <n>, increase relay fee (default=0=disabled)\"));\n     strUsage += HelpMessageOpt(\"-par=<n>\", strprintf(_(\"Set the number of script verification threads (%u to %d, 0 = auto, <0 = leave that many cores free, default: %d)\"),\n         -GetNumCores(), MAX_SCRIPTCHECK_THREADS, DEFAULT_SCRIPTCHECK_THREADS));\n #ifndef WIN32\n@@ -1447,6 +1451,9 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)\n     // Generate coins in the background\n     GenerateBitcoins(GetBoolArg(\"-gen\", false), GetArg(\"-genproclimit\", 1), Params());\n \n+    // start mempool janitor\n+    InitTxMempoolJanitor(scheduler);\n+\n     // ********************************************************* Step 11: finished\n \n     SetRPCWarmupFinished();"
+      },
+      {
+        "sha": "20b89f04757cdea4f89d4a3d66390ecb37c4be11",
+        "filename": "src/poolman.cpp",
+        "status": "added",
+        "additions": 96,
+        "deletions": 0,
+        "changes": 96,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e459798a3c94e43c40325403d648ef1ec4031888/src/poolman.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e459798a3c94e43c40325403d648ef1ec4031888/src/poolman.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/poolman.cpp?ref=e459798a3c94e43c40325403d648ef1ec4031888",
+        "patch": "@@ -0,0 +1,96 @@\n+\n+#include <algorithm>\n+#include <vector>\n+#include \"poolman.h\"\n+#include \"main.h\"\n+#include \"util.h\"\n+#include \"amount.h\"\n+#include \"utiltime.h\"\n+\n+using namespace std;\n+\n+static int64_t PoolmanLowWater, PoolmanHighWater;\n+static bool janitorInit = false;\n+static bool floatingFee = false;\n+static CFeeRate origTxFee;\n+\n+void TxMempoolJanitor()\n+{\n+    int64_t nStart = GetTimeMillis();\n+\n+    // remember original minimum tx fee\n+    if (!janitorInit) {\n+        janitorInit = true;\n+        origTxFee = ::minRelayTxFee;\n+    }\n+\n+    // query mempool stats\n+    unsigned long totalTx = mempool.size();\n+    int64_t totalSize = mempool.GetTotalTxSize();\n+\n+    // if below low water, disable janitor\n+    if (totalSize < PoolmanLowWater || totalTx < 2) {\n+        if (floatingFee) {\n+            floatingFee = false;\n+            ::minRelayTxFee = origTxFee;\n+        }\n+        LogPrint(\"mempool\", \"mempool level low, run complete,  %dms\\n\",\n+                 GetTimeMillis() - nStart);\n+        return;\n+    }\n+\n+    // if below high water, no more work.  floating fee might be active.\n+    if ((int64_t)mempool.GetTotalTxSize() < PoolmanHighWater) {\n+        LogPrint(\"mempool\", \"mempool level %s, run complete,  %dms\\n\",\n+                 floatingFee ? \"draining\" : \"adequate\",\n+                 GetTimeMillis() - nStart);\n+        return;\n+    }\n+\n+    // we are above high water.  float relay fee in response.\n+    floatingFee = true;\n+\n+    // get sorted list of fees in mempool\n+    vector<CFeeRate> vfees;\n+    mempool.queryFees(vfees);\n+    std::sort(vfees.begin(), vfees.end());\n+    std::reverse(vfees.begin(), vfees.end());\n+    vfees.resize(vfees.size() / 2);\n+\n+    // set relay fee to lowest rate of top half of mempool\n+    ::minRelayTxFee = vfees.back();\n+\n+    LogPrint(\"mempool\", \"mempool janitor run complete, fee rate %s, %dms\\n\",\n+             ::minRelayTxFee.ToString(),\n+             GetTimeMillis() - nStart);\n+}\n+\n+void InitTxMempoolJanitor(CScheduler& scheduler)\n+{\n+    // mempool janitor execution interval.  default interval: 10 min\n+    int janitorInterval = GetArg(\"-janitorinterval\", (60 * 10));\n+\n+    // mempool janitor low water, high water marks\n+    PoolmanHighWater = GetArg(\"-mempoolhighwater\", 0);\n+    if (PoolmanHighWater <= 0)\n+        PoolmanLowWater = -1;\n+    else {\n+        PoolmanLowWater = GetArg(\"-mempoollowwater\", -1);\n+        if (PoolmanLowWater < 0 || PoolmanLowWater > PoolmanHighWater)\n+            PoolmanLowWater = PoolmanHighWater / 2;\n+    }\n+\n+    // if interval too small or zero, janitor is disabled\n+    static const int janitorSaneInterval = 10;\n+    if ((janitorInterval < janitorSaneInterval) ||\n+        (PoolmanHighWater <= 0)) {\n+        janitorInterval = 0;\n+        PoolmanLowWater = -1;\n+        PoolmanHighWater = 0;\n+    }\n+\n+    // start mempool janitor\n+    if (janitorInterval > 0)\n+        scheduler.scheduleEvery(&TxMempoolJanitor, janitorInterval * 1000);\n+}\n+"
+      },
+      {
+        "sha": "dee1d65a010d2c1778dbc5302497fac43ce58985",
+        "filename": "src/poolman.h",
+        "status": "added",
+        "additions": 8,
+        "deletions": 0,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e459798a3c94e43c40325403d648ef1ec4031888/src/poolman.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e459798a3c94e43c40325403d648ef1ec4031888/src/poolman.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/poolman.h?ref=e459798a3c94e43c40325403d648ef1ec4031888",
+        "patch": "@@ -0,0 +1,8 @@\n+#ifndef __BITCOIN_POOLMAN_H__\n+#define __BITCOIN_POOLMAN_H__\n+\n+#include \"scheduler.h\"\n+\n+extern void InitTxMempoolJanitor(CScheduler& scheduler);\n+\n+#endif // __BITCOIN_POOLMAN_H__"
+      },
+      {
+        "sha": "de551ba386ec354267e86a29820b3c7583dc58bf",
+        "filename": "src/txmempool.cpp",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 0,
+        "changes": 13,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e459798a3c94e43c40325403d648ef1ec4031888/src/txmempool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e459798a3c94e43c40325403d648ef1ec4031888/src/txmempool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.cpp?ref=e459798a3c94e43c40325403d648ef1ec4031888",
+        "patch": "@@ -311,6 +311,19 @@ void CTxMemPool::queryHashes(vector<uint256>& vtxid)\n         vtxid.push_back((*mi).first);\n }\n \n+void CTxMemPool::queryFees(vector<CFeeRate>& vfees)\n+{\n+    vfees.clear();\n+\n+    LOCK(cs);\n+    vfees.reserve(mapTx.size());\n+    for (map<uint256, CTxMemPoolEntry>::iterator mi = mapTx.begin(); mi != mapTx.end(); ++mi) {\n+        CTxMemPoolEntry& mpe = (*mi).second;\n+        CFeeRate rate(mpe.GetFee(), mpe.GetTxSize());\n+        vfees.push_back(rate);\n+    }\n+}\n+\n bool CTxMemPool::lookup(uint256 hash, CTransaction& result) const\n {\n     LOCK(cs);"
+      },
+      {
+        "sha": "1c49a9ac41f13b0ddf6e8e6306a719f5e50ace8e",
+        "filename": "src/txmempool.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e459798a3c94e43c40325403d648ef1ec4031888/src/txmempool.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e459798a3c94e43c40325403d648ef1ec4031888/src/txmempool.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.h?ref=e459798a3c94e43c40325403d648ef1ec4031888",
+        "patch": "@@ -120,6 +120,7 @@ class CTxMemPool\n                         std::list<CTransaction>& conflicts, bool fCurrentEstimate = true);\n     void clear();\n     void queryHashes(std::vector<uint256>& vtxid);\n+    void queryFees(std::vector<CFeeRate>& vfees);\n     void pruneSpent(const uint256& hash, CCoins &coins);\n     unsigned int GetTransactionsUpdated() const;\n     void AddTransactionsUpdated(unsigned int n);"
+      }
+    ]
+  },
+  {
+    "sha": "6c449bdcfe73526f09df8f3ad581f49467f7b2dd",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2YzQ0OWJkY2ZlNzM1MjZmMDlkZjhmM2FkNTgxZjQ5NDY3ZjdiMmRk",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2015-07-10T04:32:09Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2015-07-10T04:32:09Z"
+      },
+      "message": "poolman: fix minor nits [squashme]",
+      "tree": {
+        "sha": "1a8e7ad8a05878b00ea086fffe183746ea353a19",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/1a8e7ad8a05878b00ea086fffe183746ea353a19"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/6c449bdcfe73526f09df8f3ad581f49467f7b2dd",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6c449bdcfe73526f09df8f3ad581f49467f7b2dd",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/6c449bdcfe73526f09df8f3ad581f49467f7b2dd",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6c449bdcfe73526f09df8f3ad581f49467f7b2dd/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "e459798a3c94e43c40325403d648ef1ec4031888",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e459798a3c94e43c40325403d648ef1ec4031888",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/e459798a3c94e43c40325403d648ef1ec4031888"
+      }
+    ],
+    "stats": {
+      "total": 29,
+      "additions": 17,
+      "deletions": 12
+    },
+    "files": [
+      {
+        "sha": "d592427ace0bc46b15ef880b5e0f0a231d7fc896",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 3,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6c449bdcfe73526f09df8f3ad581f49467f7b2dd/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6c449bdcfe73526f09df8f3ad581f49467f7b2dd/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=6c449bdcfe73526f09df8f3ad581f49467f7b2dd",
+        "patch": "@@ -282,11 +282,11 @@ std::string HelpMessage(HelpMessageMode mode)\n     }\n     strUsage += HelpMessageOpt(\"-datadir=<dir>\", _(\"Specify data directory\"));\n     strUsage += HelpMessageOpt(\"-dbcache=<n>\", strprintf(_(\"Set database cache size in megabytes (%d to %d, default: %d)\"), nMinDbCache, nMaxDbCache, nDefaultDbCache));\n-    strUsage += HelpMessageOpt(\"-janitorinterval=<n>\", _(\"Number of seconds between each mempool janitor run (default: 10 minutes, 0=disable)\"));\n+    strUsage += HelpMessageOpt(\"-janitorinterval=<n>\", _(\"Number of seconds between each mempool janitor run (default: 10 minutes; 0 = disable)\"));\n     strUsage += HelpMessageOpt(\"-loadblock=<file>\", _(\"Imports blocks from external blk000??.dat file\") + \" \" + _(\"on startup\"));\n     strUsage += HelpMessageOpt(\"-maxorphantx=<n>\", strprintf(_(\"Keep at most <n> unconnectable transactions in memory (default: %u)\"), DEFAULT_MAX_ORPHAN_TRANSACTIONS));\n-    strUsage += HelpMessageOpt(\"-mempoollowwater=<n>\", _(\"When mempool TX bytes decreases below size <n>, set relay fee back to default; stop floating relay fee (default=-1=mempoolhighwater/2, 0=always float)\"));\n-    strUsage += HelpMessageOpt(\"-mempoolhighwater=<n>\", _(\"When mempool TX bytes exceeds size <n>, increase relay fee (default=0=disabled)\"));\n+    strUsage += HelpMessageOpt(\"-mempoollowwater=<n>\", _(\"When mempool TX bytes decreases below size <n>, set relay fee back to default; stop floating relay fee (default = -1 = mempoolhighwater/2; 0 = always float)\"));\n+    strUsage += HelpMessageOpt(\"-mempoolhighwater=<n>\", _(\"When mempool TX bytes exceeds size <n>, increase relay fee (default = 0 = disabled)\"));\n     strUsage += HelpMessageOpt(\"-par=<n>\", strprintf(_(\"Set the number of script verification threads (%u to %d, 0 = auto, <0 = leave that many cores free, default: %d)\"),\n         -GetNumCores(), MAX_SCRIPTCHECK_THREADS, DEFAULT_SCRIPTCHECK_THREADS));\n #ifndef WIN32"
+      },
+      {
+        "sha": "1687d848d10e9453c8f81d1f7c83ce04e25c5bc8",
+        "filename": "src/poolman.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 6,
+        "changes": 13,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6c449bdcfe73526f09df8f3ad581f49467f7b2dd/src/poolman.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6c449bdcfe73526f09df8f3ad581f49467f7b2dd/src/poolman.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/poolman.cpp?ref=6c449bdcfe73526f09df8f3ad581f49467f7b2dd",
+        "patch": "@@ -1,14 +1,15 @@\n+// Copyright (c) 2015 The Bitcoin Core developers\n+// Distributed under the MIT software license, see the accompanying\n+// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n \n #include <algorithm>\n #include <vector>\n-#include \"poolman.h\"\n+#include \"amount.h\"\n #include \"main.h\"\n+#include \"poolman.h\"\n #include \"util.h\"\n-#include \"amount.h\"\n #include \"utiltime.h\"\n \n-using namespace std;\n-\n static int64_t PoolmanLowWater, PoolmanHighWater;\n static bool janitorInit = false;\n static bool floatingFee = false;\n@@ -51,7 +52,7 @@ void TxMempoolJanitor()\n     floatingFee = true;\n \n     // get sorted list of fees in mempool\n-    vector<CFeeRate> vfees;\n+    std::vector<CFeeRate> vfees;\n     mempool.queryFees(vfees);\n     std::sort(vfees.begin(), vfees.end());\n     std::reverse(vfees.begin(), vfees.end());\n@@ -91,6 +92,6 @@ void InitTxMempoolJanitor(CScheduler& scheduler)\n \n     // start mempool janitor\n     if (janitorInterval > 0)\n-        scheduler.scheduleEvery(&TxMempoolJanitor, janitorInterval * 1000);\n+        scheduler.scheduleEvery(&TxMempoolJanitor, janitorInterval);\n }\n "
+      },
+      {
+        "sha": "ed94fa8cc2e5e33969522434cf3bdedc47fe81e5",
+        "filename": "src/poolman.h",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 3,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6c449bdcfe73526f09df8f3ad581f49467f7b2dd/src/poolman.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6c449bdcfe73526f09df8f3ad581f49467f7b2dd/src/poolman.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/poolman.h?ref=6c449bdcfe73526f09df8f3ad581f49467f7b2dd",
+        "patch": "@@ -1,8 +1,12 @@\n-#ifndef __BITCOIN_POOLMAN_H__\n-#define __BITCOIN_POOLMAN_H__\n+// Copyright (c) 2015 The Bitcoin Core developers\n+// Distributed under the MIT software license, see the accompanying\n+// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+#ifndef BITCOIN_POOLMAN_H\n+#define BITCOIN_POOLMAN_H\n \n #include \"scheduler.h\"\n \n extern void InitTxMempoolJanitor(CScheduler& scheduler);\n \n-#endif // __BITCOIN_POOLMAN_H__\n+#endif // BITCOIN_POOLMAN_H"
+      }
+    ]
+  }
+]

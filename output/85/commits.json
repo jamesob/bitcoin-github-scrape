@@ -1,0 +1,81 @@
+[
+  {
+    "sha": "a14bf1946dfade7c615cd41924c7cd41abdbc119",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphMTRiZjE5NDZkZmFkZTdjNjE1Y2Q0MTkyNGM3Y2Q0MWFiZGJjMTE5",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2011-01-28T19:39:31Z"
+      },
+      "committer": {
+        "name": "tcatm",
+        "email": "tcatm@gawab.com",
+        "date": "2011-03-01T01:10:07Z"
+      },
+      "message": "Bugfix: avoid sub-cent change (lost in fees) whenever possible",
+      "tree": {
+        "sha": "adf370cae99e129f777d46e8cf38fca22964664a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/adf370cae99e129f777d46e8cf38fca22964664a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a14bf1946dfade7c615cd41924c7cd41abdbc119",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a14bf1946dfade7c615cd41924c7cd41abdbc119",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a14bf1946dfade7c615cd41924c7cd41abdbc119",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a14bf1946dfade7c615cd41924c7cd41abdbc119/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": null,
+    "parents": [
+      {
+        "sha": "6665aca02421e62c194dd8291b4ab7c91eea72c7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6665aca02421e62c194dd8291b4ab7c91eea72c7",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/6665aca02421e62c194dd8291b4ab7c91eea72c7"
+      }
+    ],
+    "stats": {
+      "total": 24,
+      "additions": 17,
+      "deletions": 7
+    },
+    "files": [
+      {
+        "sha": "cbbe79514a4ee165d350bc55bd959e6f444b066f",
+        "filename": "main.cpp",
+        "status": "modified",
+        "additions": 17,
+        "deletions": 7,
+        "changes": 24,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a14bf1946dfade7c615cd41924c7cd41abdbc119/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a14bf1946dfade7c615cd41924c7cd41abdbc119/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/main.cpp?ref=a14bf1946dfade7c615cd41924c7cd41abdbc119",
+        "patch": "@@ -3750,16 +3750,16 @@ bool SelectCoinsMinConf(int64 nTargetValue, int nConfMine, int nConfTheirs, set<\n             int64 n = pcoin->GetCredit();\n             if (n <= 0)\n                 continue;\n-            if (n < nTargetValue)\n-            {\n-                vValue.push_back(make_pair(n, pcoin));\n-                nTotalLower += n;\n-            }\n-            else if (n == nTargetValue)\n+            if (n == nTargetValue)\n             {\n                 setCoinsRet.insert(pcoin);\n                 return true;\n             }\n+            else if (n < nTargetValue + CENT)\n+            {\n+                vValue.push_back(make_pair(n, pcoin));\n+                nTotalLower += n;\n+            }\n             else if (n < nLowestLarger)\n             {\n                 nLowestLarger = n;\n@@ -3768,14 +3768,24 @@ bool SelectCoinsMinConf(int64 nTargetValue, int nConfMine, int nConfTheirs, set<\n         }\n     }\n \n-    if (nTotalLower < nTargetValue)\n+    if (nTotalLower == nTargetValue || nTotalLower == nTargetValue + CENT)\n+    {\n+        for (int i = 0; i < vValue.size(); ++i)\n+            setCoinsRet.insert(vValue[i].second);\n+        return true;\n+    }\n+\n+    if (nTotalLower < nTargetValue + (pcoinLowestLarger ? CENT : 0))\n     {\n         if (pcoinLowestLarger == NULL)\n             return false;\n         setCoinsRet.insert(pcoinLowestLarger);\n         return true;\n     }\n \n+    if (nTotalLower >= nTargetValue + CENT)\n+        nTargetValue += CENT;\n+\n     // Solve subset sum by stochastic approximation\n     sort(vValue.rbegin(), vValue.rend());\n     vector<char> vfIncluded;"
+      }
+    ]
+  }
+]

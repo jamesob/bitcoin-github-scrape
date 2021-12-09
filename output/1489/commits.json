@@ -1,0 +1,74 @@
+[
+  {
+    "sha": "7137e895618ccf44af7dd5d3747e3c09ec8719a8",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3MTM3ZTg5NTYxOGNjZjQ0YWY3ZGQ1ZDM3NDdlM2MwOWVjODcxOWE4",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-06-20T15:51:15Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-06-20T15:51:15Z"
+      },
+      "message": "CTxMemPool: encapsulate map[Next]Tx, by adding method copyFinal()\n\nThis [re]moves a lock and a direct mempool.mapTx access, by copying\nthe TX memory pool contents into a temporary vector, for use when\nbuilding a new block inside CreateNewBlock().\n\nIn addition to holding CTxMemPool::cs for a shorter amount of time,\nthis makes it easier to parallelize CreateNewBlock() -- something\nalready done in widely circulating miner-pool patches.\n\nThe cost: memcopying the TX memory pool at each CreateNewBlock()\ninvocation (each getwork / getmemorypool new-work request).",
+      "tree": {
+        "sha": "d02904e2c20776f832a9803f7d3b51a3de70105e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/d02904e2c20776f832a9803f7d3b51a3de70105e"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/7137e895618ccf44af7dd5d3747e3c09ec8719a8",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7137e895618ccf44af7dd5d3747e3c09ec8719a8",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/7137e895618ccf44af7dd5d3747e3c09ec8719a8",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7137e895618ccf44af7dd5d3747e3c09ec8719a8/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "c283b3c569d6ea67a07e96a6dea3c1645d7be259",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c283b3c569d6ea67a07e96a6dea3c1645d7be259",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c283b3c569d6ea67a07e96a6dea3c1645d7be259"
+      }
+    ],
+    "stats": {
+      "total": 36,
+      "additions": 28,
+      "deletions": 8
+    },
+    "files": [
+      {
+        "sha": "16ff0f74d743ed2b34a85109375c5285e1fcfcf8",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 23,
+        "deletions": 6,
+        "changes": 29,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7137e895618ccf44af7dd5d3747e3c09ec8719a8/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7137e895618ccf44af7dd5d3747e3c09ec8719a8/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=7137e895618ccf44af7dd5d3747e3c09ec8719a8",
+        "patch": "@@ -652,6 +652,21 @@ bool CTxMemPool::remove(CTransaction &tx)\n     return true;\n }\n \n+void CTxMemPool::copyFinal(vector<CTransaction> &vtx)\n+{\n+    vtx.clear();\n+\n+    LOCK(cs);\n+    vtx.reserve(mapTx.size());\n+    for (map<uint256, CTransaction>::iterator mi = mapTx.begin(); mi != mapTx.end(); ++mi) {\n+        CTransaction& tx = (*mi).second;\n+        if (tx.IsCoinBase() || !tx.IsFinal())\n+            continue;\n+\n+        vtx.push_back(tx);\n+    }\n+}\n+\n \n \n \n@@ -3296,18 +3311,20 @@ CBlock* CreateNewBlock(CReserveKey& reservekey)\n     // Collect memory pool transactions into the block\n     int64 nFees = 0;\n     {\n-        LOCK2(cs_main, mempool.cs);\n+        // Copy finalized, non-coinbase mempool transactions\n+        vector<CTransaction> txpool;\n+        mempool.copyFinal(txpool);\n+\n+        LOCK(cs_main);\n         CTxDB txdb(\"r\");\n \n         // Priority order to process transactions\n         list<COrphan> vOrphan; // list memory doesn't move\n         map<uint256, vector<COrphan*> > mapDependers;\n         multimap<double, CTransaction*> mapPriority;\n-        for (map<uint256, CTransaction>::iterator mi = mempool.mapTx.begin(); mi != mempool.mapTx.end(); ++mi)\n+        for (vector<CTransaction>::iterator it = txpool.begin(); it != txpool.end(); ++it)\n         {\n-            CTransaction& tx = (*mi).second;\n-            if (tx.IsCoinBase() || !tx.IsFinal())\n-                continue;\n+            CTransaction& tx = (*it);\n \n             COrphan* porphan = NULL;\n             double dPriority = 0;\n@@ -3346,7 +3363,7 @@ CBlock* CreateNewBlock(CReserveKey& reservekey)\n             if (porphan)\n                 porphan->dPriority = dPriority;\n             else\n-                mapPriority.insert(make_pair(-dPriority, &(*mi).second));\n+                mapPriority.insert(make_pair(-dPriority, &(*it)));\n \n             if (fDebug && GetBoolArg(\"-printpriority\"))\n             {"
+      },
+      {
+        "sha": "1a9c8bf7d332492cf2ed2e95549f309a3d40ea4b",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 2,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7137e895618ccf44af7dd5d3747e3c09ec8719a8/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7137e895618ccf44af7dd5d3747e3c09ec8719a8/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=7137e895618ccf44af7dd5d3747e3c09ec8719a8",
+        "patch": "@@ -1595,15 +1595,18 @@ class CAlert : public CUnsignedAlert\n \n class CTxMemPool\n {\n-public:\n-    mutable CCriticalSection cs;\n+private:\n     std::map<uint256, CTransaction> mapTx;\n     std::map<COutPoint, CInPoint> mapNextTx;\n \n+public:\n+    mutable CCriticalSection cs;\n+\n     bool accept(CTxDB& txdb, CTransaction &tx,\n                 bool fCheckInputs, bool* pfMissingInputs);\n     bool addUnchecked(CTransaction &tx);\n     bool remove(CTransaction &tx);\n+    void copyFinal(std::vector<CTransaction> &vtx);\n \n     unsigned long size()\n     {"
+      }
+    ]
+  }
+]

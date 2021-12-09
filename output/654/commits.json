@@ -1,0 +1,86 @@
+[
+  {
+    "sha": "2bc6cecebba52e32db43a0b2d9b519ac4a48c479",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyYmM2Y2VjZWJiYTUyZTMyZGI0M2EwYjJkOWI1MTlhYzRhNDhjNDc5",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-11-21T17:25:00Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-11-26T19:28:46Z"
+      },
+      "message": "Move DNS Seed lookup to a new thread.",
+      "tree": {
+        "sha": "4512b4adb3dd1796f4129c7afe3d15c52a52bb39",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/4512b4adb3dd1796f4129c7afe3d15c52a52bb39"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/2bc6cecebba52e32db43a0b2d9b519ac4a48c479",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2bc6cecebba52e32db43a0b2d9b519ac4a48c479",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/2bc6cecebba52e32db43a0b2d9b519ac4a48c479",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2bc6cecebba52e32db43a0b2d9b519ac4a48c479/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "50aa850fc8e16dd90577f85477dae40bfa4abb27",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/50aa850fc8e16dd90577f85477dae40bfa4abb27",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/50aa850fc8e16dd90577f85477dae40bfa4abb27"
+      }
+    ],
+    "stats": {
+      "total": 45,
+      "additions": 38,
+      "deletions": 7
+    },
+    "files": [
+      {
+        "sha": "ee31ff9485e1b94cf8601466ba5750007ea51f01",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 5,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/2bc6cecebba52e32db43a0b2d9b519ac4a48c479/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/2bc6cecebba52e32db43a0b2d9b519ac4a48c479/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=2bc6cecebba52e32db43a0b2d9b519ac4a48c479",
+        "patch": "@@ -476,11 +476,6 @@ bool AppInit2(int argc, char* argv[])\n         }\n     }\n \n-    if (GetBoolArg(\"-nodnsseed\"))\n-        printf(\"DNS seeding disabled\\n\");\n-    else\n-        DNSAddressSeed();\n-\n     if (mapArgs.count(\"-paytxfee\"))\n     {\n         if (!ParseMoney(mapArgs[\"-paytxfee\"], nTransactionFee))"
+      },
+      {
+        "sha": "199fb407f2e72d645a28bca918708de0e2905d8c",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 38,
+        "deletions": 1,
+        "changes": 39,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/2bc6cecebba52e32db43a0b2d9b519ac4a48c479/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/2bc6cecebba52e32db43a0b2d9b519ac4a48c479/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=2bc6cecebba52e32db43a0b2d9b519ac4a48c479",
+        "patch": "@@ -32,6 +32,7 @@ void ThreadOpenConnections2(void* parg);\n #ifdef USE_UPNP\n void ThreadMapPort2(void* parg);\n #endif\n+void ThreadDNSAddressSeed2(void* parg);\n bool OpenNetworkConnection(const CAddress& addrConnect);\n \n \n@@ -1213,8 +1214,28 @@ static const char *strDNSSeed[] = {\n     \"dnsseed.bluematt.me\",\n };\n \n-void DNSAddressSeed()\n+void ThreadDNSAddressSeed(void* parg)\n {\n+    IMPLEMENT_RANDOMIZE_STACK(ThreadDNSAddressSeed(parg));\n+    try\n+    {\n+        vnThreadsRunning[6]++;\n+        ThreadDNSAddressSeed2(parg);\n+        vnThreadsRunning[6]--;\n+    }\n+    catch (std::exception& e) {\n+        vnThreadsRunning[6]--;\n+        PrintException(&e, \"ThreadDNSAddressSeed()\");\n+    } catch (...) {\n+        vnThreadsRunning[6]--;\n+        throw; // support pthread_cancel()\n+    }\n+    printf(\"ThreadDNSAddressSeed exiting\\n\");\n+}\n+\n+void ThreadDNSAddressSeed2(void* parg)\n+{\n+    printf(\"ThreadDNSAddressSeed started\\n\");\n     int found = 0;\n \n     if (!fTestNet)\n@@ -1247,6 +1268,15 @@ void DNSAddressSeed()\n \n \n \n+\n+\n+\n+\n+\n+\n+\n+\n+\n unsigned int pnSeed[] =\n {\n     0x6884ac63, 0x3ffecead, 0x2919b953, 0x0942fe50, 0x7a1d922e, 0xcdd6734a, 0x953a5bb6, 0x2c46922e,\n@@ -1757,6 +1787,12 @@ void StartNode(void* parg)\n     // Start threads\n     //\n \n+    if (GetBoolArg(\"-nodnsseed\"))\n+        printf(\"DNS seeding disabled\\n\");\n+    else\n+        if (!CreateThread(ThreadDNSAddressSeed, NULL))\n+            printf(\"Error: CreateThread(ThreadDNSAddressSeed) failed\\n\");\n+\n     // Map ports with UPnP\n     if (fHaveUPnP)\n         MapPort(fUseUPnP);\n@@ -1803,6 +1839,7 @@ bool StopNode()\n     if (vnThreadsRunning[3] > 0) printf(\"ThreadBitcoinMiner still running\\n\");\n     if (vnThreadsRunning[4] > 0) printf(\"ThreadRPCServer still running\\n\");\n     if (fHaveUPnP && vnThreadsRunning[5] > 0) printf(\"ThreadMapPort still running\\n\");\n+    if (vnThreadsRunning[6] > 0) printf(\"ThreadDNSAddressSeed still running\\n\");\n     while (vnThreadsRunning[2] > 0 || vnThreadsRunning[4] > 0)\n         Sleep(20);\n     Sleep(50);"
+      },
+      {
+        "sha": "03da382df36c1ff41888f139bd69b5b491355962",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 1,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/2bc6cecebba52e32db43a0b2d9b519ac4a48c479/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/2bc6cecebba52e32db43a0b2d9b519ac4a48c479/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=2bc6cecebba52e32db43a0b2d9b519ac4a48c479",
+        "patch": "@@ -40,7 +40,6 @@ CNode* ConnectNode(CAddress addrConnect, int64 nTimeout=0);\n void AbandonRequests(void (*fn)(void*, CDataStream&), void* param1);\n bool AnySubscribed(unsigned int nChannel);\n void MapPort(bool fMapPort);\n-void DNSAddressSeed();\n bool BindListenPort(std::string& strError=REF(std::string()));\n void StartNode(void* parg);\n bool StopNode();"
+      }
+    ]
+  }
+]

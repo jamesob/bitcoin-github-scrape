@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "baba6e7de28940a8f4cc907d57d2ea5b780d39ea",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiYWJhNmU3ZGUyODk0MGE4ZjRjYzkwN2Q1N2QyZWE1Yjc4MGQzOWVh",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-02-10T03:41:42Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-02-10T05:54:11Z"
+      },
+      "message": "Get ext. IP from UPnP, make sure addrMe IsRoutable() in version.\n\nThis fixes a potential bug where some NATs may replace the node's\ninteral IP with its external IP in version messages, causing\nincorrect checksums when version messages begin being checksummed\non February 14, 2012.",
+      "tree": {
+        "sha": "04bce51d6b43395f40c54bc918156652f7e38dea",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/04bce51d6b43395f40c54bc918156652f7e38dea"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/baba6e7de28940a8f4cc907d57d2ea5b780d39ea",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/baba6e7de28940a8f4cc907d57d2ea5b780d39ea",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/baba6e7de28940a8f4cc907d57d2ea5b780d39ea",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/baba6e7de28940a8f4cc907d57d2ea5b780d39ea/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "328b26d40b2ea046144a487a6b4927a630e91fb9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/328b26d40b2ea046144a487a6b4927a630e91fb9",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/328b26d40b2ea046144a487a6b4927a630e91fb9"
+      }
+    ],
+    "stats": {
+      "total": 22,
+      "additions": 21,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "63829d0e0aa4a46dd4083be8e0281f5e28cabce7",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 21,
+        "deletions": 1,
+        "changes": 22,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/baba6e7de28940a8f4cc907d57d2ea5b780d39ea/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/baba6e7de28940a8f4cc907d57d2ea5b780d39ea/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=baba6e7de28940a8f4cc907d57d2ea5b780d39ea",
+        "patch": "@@ -530,7 +530,7 @@ void CNode::PushVersion()\n     /// when NTP implemented, change to just nTime = GetAdjustedTime()\n     int64 nTime = (fInbound ? GetAdjustedTime() : GetTime());\n     CAddress addrYou = (fUseProxy ? CAddress(CService(\"0.0.0.0\",0)) : addr);\n-    CAddress addrMe = (fUseProxy ? CAddress(CService(\"0.0.0.0\",0)) : addrLocalHost);\n+    CAddress addrMe = (fUseProxy || !addrLocalHost.IsRoutable() ? CAddress(CService(\"0.0.0.0\",0)) : addrLocalHost);\n     RAND_bytes((unsigned char*)&nLocalHostNonce, sizeof(nLocalHostNonce));\n     PushMessage(\"version\", PROTOCOL_VERSION, nLocalServices, nTime, addrYou, addrMe,\n                 nLocalHostNonce, FormatSubVersion(CLIENT_NAME, CLIENT_VERSION, std::vector<string>()), nBestHeight);\n@@ -965,6 +965,26 @@ void ThreadMapPort2(void* parg)\n     r = UPNP_GetValidIGD(devlist, &urls, &data, lanaddr, sizeof(lanaddr));\n     if (r == 1)\n     {\n+        if (!addrLocalHost.IsRoutable())\n+        {\n+            char externalIPAddress[40];\n+            r = UPNP_GetExternalIPAddress(urls.controlURL, data.first.servicetype, externalIPAddress);\n+            if(r != UPNPCOMMAND_SUCCESS)\n+                printf(\"UPnP: GetExternalIPAddress() returned %d\\n\", r);\n+            else\n+            {\n+                if(externalIPAddress[0])\n+                {\n+                    printf(\"UPnP: ExternalIPAddress = %s\\n\", externalIPAddress);\n+                    CAddress addrExternalFromUPnP(CService(externalIPAddress, 0), nLocalServices);\n+                    if (addrExternalFromUPnP.IsRoutable())\n+                        addrLocalHost = addrExternalFromUPnP;\n+                }\n+                else\n+                    printf(\"UPnP: GetExternalIPAddress failed.\\n\");\n+            }\n+        }\n+\n         string strDesc = \"Bitcoin \" + FormatFullVersion();\n #ifndef UPNPDISCOVER_SUCCESS\n         /* miniupnpc 1.5 */"
+      }
+    ]
+  }
+]

@@ -1,0 +1,314 @@
+[
+  {
+    "sha": "79f2525ab69146480033d6aa3c00c986f1c933f1",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3OWYyNTI1YWI2OTE0NjQ4MDAzM2Q2YWEzYzAwYzk4NmYxYzkzM2Yx",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-08-21T06:02:06Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-08-21T06:02:06Z"
+      },
+      "message": "RPC: split new 'submitblock' out of 'getblocktemplate'",
+      "tree": {
+        "sha": "874320d6f3a818a46a59f911628052888849254f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/874320d6f3a818a46a59f911628052888849254f"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/79f2525ab69146480033d6aa3c00c986f1c933f1",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/79f2525ab69146480033d6aa3c00c986f1c933f1",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/79f2525ab69146480033d6aa3c00c986f1c933f1",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/79f2525ab69146480033d6aa3c00c986f1c933f1/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "b86da2abe8695640698d45b1288a2951b7b3dfcb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b86da2abe8695640698d45b1288a2951b7b3dfcb",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b86da2abe8695640698d45b1288a2951b7b3dfcb"
+      }
+    ],
+    "stats": {
+      "total": 52,
+      "additions": 32,
+      "deletions": 20
+    },
+    "files": [
+      {
+        "sha": "49bea89bde6ceb18dd8b79234244b3d4767e972e",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 32,
+        "deletions": 20,
+        "changes": 52,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/79f2525ab69146480033d6aa3c00c986f1c933f1/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/79f2525ab69146480033d6aa3c00c986f1c933f1/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=79f2525ab69146480033d6aa3c00c986f1c933f1",
+        "patch": "@@ -1925,10 +1925,10 @@ Value getwork(const Array& params, bool fHelp)\n \n Value getblocktemplate(const Array& params, bool fHelp)\n {\n-    if (fHelp || params.size() != 1)\n+    if (fHelp || params.size() > 1)\n         throw runtime_error(\n             \"getblocktemplate [params]\\n\"\n-            \"If [params] does not contain a \\\"data\\\" key, returns data needed to construct a block to work on:\\n\"\n+            \"Returns data needed to construct a block to work on:\\n\"\n             \"  \\\"version\\\" : block version\\n\"\n             \"  \\\"previousblockhash\\\" : hash of current highest block\\n\"\n             \"  \\\"transactions\\\" : contents of non-coinbase transactions that should be included in the next block\\n\"\n@@ -1943,23 +1943,22 @@ Value getblocktemplate(const Array& params, bool fHelp)\n             \"  \\\"sizelimit\\\" : limit of block size\\n\"\n             \"  \\\"bits\\\" : compressed target of next block\\n\"\n             \"  \\\"height\\\" : height of the next block\\n\"\n-            \"If [params] does contain a \\\"data\\\" key, tries to solve the block and returns null if it was successful (and \\\"rejected\\\" if not)\\n\"\n             \"See https://en.bitcoin.it/wiki/BIP_0022 for full specification.\");\n \n-    const Object& oparam = params[0].get_obj();\n-    std::string strMode;\n+    std::string strMode = \"template\";\n+    if (params.size() > 0)\n     {\n+        const Object& oparam = params[0].get_obj();\n         const Value& modeval = find_value(oparam, \"mode\");\n         if (modeval.type() == str_type)\n             strMode = modeval.get_str();\n         else\n-        if (find_value(oparam, \"data\").type() == null_type)\n-            strMode = \"template\";\n-        else\n-            strMode = \"submit\";\n+            throw JSONRPCError(-8, \"Invalid mode\");\n     }\n \n-    if (strMode == \"template\")\n+    if (strMode != \"template\")\n+        throw JSONRPCError(-8, \"Invalid mode\");\n+\n     {\n         if (vNodes.empty())\n             throw JSONRPCError(-9, \"Bitcoin is not connected!\");\n@@ -2077,20 +2076,32 @@ Value getblocktemplate(const Array& params, bool fHelp)\n \n         return result;\n     }\n-    else\n-    if (strMode == \"submit\")\n-    {\n-        // Parse parameters\n-        CDataStream ssBlock(ParseHex(find_value(oparam, \"data\").get_str()), SER_NETWORK, PROTOCOL_VERSION);\n-        CBlock pblock;\n-        ssBlock >> pblock;\n+}\n \n-        bool fAccepted = ProcessBlock(NULL, &pblock);\n+Value submitblock(const Array& params, bool fHelp)\n+{\n+    if (fHelp || params.size() < 1 || params.size() > 2)\n+        throw runtime_error(\n+            \"submitblock <hex data> [optional-params-obj]\\n\"\n+            \"[optional-params-obj] parameter is currently ignored.\\n\"\n+            \"Attempts to submit new block to network.\\n\"\n+            \"See https://en.bitcoin.it/wiki/BIP_0022 for full specification.\");\n \n-        return fAccepted ? Value::null : \"rejected\";\n+    vector<unsigned char> blockData(ParseHex(params[0].get_str()));\n+    CDataStream ssBlock(blockData, SER_NETWORK, PROTOCOL_VERSION);\n+    CBlock block;\n+    try {\n+        ssBlock >> block;\n+    }\n+    catch (std::exception &e) {\n+        throw JSONRPCError(-22, \"Block decode failed\");\n     }\n \n-    throw JSONRPCError(-8, \"Invalid mode\");\n+    bool fAccepted = ProcessBlock(NULL, &block);\n+    if (!fAccepted)\n+        throw JSONRPCError(-23, \"Block rejected\");\n+\n+    return true;\n }\n \n Value getrawmempool(const Array& params, bool fHelp)\n@@ -2203,6 +2214,7 @@ static const CRPCCommand vRPCCommands[] =\n     { \"listaccounts\",           &listaccounts,           false },\n     { \"settxfee\",               &settxfee,               false },\n     { \"getblocktemplate\",       &getblocktemplate,       true },\n+    { \"submitblock\",            &submitblock,            false },\n     { \"listsinceblock\",         &listsinceblock,         false },\n     { \"dumpprivkey\",            &dumpprivkey,            false },\n     { \"importprivkey\",          &importprivkey,          false },"
+      }
+    ]
+  },
+  {
+    "sha": "ddd1ffb4f1b433c64b4cc91b9fdd6b0958d2d14e",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkZGQxZmZiNGYxYjQzM2M2NGI0Y2M5MWI5ZmRkNmIwOTU4ZDJkMTRl",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-08-21T06:06:09Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-08-21T06:06:09Z"
+      },
+      "message": "RPC, cosmetic: de-indent getblocktemplate()",
+      "tree": {
+        "sha": "5ef783af2cb00040e563161f820f0f4da9c32c89",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/5ef783af2cb00040e563161f820f0f4da9c32c89"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/ddd1ffb4f1b433c64b4cc91b9fdd6b0958d2d14e",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ddd1ffb4f1b433c64b4cc91b9fdd6b0958d2d14e",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/ddd1ffb4f1b433c64b4cc91b9fdd6b0958d2d14e",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ddd1ffb4f1b433c64b4cc91b9fdd6b0958d2d14e/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "79f2525ab69146480033d6aa3c00c986f1c933f1",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/79f2525ab69146480033d6aa3c00c986f1c933f1",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/79f2525ab69146480033d6aa3c00c986f1c933f1"
+      }
+    ],
+    "stats": {
+      "total": 188,
+      "additions": 93,
+      "deletions": 95
+    },
+    "files": [
+      {
+        "sha": "b20191b45cdea5b728e2f08dc7957e9e85b3f8d2",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 93,
+        "deletions": 95,
+        "changes": 188,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ddd1ffb4f1b433c64b4cc91b9fdd6b0958d2d14e/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ddd1ffb4f1b433c64b4cc91b9fdd6b0958d2d14e/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=ddd1ffb4f1b433c64b4cc91b9fdd6b0958d2d14e",
+        "patch": "@@ -1959,123 +1959,121 @@ Value getblocktemplate(const Array& params, bool fHelp)\n     if (strMode != \"template\")\n         throw JSONRPCError(-8, \"Invalid mode\");\n \n-    {\n-        if (vNodes.empty())\n-            throw JSONRPCError(-9, \"Bitcoin is not connected!\");\n-\n-        if (IsInitialBlockDownload())\n-            throw JSONRPCError(-10, \"Bitcoin is downloading blocks...\");\n+    if (vNodes.empty())\n+        throw JSONRPCError(-9, \"Bitcoin is not connected!\");\n \n-        static CReserveKey reservekey(pwalletMain);\n+    if (IsInitialBlockDownload())\n+        throw JSONRPCError(-10, \"Bitcoin is downloading blocks...\");\n \n-        // Update block\n-        static unsigned int nTransactionsUpdatedLast;\n-        static CBlockIndex* pindexPrev;\n-        static int64 nStart;\n-        static CBlock* pblock;\n-        if (pindexPrev != pindexBest ||\n-            (nTransactionsUpdated != nTransactionsUpdatedLast && GetTime() - nStart > 5))\n-        {\n-            // Clear pindexPrev so future calls make a new block, despite any failures from here on\n-            pindexPrev = NULL;\n+    static CReserveKey reservekey(pwalletMain);\n \n-            // Store the pindexBest used before CreateNewBlock, to avoid races\n-            nTransactionsUpdatedLast = nTransactionsUpdated;\n-            CBlockIndex* pindexPrevNew = pindexBest;\n-            nStart = GetTime();\n+    // Update block\n+    static unsigned int nTransactionsUpdatedLast;\n+    static CBlockIndex* pindexPrev;\n+    static int64 nStart;\n+    static CBlock* pblock;\n+    if (pindexPrev != pindexBest ||\n+        (nTransactionsUpdated != nTransactionsUpdatedLast && GetTime() - nStart > 5))\n+    {\n+        // Clear pindexPrev so future calls make a new block, despite any failures from here on\n+        pindexPrev = NULL;\n \n-            // Create new block\n-            if(pblock)\n-            {\n-                delete pblock;\n-                pblock = NULL;\n-            }\n-            pblock = CreateNewBlock(reservekey);\n-            if (!pblock)\n-                throw JSONRPCError(-7, \"Out of memory\");\n+        // Store the pindexBest used before CreateNewBlock, to avoid races\n+        nTransactionsUpdatedLast = nTransactionsUpdated;\n+        CBlockIndex* pindexPrevNew = pindexBest;\n+        nStart = GetTime();\n \n-            // Need to update only after we know CreateNewBlock succeeded\n-            pindexPrev = pindexPrevNew;\n+        // Create new block\n+        if(pblock)\n+        {\n+            delete pblock;\n+            pblock = NULL;\n         }\n+        pblock = CreateNewBlock(reservekey);\n+        if (!pblock)\n+            throw JSONRPCError(-7, \"Out of memory\");\n \n-        // Update nTime\n-        pblock->UpdateTime(pindexPrev);\n-        pblock->nNonce = 0;\n+        // Need to update only after we know CreateNewBlock succeeded\n+        pindexPrev = pindexPrevNew;\n+    }\n \n-        Array transactions;\n-        map<uint256, int64_t> setTxIndex;\n-        int i = 0;\n-        CTxDB txdb(\"r\");\n-        BOOST_FOREACH (CTransaction& tx, pblock->vtx)\n-        {\n-            uint256 txHash = tx.GetHash();\n-            setTxIndex[txHash] = i++;\n+    // Update nTime\n+    pblock->UpdateTime(pindexPrev);\n+    pblock->nNonce = 0;\n \n-            if (tx.IsCoinBase())\n-                continue;\n+    Array transactions;\n+    map<uint256, int64_t> setTxIndex;\n+    int i = 0;\n+    CTxDB txdb(\"r\");\n+    BOOST_FOREACH (CTransaction& tx, pblock->vtx)\n+    {\n+        uint256 txHash = tx.GetHash();\n+        setTxIndex[txHash] = i++;\n \n-            Object entry;\n+        if (tx.IsCoinBase())\n+            continue;\n \n-            CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);\n-            ssTx << tx;\n-            entry.push_back(Pair(\"data\", HexStr(ssTx.begin(), ssTx.end())));\n+        Object entry;\n+\n+        CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);\n+        ssTx << tx;\n+        entry.push_back(Pair(\"data\", HexStr(ssTx.begin(), ssTx.end())));\n \n-            entry.push_back(Pair(\"hash\", txHash.GetHex()));\n+        entry.push_back(Pair(\"hash\", txHash.GetHex()));\n \n-            MapPrevTx mapInputs;\n-            map<uint256, CTxIndex> mapUnused;\n-            bool fInvalid = false;\n-            if (tx.FetchInputs(txdb, mapUnused, false, false, mapInputs, fInvalid))\n+        MapPrevTx mapInputs;\n+        map<uint256, CTxIndex> mapUnused;\n+        bool fInvalid = false;\n+        if (tx.FetchInputs(txdb, mapUnused, false, false, mapInputs, fInvalid))\n+        {\n+            entry.push_back(Pair(\"fee\", (int64_t)(tx.GetValueIn(mapInputs) - tx.GetValueOut())));\n+\n+            Array deps;\n+            BOOST_FOREACH (MapPrevTx::value_type& inp, mapInputs)\n             {\n-                entry.push_back(Pair(\"fee\", (int64_t)(tx.GetValueIn(mapInputs) - tx.GetValueOut())));\n-\n-                Array deps;\n-                BOOST_FOREACH (MapPrevTx::value_type& inp, mapInputs)\n-                {\n-                    if (setTxIndex.count(inp.first))\n-                        deps.push_back(setTxIndex[inp.first]);\n-                }\n-                entry.push_back(Pair(\"depends\", deps));\n-\n-                int64_t nSigOps = tx.GetLegacySigOpCount();\n-                nSigOps += tx.GetP2SHSigOpCount(mapInputs);\n-                entry.push_back(Pair(\"sigops\", nSigOps));\n+                if (setTxIndex.count(inp.first))\n+                    deps.push_back(setTxIndex[inp.first]);\n             }\n+            entry.push_back(Pair(\"depends\", deps));\n \n-            transactions.push_back(entry);\n+            int64_t nSigOps = tx.GetLegacySigOpCount();\n+            nSigOps += tx.GetP2SHSigOpCount(mapInputs);\n+            entry.push_back(Pair(\"sigops\", nSigOps));\n         }\n \n-        Object aux;\n-        aux.push_back(Pair(\"flags\", HexStr(COINBASE_FLAGS.begin(), COINBASE_FLAGS.end())));\n+        transactions.push_back(entry);\n+    }\n \n-        uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();\n+    Object aux;\n+    aux.push_back(Pair(\"flags\", HexStr(COINBASE_FLAGS.begin(), COINBASE_FLAGS.end())));\n \n-        static Array aMutable;\n-        if (aMutable.empty())\n-        {\n-            aMutable.push_back(\"time\");\n-            aMutable.push_back(\"transactions\");\n-            aMutable.push_back(\"prevblock\");\n-        }\n-\n-        Object result;\n-        result.push_back(Pair(\"version\", pblock->nVersion));\n-        result.push_back(Pair(\"previousblockhash\", pblock->hashPrevBlock.GetHex()));\n-        result.push_back(Pair(\"transactions\", transactions));\n-        result.push_back(Pair(\"coinbaseaux\", aux));\n-        result.push_back(Pair(\"coinbasevalue\", (int64_t)pblock->vtx[0].vout[0].nValue));\n-        result.push_back(Pair(\"target\", hashTarget.GetHex()));\n-        result.push_back(Pair(\"mintime\", (int64_t)pindexPrev->GetMedianTimePast()+1));\n-        result.push_back(Pair(\"mutable\", aMutable));\n-        result.push_back(Pair(\"noncerange\", \"00000000ffffffff\"));\n-        result.push_back(Pair(\"sigoplimit\", (int64_t)MAX_BLOCK_SIGOPS));\n-        result.push_back(Pair(\"sizelimit\", (int64_t)MAX_BLOCK_SIZE));\n-        result.push_back(Pair(\"curtime\", (int64_t)pblock->nTime));\n-        result.push_back(Pair(\"bits\", HexBits(pblock->nBits)));\n-        result.push_back(Pair(\"height\", (int64_t)(pindexPrev->nHeight+1)));\n+    uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();\n \n-        return result;\n+    static Array aMutable;\n+    if (aMutable.empty())\n+    {\n+        aMutable.push_back(\"time\");\n+        aMutable.push_back(\"transactions\");\n+        aMutable.push_back(\"prevblock\");\n     }\n+\n+    Object result;\n+    result.push_back(Pair(\"version\", pblock->nVersion));\n+    result.push_back(Pair(\"previousblockhash\", pblock->hashPrevBlock.GetHex()));\n+    result.push_back(Pair(\"transactions\", transactions));\n+    result.push_back(Pair(\"coinbaseaux\", aux));\n+    result.push_back(Pair(\"coinbasevalue\", (int64_t)pblock->vtx[0].vout[0].nValue));\n+    result.push_back(Pair(\"target\", hashTarget.GetHex()));\n+    result.push_back(Pair(\"mintime\", (int64_t)pindexPrev->GetMedianTimePast()+1));\n+    result.push_back(Pair(\"mutable\", aMutable));\n+    result.push_back(Pair(\"noncerange\", \"00000000ffffffff\"));\n+    result.push_back(Pair(\"sigoplimit\", (int64_t)MAX_BLOCK_SIGOPS));\n+    result.push_back(Pair(\"sizelimit\", (int64_t)MAX_BLOCK_SIZE));\n+    result.push_back(Pair(\"curtime\", (int64_t)pblock->nTime));\n+    result.push_back(Pair(\"bits\", HexBits(pblock->nBits)));\n+    result.push_back(Pair(\"height\", (int64_t)(pindexPrev->nHeight+1)));\n+\n+    return result;\n }\n \n Value submitblock(const Array& params, bool fHelp)"
+      }
+    ]
+  },
+  {
+    "sha": "7600e7fc399b46bf126e22fa8681d812c844124e",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3NjAwZTdmYzM5OWI0NmJmMTI2ZTIyZmE4NjgxZDgxMmM4NDQxMjRl",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-08-21T06:21:33Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-08-21T06:21:33Z"
+      },
+      "message": "RPC, cosmetic: Create rpcmining.cpp as new home for mining-related RPC code",
+      "tree": {
+        "sha": "0c9394f62df092465ec83f598ecec0e189daecd6",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/0c9394f62df092465ec83f598ecec0e189daecd6"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/7600e7fc399b46bf126e22fa8681d812c844124e",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7600e7fc399b46bf126e22fa8681d812c844124e",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/7600e7fc399b46bf126e22fa8681d812c844124e",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7600e7fc399b46bf126e22fa8681d812c844124e/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "ddd1ffb4f1b433c64b4cc91b9fdd6b0958d2d14e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ddd1ffb4f1b433c64b4cc91b9fdd6b0958d2d14e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/ddd1ffb4f1b433c64b4cc91b9fdd6b0958d2d14e"
+      }
+    ],
+    "stats": {
+      "total": 759,
+      "additions": 394,
+      "deletions": 365
+    },
+    "files": [
+      {
+        "sha": "554b5ba9fb1bdbd93b7f0697f053f92d586e9db0",
+        "filename": "bitcoin-qt.pro",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7600e7fc399b46bf126e22fa8681d812c844124e/bitcoin-qt.pro",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7600e7fc399b46bf126e22fa8681d812c844124e/bitcoin-qt.pro",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/bitcoin-qt.pro?ref=7600e7fc399b46bf126e22fa8681d812c844124e",
+        "patch": "@@ -209,6 +209,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \\\n     src/bitcoinrpc.cpp \\\n     src/rpcdump.cpp \\\n     src/rpcnet.cpp \\\n+    src/rpcmining.cpp \\\n     src/rpcrawtransaction.cpp \\\n     src/qt/overviewpage.cpp \\\n     src/qt/csvmodelwriter.cpp \\"
+      },
+      {
+        "sha": "d6805e7ee31d3a17721b4697f7d9bc7deb93207d",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 365,
+        "changes": 374,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7600e7fc399b46bf126e22fa8681d812c844124e/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7600e7fc399b46bf126e22fa8681d812c844124e/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=7600e7fc399b46bf126e22fa8681d812c844124e",
+        "patch": "@@ -5,7 +5,6 @@\n \n #include \"main.h\"\n #include \"wallet.h\"\n-#include \"db.h\"\n #include \"walletdb.h\"\n #include \"net.h\"\n #include \"init.h\"\n@@ -46,6 +45,15 @@ extern Value getconnectioncount(const Array& params, bool fHelp); // in rpcnet.c\n extern Value getpeerinfo(const Array& params, bool fHelp);\n extern Value dumpprivkey(const Array& params, bool fHelp); // in rpcdump.cpp\n extern Value importprivkey(const Array& params, bool fHelp);\n+\n+extern Value getgenerate(const Array& params, bool fHelp); // in rpcmining.cpp\n+extern Value setgenerate(const Array& params, bool fHelp);\n+extern Value gethashespersec(const Array& params, bool fHelp);\n+extern Value getmininginfo(const Array& params, bool fHelp);\n+extern Value getwork(const Array& params, bool fHelp);\n+extern Value getblocktemplate(const Array& params, bool fHelp);\n+extern Value submitblock(const Array& params, bool fHelp);\n+\n extern Value getrawtransaction(const Array& params, bool fHelp); // in rcprawtransaction.cpp\n extern Value listunspent(const Array& params, bool fHelp);\n extern Value createrawtransaction(const Array& params, bool fHelp);\n@@ -318,56 +326,6 @@ Value getdifficulty(const Array& params, bool fHelp)\n }\n \n \n-Value getgenerate(const Array& params, bool fHelp)\n-{\n-    if (fHelp || params.size() != 0)\n-        throw runtime_error(\n-            \"getgenerate\\n\"\n-            \"Returns true or false.\");\n-\n-    return GetBoolArg(\"-gen\");\n-}\n-\n-\n-Value setgenerate(const Array& params, bool fHelp)\n-{\n-    if (fHelp || params.size() < 1 || params.size() > 2)\n-        throw runtime_error(\n-            \"setgenerate <generate> [genproclimit]\\n\"\n-            \"<generate> is true or false to turn generation on or off.\\n\"\n-            \"Generation is limited to [genproclimit] processors, -1 is unlimited.\");\n-\n-    bool fGenerate = true;\n-    if (params.size() > 0)\n-        fGenerate = params[0].get_bool();\n-\n-    if (params.size() > 1)\n-    {\n-        int nGenProcLimit = params[1].get_int();\n-        mapArgs[\"-genproclimit\"] = itostr(nGenProcLimit);\n-        if (nGenProcLimit == 0)\n-            fGenerate = false;\n-    }\n-    mapArgs[\"-gen\"] = (fGenerate ? \"1\" : \"0\");\n-\n-    GenerateBitcoins(fGenerate, pwalletMain);\n-    return Value::null;\n-}\n-\n-\n-Value gethashespersec(const Array& params, bool fHelp)\n-{\n-    if (fHelp || params.size() != 0)\n-        throw runtime_error(\n-            \"gethashespersec\\n\"\n-            \"Returns a recent hashes per second performance measurement while generating.\");\n-\n-    if (GetTimeMillis() - nHPSTimerStart > 8000)\n-        return (boost::int64_t)0;\n-    return (boost::int64_t)dHashesPerSec;\n-}\n-\n-\n Value getinfo(const Array& params, bool fHelp)\n {\n     if (fHelp || params.size() != 0)\n@@ -398,28 +356,6 @@ Value getinfo(const Array& params, bool fHelp)\n }\n \n \n-Value getmininginfo(const Array& params, bool fHelp)\n-{\n-    if (fHelp || params.size() != 0)\n-        throw runtime_error(\n-            \"getmininginfo\\n\"\n-            \"Returns an object containing mining-related information.\");\n-\n-    Object obj;\n-    obj.push_back(Pair(\"blocks\",        (int)nBestHeight));\n-    obj.push_back(Pair(\"currentblocksize\",(uint64_t)nLastBlockSize));\n-    obj.push_back(Pair(\"currentblocktx\",(uint64_t)nLastBlockTx));\n-    obj.push_back(Pair(\"difficulty\",    (double)GetDifficulty()));\n-    obj.push_back(Pair(\"errors\",        GetWarnings(\"statusbar\")));\n-    obj.push_back(Pair(\"generate\",      GetBoolArg(\"-gen\")));\n-    obj.push_back(Pair(\"genproclimit\",  (int)GetArg(\"-genproclimit\", -1)));\n-    obj.push_back(Pair(\"hashespersec\",  gethashespersec(params, false)));\n-    obj.push_back(Pair(\"pooledtx\",      (uint64_t)mempool.size()));\n-    obj.push_back(Pair(\"testnet\",       fTestNet));\n-    return obj;\n-}\n-\n-\n Value getnewaddress(const Array& params, bool fHelp)\n {\n     if (fHelp || params.size() > 1)\n@@ -1810,298 +1746,6 @@ Value validateaddress(const Array& params, bool fHelp)\n     return ret;\n }\n \n-Value getwork(const Array& params, bool fHelp)\n-{\n-    if (fHelp || params.size() > 1)\n-        throw runtime_error(\n-            \"getwork [data]\\n\"\n-            \"If [data] is not specified, returns formatted hash data to work on:\\n\"\n-            \"  \\\"midstate\\\" : precomputed hash state after hashing the first half of the data (DEPRECATED)\\n\" // deprecated\n-            \"  \\\"data\\\" : block data\\n\"\n-            \"  \\\"hash1\\\" : formatted hash buffer for second hash (DEPRECATED)\\n\" // deprecated\n-            \"  \\\"target\\\" : little endian hash target\\n\"\n-            \"If [data] is specified, tries to solve the block and returns true if it was successful.\");\n-\n-    if (vNodes.empty())\n-        throw JSONRPCError(-9, \"Bitcoin is not connected!\");\n-\n-    if (IsInitialBlockDownload())\n-        throw JSONRPCError(-10, \"Bitcoin is downloading blocks...\");\n-\n-    typedef map<uint256, pair<CBlock*, CScript> > mapNewBlock_t;\n-    static mapNewBlock_t mapNewBlock;    // FIXME: thread safety\n-    static vector<CBlock*> vNewBlock;\n-    static CReserveKey reservekey(pwalletMain);\n-\n-    if (params.size() == 0)\n-    {\n-        // Update block\n-        static unsigned int nTransactionsUpdatedLast;\n-        static CBlockIndex* pindexPrev;\n-        static int64 nStart;\n-        static CBlock* pblock;\n-        if (pindexPrev != pindexBest ||\n-            (nTransactionsUpdated != nTransactionsUpdatedLast && GetTime() - nStart > 60))\n-        {\n-            if (pindexPrev != pindexBest)\n-            {\n-                // Deallocate old blocks since they're obsolete now\n-                mapNewBlock.clear();\n-                BOOST_FOREACH(CBlock* pblock, vNewBlock)\n-                    delete pblock;\n-                vNewBlock.clear();\n-            }\n-\n-            // Clear pindexPrev so future getworks make a new block, despite any failures from here on\n-            pindexPrev = NULL;\n-\n-            // Store the pindexBest used before CreateNewBlock, to avoid races\n-            nTransactionsUpdatedLast = nTransactionsUpdated;\n-            CBlockIndex* pindexPrevNew = pindexBest;\n-            nStart = GetTime();\n-\n-            // Create new block\n-            pblock = CreateNewBlock(reservekey);\n-            if (!pblock)\n-                throw JSONRPCError(-7, \"Out of memory\");\n-            vNewBlock.push_back(pblock);\n-\n-            // Need to update only after we know CreateNewBlock succeeded\n-            pindexPrev = pindexPrevNew;\n-        }\n-\n-        // Update nTime\n-        pblock->UpdateTime(pindexPrev);\n-        pblock->nNonce = 0;\n-\n-        // Update nExtraNonce\n-        static unsigned int nExtraNonce = 0;\n-        IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);\n-\n-        // Save\n-        mapNewBlock[pblock->hashMerkleRoot] = make_pair(pblock, pblock->vtx[0].vin[0].scriptSig);\n-\n-        // Pre-build hash buffers\n-        char pmidstate[32];\n-        char pdata[128];\n-        char phash1[64];\n-        FormatHashBuffers(pblock, pmidstate, pdata, phash1);\n-\n-        uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();\n-\n-        Object result;\n-        result.push_back(Pair(\"midstate\", HexStr(BEGIN(pmidstate), END(pmidstate)))); // deprecated\n-        result.push_back(Pair(\"data\",     HexStr(BEGIN(pdata), END(pdata))));\n-        result.push_back(Pair(\"hash1\",    HexStr(BEGIN(phash1), END(phash1)))); // deprecated\n-        result.push_back(Pair(\"target\",   HexStr(BEGIN(hashTarget), END(hashTarget))));\n-        return result;\n-    }\n-    else\n-    {\n-        // Parse parameters\n-        vector<unsigned char> vchData = ParseHex(params[0].get_str());\n-        if (vchData.size() != 128)\n-            throw JSONRPCError(-8, \"Invalid parameter\");\n-        CBlock* pdata = (CBlock*)&vchData[0];\n-\n-        // Byte reverse\n-        for (int i = 0; i < 128/4; i++)\n-            ((unsigned int*)pdata)[i] = ByteReverse(((unsigned int*)pdata)[i]);\n-\n-        // Get saved block\n-        if (!mapNewBlock.count(pdata->hashMerkleRoot))\n-            return false;\n-        CBlock* pblock = mapNewBlock[pdata->hashMerkleRoot].first;\n-\n-        pblock->nTime = pdata->nTime;\n-        pblock->nNonce = pdata->nNonce;\n-        pblock->vtx[0].vin[0].scriptSig = mapNewBlock[pdata->hashMerkleRoot].second;\n-        pblock->hashMerkleRoot = pblock->BuildMerkleTree();\n-\n-        return CheckWork(pblock, *pwalletMain, reservekey);\n-    }\n-}\n-\n-\n-Value getblocktemplate(const Array& params, bool fHelp)\n-{\n-    if (fHelp || params.size() > 1)\n-        throw runtime_error(\n-            \"getblocktemplate [params]\\n\"\n-            \"Returns data needed to construct a block to work on:\\n\"\n-            \"  \\\"version\\\" : block version\\n\"\n-            \"  \\\"previousblockhash\\\" : hash of current highest block\\n\"\n-            \"  \\\"transactions\\\" : contents of non-coinbase transactions that should be included in the next block\\n\"\n-            \"  \\\"coinbaseaux\\\" : data that should be included in coinbase\\n\"\n-            \"  \\\"coinbasevalue\\\" : maximum allowable input to coinbase transaction, including the generation award and transaction fees\\n\"\n-            \"  \\\"target\\\" : hash target\\n\"\n-            \"  \\\"mintime\\\" : minimum timestamp appropriate for next block\\n\"\n-            \"  \\\"curtime\\\" : current timestamp\\n\"\n-            \"  \\\"mutable\\\" : list of ways the block template may be changed\\n\"\n-            \"  \\\"noncerange\\\" : range of valid nonces\\n\"\n-            \"  \\\"sigoplimit\\\" : limit of sigops in blocks\\n\"\n-            \"  \\\"sizelimit\\\" : limit of block size\\n\"\n-            \"  \\\"bits\\\" : compressed target of next block\\n\"\n-            \"  \\\"height\\\" : height of the next block\\n\"\n-            \"See https://en.bitcoin.it/wiki/BIP_0022 for full specification.\");\n-\n-    std::string strMode = \"template\";\n-    if (params.size() > 0)\n-    {\n-        const Object& oparam = params[0].get_obj();\n-        const Value& modeval = find_value(oparam, \"mode\");\n-        if (modeval.type() == str_type)\n-            strMode = modeval.get_str();\n-        else\n-            throw JSONRPCError(-8, \"Invalid mode\");\n-    }\n-\n-    if (strMode != \"template\")\n-        throw JSONRPCError(-8, \"Invalid mode\");\n-\n-    if (vNodes.empty())\n-        throw JSONRPCError(-9, \"Bitcoin is not connected!\");\n-\n-    if (IsInitialBlockDownload())\n-        throw JSONRPCError(-10, \"Bitcoin is downloading blocks...\");\n-\n-    static CReserveKey reservekey(pwalletMain);\n-\n-    // Update block\n-    static unsigned int nTransactionsUpdatedLast;\n-    static CBlockIndex* pindexPrev;\n-    static int64 nStart;\n-    static CBlock* pblock;\n-    if (pindexPrev != pindexBest ||\n-        (nTransactionsUpdated != nTransactionsUpdatedLast && GetTime() - nStart > 5))\n-    {\n-        // Clear pindexPrev so future calls make a new block, despite any failures from here on\n-        pindexPrev = NULL;\n-\n-        // Store the pindexBest used before CreateNewBlock, to avoid races\n-        nTransactionsUpdatedLast = nTransactionsUpdated;\n-        CBlockIndex* pindexPrevNew = pindexBest;\n-        nStart = GetTime();\n-\n-        // Create new block\n-        if(pblock)\n-        {\n-            delete pblock;\n-            pblock = NULL;\n-        }\n-        pblock = CreateNewBlock(reservekey);\n-        if (!pblock)\n-            throw JSONRPCError(-7, \"Out of memory\");\n-\n-        // Need to update only after we know CreateNewBlock succeeded\n-        pindexPrev = pindexPrevNew;\n-    }\n-\n-    // Update nTime\n-    pblock->UpdateTime(pindexPrev);\n-    pblock->nNonce = 0;\n-\n-    Array transactions;\n-    map<uint256, int64_t> setTxIndex;\n-    int i = 0;\n-    CTxDB txdb(\"r\");\n-    BOOST_FOREACH (CTransaction& tx, pblock->vtx)\n-    {\n-        uint256 txHash = tx.GetHash();\n-        setTxIndex[txHash] = i++;\n-\n-        if (tx.IsCoinBase())\n-            continue;\n-\n-        Object entry;\n-\n-        CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);\n-        ssTx << tx;\n-        entry.push_back(Pair(\"data\", HexStr(ssTx.begin(), ssTx.end())));\n-\n-        entry.push_back(Pair(\"hash\", txHash.GetHex()));\n-\n-        MapPrevTx mapInputs;\n-        map<uint256, CTxIndex> mapUnused;\n-        bool fInvalid = false;\n-        if (tx.FetchInputs(txdb, mapUnused, false, false, mapInputs, fInvalid))\n-        {\n-            entry.push_back(Pair(\"fee\", (int64_t)(tx.GetValueIn(mapInputs) - tx.GetValueOut())));\n-\n-            Array deps;\n-            BOOST_FOREACH (MapPrevTx::value_type& inp, mapInputs)\n-            {\n-                if (setTxIndex.count(inp.first))\n-                    deps.push_back(setTxIndex[inp.first]);\n-            }\n-            entry.push_back(Pair(\"depends\", deps));\n-\n-            int64_t nSigOps = tx.GetLegacySigOpCount();\n-            nSigOps += tx.GetP2SHSigOpCount(mapInputs);\n-            entry.push_back(Pair(\"sigops\", nSigOps));\n-        }\n-\n-        transactions.push_back(entry);\n-    }\n-\n-    Object aux;\n-    aux.push_back(Pair(\"flags\", HexStr(COINBASE_FLAGS.begin(), COINBASE_FLAGS.end())));\n-\n-    uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();\n-\n-    static Array aMutable;\n-    if (aMutable.empty())\n-    {\n-        aMutable.push_back(\"time\");\n-        aMutable.push_back(\"transactions\");\n-        aMutable.push_back(\"prevblock\");\n-    }\n-\n-    Object result;\n-    result.push_back(Pair(\"version\", pblock->nVersion));\n-    result.push_back(Pair(\"previousblockhash\", pblock->hashPrevBlock.GetHex()));\n-    result.push_back(Pair(\"transactions\", transactions));\n-    result.push_back(Pair(\"coinbaseaux\", aux));\n-    result.push_back(Pair(\"coinbasevalue\", (int64_t)pblock->vtx[0].vout[0].nValue));\n-    result.push_back(Pair(\"target\", hashTarget.GetHex()));\n-    result.push_back(Pair(\"mintime\", (int64_t)pindexPrev->GetMedianTimePast()+1));\n-    result.push_back(Pair(\"mutable\", aMutable));\n-    result.push_back(Pair(\"noncerange\", \"00000000ffffffff\"));\n-    result.push_back(Pair(\"sigoplimit\", (int64_t)MAX_BLOCK_SIGOPS));\n-    result.push_back(Pair(\"sizelimit\", (int64_t)MAX_BLOCK_SIZE));\n-    result.push_back(Pair(\"curtime\", (int64_t)pblock->nTime));\n-    result.push_back(Pair(\"bits\", HexBits(pblock->nBits)));\n-    result.push_back(Pair(\"height\", (int64_t)(pindexPrev->nHeight+1)));\n-\n-    return result;\n-}\n-\n-Value submitblock(const Array& params, bool fHelp)\n-{\n-    if (fHelp || params.size() < 1 || params.size() > 2)\n-        throw runtime_error(\n-            \"submitblock <hex data> [optional-params-obj]\\n\"\n-            \"[optional-params-obj] parameter is currently ignored.\\n\"\n-            \"Attempts to submit new block to network.\\n\"\n-            \"See https://en.bitcoin.it/wiki/BIP_0022 for full specification.\");\n-\n-    vector<unsigned char> blockData(ParseHex(params[0].get_str()));\n-    CDataStream ssBlock(blockData, SER_NETWORK, PROTOCOL_VERSION);\n-    CBlock block;\n-    try {\n-        ssBlock >> block;\n-    }\n-    catch (std::exception &e) {\n-        throw JSONRPCError(-22, \"Block decode failed\");\n-    }\n-\n-    bool fAccepted = ProcessBlock(NULL, &block);\n-    if (!fAccepted)\n-        throw JSONRPCError(-23, \"Block rejected\");\n-\n-    return true;\n-}\n-\n Value getrawmempool(const Array& params, bool fHelp)\n {\n     if (fHelp || params.size() != 0)"
+      },
+      {
+        "sha": "8d8ddfddbbbbb21de6a24a343330e2b50430b153",
+        "filename": "src/makefile.linux-mingw",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7600e7fc399b46bf126e22fa8681d812c844124e/src/makefile.linux-mingw",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7600e7fc399b46bf126e22fa8681d812c844124e/src/makefile.linux-mingw",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/makefile.linux-mingw?ref=7600e7fc399b46bf126e22fa8681d812c844124e",
+        "patch": "@@ -62,6 +62,7 @@ OBJS= \\\n     obj/bitcoinrpc.o \\\n     obj/rpcdump.o \\\n     obj/rpcnet.o \\\n+    obj/rpcmining.o \\\n     obj/rpcrawtransaction.o \\\n     obj/script.o \\\n     obj/sync.o \\"
+      },
+      {
+        "sha": "337f28e811564193383573172ca6721b8d472415",
+        "filename": "src/makefile.mingw",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7600e7fc399b46bf126e22fa8681d812c844124e/src/makefile.mingw",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7600e7fc399b46bf126e22fa8681d812c844124e/src/makefile.mingw",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/makefile.mingw?ref=7600e7fc399b46bf126e22fa8681d812c844124e",
+        "patch": "@@ -58,6 +58,7 @@ OBJS= \\\n     obj/bitcoinrpc.o \\\n     obj/rpcdump.o \\\n     obj/rpcnet.o \\\n+    obj/rpcmining.o \\\n     obj/rpcrawtransaction.o \\\n     obj/script.o \\\n     obj/sync.o \\"
+      },
+      {
+        "sha": "7135679bbcaca2bacfa028600a9c2fb55f70a537",
+        "filename": "src/makefile.osx",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7600e7fc399b46bf126e22fa8681d812c844124e/src/makefile.osx",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7600e7fc399b46bf126e22fa8681d812c844124e/src/makefile.osx",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/makefile.osx?ref=7600e7fc399b46bf126e22fa8681d812c844124e",
+        "patch": "@@ -85,6 +85,7 @@ OBJS= \\\n     obj/bitcoinrpc.o \\\n     obj/rpcdump.o \\\n     obj/rpcnet.o \\\n+    obj/rpcmining.o \\\n     obj/rpcrawtransaction.o \\\n     obj/script.o \\\n     obj/sync.o \\"
+      },
+      {
+        "sha": "a1228f474f1a745ae7ed40f1da11f50bc598d431",
+        "filename": "src/makefile.unix",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7600e7fc399b46bf126e22fa8681d812c844124e/src/makefile.unix",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7600e7fc399b46bf126e22fa8681d812c844124e/src/makefile.unix",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/makefile.unix?ref=7600e7fc399b46bf126e22fa8681d812c844124e",
+        "patch": "@@ -110,6 +110,7 @@ OBJS= \\\n     obj/bitcoinrpc.o \\\n     obj/rpcdump.o \\\n     obj/rpcnet.o \\\n+    obj/rpcmining.o \\\n     obj/rpcrawtransaction.o \\\n     obj/script.o \\\n     obj/sync.o \\"
+      },
+      {
+        "sha": "5d983d21d4039a28207b4a263a2a1e9de5686f29",
+        "filename": "src/rpcmining.cpp",
+        "status": "added",
+        "additions": 380,
+        "deletions": 0,
+        "changes": 380,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7600e7fc399b46bf126e22fa8681d812c844124e/src/rpcmining.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7600e7fc399b46bf126e22fa8681d812c844124e/src/rpcmining.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcmining.cpp?ref=7600e7fc399b46bf126e22fa8681d812c844124e",
+        "patch": "@@ -0,0 +1,380 @@\n+// Copyright (c) 2010 Satoshi Nakamoto\n+// Copyright (c) 2009-2012 The Bitcoin developers\n+// Distributed under the MIT/X11 software license, see the accompanying\n+// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+#include \"main.h\"\n+#include \"db.h\"\n+#include \"init.h\"\n+#include \"bitcoinrpc.h\"\n+\n+using namespace json_spirit;\n+using namespace std;\n+\n+extern double GetDifficulty(const CBlockIndex* blockindex = NULL);\n+extern std::string HexBits(unsigned int nBits);\n+\n+Value getgenerate(const Array& params, bool fHelp)\n+{\n+    if (fHelp || params.size() != 0)\n+        throw runtime_error(\n+            \"getgenerate\\n\"\n+            \"Returns true or false.\");\n+\n+    return GetBoolArg(\"-gen\");\n+}\n+\n+\n+Value setgenerate(const Array& params, bool fHelp)\n+{\n+    if (fHelp || params.size() < 1 || params.size() > 2)\n+        throw runtime_error(\n+            \"setgenerate <generate> [genproclimit]\\n\"\n+            \"<generate> is true or false to turn generation on or off.\\n\"\n+            \"Generation is limited to [genproclimit] processors, -1 is unlimited.\");\n+\n+    bool fGenerate = true;\n+    if (params.size() > 0)\n+        fGenerate = params[0].get_bool();\n+\n+    if (params.size() > 1)\n+    {\n+        int nGenProcLimit = params[1].get_int();\n+        mapArgs[\"-genproclimit\"] = itostr(nGenProcLimit);\n+        if (nGenProcLimit == 0)\n+            fGenerate = false;\n+    }\n+    mapArgs[\"-gen\"] = (fGenerate ? \"1\" : \"0\");\n+\n+    GenerateBitcoins(fGenerate, pwalletMain);\n+    return Value::null;\n+}\n+\n+\n+Value gethashespersec(const Array& params, bool fHelp)\n+{\n+    if (fHelp || params.size() != 0)\n+        throw runtime_error(\n+            \"gethashespersec\\n\"\n+            \"Returns a recent hashes per second performance measurement while generating.\");\n+\n+    if (GetTimeMillis() - nHPSTimerStart > 8000)\n+        return (boost::int64_t)0;\n+    return (boost::int64_t)dHashesPerSec;\n+}\n+\n+\n+Value getmininginfo(const Array& params, bool fHelp)\n+{\n+    if (fHelp || params.size() != 0)\n+        throw runtime_error(\n+            \"getmininginfo\\n\"\n+            \"Returns an object containing mining-related information.\");\n+\n+    Object obj;\n+    obj.push_back(Pair(\"blocks\",        (int)nBestHeight));\n+    obj.push_back(Pair(\"currentblocksize\",(uint64_t)nLastBlockSize));\n+    obj.push_back(Pair(\"currentblocktx\",(uint64_t)nLastBlockTx));\n+    obj.push_back(Pair(\"difficulty\",    (double)GetDifficulty()));\n+    obj.push_back(Pair(\"errors\",        GetWarnings(\"statusbar\")));\n+    obj.push_back(Pair(\"generate\",      GetBoolArg(\"-gen\")));\n+    obj.push_back(Pair(\"genproclimit\",  (int)GetArg(\"-genproclimit\", -1)));\n+    obj.push_back(Pair(\"hashespersec\",  gethashespersec(params, false)));\n+    obj.push_back(Pair(\"pooledtx\",      (uint64_t)mempool.size()));\n+    obj.push_back(Pair(\"testnet\",       fTestNet));\n+    return obj;\n+}\n+\n+\n+Value getwork(const Array& params, bool fHelp)\n+{\n+    if (fHelp || params.size() > 1)\n+        throw runtime_error(\n+            \"getwork [data]\\n\"\n+            \"If [data] is not specified, returns formatted hash data to work on:\\n\"\n+            \"  \\\"midstate\\\" : precomputed hash state after hashing the first half of the data (DEPRECATED)\\n\" // deprecated\n+            \"  \\\"data\\\" : block data\\n\"\n+            \"  \\\"hash1\\\" : formatted hash buffer for second hash (DEPRECATED)\\n\" // deprecated\n+            \"  \\\"target\\\" : little endian hash target\\n\"\n+            \"If [data] is specified, tries to solve the block and returns true if it was successful.\");\n+\n+    if (vNodes.empty())\n+        throw JSONRPCError(-9, \"Bitcoin is not connected!\");\n+\n+    if (IsInitialBlockDownload())\n+        throw JSONRPCError(-10, \"Bitcoin is downloading blocks...\");\n+\n+    typedef map<uint256, pair<CBlock*, CScript> > mapNewBlock_t;\n+    static mapNewBlock_t mapNewBlock;    // FIXME: thread safety\n+    static vector<CBlock*> vNewBlock;\n+    static CReserveKey reservekey(pwalletMain);\n+\n+    if (params.size() == 0)\n+    {\n+        // Update block\n+        static unsigned int nTransactionsUpdatedLast;\n+        static CBlockIndex* pindexPrev;\n+        static int64 nStart;\n+        static CBlock* pblock;\n+        if (pindexPrev != pindexBest ||\n+            (nTransactionsUpdated != nTransactionsUpdatedLast && GetTime() - nStart > 60))\n+        {\n+            if (pindexPrev != pindexBest)\n+            {\n+                // Deallocate old blocks since they're obsolete now\n+                mapNewBlock.clear();\n+                BOOST_FOREACH(CBlock* pblock, vNewBlock)\n+                    delete pblock;\n+                vNewBlock.clear();\n+            }\n+\n+            // Clear pindexPrev so future getworks make a new block, despite any failures from here on\n+            pindexPrev = NULL;\n+\n+            // Store the pindexBest used before CreateNewBlock, to avoid races\n+            nTransactionsUpdatedLast = nTransactionsUpdated;\n+            CBlockIndex* pindexPrevNew = pindexBest;\n+            nStart = GetTime();\n+\n+            // Create new block\n+            pblock = CreateNewBlock(reservekey);\n+            if (!pblock)\n+                throw JSONRPCError(-7, \"Out of memory\");\n+            vNewBlock.push_back(pblock);\n+\n+            // Need to update only after we know CreateNewBlock succeeded\n+            pindexPrev = pindexPrevNew;\n+        }\n+\n+        // Update nTime\n+        pblock->UpdateTime(pindexPrev);\n+        pblock->nNonce = 0;\n+\n+        // Update nExtraNonce\n+        static unsigned int nExtraNonce = 0;\n+        IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);\n+\n+        // Save\n+        mapNewBlock[pblock->hashMerkleRoot] = make_pair(pblock, pblock->vtx[0].vin[0].scriptSig);\n+\n+        // Pre-build hash buffers\n+        char pmidstate[32];\n+        char pdata[128];\n+        char phash1[64];\n+        FormatHashBuffers(pblock, pmidstate, pdata, phash1);\n+\n+        uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();\n+\n+        Object result;\n+        result.push_back(Pair(\"midstate\", HexStr(BEGIN(pmidstate), END(pmidstate)))); // deprecated\n+        result.push_back(Pair(\"data\",     HexStr(BEGIN(pdata), END(pdata))));\n+        result.push_back(Pair(\"hash1\",    HexStr(BEGIN(phash1), END(phash1)))); // deprecated\n+        result.push_back(Pair(\"target\",   HexStr(BEGIN(hashTarget), END(hashTarget))));\n+        return result;\n+    }\n+    else\n+    {\n+        // Parse parameters\n+        vector<unsigned char> vchData = ParseHex(params[0].get_str());\n+        if (vchData.size() != 128)\n+            throw JSONRPCError(-8, \"Invalid parameter\");\n+        CBlock* pdata = (CBlock*)&vchData[0];\n+\n+        // Byte reverse\n+        for (int i = 0; i < 128/4; i++)\n+            ((unsigned int*)pdata)[i] = ByteReverse(((unsigned int*)pdata)[i]);\n+\n+        // Get saved block\n+        if (!mapNewBlock.count(pdata->hashMerkleRoot))\n+            return false;\n+        CBlock* pblock = mapNewBlock[pdata->hashMerkleRoot].first;\n+\n+        pblock->nTime = pdata->nTime;\n+        pblock->nNonce = pdata->nNonce;\n+        pblock->vtx[0].vin[0].scriptSig = mapNewBlock[pdata->hashMerkleRoot].second;\n+        pblock->hashMerkleRoot = pblock->BuildMerkleTree();\n+\n+        return CheckWork(pblock, *pwalletMain, reservekey);\n+    }\n+}\n+\n+\n+Value getblocktemplate(const Array& params, bool fHelp)\n+{\n+    if (fHelp || params.size() > 1)\n+        throw runtime_error(\n+            \"getblocktemplate [params]\\n\"\n+            \"Returns data needed to construct a block to work on:\\n\"\n+            \"  \\\"version\\\" : block version\\n\"\n+            \"  \\\"previousblockhash\\\" : hash of current highest block\\n\"\n+            \"  \\\"transactions\\\" : contents of non-coinbase transactions that should be included in the next block\\n\"\n+            \"  \\\"coinbaseaux\\\" : data that should be included in coinbase\\n\"\n+            \"  \\\"coinbasevalue\\\" : maximum allowable input to coinbase transaction, including the generation award and transaction fees\\n\"\n+            \"  \\\"target\\\" : hash target\\n\"\n+            \"  \\\"mintime\\\" : minimum timestamp appropriate for next block\\n\"\n+            \"  \\\"curtime\\\" : current timestamp\\n\"\n+            \"  \\\"mutable\\\" : list of ways the block template may be changed\\n\"\n+            \"  \\\"noncerange\\\" : range of valid nonces\\n\"\n+            \"  \\\"sigoplimit\\\" : limit of sigops in blocks\\n\"\n+            \"  \\\"sizelimit\\\" : limit of block size\\n\"\n+            \"  \\\"bits\\\" : compressed target of next block\\n\"\n+            \"  \\\"height\\\" : height of the next block\\n\"\n+            \"See https://en.bitcoin.it/wiki/BIP_0022 for full specification.\");\n+\n+    std::string strMode = \"template\";\n+    if (params.size() > 0)\n+    {\n+        const Object& oparam = params[0].get_obj();\n+        const Value& modeval = find_value(oparam, \"mode\");\n+        if (modeval.type() == str_type)\n+            strMode = modeval.get_str();\n+        else\n+            throw JSONRPCError(-8, \"Invalid mode\");\n+    }\n+\n+    if (strMode != \"template\")\n+        throw JSONRPCError(-8, \"Invalid mode\");\n+\n+    if (vNodes.empty())\n+        throw JSONRPCError(-9, \"Bitcoin is not connected!\");\n+\n+    if (IsInitialBlockDownload())\n+        throw JSONRPCError(-10, \"Bitcoin is downloading blocks...\");\n+\n+    static CReserveKey reservekey(pwalletMain);\n+\n+    // Update block\n+    static unsigned int nTransactionsUpdatedLast;\n+    static CBlockIndex* pindexPrev;\n+    static int64 nStart;\n+    static CBlock* pblock;\n+    if (pindexPrev != pindexBest ||\n+        (nTransactionsUpdated != nTransactionsUpdatedLast && GetTime() - nStart > 5))\n+    {\n+        // Clear pindexPrev so future calls make a new block, despite any failures from here on\n+        pindexPrev = NULL;\n+\n+        // Store the pindexBest used before CreateNewBlock, to avoid races\n+        nTransactionsUpdatedLast = nTransactionsUpdated;\n+        CBlockIndex* pindexPrevNew = pindexBest;\n+        nStart = GetTime();\n+\n+        // Create new block\n+        if(pblock)\n+        {\n+            delete pblock;\n+            pblock = NULL;\n+        }\n+        pblock = CreateNewBlock(reservekey);\n+        if (!pblock)\n+            throw JSONRPCError(-7, \"Out of memory\");\n+\n+        // Need to update only after we know CreateNewBlock succeeded\n+        pindexPrev = pindexPrevNew;\n+    }\n+\n+    // Update nTime\n+    pblock->UpdateTime(pindexPrev);\n+    pblock->nNonce = 0;\n+\n+    Array transactions;\n+    map<uint256, int64_t> setTxIndex;\n+    int i = 0;\n+    CTxDB txdb(\"r\");\n+    BOOST_FOREACH (CTransaction& tx, pblock->vtx)\n+    {\n+        uint256 txHash = tx.GetHash();\n+        setTxIndex[txHash] = i++;\n+\n+        if (tx.IsCoinBase())\n+            continue;\n+\n+        Object entry;\n+\n+        CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);\n+        ssTx << tx;\n+        entry.push_back(Pair(\"data\", HexStr(ssTx.begin(), ssTx.end())));\n+\n+        entry.push_back(Pair(\"hash\", txHash.GetHex()));\n+\n+        MapPrevTx mapInputs;\n+        map<uint256, CTxIndex> mapUnused;\n+        bool fInvalid = false;\n+        if (tx.FetchInputs(txdb, mapUnused, false, false, mapInputs, fInvalid))\n+        {\n+            entry.push_back(Pair(\"fee\", (int64_t)(tx.GetValueIn(mapInputs) - tx.GetValueOut())));\n+\n+            Array deps;\n+            BOOST_FOREACH (MapPrevTx::value_type& inp, mapInputs)\n+            {\n+                if (setTxIndex.count(inp.first))\n+                    deps.push_back(setTxIndex[inp.first]);\n+            }\n+            entry.push_back(Pair(\"depends\", deps));\n+\n+            int64_t nSigOps = tx.GetLegacySigOpCount();\n+            nSigOps += tx.GetP2SHSigOpCount(mapInputs);\n+            entry.push_back(Pair(\"sigops\", nSigOps));\n+        }\n+\n+        transactions.push_back(entry);\n+    }\n+\n+    Object aux;\n+    aux.push_back(Pair(\"flags\", HexStr(COINBASE_FLAGS.begin(), COINBASE_FLAGS.end())));\n+\n+    uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();\n+\n+    static Array aMutable;\n+    if (aMutable.empty())\n+    {\n+        aMutable.push_back(\"time\");\n+        aMutable.push_back(\"transactions\");\n+        aMutable.push_back(\"prevblock\");\n+    }\n+\n+    Object result;\n+    result.push_back(Pair(\"version\", pblock->nVersion));\n+    result.push_back(Pair(\"previousblockhash\", pblock->hashPrevBlock.GetHex()));\n+    result.push_back(Pair(\"transactions\", transactions));\n+    result.push_back(Pair(\"coinbaseaux\", aux));\n+    result.push_back(Pair(\"coinbasevalue\", (int64_t)pblock->vtx[0].vout[0].nValue));\n+    result.push_back(Pair(\"target\", hashTarget.GetHex()));\n+    result.push_back(Pair(\"mintime\", (int64_t)pindexPrev->GetMedianTimePast()+1));\n+    result.push_back(Pair(\"mutable\", aMutable));\n+    result.push_back(Pair(\"noncerange\", \"00000000ffffffff\"));\n+    result.push_back(Pair(\"sigoplimit\", (int64_t)MAX_BLOCK_SIGOPS));\n+    result.push_back(Pair(\"sizelimit\", (int64_t)MAX_BLOCK_SIZE));\n+    result.push_back(Pair(\"curtime\", (int64_t)pblock->nTime));\n+    result.push_back(Pair(\"bits\", HexBits(pblock->nBits)));\n+    result.push_back(Pair(\"height\", (int64_t)(pindexPrev->nHeight+1)));\n+\n+    return result;\n+}\n+\n+Value submitblock(const Array& params, bool fHelp)\n+{\n+    if (fHelp || params.size() < 1 || params.size() > 2)\n+        throw runtime_error(\n+            \"submitblock <hex data> [optional-params-obj]\\n\"\n+            \"[optional-params-obj] parameter is currently ignored.\\n\"\n+            \"Attempts to submit new block to network.\\n\"\n+            \"See https://en.bitcoin.it/wiki/BIP_0022 for full specification.\");\n+\n+    vector<unsigned char> blockData(ParseHex(params[0].get_str()));\n+    CDataStream ssBlock(blockData, SER_NETWORK, PROTOCOL_VERSION);\n+    CBlock block;\n+    try {\n+        ssBlock >> block;\n+    }\n+    catch (std::exception &e) {\n+        throw JSONRPCError(-22, \"Block decode failed\");\n+    }\n+\n+    bool fAccepted = ProcessBlock(NULL, &block);\n+    if (!fAccepted)\n+        throw JSONRPCError(-23, \"Block rejected\");\n+\n+    return true;\n+}\n+"
+      }
+    ]
+  },
+  {
+    "sha": "a2168d94c077543c538b5e9c1450d60f33301b33",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphMjE2OGQ5NGMwNzc1NDNjNTM4YjVlOWMxNDUwZDYwZjMzMzAxYjMz",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-08-21T06:41:46Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-08-21T06:41:46Z"
+      },
+      "message": "RPC: submitblock returns null on success, string on error",
+      "tree": {
+        "sha": "7d7a0b70fed32b03575e61560f080f1e19092f09",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/7d7a0b70fed32b03575e61560f080f1e19092f09"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a2168d94c077543c538b5e9c1450d60f33301b33",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a2168d94c077543c538b5e9c1450d60f33301b33",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a2168d94c077543c538b5e9c1450d60f33301b33",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a2168d94c077543c538b5e9c1450d60f33301b33/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "7600e7fc399b46bf126e22fa8681d812c844124e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7600e7fc399b46bf126e22fa8681d812c844124e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/7600e7fc399b46bf126e22fa8681d812c844124e"
+      }
+    ],
+    "stats": {
+      "total": 4,
+      "additions": 2,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "fa6fdd6d356238e6e977879586a1fd68f735fd30",
+        "filename": "src/rpcmining.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a2168d94c077543c538b5e9c1450d60f33301b33/src/rpcmining.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a2168d94c077543c538b5e9c1450d60f33301b33/src/rpcmining.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcmining.cpp?ref=a2168d94c077543c538b5e9c1450d60f33301b33",
+        "patch": "@@ -373,8 +373,8 @@ Value submitblock(const Array& params, bool fHelp)\n \n     bool fAccepted = ProcessBlock(NULL, &block);\n     if (!fAccepted)\n-        throw JSONRPCError(-23, \"Block rejected\");\n+        return \"rejected\";\n \n-    return true;\n+    return Value::null;\n }\n "
+      }
+    ]
+  }
+]

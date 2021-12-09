@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "2fdd4c793347843a450f26aa238b62a239bbb261",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyZmRkNGM3OTMzNDc4NDNhNDUwZjI2YWEyMzhiNjJhMjM5YmJiMjYx",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-01-30T09:50:52Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-05-02T12:35:30Z"
+      },
+      "message": "better std::exception logging for CAddrDb\n\n- also small logging text changes",
+      "tree": {
+        "sha": "db2e5c34e5713965f7218c36ec15928f4b06b91c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/db2e5c34e5713965f7218c36ec15928f4b06b91c"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/2fdd4c793347843a450f26aa238b62a239bbb261",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2fdd4c793347843a450f26aa238b62a239bbb261",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/2fdd4c793347843a450f26aa238b62a239bbb261",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2fdd4c793347843a450f26aa238b62a239bbb261/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "583df73acd748db366f5367590ca2860ab4f227d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/583df73acd748db366f5367590ca2860ab4f227d",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/583df73acd748db366f5367590ca2860ab4f227d"
+      }
+    ],
+    "stats": {
+      "total": 19,
+      "additions": 10,
+      "deletions": 9
+    },
+    "files": [
+      {
+        "sha": "6369dd29245b9f6af0e4c7dacc52dddbc0126a5b",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 10,
+        "deletions": 9,
+        "changes": 19,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/2fdd4c793347843a450f26aa238b62a239bbb261/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/2fdd4c793347843a450f26aa238b62a239bbb261/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=2fdd4c793347843a450f26aa238b62a239bbb261",
+        "patch": "@@ -1944,21 +1944,21 @@ bool CAddrDB::Write(const CAddrMan& addr)\n     FILE *file = fopen(pathTmp.string().c_str(), \"wb\");\n     CAutoFile fileout = CAutoFile(file, SER_DISK, CLIENT_VERSION);\n     if (!fileout)\n-        return error(\"CAddrman::Write() : open failed\");\n+        return error(\"%s : Failed to open file %s\", __func__, pathTmp.string());\n \n     // Write and commit header, data\n     try {\n         fileout << ssPeers;\n     }\n     catch (std::exception &e) {\n-        return error(\"CAddrman::Write() : I/O error\");\n+        return error(\"%s : Serialize or I/O error - %s\", __func__, e.what());\n     }\n     FileCommit(fileout);\n     fileout.fclose();\n \n     // replace existing peers.dat, if any, with new peers.dat.XXXX\n     if (!RenameOver(pathTmp, pathAddr))\n-        return error(\"CAddrman::Write() : Rename-into-place failed\");\n+        return error(\"%s : Rename-into-place failed\", __func__);\n \n     return true;\n }\n@@ -1969,13 +1969,14 @@ bool CAddrDB::Read(CAddrMan& addr)\n     FILE *file = fopen(pathAddr.string().c_str(), \"rb\");\n     CAutoFile filein = CAutoFile(file, SER_DISK, CLIENT_VERSION);\n     if (!filein)\n-        return error(\"CAddrman::Read() : open failed\");\n+        return error(\"%s : Failed to open file %s\", __func__, pathAddr.string());\n \n     // use file size to size memory buffer\n     int fileSize = boost::filesystem::file_size(pathAddr);\n     int dataSize = fileSize - sizeof(uint256);\n     // Don't try to resize to a negative number if file is small\n-    if ( dataSize < 0 ) dataSize = 0;\n+    if (dataSize < 0)\n+        dataSize = 0;\n     vector<unsigned char> vchData;\n     vchData.resize(dataSize);\n     uint256 hashIn;\n@@ -1986,7 +1987,7 @@ bool CAddrDB::Read(CAddrMan& addr)\n         filein >> hashIn;\n     }\n     catch (std::exception &e) {\n-        return error(\"CAddrman::Read() 2 : I/O error or stream data corrupted\");\n+        return error(\"%s : Deserialize or I/O error - %s\", __func__, e.what());\n     }\n     filein.fclose();\n \n@@ -1995,7 +1996,7 @@ bool CAddrDB::Read(CAddrMan& addr)\n     // verify stored checksum matches input data\n     uint256 hashTmp = Hash(ssPeers.begin(), ssPeers.end());\n     if (hashIn != hashTmp)\n-        return error(\"CAddrman::Read() : checksum mismatch; data corrupted\");\n+        return error(\"%s : Checksum mismatch, data corrupted\", __func__);\n \n     unsigned char pchMsgTmp[4];\n     try {\n@@ -2004,13 +2005,13 @@ bool CAddrDB::Read(CAddrMan& addr)\n \n         // ... verify the network matches ours\n         if (memcmp(pchMsgTmp, Params().MessageStart(), sizeof(pchMsgTmp)))\n-            return error(\"CAddrman::Read() : invalid network magic number\");\n+            return error(\"%s : Invalid network magic number\", __func__);\n \n         // de-serialize address data into one CAddrMan object\n         ssPeers >> addr;\n     }\n     catch (std::exception &e) {\n-        return error(\"CAddrman::Read() : I/O error or stream data corrupted\");\n+        return error(\"%s : Deserialize or I/O error - %s\", __func__, e.what());\n     }\n \n     return true;"
+      }
+    ]
+  }
+]

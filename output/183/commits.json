@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "efffd281624b4bcf5672ffe98537c45a39ec2ae1",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplZmZmZDI4MTYyNGI0YmNmNTY3MmZmZTk4NTM3YzQ1YTM5ZWMyYWUx",
+    "commit": {
+      "author": {
+        "name": "Khalahan",
+        "email": "khal@bitcoin-contact.org",
+        "date": "2011-04-24T12:27:52Z"
+      },
+      "committer": {
+        "name": "Khalahan",
+        "email": "khal@bitcoin-contact.org",
+        "date": "2011-05-06T14:21:13Z"
+      },
+      "message": "Sign and verify message with bitcoin address and public key\n\nAdd padding to input (fixed string + address) before hashing",
+      "tree": {
+        "sha": "5aa42686c817ae8cf6bd4bf629d9630c13540122",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/5aa42686c817ae8cf6bd4bf629d9630c13540122"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/efffd281624b4bcf5672ffe98537c45a39ec2ae1",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/efffd281624b4bcf5672ffe98537c45a39ec2ae1",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/efffd281624b4bcf5672ffe98537c45a39ec2ae1",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/efffd281624b4bcf5672ffe98537c45a39ec2ae1/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "b37f09aa2e80b17028ad7fe1e87362c0f07c7406",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b37f09aa2e80b17028ad7fe1e87362c0f07c7406",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b37f09aa2e80b17028ad7fe1e87362c0f07c7406"
+      }
+    ],
+    "stats": {
+      "total": 66,
+      "additions": 66,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "2303e6fc3b591863d3392ce6846d7329364eb693",
+        "filename": "rpc.cpp",
+        "status": "modified",
+        "additions": 66,
+        "deletions": 0,
+        "changes": 66,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/efffd281624b4bcf5672ffe98537c45a39ec2ae1/rpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/efffd281624b4bcf5672ffe98537c45a39ec2ae1/rpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/rpc.cpp?ref=efffd281624b4bcf5672ffe98537c45a39ec2ae1",
+        "patch": "@@ -494,6 +494,70 @@ Value sendtoaddress(const Array& params, bool fHelp)\n     return wtx.GetHash().GetHex();\n }\n \n+Value signmessage(const Array& params, bool fHelp)\n+{\n+    if (fHelp || params.size() != 2)\n+        throw runtime_error(\n+            \"signmessage <bitcoinaddress> <message>\\n\"\n+            \"Sign a message with the private key of an address\");\n+\n+    string strAddress = params[0].get_str();\n+    string strMessage = params[1].get_str();\n+    strMessage.insert(0, \"Padding text - \");\n+    \n+    uint160 hash160;\n+    if(!AddressToHash160(strAddress, hash160))\n+        throw JSONRPCError(-3, \"Invalid address\");\n+    \n+    vector<unsigned char>& vchPubKey = mapPubKeys[hash160];\n+    CKey key;\n+    if(!key.SetPubKey(vchPubKey))\n+        throw JSONRPCError(-3, \"Public key not found\");\n+    strMessage.insert(0, HexStr(vchPubKey.begin(), vchPubKey.end()).c_str());\n+\n+    vector<unsigned char> vchMsg(strMessage.begin(), strMessage.end());\n+    vector<unsigned char> vchSig;\n+    if (!CKey::Sign(mapKeys[vchPubKey], Hash(vchMsg.begin(), vchMsg.end()), vchSig))\n+        throw JSONRPCError(-3, \"Sign failed\");\n+\n+    Object obj;\n+    obj.push_back(Pair(\"address\",       strAddress));\n+    obj.push_back(Pair(\"pubkey\",        HexStr(vchPubKey.begin(), vchPubKey.end()).c_str()));\n+    obj.push_back(Pair(\"sign\",          HexStr(vchSig.begin(), vchSig.end()).c_str()));\n+\n+    return obj;\n+}\n+\n+Value verifymessage(const Array& params, bool fHelp)\n+{\n+    if (fHelp || params.size() != 3)\n+        throw runtime_error(\n+            \"verifymessage <pubkey> <sign> <message>\\n\"\n+            \"Verify a signed message with the public key\");\n+\n+    string strPubKey  = params[0].get_str();\n+    string strSign    = params[1].get_str();\n+    string strMessage = params[2].get_str();\n+    strMessage.insert(0, \"Padding text - \");\n+    strMessage.insert(0, strPubKey.c_str());\n+\n+    vector<unsigned char> vchPubKey = ParseHex(strPubKey);\n+    vector<unsigned char> vchSig = ParseHex(strSign);\n+    vector<unsigned char> vchMsg(strMessage.begin(), strMessage.end());\n+\n+    CKey key;\n+    if(!key.SetPubKey(vchPubKey))\n+        throw JSONRPCError(-3, \"Invalid pubkey\");\n+    \n+    if (!key.Verify(Hash(vchMsg.begin(), vchMsg.end()), vchSig))\n+        throw JSONRPCError(-3, \"Verify failed\");\n+    \n+    Object obj;\n+    obj.push_back(Pair(\"address\",       PubKeyToAddress(vchPubKey)));\n+    obj.push_back(Pair(\"pubkey\",        strPubKey.c_str()));\n+    return obj;\n+}\n+\n \n Value getreceivedbyaddress(const Array& params, bool fHelp)\n {\n@@ -1438,6 +1502,8 @@ pair<string, rpcfn_type> pCallTable[] =\n     make_pair(\"listtransactions\",      &listtransactions),\n     make_pair(\"getwork\",               &getwork),\n     make_pair(\"listaccounts\",          &listaccounts),\n+    make_pair(\"signmessage\",           &signmessage),\n+    make_pair(\"verifymessage\",         &verifymessage),\n };\n map<string, rpcfn_type> mapCallTable(pCallTable, pCallTable + sizeof(pCallTable)/sizeof(pCallTable[0]));\n "
+      }
+    ]
+  }
+]

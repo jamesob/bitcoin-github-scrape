@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "f7a9a11391b18e8d18fce4482a4fcb6a7d6c9796",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmN2E5YTExMzkxYjE4ZThkMThmY2U0NDgyYTRmY2I2YTdkNmM5Nzk2",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-01-03T08:03:07Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-01-05T00:46:16Z"
+      },
+      "message": "Fix horrific performance found by gmaxwell.",
+      "tree": {
+        "sha": "faa2f905578b7ee1b62746154c47fbb9a49ec4c0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/faa2f905578b7ee1b62746154c47fbb9a49ec4c0"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/f7a9a11391b18e8d18fce4482a4fcb6a7d6c9796",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f7a9a11391b18e8d18fce4482a4fcb6a7d6c9796",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/f7a9a11391b18e8d18fce4482a4fcb6a7d6c9796",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f7a9a11391b18e8d18fce4482a4fcb6a7d6c9796/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "96d3bcb99690726d4c0e28355cc87c25e14f4c8d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/96d3bcb99690726d4c0e28355cc87c25e14f4c8d",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/96d3bcb99690726d4c0e28355cc87c25e14f4c8d"
+      }
+    ],
+    "stats": {
+      "total": 34,
+      "additions": 33,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "626f7d6effed5b51fcf3ee252e60b97c569047de",
+        "filename": "src/serialize.h",
+        "status": "modified",
+        "additions": 33,
+        "deletions": 1,
+        "changes": 34,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f7a9a11391b18e8d18fce4482a4fcb6a7d6c9796/src/serialize.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f7a9a11391b18e8d18fce4482a4fcb6a7d6c9796/src/serialize.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/serialize.h?ref=f7a9a11391b18e8d18fce4482a4fcb6a7d6c9796",
+        "patch": "@@ -819,6 +819,38 @@ struct secure_allocator : public std::allocator<T>\n };\n \n \n+//\n+// Allocator that clears its contents before deletion.\n+//\n+template<typename T>\n+struct zero_after_free_allocator : public std::allocator<T>\n+{\n+    // MSVC8 default copy constructor is broken\n+    typedef std::allocator<T> base;\n+    typedef typename base::size_type size_type;\n+    typedef typename base::difference_type  difference_type;\n+    typedef typename base::pointer pointer;\n+    typedef typename base::const_pointer const_pointer;\n+    typedef typename base::reference reference;\n+    typedef typename base::const_reference const_reference;\n+    typedef typename base::value_type value_type;\n+    zero_after_free_allocator() throw() {}\n+    zero_after_free_allocator(const zero_after_free_allocator& a) throw() : base(a) {}\n+    template <typename U>\n+    zero_after_free_allocator(const zero_after_free_allocator<U>& a) throw() : base(a) {}\n+    ~zero_after_free_allocator() throw() {}\n+    template<typename _Other> struct rebind\n+    { typedef zero_after_free_allocator<_Other> other; };\n+\n+    void deallocate(T* p, std::size_t n)\n+    {\n+        if (p != NULL)\n+            memset(p, 0, sizeof(T) * n);\n+        std::allocator<T>::deallocate(p, n);\n+    }\n+};\n+\n+\n \n //\n // Double ended buffer combining vector and stream-like interfaces.\n@@ -828,7 +860,7 @@ struct secure_allocator : public std::allocator<T>\n class CDataStream\n {\n protected:\n-    typedef std::vector<char, secure_allocator<char> > vector_type;\n+    typedef std::vector<char, zero_after_free_allocator<char> > vector_type;\n     vector_type vch;\n     unsigned int nReadPos;\n     short state;"
+      }
+    ]
+  }
+]

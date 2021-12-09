@@ -1,0 +1,86 @@
+[
+  {
+    "sha": "0b1e73d1e128f221d3925332dfa386afb2feaa2e",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowYjFlNzNkMWUxMjhmMjIxZDM5MjUzMzJkZmEzODZhZmIyZmVhYTJl",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-08-30T17:04:19Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-08-31T08:34:35Z"
+      },
+      "message": "implement proxy server connection-test on client startup\n\n- add ConnectionTest() to netbase.h to do a connection-test for a present\n  -proxy address on client init and warn on failure",
+      "tree": {
+        "sha": "b48485baf81c5ada76997c4682d1ccdc04e8b1f0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/b48485baf81c5ada76997c4682d1ccdc04e8b1f0"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/0b1e73d1e128f221d3925332dfa386afb2feaa2e",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0b1e73d1e128f221d3925332dfa386afb2feaa2e",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/0b1e73d1e128f221d3925332dfa386afb2feaa2e",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0b1e73d1e128f221d3925332dfa386afb2feaa2e/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "c2cd13faa4a09214c8d262f9e662edb57fc7b171",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c2cd13faa4a09214c8d262f9e662edb57fc7b171",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c2cd13faa4a09214c8d262f9e662edb57fc7b171"
+      }
+    ],
+    "stats": {
+      "total": 32,
+      "additions": 28,
+      "deletions": 4
+    },
+    "files": [
+      {
+        "sha": "560028cb86dbf7d226f0b475591048b835e3fb2c",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 0,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0b1e73d1e128f221d3925332dfa386afb2feaa2e/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0b1e73d1e128f221d3925332dfa386afb2feaa2e/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=0b1e73d1e128f221d3925332dfa386afb2feaa2e",
+        "patch": "@@ -2,13 +2,16 @@\n // Copyright (c) 2009-2012 The Bitcoin developers\n // Distributed under the MIT/X11 software license, see the accompanying\n // file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n #include \"db.h\"\n #include \"walletdb.h\"\n #include \"bitcoinrpc.h\"\n #include \"net.h\"\n #include \"init.h\"\n #include \"util.h\"\n #include \"ui_interface.h\"\n+#include \"netbase.h\"\n+\n #include <boost/filesystem.hpp>\n #include <boost/filesystem/fstream.hpp>\n #include <boost/filesystem/convenience.hpp>\n@@ -514,6 +517,14 @@ bool AppInit2()\n         if (!addrProxy.IsValid())\n             return InitError(strprintf(_(\"Invalid -proxy address: '%s'\"), mapArgs[\"-proxy\"].c_str()));\n \n+        uiInterface.InitMessage(_(\"Proxy Connection-test...\"));\n+        // check proxy server connection (1sec timeout)\n+        if (!ConnectionTest(addrProxy, 1000))\n+        {\n+            // allow the client to start, to fix a possibly non working proxy, if it was entered in the Qt network settings\n+            InitWarning(strprintf(_(\"Warning: Connection-test to -proxy address '%s' failed, check network settings!\"), mapArgs[\"-proxy\"].c_str()));\n+        }\n+\n         if (!IsLimited(NET_IPV4))\n             SetProxy(NET_IPV4, addrProxy, nSocksVersion);\n         if (nSocksVersion > 4) {"
+      },
+      {
+        "sha": "e43dd48add1559d9f56baf16e7256f5aaff1f714",
+        "filename": "src/netbase.cpp",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 4,
+        "changes": 20,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0b1e73d1e128f221d3925332dfa386afb2feaa2e/src/netbase.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0b1e73d1e128f221d3925332dfa386afb2feaa2e/src/netbase.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/netbase.cpp?ref=0b1e73d1e128f221d3925332dfa386afb2feaa2e",
+        "patch": "@@ -246,7 +246,7 @@ bool static Socks5(string strDest, int port, SOCKET& hSocket)\n     string strSocks5(\"\\5\\1\");\n     strSocks5 += '\\000'; strSocks5 += '\\003';\n     strSocks5 += static_cast<char>(std::min((int)strDest.size(), 255));\n-    strSocks5 += strDest; \n+    strSocks5 += strDest;\n     strSocks5 += static_cast<char>((port >> 8) & 0xFF);\n     strSocks5 += static_cast<char>((port >> 0) & 0xFF);\n     ret = send(hSocket, strSocks5.c_str(), strSocks5.size(), MSG_NOSIGNAL);\n@@ -478,7 +478,7 @@ bool ConnectSocket(const CService &addrDest, SOCKET& hSocketRet, int nTimeout)\n     // first connect to proxy server\n     if (!ConnectSocketDirectly(proxy.first, hSocket, nTimeout))\n         return false;\n- \n+\n     // do socks negotiation\n     switch (proxy.second) {\n     case 4:\n@@ -529,6 +529,18 @@ bool ConnectSocketByName(CService &addr, SOCKET& hSocketRet, const char *pszDest\n     return true;\n }\n \n+bool ConnectionTest(const CService &addrConnect, int nTimeout)\n+{\n+    SOCKET hSocket = INVALID_SOCKET;\n+    // Try to establish a connection to addrConnect as connection-test\n+    if (ConnectSocketDirectly(addrConnect, hSocket, nTimeout))\n+    {\n+        closesocket(hSocket);\n+        return true;\n+    }\n+    return false;\n+}\n+\n void CNetAddr::Init()\n {\n     memset(ip, 0, 16);\n@@ -617,8 +629,8 @@ bool CNetAddr::IsIPv6() const\n bool CNetAddr::IsRFC1918() const\n {\n     return IsIPv4() && (\n-        GetByte(3) == 10 || \n-        (GetByte(3) == 192 && GetByte(2) == 168) || \n+        GetByte(3) == 10 ||\n+        (GetByte(3) == 192 && GetByte(2) == 168) ||\n         (GetByte(3) == 172 && (GetByte(2) >= 16 && GetByte(2) <= 31)));\n }\n "
+      },
+      {
+        "sha": "c18e7fd88a14276e7bec70066c95a4903b6afbfb",
+        "filename": "src/netbase.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0b1e73d1e128f221d3925332dfa386afb2feaa2e/src/netbase.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0b1e73d1e128f221d3925332dfa386afb2feaa2e/src/netbase.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/netbase.h?ref=0b1e73d1e128f221d3925332dfa386afb2feaa2e",
+        "patch": "@@ -147,5 +147,6 @@ bool Lookup(const char *pszName, std::vector<CService>& vAddr, int portDefault =\n bool LookupNumeric(const char *pszName, CService& addr, int portDefault = 0);\n bool ConnectSocket(const CService &addr, SOCKET& hSocketRet, int nTimeout = nConnectTimeout);\n bool ConnectSocketByName(CService &addr, SOCKET& hSocketRet, const char *pszDest, int portDefault = 0, int nTimeout = nConnectTimeout);\n+bool ConnectionTest(const CService &addrConnect, int nTimeout = nConnectTimeout);\n \n #endif"
+      }
+    ]
+  }
+]

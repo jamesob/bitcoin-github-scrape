@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "c71093d23b21c4cee998834294c23da3a2c0c464",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjNzEwOTNkMjNiMjFjNGNlZTk5ODgzNDI5NGMyM2RhM2EyYzBjNDY0",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-06-03T07:15:19Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-06-03T07:15:19Z"
+      },
+      "message": "[Qt] remove unclean net-detection in ipcParseCommandLine()\n\n- remove the net-detection implementation in ipcParseCommandLine() as it\n  will fail if the request itself is damaged or not a payment-request but\n  just a normal bitcoin: URI\n- try to send the received payment-request or URI via ipcSendCommandLine()\n  directly to a mainnet instance and if that fails to a testnet instance\n  (this should reflect normal use case of Bitcoin Core, but will cause\n  problems when running both nets and playing with testnet stuff as the\n  mainnet instance wont process the testnet stuff and error out)",
+      "tree": {
+        "sha": "565d13e0d15344500d2eb5302753960f0805818b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/565d13e0d15344500d2eb5302753960f0805818b"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/c71093d23b21c4cee998834294c23da3a2c0c464",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c71093d23b21c4cee998834294c23da3a2c0c464",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/c71093d23b21c4cee998834294c23da3a2c0c464",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c71093d23b21c4cee998834294c23da3a2c0c464/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "73b072252b47d2807269ebd365bc6eabcd3a0871",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/73b072252b47d2807269ebd365bc6eabcd3a0871",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/73b072252b47d2807269ebd365bc6eabcd3a0871"
+      }
+    ],
+    "stats": {
+      "total": 52,
+      "additions": 17,
+      "deletions": 35
+    },
+    "files": [
+      {
+        "sha": "d673febcdbbec4f60c02a821d591788cafb2c961",
+        "filename": "src/qt/paymentserver.cpp",
+        "status": "modified",
+        "additions": 17,
+        "deletions": 35,
+        "changes": 52,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c71093d23b21c4cee998834294c23da3a2c0c464/src/qt/paymentserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c71093d23b21c4cee998834294c23da3a2c0c464/src/qt/paymentserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.cpp?ref=c71093d23b21c4cee998834294c23da3a2c0c464",
+        "patch": "@@ -185,44 +185,17 @@ bool PaymentServer::ipcParseCommandLine(int argc, char* argv[])\n {\n     for (int i = 1; i < argc; i++)\n     {\n-        QString arg(argv[i]);\n-        if (arg.startsWith(\"-\"))\n+        QString curArg(argv[i]);\n+        if (curArg.startsWith(\"-\"))\n             continue;\n \n-        if (arg.startsWith(BITCOIN_IPC_PREFIX, Qt::CaseInsensitive)) // bitcoin: URI\n+        if (curArg.startsWith(BITCOIN_IPC_PREFIX, Qt::CaseInsensitive)) // bitcoin: URI\n         {\n-            savedPaymentRequests.append(arg);\n-\n-            SendCoinsRecipient r;\n-            if (GUIUtil::parseBitcoinURI(arg, &r))\n-            {\n-                CBitcoinAddress address(r.address.toStdString());\n-\n-                SelectParams(CChainParams::MAIN);\n-                if (!address.IsValid())\n-                {\n-                    SelectParams(CChainParams::TESTNET);\n-                }\n-            }\n-        }\n-        else if (QFile::exists(arg)) // Filename\n-        {\n-            savedPaymentRequests.append(arg);\n-\n-            PaymentRequestPlus request;\n-            if (readPaymentRequest(arg, request))\n-            {\n-                if (request.getDetails().network() == \"main\")\n-                    SelectParams(CChainParams::MAIN);\n-                else\n-                    SelectParams(CChainParams::TESTNET);\n-            }\n+            savedPaymentRequests.append(curArg);\n         }\n-        else\n+        else if (QFile::exists(curArg)) // Filename\n         {\n-            // Printing to debug.log is about the best we can do here, the\n-            // GUI hasn't started yet so we can't pop up a message box.\n-            qDebug() << \"PaymentServer::ipcSendCommandLine : Payment request file does not exist: \" << arg;\n+            savedPaymentRequests.append(curArg);\n         }\n     }\n     return true;\n@@ -240,11 +213,20 @@ bool PaymentServer::ipcSendCommandLine()\n     foreach (const QString& r, savedPaymentRequests)\n     {\n         QLocalSocket* socket = new QLocalSocket();\n+\n+        // Try mainnet local server first...\n+        SelectParams(CChainParams::MAIN);\n         socket->connectToServer(ipcServerName(), QIODevice::WriteOnly);\n         if (!socket->waitForConnected(BITCOIN_IPC_CONNECT_TIMEOUT))\n         {\n-            delete socket;\n-            return false;\n+            // ...try testnet local server, if mainnet local server connection failed.\n+            SelectParams(CChainParams::TESTNET);\n+            socket->connectToServer(ipcServerName(), QIODevice::WriteOnly);\n+            if (!socket->waitForConnected(BITCOIN_IPC_CONNECT_TIMEOUT))\n+            {\n+                delete socket;\n+                return false;\n+            }\n         }\n \n         QByteArray block;"
+      }
+    ]
+  }
+]

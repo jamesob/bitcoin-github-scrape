@@ -1,0 +1,210 @@
+[
+  {
+    "sha": "d7c58ad514ee00db00589216166808258bc16b60",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkN2M1OGFkNTE0ZWUwMGRiMDA1ODkyMTYxNjY4MDgyNThiYzE2YjYw",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2016-12-24T19:34:20Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-01-13T18:34:37Z"
+      },
+      "message": "Split CNode::cs_vSend: message processing and message sending\n\ncs_vSend is used for two purposes - to lock the datastructures used\nto queue messages to place on the wire and to only call\nSendMessages once at a time per-node. I believe SendMessages used\nto access some of the vSendMsg stuff, but it doesn't anymore, so\nthese locks do not need to be on the same mutex, and also make\ndeadlocking much more likely.",
+      "tree": {
+        "sha": "9ada9b97140cb50aa139dff17046beec63cd0788",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/9ada9b97140cb50aa139dff17046beec63cd0788"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/d7c58ad514ee00db00589216166808258bc16b60",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d7c58ad514ee00db00589216166808258bc16b60",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/d7c58ad514ee00db00589216166808258bc16b60",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d7c58ad514ee00db00589216166808258bc16b60/comments",
+    "author": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "8b66bf74e2a349e71eaa183af81fa63eaee76ad2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8b66bf74e2a349e71eaa183af81fa63eaee76ad2",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/8b66bf74e2a349e71eaa183af81fa63eaee76ad2"
+      }
+    ],
+    "stats": {
+      "total": 24,
+      "additions": 11,
+      "deletions": 13
+    },
+    "files": [
+      {
+        "sha": "e7b4562eabc66bf6d3ac509fb9e5deb259c9ed89",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 13,
+        "changes": 22,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d7c58ad514ee00db00589216166808258bc16b60/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d7c58ad514ee00db00589216166808258bc16b60/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=d7c58ad514ee00db00589216166808258bc16b60",
+        "patch": "@@ -1147,12 +1147,10 @@ void CConnman::ThreadSocketHandler()\n                 // * Hand off all complete messages to the processor, to be handled without\n                 //   blocking here.\n                 {\n-                    TRY_LOCK(pnode->cs_vSend, lockSend);\n-                    if (lockSend) {\n-                        if (!pnode->vSendMsg.empty()) {\n-                            FD_SET(pnode->hSocket, &fdsetSend);\n-                            continue;\n-                        }\n+                    LOCK(pnode->cs_vSend);\n+                    if (!pnode->vSendMsg.empty()) {\n+                        FD_SET(pnode->hSocket, &fdsetSend);\n+                        continue;\n                     }\n                 }\n                 {\n@@ -1272,12 +1270,10 @@ void CConnman::ThreadSocketHandler()\n                 continue;\n             if (FD_ISSET(pnode->hSocket, &fdsetSend))\n             {\n-                TRY_LOCK(pnode->cs_vSend, lockSend);\n-                if (lockSend) {\n-                    size_t nBytes = SocketSendData(pnode);\n-                    if (nBytes) {\n-                        RecordBytesSent(nBytes);\n-                    }\n+                LOCK(pnode->cs_vSend);\n+                size_t nBytes = SocketSendData(pnode);\n+                if (nBytes) {\n+                    RecordBytesSent(nBytes);\n                 }\n             }\n \n@@ -1875,7 +1871,7 @@ void CConnman::ThreadMessageHandler()\n \n             // Send messages\n             {\n-                TRY_LOCK(pnode->cs_vSend, lockSend);\n+                TRY_LOCK(pnode->cs_sendProcessing, lockSend);\n                 if (lockSend)\n                     GetNodeSignals().SendMessages(pnode, *this, flagInterruptMsgProc);\n             }"
+      },
+      {
+        "sha": "aef3ef9a7d7c90366d41bd81be56397f1966a413",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d7c58ad514ee00db00589216166808258bc16b60/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d7c58ad514ee00db00589216166808258bc16b60/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=d7c58ad514ee00db00589216166808258bc16b60",
+        "patch": "@@ -618,6 +618,8 @@ class CNode\n     std::list<CNetMessage> vProcessMsg;\n     size_t nProcessQueueSize;\n \n+    CCriticalSection cs_sendProcessing;\n+\n     std::deque<CInv> vRecvGetData;\n     uint64_t nRecvBytes;\n     std::atomic<int> nRecvVersion;"
+      }
+    ]
+  },
+  {
+    "sha": "376b3c2c6e329357e4793c1d1b90d1dc0f30fed0",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozNzZiM2MyYzZlMzI5MzU3ZTQ3OTNjMWQxYjkwZDFkYzBmMzBmZWQw",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-01-13T04:08:52Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-01-13T18:34:38Z"
+      },
+      "message": "Make the cs_sendProcessing a LOCK instead of a TRY_LOCK\n\nTechnically cs_sendProcessing is entirely useless now because it\nis only ever taken on the one MessageHandler thread, but because\nthere may be multiple of those in the future, it is left in place",
+      "tree": {
+        "sha": "c132086211bc65e2d4d74b1ca89245745086724c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/c132086211bc65e2d4d74b1ca89245745086724c"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/376b3c2c6e329357e4793c1d1b90d1dc0f30fed0",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/376b3c2c6e329357e4793c1d1b90d1dc0f30fed0",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/376b3c2c6e329357e4793c1d1b90d1dc0f30fed0",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/376b3c2c6e329357e4793c1d1b90d1dc0f30fed0/comments",
+    "author": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "d7c58ad514ee00db00589216166808258bc16b60",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d7c58ad514ee00db00589216166808258bc16b60",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/d7c58ad514ee00db00589216166808258bc16b60"
+      }
+    ],
+    "stats": {
+      "total": 5,
+      "additions": 2,
+      "deletions": 3
+    },
+    "files": [
+      {
+        "sha": "1019d595442888d6645ab07a3d5dddbe33a32ef2",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 3,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/376b3c2c6e329357e4793c1d1b90d1dc0f30fed0/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/376b3c2c6e329357e4793c1d1b90d1dc0f30fed0/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=376b3c2c6e329357e4793c1d1b90d1dc0f30fed0",
+        "patch": "@@ -1871,9 +1871,8 @@ void CConnman::ThreadMessageHandler()\n \n             // Send messages\n             {\n-                TRY_LOCK(pnode->cs_sendProcessing, lockSend);\n-                if (lockSend)\n-                    GetNodeSignals().SendMessages(pnode, *this, flagInterruptMsgProc);\n+                LOCK(pnode->cs_sendProcessing);\n+                GetNodeSignals().SendMessages(pnode, *this, flagInterruptMsgProc);\n             }\n             if (flagInterruptMsgProc)\n                 return;"
+      }
+    ]
+  }
+]

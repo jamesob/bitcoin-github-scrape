@@ -1,0 +1,74 @@
+[
+  {
+    "sha": "d051ffa6d527cc6f35368e309957b15b6e6358bc",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkMDUxZmZhNmQ1MjdjYzZmMzUzNjhlMzA5OTU3YjE1YjZlNjM1OGJj",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-10-10T18:09:33Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-10-10T18:09:33Z"
+      },
+      "message": "Relay up to two (2) OP_RETURN outputs as IsStandard\n\nConsensus seems to be that 40 is too small, but 80 should be enough.",
+      "tree": {
+        "sha": "f4419bbe316c8713d3900b40696d025cf7709d08",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f4419bbe316c8713d3900b40696d025cf7709d08"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/d051ffa6d527cc6f35368e309957b15b6e6358bc",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d051ffa6d527cc6f35368e309957b15b6e6358bc",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/d051ffa6d527cc6f35368e309957b15b6e6358bc",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d051ffa6d527cc6f35368e309957b15b6e6358bc/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "023690c0f24a06853bb860db032a1ff67978ee74",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/023690c0f24a06853bb860db032a1ff67978ee74",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/023690c0f24a06853bb860db032a1ff67978ee74"
+      }
+    ],
+    "stats": {
+      "total": 20,
+      "additions": 15,
+      "deletions": 5
+    },
+    "files": [
+      {
+        "sha": "b11be108d18d85ae18464e3267b035496f45707b",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d051ffa6d527cc6f35368e309957b15b6e6358bc/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d051ffa6d527cc6f35368e309957b15b6e6358bc/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=d051ffa6d527cc6f35368e309957b15b6e6358bc",
+        "patch": "@@ -583,8 +583,8 @@ bool IsStandardTx(const CTransaction& tx, string& reason)\n         }\n     }\n \n-    // only one OP_RETURN txout is permitted\n-    if (nDataOut > 1) {\n+    // two OP_RETURN txout's permitted\n+    if (nDataOut > 2) {\n         reason = \"multi-op-return\";\n         return false;\n     }"
+      },
+      {
+        "sha": "4df365fcf013f9021c824884b8712916828218a3",
+        "filename": "src/test/transaction_tests.cpp",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 3,
+        "changes": 16,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d051ffa6d527cc6f35368e309957b15b6e6358bc/src/test/transaction_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d051ffa6d527cc6f35368e309957b15b6e6358bc/src/test/transaction_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/transaction_tests.cpp?ref=d051ffa6d527cc6f35368e309957b15b6e6358bc",
+        "patch": "@@ -343,7 +343,14 @@ BOOST_AUTO_TEST_CASE(test_IsStandard)\n     t.vout[0].scriptPubKey = CScript() << OP_RETURN << ParseHex(\"04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38\");\n     BOOST_CHECK(IsStandardTx(t, reason));\n \n+    // 2x 40-byte TX_NULL_DATA (standard)\n+    t.vout.resize(2);\n+    t.vout[0].scriptPubKey = CScript() << OP_RETURN << ParseHex(\"04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38\");\n+    t.vout[1].scriptPubKey = CScript() << OP_RETURN << ParseHex(\"04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38\");\n+    BOOST_CHECK(IsStandardTx(t, reason));\n+\n     // 41-byte TX_NULL_DATA (non-standard)\n+    t.vout.resize(1);\n     t.vout[0].scriptPubKey = CScript() << OP_RETURN << ParseHex(\"04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef3800\");\n     BOOST_CHECK(!IsStandardTx(t, reason));\n \n@@ -352,18 +359,21 @@ BOOST_AUTO_TEST_CASE(test_IsStandard)\n     t.vout[0].scriptPubKey = CScript() << OP_RETURN;\n     BOOST_CHECK(IsStandardTx(t, reason));\n \n-    // Only one TX_NULL_DATA permitted in all cases\n-    t.vout.resize(2);\n+    // Only two TX_NULL_DATA permitted in all cases\n+    t.vout.resize(3);\n     t.vout[0].scriptPubKey = CScript() << OP_RETURN << ParseHex(\"04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38\");\n     t.vout[1].scriptPubKey = CScript() << OP_RETURN << ParseHex(\"04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38\");\n+    t.vout[2].scriptPubKey = CScript() << OP_RETURN << ParseHex(\"04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38\");\n     BOOST_CHECK(!IsStandardTx(t, reason));\n \n     t.vout[0].scriptPubKey = CScript() << OP_RETURN << ParseHex(\"04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38\");\n-    t.vout[1].scriptPubKey = CScript() << OP_RETURN;\n+    t.vout[1].scriptPubKey = CScript() << OP_RETURN << ParseHex(\"04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38\");\n+    t.vout[2].scriptPubKey = CScript() << OP_RETURN;\n     BOOST_CHECK(!IsStandardTx(t, reason));\n \n     t.vout[0].scriptPubKey = CScript() << OP_RETURN;\n     t.vout[1].scriptPubKey = CScript() << OP_RETURN;\n+    t.vout[2].scriptPubKey = CScript() << OP_RETURN;\n     BOOST_CHECK(!IsStandardTx(t, reason));\n }\n "
+      }
+    ]
+  }
+]

@@ -1,0 +1,86 @@
+[
+  {
+    "sha": "53e71135de2933ef1204bb02487d4c45a95d2e28",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1M2U3MTEzNWRlMjkzM2VmMTIwNGJiMDI0ODdkNGM0NWE5NWQyZTI4",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-04-23T09:36:54Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-06-10T17:49:54Z"
+      },
+      "message": "changes to thread code (directly use boost::thread)\n\n- removes our NewThread() function an replaces remaining calls with\n  boost::thread with our TraceThread template\n- remove ExitThread() function\n- fix THREAD_PRIORITY_ABOVE_NORMAL for non Windows OSes",
+      "tree": {
+        "sha": "acfd11fae2bb093a83e6d8b6622a90086870d3b5",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/acfd11fae2bb093a83e6d8b6622a90086870d3b5"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/53e71135de2933ef1204bb02487d4c45a95d2e28",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/53e71135de2933ef1204bb02487d4c45a95d2e28",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/53e71135de2933ef1204bb02487d4c45a95d2e28",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/53e71135de2933ef1204bb02487d4c45a95d2e28/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "a2a2874fc03102c2e847cd165db1ff1f5d84fa89",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a2a2874fc03102c2e847cd165db1ff1f5d84fa89",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/a2a2874fc03102c2e847cd165db1ff1f5d84fa89"
+      }
+    ],
+    "stats": {
+      "total": 32,
+      "additions": 5,
+      "deletions": 27
+    },
+    "files": [
+      {
+        "sha": "1f8b39ac987ad833a1c0cb93248f1bf365440c51",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 7,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/53e71135de2933ef1204bb02487d4c45a95d2e28/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/53e71135de2933ef1204bb02487d4c45a95d2e28/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=53e71135de2933ef1204bb02487d4c45a95d2e28",
+        "patch": "@@ -389,11 +389,8 @@ bool GetMyExternalIP(CNetAddr& ipRet)\n     return false;\n }\n \n-void ThreadGetMyExternalIP(void* parg)\n+void ThreadGetMyExternalIP()\n {\n-    // Make this thread recognisable as the external IP detection thread\n-    RenameThread(\"bitcoin-ext-ip\");\n-\n     CNetAddr addrLocalHost;\n     if (GetMyExternalIP(addrLocalHost))\n     {\n@@ -1151,7 +1148,7 @@ void MapPort(bool fUseUPnP)\n             upnp_thread->join();\n             delete upnp_thread;\n         }\n-        upnp_thread = new boost::thread(boost::bind(&TraceThread<boost::function<void()> >, \"upnp\", &ThreadMapPort));\n+        upnp_thread = new boost::thread(boost::bind(&TraceThread<void (*)()>, \"upnp\", &ThreadMapPort));\n     }\n     else if (upnp_thread) {\n         upnp_thread->interrupt();\n@@ -1800,7 +1797,7 @@ void static Discover()\n \n     // Don't use external IPv4 discovery, when -onlynet=\"IPv6\"\n     if (!IsLimited(NET_IPV4))\n-        NewThread(ThreadGetMyExternalIP, NULL);\n+        boost::thread(boost::bind(&TraceThread<void (*)()>, \"ext-ip\", &ThreadGetMyExternalIP));\n }\n \n void StartNode(boost::thread_group& threadGroup)\n@@ -1823,7 +1820,7 @@ void StartNode(boost::thread_group& threadGroup)\n     if (!GetBoolArg(\"-dnsseed\", true))\n         printf(\"DNS seeding disabled\\n\");\n     else\n-        threadGroup.create_thread(boost::bind(&TraceThread<boost::function<void()> >, \"dnsseed\", &ThreadDNSAddressSeed));\n+        threadGroup.create_thread(boost::bind(&TraceThread<void (*)()>, \"dnsseed\", &ThreadDNSAddressSeed));\n \n #ifdef USE_UPNP\n     // Map ports with UPnP"
+      },
+      {
+        "sha": "f4892a238790c0bd48b7916ee84802c6f6b45a52",
+        "filename": "src/util.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 12,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/53e71135de2933ef1204bb02487d4c45a95d2e28/src/util.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/53e71135de2933ef1204bb02487d4c45a95d2e28/src/util.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/util.cpp?ref=53e71135de2933ef1204bb02487d4c45a95d2e28",
+        "patch": "@@ -1468,15 +1468,3 @@ void RenameThread(const char* name)\n     (void)name;\n #endif\n }\n-\n-bool NewThread(void(*pfn)(void*), void* parg)\n-{\n-    try\n-    {\n-        boost::thread(pfn, parg); // thread detaches when out of scope\n-    } catch(boost::thread_resource_error &e) {\n-        printf(\"Error creating thread: %s\\n\", e.what());\n-        return false;\n-    }\n-    return true;\n-}"
+      },
+      {
+        "sha": "2272ed02f44e938a33178954d9dd4ba047f2c089",
+        "filename": "src/util.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 8,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/53e71135de2933ef1204bb02487d4c45a95d2e28/src/util.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/53e71135de2933ef1204bb02487d4c45a95d2e28/src/util.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/util.h?ref=53e71135de2933ef1204bb02487d4c45a95d2e28",
+        "patch": "@@ -488,8 +488,6 @@ template <typename T> class CMedianFilter\n     }\n };\n \n-bool NewThread(void(*pfn)(void*), void* parg);\n-\n #ifdef WIN32\n inline void SetThreadPriority(int nPriority)\n {\n@@ -500,7 +498,7 @@ inline void SetThreadPriority(int nPriority)\n #define THREAD_PRIORITY_LOWEST          PRIO_MAX\n #define THREAD_PRIORITY_BELOW_NORMAL    2\n #define THREAD_PRIORITY_NORMAL          0\n-#define THREAD_PRIORITY_ABOVE_NORMAL    0\n+#define THREAD_PRIORITY_ABOVE_NORMAL    (-2)\n \n inline void SetThreadPriority(int nPriority)\n {\n@@ -512,11 +510,6 @@ inline void SetThreadPriority(int nPriority)\n     setpriority(PRIO_PROCESS, 0, nPriority);\n #endif\n }\n-\n-inline void ExitThread(size_t nExitCode)\n-{\n-    pthread_exit((void*)nExitCode);\n-}\n #endif\n \n void RenameThread(const char* name);"
+      }
+    ]
+  }
+]

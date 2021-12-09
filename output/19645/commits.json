@@ -1,0 +1,158 @@
+[
+  {
+    "sha": "d02c78ac017fee47eed02acfd6c3468ff2490e2c",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkMDJjNzhhYzAxN2ZlZTQ3ZWVkMDJhY2ZkNmMzNDY4ZmYyNDkwZTJj",
+    "commit": {
+      "author": {
+        "name": "Antoine Riard",
+        "email": "ariard@student.42.fr",
+        "date": "2020-08-02T16:09:59Z"
+      },
+      "committer": {
+        "name": "Antoine Riard",
+        "email": "ariard@student.42.fr",
+        "date": "2020-08-06T09:25:40Z"
+      },
+      "message": "[validation] Allow wtxid-acceptance to mempool\n\nAccepting a transaction to the mempool only succeeds if this transaction\nisn't already present. This check operating on txid, it prevents new\nsubmissions of the transaction with identical non-witness data but\nsmaller valid witnesses. Therefore, overall mempool feerate won't improve\neven if such higher-feerate mempool candidate is learnt through wtxid-relay.\n\nThis commit changes mempool and transaction broadcast already-present checks\nfrom transaction's txid to its wtxid.\n\nA new-wtxid submission may still fail due to replacement rules in\nfunction of local policy settings.",
+      "tree": {
+        "sha": "f351cf785aff2da1b107ae0db90b2bf751bd52a5",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f351cf785aff2da1b107ae0db90b2bf751bd52a5"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/d02c78ac017fee47eed02acfd6c3468ff2490e2c",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d02c78ac017fee47eed02acfd6c3468ff2490e2c",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/d02c78ac017fee47eed02acfd6c3468ff2490e2c",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d02c78ac017fee47eed02acfd6c3468ff2490e2c/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "a78742830aa35bf57bcb0a4730977a1e5a1876bc",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a78742830aa35bf57bcb0a4730977a1e5a1876bc",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/a78742830aa35bf57bcb0a4730977a1e5a1876bc"
+      }
+    ],
+    "stats": {
+      "total": 32,
+      "additions": 21,
+      "deletions": 11
+    },
+    "files": [
+      {
+        "sha": "5e5c9e0a1fc3f626bdff8b169daaead2155310a9",
+        "filename": "src/node/transaction.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 1,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d02c78ac017fee47eed02acfd6c3468ff2490e2c/src/node/transaction.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d02c78ac017fee47eed02acfd6c3468ff2490e2c/src/node/transaction.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/node/transaction.cpp?ref=d02c78ac017fee47eed02acfd6c3468ff2490e2c",
+        "patch": "@@ -22,6 +22,7 @@ TransactionError BroadcastTransaction(NodeContext& node, const CTransactionRef t\n     assert(node.mempool);\n     std::promise<void> promise;\n     uint256 hashTx = tx->GetHash();\n+    GenTxid gtxid(true, tx->GetWitnessHash());\n     bool callback_set = false;\n \n     { // cs_main scope\n@@ -35,7 +36,7 @@ TransactionError BroadcastTransaction(NodeContext& node, const CTransactionRef t\n         // So if the output does exist, then this transaction exists in the chain.\n         if (!existingCoin.IsSpent()) return TransactionError::ALREADY_IN_CHAIN;\n     }\n-    if (!node.mempool->exists(hashTx)) {\n+    if (!node.mempool->exists(gtxid)) {\n         // Transaction is not already in the mempool. Submit it.\n         TxValidationState state;\n         if (!AcceptToMemoryPool(*node.mempool, state, std::move(tx),"
+      },
+      {
+        "sha": "b507cfabc3120a32d29ea53e94af9c7cdf06074d",
+        "filename": "src/validation.cpp",
+        "status": "modified",
+        "additions": 19,
+        "deletions": 10,
+        "changes": 29,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d02c78ac017fee47eed02acfd6c3468ff2490e2c/src/validation.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d02c78ac017fee47eed02acfd6c3468ff2490e2c/src/validation.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.cpp?ref=d02c78ac017fee47eed02acfd6c3468ff2490e2c",
+        "patch": "@@ -484,7 +484,7 @@ class MemPoolAccept\n     // All the intermediate state that gets passed between the various levels\n     // of checking a given transaction.\n     struct Workspace {\n-        Workspace(const CTransactionRef& ptx) : m_ptx(ptx), m_hash(ptx->GetHash()) {}\n+        Workspace(const CTransactionRef& ptx) : m_ptx(ptx), m_hash(ptx->GetHash()), m_wtxid(ptx->GetWitnessHash()) {}\n         std::set<uint256> m_conflicts;\n         CTxMemPool::setEntries m_all_conflicting;\n         CTxMemPool::setEntries m_ancestors;\n@@ -497,6 +497,7 @@ class MemPoolAccept\n \n         const CTransactionRef& m_ptx;\n         const uint256& m_hash;\n+        const uint256& m_wtxid;\n     };\n \n     // Run the policy checks on a given transaction, excluding any script checks.\n@@ -554,6 +555,7 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)\n     const CTransactionRef& ptx = ws.m_ptx;\n     const CTransaction& tx = *ws.m_ptx;\n     const uint256& hash = ws.m_hash;\n+    const uint256& wtxid = ws.m_wtxid;\n \n     // Copy/alias what we need out of args\n     TxValidationState &state = args.m_state;\n@@ -598,8 +600,10 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)\n     if (!CheckFinalTx(tx, STANDARD_LOCKTIME_VERIFY_FLAGS))\n         return state.Invalid(TxValidationResult::TX_PREMATURE_SPEND, \"non-final\");\n \n-    // is it already in the memory pool?\n-    if (m_pool.exists(hash)) {\n+    // Reject transaction already in the mempool. We proceed check on wtxid to allow for\n+    // replacement with a higher-feerate witness between identical non-witness data transactions.\n+    GenTxid gtxid(true, wtxid);\n+    if (m_pool.exists(gtxid)) {\n         return state.Invalid(TxValidationResult::TX_CONFLICT, \"txn-already-in-mempool\");\n     }\n \n@@ -837,8 +841,9 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)\n             if (newFeeRate <= oldFeeRate)\n             {\n                 return state.Invalid(TxValidationResult::TX_MEMPOOL_POLICY, \"insufficient fee\",\n-                        strprintf(\"rejecting replacement %s; new feerate %s <= old feerate %s\",\n+                        strprintf(\"rejecting replacement txid:%s wtxid:%s ; new feerate %s <= old feerate %s\",\n                             hash.ToString(),\n+                            wtxid.ToString(),\n                             newFeeRate.ToString(),\n                             oldFeeRate.ToString()));\n             }\n@@ -865,8 +870,9 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)\n             }\n         } else {\n             return state.Invalid(TxValidationResult::TX_MEMPOOL_POLICY, \"too many potential replacements\",\n-                    strprintf(\"rejecting replacement %s; too many potential replacements (%d > %d)\\n\",\n+                    strprintf(\"rejecting replacement txid:%s wtxid:%s ; too many potential replacements (%d > %d)\\n\",\n                         hash.ToString(),\n+                        wtxid.ToString(),\n                         nConflictingCount,\n                         maxDescendantsToVisit));\n         }\n@@ -889,8 +895,9 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)\n                 // tx that's in the mempool.\n                 if (m_pool.exists(tx.vin[j].prevout.hash)) {\n                     return state.Invalid(TxValidationResult::TX_MEMPOOL_POLICY, \"replacement-adds-unconfirmed\",\n-                            strprintf(\"replacement %s adds unconfirmed input, idx %d\",\n-                                hash.ToString(), j));\n+                            strprintf(\"replacement txid:%s wtxid:%s adds unconfirmed input, idx %d\",\n+                                hash.ToString(),\n+                                wtxid.ToString(), j));\n                 }\n             }\n         }\n@@ -901,8 +908,9 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)\n         if (nModifiedFees < nConflictingFees)\n         {\n             return state.Invalid(TxValidationResult::TX_MEMPOOL_POLICY, \"insufficient fee\",\n-                    strprintf(\"rejecting replacement %s, less fees than conflicting txs; %s < %s\",\n-                        hash.ToString(), FormatMoney(nModifiedFees), FormatMoney(nConflictingFees)));\n+                    strprintf(\"rejecting replacement txid:%s wtxid:%s, less fees than conflicting txs; %s < %s\",\n+                        hash.ToString(),\n+                        wtxid.ToString(), FormatMoney(nModifiedFees), FormatMoney(nConflictingFees)));\n         }\n \n         // Finally in addition to paying more fees than the conflicts the\n@@ -911,8 +919,9 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)\n         if (nDeltaFees < ::incrementalRelayFee.GetFee(nSize))\n         {\n             return state.Invalid(TxValidationResult::TX_MEMPOOL_POLICY, \"insufficient fee\",\n-                    strprintf(\"rejecting replacement %s, not enough additional fees to relay; %s < %s\",\n+                    strprintf(\"rejecting replacement txid:%s wtxid:%s, not enough additional fees to relay; %s < %s\",\n                         hash.ToString(),\n+                        wtxid.ToString(),\n                         FormatMoney(nDeltaFees),\n                         FormatMoney(::incrementalRelayFee.GetFee(nSize))));\n         }"
+      }
+    ]
+  },
+  {
+    "sha": "d86e7a17081af04ceabe93b15a87cf295a9e9d84",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkODZlN2ExNzA4MWFmMDRjZWFiZTkzYjE1YTg3Y2YyOTVhOWU5ZDg0",
+    "commit": {
+      "author": {
+        "name": "Antoine Riard",
+        "email": "ariard@student.42.fr",
+        "date": "2020-08-02T16:11:57Z"
+      },
+      "committer": {
+        "name": "Antoine Riard",
+        "email": "ariard@student.42.fr",
+        "date": "2020-08-06T09:25:43Z"
+      },
+      "message": "[functional] Add mempool_wtxid.py\n\nBroadcast consequently two identical child transactions with size-divergent\nwitnesses and thus different feerate. The second broadcast should successfully\nreplace the first one.\n\nAdd assert_not_equal helper in test_framework/util.py",
+      "tree": {
+        "sha": "5ebab9c2495a200d22dff20999b91322ffe3f817",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/5ebab9c2495a200d22dff20999b91322ffe3f817"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/d86e7a17081af04ceabe93b15a87cf295a9e9d84",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d86e7a17081af04ceabe93b15a87cf295a9e9d84",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/d86e7a17081af04ceabe93b15a87cf295a9e9d84",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d86e7a17081af04ceabe93b15a87cf295a9e9d84/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "d02c78ac017fee47eed02acfd6c3468ff2490e2c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d02c78ac017fee47eed02acfd6c3468ff2490e2c",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/d02c78ac017fee47eed02acfd6c3468ff2490e2c"
+      }
+    ],
+    "stats": {
+      "total": 116,
+      "additions": 116,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "fd6aecd6edbd3c2851c11c0002b9953cc6cde8b8",
+        "filename": "test/functional/mempool_wtxid.py",
+        "status": "added",
+        "additions": 110,
+        "deletions": 0,
+        "changes": 110,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d86e7a17081af04ceabe93b15a87cf295a9e9d84/test/functional/mempool_wtxid.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d86e7a17081af04ceabe93b15a87cf295a9e9d84/test/functional/mempool_wtxid.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/mempool_wtxid.py?ref=d86e7a17081af04ceabe93b15a87cf295a9e9d84",
+        "patch": "@@ -0,0 +1,110 @@\n+#!/usr/bin/env python3\n+# Copyright (c) 2020 The Bitcoin Core developers\n+# Distributed under the MIT software license, see the accompanying\n+# file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\"\"\"Test mempool wtxid acceptance in case of an already known transaction\n+with identical non-witness data but lower feerate witness.\"\"\"\n+\n+from codecs import encode\n+from decimal import Decimal\n+\n+from test_framework.test_framework import BitcoinTestFramework\n+\n+from test_framework.messages import (\n+        CTransaction,\n+        CTxIn,\n+        CTxInWitness,\n+        CTxOut,\n+        COutPoint,\n+        sha256,\n+        COIN,\n+        hash256,\n+)\n+\n+from test_framework.util import (\n+        assert_equal,\n+        assert_not_equal,\n+)\n+\n+from test_framework.script import (\n+        CScript,\n+        OP_0,\n+        OP_TRUE,\n+        OP_IF,\n+        OP_HASH160,\n+        OP_EQUAL,\n+        OP_ELSE,\n+        OP_ENDIF,\n+        hash160,\n+)\n+\n+class MempoolWtxidTest(BitcoinTestFramework):\n+    def set_test_params(self):\n+        self.num_nodes = 1\n+        self.supports_cli = False\n+        self.extra_args = [[\"-incrementalrelayfee=0\"]]\n+\n+    def skip_test_if_missing_module(self):\n+        self.skip_if_no_wallet()\n+\n+    def run_test(self):\n+        node = self.nodes[0]\n+\n+        self.log.info('Start with empty mempool, and 200 blocks')\n+        self.mempool_size = 0\n+        assert_equal(node.getblockcount(), 200)\n+        assert_equal(node.getmempoolinfo()['size'], self.mempool_size)\n+\n+        txid = self.nodes[0].sendtoaddress(self.nodes[0].getnewaddress(), Decimal(\"10\"))\n+\n+        # Create a Segwit output\n+        hashlock = hash160(b'Preimage')\n+        witness_script = CScript([OP_IF, OP_HASH160, hashlock, OP_EQUAL, OP_ELSE, OP_TRUE, OP_ENDIF])\n+        witness_program = sha256(witness_script)\n+        script_pubkey = CScript([OP_0, witness_program])\n+\n+        parent = CTransaction()\n+        parent.vin.append(CTxIn(COutPoint(int(txid, 16), 0), b\"\"))\n+        parent.vout.append(CTxOut(int(9.99998 * COIN), script_pubkey))\n+        parent.rehash()\n+\n+        # Confirm parent with alternative script branches witnessScript\n+        raw_parent = self.nodes[0].signrawtransactionwithwallet(parent.serialize().hex())['hex']\n+        parent_txid = self.nodes[0].sendrawtransaction(hexstring=raw_parent, maxfeerate=0)\n+        self.nodes[0].generate(1)\n+\n+        # Create a new segwit transaction with witness solving first branch\n+        child_witness_script = CScript([OP_TRUE])\n+        child_witness_program = sha256(child_witness_script)\n+        child_script_pubkey = CScript([OP_0, child_witness_program])\n+\n+        child_one = CTransaction()\n+        child_one.vin.append(CTxIn(COutPoint(int(parent_txid, 16), 0), b\"\"))\n+        child_one.vout.append(CTxOut(int(9.99996 * COIN), child_script_pubkey))\n+        child_one.wit.vtxinwit.append(CTxInWitness())\n+        child_one.wit.vtxinwit[0].scriptWitness.stack = [b'Preimage', b'\\x01', witness_script]\n+        child_one_txid = self.nodes[0].sendrawtransaction(hexstring=child_one.serialize().hex())\n+        child_one_wtxid = encode(hash256(child_one.serialize_with_witness())[::-1], 'hex_codec').decode('ascii')\n+\n+        self.log.info('Verify that transaction with lower-feerate witness gets in the mempool')\n+        in_mempool_wtxid = self.nodes[0].getrawmempool(True)[child_one_txid]['wtxid']\n+        assert_equal(child_one_wtxid, in_mempool_wtxid)\n+\n+        # Create another identical segwit transaction with witness solving second branch\n+        child_two = CTransaction()\n+        child_two.vin.append(CTxIn(COutPoint(int(parent_txid, 16), 0), b\"\"))\n+        child_two.vout.append(CTxOut(int(9.99996 * COIN), child_script_pubkey))\n+        child_two.wit.vtxinwit.append(CTxInWitness())\n+        child_two.wit.vtxinwit[0].scriptWitness.stack = [b'', witness_script]\n+        child_two_txid = self.nodes[0].sendrawtransaction(hexstring=child_two.serialize().hex())\n+        child_two_wtxid = encode(hash256(child_two.serialize_with_witness())[::-1], 'hex_codec').decode('ascii')\n+\n+        assert_equal(child_one_txid, child_two_txid)\n+        assert_not_equal(child_one_wtxid, child_two_wtxid)\n+\n+        self.log.info('Verify that identical transaction with higher-feerate witness gets in the mempool')\n+        in_mempool_wtxid = self.nodes[0].getrawmempool(True)[child_one_txid]['wtxid']\n+        assert_equal(child_two_wtxid, in_mempool_wtxid)\n+\n+if __name__ == '__main__':\n+    MempoolWtxidTest().main()"
+      },
+      {
+        "sha": "b69254903e6b0a997bed408ef40cff9ee685143f",
+        "filename": "test/functional/test_framework/util.py",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 0,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d86e7a17081af04ceabe93b15a87cf295a9e9d84/test/functional/test_framework/util.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d86e7a17081af04ceabe93b15a87cf295a9e9d84/test/functional/test_framework/util.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/test_framework/util.py?ref=d86e7a17081af04ceabe93b15a87cf295a9e9d84",
+        "patch": "@@ -49,6 +49,11 @@ def assert_equal(thing1, thing2, *args):\n         raise AssertionError(\"not(%s)\" % \" == \".join(str(arg) for arg in (thing1, thing2) + args))\n \n \n+def assert_not_equal(thing1, thing2, *args):\n+    if thing1 == thing2 or any(thing1 == arg for arg in args):\n+        raise AssertionError(\"not(%s)\" % \" != \".join(str(arg) for arg in (thing1, thing2) + args))\n+\n+\n def assert_greater_than(thing1, thing2):\n     if thing1 <= thing2:\n         raise AssertionError(\"%s <= %s\" % (str(thing1), str(thing2)))"
+      },
+      {
+        "sha": "7c343d782e730a296751a410a18e74a7bdd5e35a",
+        "filename": "test/functional/test_runner.py",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d86e7a17081af04ceabe93b15a87cf295a9e9d84/test/functional/test_runner.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d86e7a17081af04ceabe93b15a87cf295a9e9d84/test/functional/test_runner.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/test_runner.py?ref=d86e7a17081af04ceabe93b15a87cf295a9e9d84",
+        "patch": "@@ -234,6 +234,7 @@\n     'feature_asmap.py',\n     'mempool_unbroadcast.py',\n     'mempool_compatibility.py',\n+    'mempool_wtxid.py',\n     'rpc_deriveaddresses.py',\n     'rpc_deriveaddresses.py --usecli',\n     'p2p_ping.py',"
+      }
+    ]
+  }
+]

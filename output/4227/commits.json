@@ -1,0 +1,134 @@
+[
+  {
+    "sha": "5bd6c31bd63261f16d3d1b40512a8bb51b28abcf",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1YmQ2YzMxYmQ2MzI2MWYxNmQzZDFiNDA1MTJhOGJiNTFiMjhhYmNm",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-05-24T09:14:52Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-06-11T10:38:31Z"
+      },
+      "message": "small cleanup of net\n\n- remove an unneded else in ConnectNode()\n- make 0 a double and change to 0.0 in ConnectNode()\n- rename strDest to pszDest in OpenNetworkConnection()\n- remove an unneded call to our REF() macro in BindListenPort()\n- small style cleanups and removal of unneeded new-lines",
+      "tree": {
+        "sha": "72c2e9791393f36841a07271cac87618d614bbc0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/72c2e9791393f36841a07271cac87618d614bbc0"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/5bd6c31bd63261f16d3d1b40512a8bb51b28abcf",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5bd6c31bd63261f16d3d1b40512a8bb51b28abcf",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/5bd6c31bd63261f16d3d1b40512a8bb51b28abcf",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5bd6c31bd63261f16d3d1b40512a8bb51b28abcf/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "5905d71fe3bb22d0111da7fb4ca8433ed54c9abf",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5905d71fe3bb22d0111da7fb4ca8433ed54c9abf",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/5905d71fe3bb22d0111da7fb4ca8433ed54c9abf"
+      }
+    ],
+    "stats": {
+      "total": 30,
+      "additions": 13,
+      "deletions": 17
+    },
+    "files": [
+      {
+        "sha": "07a2848e9c520db8acdb184357654e5ab61a4622",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 15,
+        "changes": 26,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5bd6c31bd63261f16d3d1b40512a8bb51b28abcf/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5bd6c31bd63261f16d3d1b40512a8bb51b28abcf/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=5bd6c31bd63261f16d3d1b40512a8bb51b28abcf",
+        "patch": "@@ -469,11 +469,10 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest)\n         }\n     }\n \n-\n     /// debug print\n     LogPrint(\"net\", \"trying connection %s lastseen=%.1fhrs\\n\",\n         pszDest ? pszDest : addrConnect.ToString(),\n-        pszDest ? 0 : (double)(GetAdjustedTime() - addrConnect.nTime)/3600.0);\n+        pszDest ? 0.0 : (double)(GetAdjustedTime() - addrConnect.nTime)/3600.0);\n \n     // Connect\n     SOCKET hSocket;\n@@ -505,10 +504,8 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest)\n         pnode->nTimeConnected = GetTime();\n         return pnode;\n     }\n-    else\n-    {\n-        return NULL;\n-    }\n+\n+    return NULL;\n }\n \n void CNode::CloseSocketDisconnect()\n@@ -535,7 +532,6 @@ void CNode::Cleanup()\n {\n }\n \n-\n void CNode::PushVersion()\n {\n     int nBestHeight = g_signals.GetHeight().get_value_or(0);\n@@ -1425,21 +1421,22 @@ void ThreadOpenAddedConnections()\n }\n \n // if successful, this moves the passed grant to the constructed node\n-bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOutbound, const char *strDest, bool fOneShot)\n+bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOutbound, const char *pszDest, bool fOneShot)\n {\n     //\n     // Initiate outbound network connection\n     //\n     boost::this_thread::interruption_point();\n-    if (!strDest)\n+    if (!pszDest) {\n         if (IsLocal(addrConnect) ||\n             FindNode((CNetAddr)addrConnect) || CNode::IsBanned(addrConnect) ||\n             FindNode(addrConnect.ToStringIPPort().c_str()))\n             return false;\n-    if (strDest && FindNode(strDest))\n+    }\n+\tif (pszDest && FindNode(pszDest))\n         return false;\n \n-    CNode* pnode = ConnectNode(addrConnect, strDest);\n+    CNode* pnode = ConnectNode(addrConnect, pszDest);\n     boost::this_thread::interruption_point();\n \n     if (!pnode)\n@@ -1575,7 +1572,7 @@ bool BindListenPort(const CService &addrBind, string& strError)\n     socklen_t len = sizeof(sockaddr);\n     if (!addrBind.GetSockAddr((struct sockaddr*)&sockaddr, &len))\n     {\n-        strError = strprintf(\"Error: bind address family for %s not supported\", addrBind.ToString());\n+        strError = strprintf(\"Error: Bind address family for %s not supported\", addrBind.ToString());\n         LogPrintf(\"%s\\n\", strError);\n         return false;\n     }\n@@ -1769,9 +1766,8 @@ bool StopNode()\n class CNetCleanup\n {\n public:\n-    CNetCleanup()\n-    {\n-    }\n+    CNetCleanup() {}\n+\n     ~CNetCleanup()\n     {\n         // Close sockets"
+      },
+      {
+        "sha": "df7555d476f66360a5ab2ddd4ec66164d3f94038",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5bd6c31bd63261f16d3d1b40512a8bb51b28abcf/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5bd6c31bd63261f16d3d1b40512a8bb51b28abcf/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=5bd6c31bd63261f16d3d1b40512a8bb51b28abcf",
+        "patch": "@@ -54,11 +54,11 @@ bool GetMyExternalIP(CNetAddr& ipRet);\n void AddressCurrentlyConnected(const CService& addr);\n CNode* FindNode(const CNetAddr& ip);\n CNode* FindNode(const CService& ip);\n-CNode* ConnectNode(CAddress addrConnect, const char *strDest = NULL);\n+CNode* ConnectNode(CAddress addrConnect, const char *pszDest = NULL);\n bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOutbound = NULL, const char *strDest = NULL, bool fOneShot = false);\n void MapPort(bool fUseUPnP);\n unsigned short GetListenPort();\n-bool BindListenPort(const CService &bindAddr, std::string& strError=REF(std::string()));\n+bool BindListenPort(const CService &bindAddr, std::string& strError);\n void StartNode(boost::thread_group& threadGroup);\n bool StopNode();\n void SocketSendData(CNode *pnode);"
+      }
+    ]
+  },
+  {
+    "sha": "634bd61b76c9d03d7ce7dfab4e4a48f4b70f282a",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2MzRiZDYxYjc2YzlkMDNkN2NlN2RmYWI0ZTRhNDhmNGI3MGYyODJh",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-06-11T10:39:09Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-06-11T10:40:13Z"
+      },
+      "message": "convert an if into an else if in OpenNetworkConnection()",
+      "tree": {
+        "sha": "3d1c47521c73840e060b7db616214d7a75dc884d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/3d1c47521c73840e060b7db616214d7a75dc884d"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/634bd61b76c9d03d7ce7dfab4e4a48f4b70f282a",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/634bd61b76c9d03d7ce7dfab4e4a48f4b70f282a",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/634bd61b76c9d03d7ce7dfab4e4a48f4b70f282a",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/634bd61b76c9d03d7ce7dfab4e4a48f4b70f282a/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "5bd6c31bd63261f16d3d1b40512a8bb51b28abcf",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5bd6c31bd63261f16d3d1b40512a8bb51b28abcf",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/5bd6c31bd63261f16d3d1b40512a8bb51b28abcf"
+      }
+    ],
+    "stats": {
+      "total": 3,
+      "additions": 1,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "ac0da26de95b72a0377ad5293e8c9428f1a7dcb9",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 2,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/634bd61b76c9d03d7ce7dfab4e4a48f4b70f282a/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/634bd61b76c9d03d7ce7dfab4e4a48f4b70f282a/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=634bd61b76c9d03d7ce7dfab4e4a48f4b70f282a",
+        "patch": "@@ -1432,8 +1432,7 @@ bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOu\n             FindNode((CNetAddr)addrConnect) || CNode::IsBanned(addrConnect) ||\n             FindNode(addrConnect.ToStringIPPort().c_str()))\n             return false;\n-    }\n-\tif (pszDest && FindNode(pszDest))\n+    } else if (FindNode(pszDest))\n         return false;\n \n     CNode* pnode = ConnectNode(addrConnect, pszDest);"
+      }
+    ]
+  }
+]

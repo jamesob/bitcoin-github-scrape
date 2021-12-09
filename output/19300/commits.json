@@ -1,0 +1,198 @@
+[
+  {
+    "sha": "b9971ae5853c1d62e09d976a8705f4f731290d85",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiOTk3MWFlNTg1M2MxZDYyZTA5ZDk3NmE4NzA1ZjRmNzMxMjkwZDg1",
+    "commit": {
+      "author": {
+        "name": "Jo\u00e3o Barbosa",
+        "email": "joao.paulo.barbosa@gmail.com",
+        "date": "2020-06-17T09:47:29Z"
+      },
+      "committer": {
+        "name": "Jo\u00e3o Barbosa",
+        "email": "joao.paulo.barbosa@gmail.com",
+        "date": "2020-06-19T00:02:28Z"
+      },
+      "message": "wallet: Handle concurrent wallet loading",
+      "tree": {
+        "sha": "180abb9dbc43308c6244ff485ea1c520d8753efa",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/180abb9dbc43308c6244ff485ea1c520d8753efa"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/b9971ae5853c1d62e09d976a8705f4f731290d85",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b9971ae5853c1d62e09d976a8705f4f731290d85",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/b9971ae5853c1d62e09d976a8705f4f731290d85",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b9971ae5853c1d62e09d976a8705f4f731290d85/comments",
+    "author": {
+      "login": "promag",
+      "id": 3534524,
+      "node_id": "MDQ6VXNlcjM1MzQ1MjQ=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3534524?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/promag",
+      "html_url": "https://github.com/promag",
+      "followers_url": "https://api.github.com/users/promag/followers",
+      "following_url": "https://api.github.com/users/promag/following{/other_user}",
+      "gists_url": "https://api.github.com/users/promag/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/promag/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/promag/subscriptions",
+      "organizations_url": "https://api.github.com/users/promag/orgs",
+      "repos_url": "https://api.github.com/users/promag/repos",
+      "events_url": "https://api.github.com/users/promag/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/promag/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "promag",
+      "id": 3534524,
+      "node_id": "MDQ6VXNlcjM1MzQ1MjQ=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3534524?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/promag",
+      "html_url": "https://github.com/promag",
+      "followers_url": "https://api.github.com/users/promag/followers",
+      "following_url": "https://api.github.com/users/promag/following{/other_user}",
+      "gists_url": "https://api.github.com/users/promag/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/promag/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/promag/subscriptions",
+      "organizations_url": "https://api.github.com/users/promag/orgs",
+      "repos_url": "https://api.github.com/users/promag/repos",
+      "events_url": "https://api.github.com/users/promag/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/promag/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "09da0e46bf83e6d17ee55a9e669914423373e527",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/09da0e46bf83e6d17ee55a9e669914423373e527",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/09da0e46bf83e6d17ee55a9e669914423373e527"
+      }
+    ],
+    "stats": {
+      "total": 20,
+      "additions": 18,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "a71abf8fb0988df837ff62407b413c2677cd6f31",
+        "filename": "src/wallet/wallet.cpp",
+        "status": "modified",
+        "additions": 18,
+        "deletions": 2,
+        "changes": 20,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b9971ae5853c1d62e09d976a8705f4f731290d85/src/wallet/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b9971ae5853c1d62e09d976a8705f4f731290d85/src/wallet/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.cpp?ref=b9971ae5853c1d62e09d976a8705f4f731290d85",
+        "patch": "@@ -99,9 +99,11 @@ std::unique_ptr<interfaces::Handler> HandleLoadWallet(LoadWalletFn load_wallet)\n     return interfaces::MakeHandler([it] { LOCK(cs_wallets); g_load_wallet_fns.erase(it); });\n }\n \n+static Mutex g_loading_wallet_mutex;\n static Mutex g_wallet_release_mutex;\n static std::condition_variable g_wallet_release_cv;\n-static std::set<std::string> g_unloading_wallet_set;\n+static std::set<std::string> g_loading_wallet_set GUARDED_BY(g_loading_wallet_mutex);\n+static std::set<std::string> g_unloading_wallet_set GUARDED_BY(g_wallet_release_mutex);\n \n // Custom deleter for shared_ptr<CWallet>.\n static void ReleaseWallet(CWallet* wallet)\n@@ -145,7 +147,8 @@ void UnloadWallet(std::shared_ptr<CWallet>&& wallet)\n     }\n }\n \n-std::shared_ptr<CWallet> LoadWallet(interfaces::Chain& chain, const WalletLocation& location, bilingual_str& error, std::vector<bilingual_str>& warnings)\n+namespace {\n+std::shared_ptr<CWallet> LoadWalletInternal(interfaces::Chain& chain, const WalletLocation& location, bilingual_str& error, std::vector<bilingual_str>& warnings)\n {\n     try {\n         if (!CWallet::Verify(chain, location, error, warnings)) {\n@@ -166,6 +169,19 @@ std::shared_ptr<CWallet> LoadWallet(interfaces::Chain& chain, const WalletLocati\n         return nullptr;\n     }\n }\n+} // namespace\n+\n+std::shared_ptr<CWallet> LoadWallet(interfaces::Chain& chain, const WalletLocation& location, bilingual_str& error, std::vector<bilingual_str>& warnings)\n+{\n+    auto result = WITH_LOCK(g_loading_wallet_mutex, return g_loading_wallet_set.insert(location.GetName()));\n+    if (!result.second) {\n+        error = Untranslated(\"Wallet already being loading.\");\n+        return nullptr;\n+    }\n+    auto wallet = LoadWalletInternal(chain, location, error, warnings);\n+    WITH_LOCK(g_loading_wallet_mutex, g_loading_wallet_set.erase(result.first));\n+    return wallet;\n+}\n \n std::shared_ptr<CWallet> LoadWallet(interfaces::Chain& chain, const std::string& name, bilingual_str& error, std::vector<bilingual_str>& warnings)\n {"
+      }
+    ]
+  },
+  {
+    "sha": "9b009fae6e2eb0ab2ee7ce7882c3556a9ac363a7",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5YjAwOWZhZTZlMmViMGFiMmVlN2NlNzg4MmMzNTU2YTlhYzM2M2E3",
+    "commit": {
+      "author": {
+        "name": "Jo\u00e3o Barbosa",
+        "email": "joao.paulo.barbosa@gmail.com",
+        "date": "2020-06-17T13:00:25Z"
+      },
+      "committer": {
+        "name": "Jo\u00e3o Barbosa",
+        "email": "joao.paulo.barbosa@gmail.com",
+        "date": "2020-06-19T01:09:26Z"
+      },
+      "message": "qa: Test concurrent wallet loading",
+      "tree": {
+        "sha": "8e58ee477b8ee97979f8ce9d0afaea3c11a3fb06",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/8e58ee477b8ee97979f8ce9d0afaea3c11a3fb06"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/9b009fae6e2eb0ab2ee7ce7882c3556a9ac363a7",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9b009fae6e2eb0ab2ee7ce7882c3556a9ac363a7",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/9b009fae6e2eb0ab2ee7ce7882c3556a9ac363a7",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9b009fae6e2eb0ab2ee7ce7882c3556a9ac363a7/comments",
+    "author": {
+      "login": "promag",
+      "id": 3534524,
+      "node_id": "MDQ6VXNlcjM1MzQ1MjQ=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3534524?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/promag",
+      "html_url": "https://github.com/promag",
+      "followers_url": "https://api.github.com/users/promag/followers",
+      "following_url": "https://api.github.com/users/promag/following{/other_user}",
+      "gists_url": "https://api.github.com/users/promag/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/promag/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/promag/subscriptions",
+      "organizations_url": "https://api.github.com/users/promag/orgs",
+      "repos_url": "https://api.github.com/users/promag/repos",
+      "events_url": "https://api.github.com/users/promag/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/promag/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "promag",
+      "id": 3534524,
+      "node_id": "MDQ6VXNlcjM1MzQ1MjQ=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3534524?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/promag",
+      "html_url": "https://github.com/promag",
+      "followers_url": "https://api.github.com/users/promag/followers",
+      "following_url": "https://api.github.com/users/promag/following{/other_user}",
+      "gists_url": "https://api.github.com/users/promag/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/promag/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/promag/subscriptions",
+      "organizations_url": "https://api.github.com/users/promag/orgs",
+      "repos_url": "https://api.github.com/users/promag/repos",
+      "events_url": "https://api.github.com/users/promag/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/promag/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "b9971ae5853c1d62e09d976a8705f4f731290d85",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b9971ae5853c1d62e09d976a8705f4f731290d85",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b9971ae5853c1d62e09d976a8705f4f731290d85"
+      }
+    ],
+    "stats": {
+      "total": 29,
+      "additions": 29,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "88beef10347b9daec344d18a29631608641bd018",
+        "filename": "test/functional/wallet_multiwallet.py",
+        "status": "modified",
+        "additions": 29,
+        "deletions": 0,
+        "changes": 29,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9b009fae6e2eb0ab2ee7ce7882c3556a9ac363a7/test/functional/wallet_multiwallet.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9b009fae6e2eb0ab2ee7ce7882c3556a9ac363a7/test/functional/wallet_multiwallet.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/wallet_multiwallet.py?ref=9b009fae6e2eb0ab2ee7ce7882c3556a9ac363a7",
+        "patch": "@@ -7,19 +7,36 @@\n Verify that a bitcoind node can load multiple wallet files\n \"\"\"\n from decimal import Decimal\n+from threading import Thread\n import os\n import shutil\n import time\n \n+from test_framework.authproxy import JSONRPCException\n from test_framework.test_framework import BitcoinTestFramework\n from test_framework.test_node import ErrorMatch\n from test_framework.util import (\n     assert_equal,\n     assert_raises_rpc_error,\n+    get_rpc_proxy,\n )\n \n FEATURE_LATEST = 169900\n \n+got_loading_error = False\n+def test_load_unload(node, name):\n+    global got_loading_error\n+    for i in range(10):\n+        if got_loading_error:\n+            return\n+        try:\n+            node.loadwallet(name)\n+            node.unloadwallet(name)\n+        except JSONRPCException as e:\n+            if e.error['code'] == -4 and 'Wallet already being loading' in e.error['message']:\n+                got_loading_error = True\n+                return\n+\n \n class MultiWalletTest(BitcoinTestFramework):\n     def set_test_params(self):\n@@ -212,6 +229,18 @@ def wallet_file(name):\n         w2 = node.get_wallet_rpc(wallet_names[1])\n         w2.getwalletinfo()\n \n+        self.log.info(\"Concurrent wallet loading\")\n+        threads = []\n+        for _ in range(3):\n+            n = node.cli if self.options.usecli else get_rpc_proxy(node.url, 1, timeout=600, coveragedir=node.coverage_dir)\n+            t = Thread(target=test_load_unload, args=(n, wallet_names[2], ))\n+            t.start()\n+            threads.append(t)\n+        for t in threads:\n+            t.join()\n+        global got_loading_error\n+        assert_equal(got_loading_error, True)\n+\n         self.log.info(\"Load remaining wallets\")\n         for wallet_name in wallet_names[2:]:\n             loadwallet_name = self.nodes[0].loadwallet(wallet_name)"
+      }
+    ]
+  }
+]

@@ -1,0 +1,1346 @@
+[
+  {
+    "sha": "a13c30296f0507b1c6cdd70e42e693fe38d3c9df",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphMTNjMzAyOTZmMDUwN2IxYzZjZGQ3MGU0MmU2OTNmZTM4ZDNjOWRm",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-05-05T03:45:39Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-10-25T21:38:13Z"
+      },
+      "message": "Wallet: Add memory-only bloom filter for addresses used in wallet transactions",
+      "tree": {
+        "sha": "2246cca7db98baddae769a353acd0ea4bfb8cdf0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/2246cca7db98baddae769a353acd0ea4bfb8cdf0"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a13c30296f0507b1c6cdd70e42e693fe38d3c9df",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a13c30296f0507b1c6cdd70e42e693fe38d3c9df",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a13c30296f0507b1c6cdd70e42e693fe38d3c9df",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a13c30296f0507b1c6cdd70e42e693fe38d3c9df/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "25d7e2e78137d07eb612c44d19b0d496050c947a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/25d7e2e78137d07eb612c44d19b0d496050c947a",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/25d7e2e78137d07eb612c44d19b0d496050c947a"
+      }
+    ],
+    "stats": {
+      "total": 26,
+      "additions": 26,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "a3901029e52eab42968108f3a2adcc94f6480073",
+        "filename": "src/wallet/wallet.cpp",
+        "status": "modified",
+        "additions": 20,
+        "deletions": 0,
+        "changes": 20,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a13c30296f0507b1c6cdd70e42e693fe38d3c9df/src/wallet/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a13c30296f0507b1c6cdd70e42e693fe38d3c9df/src/wallet/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.cpp?ref=a13c30296f0507b1c6cdd70e42e693fe38d3c9df",
+        "patch": "@@ -841,6 +841,23 @@ void CWallet::AddToSpends(const uint256& wtxid)\n         AddToSpends(txin.prevout, wtxid);\n }\n \n+void CWallet::AddToAddressBloomFilter(const CWalletTx& wtx)\n+{\n+    for (const auto& output : wtx.tx->vout) {\n+        m_address_bloom_filter.insert(ToByteVector(output.scriptPubKey));\n+    }\n+}\n+\n+void CWallet::BuildAddressBloomFilter()\n+{\n+    m_address_bloom_filter_elems = std::max<size_t>(100, mapWallet.size() * 2);\n+    m_address_bloom_filter = CBloomFilter(m_address_bloom_filter_elems, 0.000001, 0, BLOOM_UPDATE_ALL);\n+    for (const auto& entry : mapWallet) {\n+        const CWalletTx& wtx = entry.second;\n+        AddToAddressBloomFilter(wtx);\n+    }\n+}\n+\n bool CWallet::EncryptWallet(const SecureString& strWalletPassphrase)\n {\n     if (IsCrypted())\n@@ -1102,6 +1119,7 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn, bool fFlushOnClose)\n         wtx.m_it_wtxOrdered = wtxOrdered.insert(std::make_pair(wtx.nOrderPos, &wtx));\n         wtx.nTimeSmart = ComputeTimeSmart(wtx);\n         AddToSpends(hash);\n+        AddToAddressBloomFilter(wtx);\n     }\n \n     bool fUpdated = false;\n@@ -3358,6 +3376,8 @@ DBErrors CWallet::LoadWallet(bool& fFirstRunRet)\n     if (nLoadWalletRet != DBErrors::LOAD_OK)\n         return nLoadWalletRet;\n \n+    BuildAddressBloomFilter();\n+\n     return DBErrors::LOAD_OK;\n }\n "
+      },
+      {
+        "sha": "58ea686740c5fa4bab16287d654b49093fbb5a47",
+        "filename": "src/wallet/wallet.h",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 0,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a13c30296f0507b1c6cdd70e42e693fe38d3c9df/src/wallet/wallet.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a13c30296f0507b1c6cdd70e42e693fe38d3c9df/src/wallet/wallet.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.h?ref=a13c30296f0507b1c6cdd70e42e693fe38d3c9df",
+        "patch": "@@ -7,6 +7,7 @@\n #define BITCOIN_WALLET_WALLET_H\n \n #include <amount.h>\n+#include <bloom.h>\n #include <interfaces/chain.h>\n #include <interfaces/handler.h>\n #include <outputtype.h>\n@@ -785,6 +786,11 @@ class CWallet final : public FillableSigningProvider, private interfaces::Chain:\n     void AddToSpends(const COutPoint& outpoint, const uint256& wtxid) EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);\n     void AddToSpends(const uint256& wtxid) EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);\n \n+    size_t m_address_bloom_filter_elems GUARDED_BY(cs_wallet) {0};\n+    CBloomFilter m_address_bloom_filter GUARDED_BY(cs_wallet);\n+    void AddToAddressBloomFilter(const CWalletTx&) EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);\n+    void BuildAddressBloomFilter() EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);\n+\n     /**\n      * Add a transaction to the wallet, or update it.  pIndex and posInBlock should\n      * be set when the transaction was known to be included in a block.  When"
+      }
+    ]
+  },
+  {
+    "sha": "39f49f653541ce172a91a8d6996f44831f9a8df2",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozOWY0OWY2NTM1NDFjZTE3MmE5MWE4ZDY5OTZmNDQ4MzFmOWE4ZGYy",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-05-05T03:47:00Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-10-25T21:38:13Z"
+      },
+      "message": "Wallet: Add efficient [negative] check that an address is not known to be used",
+      "tree": {
+        "sha": "57b6606d3f53a0c9814897f1eb98d098e9e2b257",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/57b6606d3f53a0c9814897f1eb98d098e9e2b257"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/39f49f653541ce172a91a8d6996f44831f9a8df2",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/39f49f653541ce172a91a8d6996f44831f9a8df2",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/39f49f653541ce172a91a8d6996f44831f9a8df2",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/39f49f653541ce172a91a8d6996f44831f9a8df2/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "a13c30296f0507b1c6cdd70e42e693fe38d3c9df",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a13c30296f0507b1c6cdd70e42e693fe38d3c9df",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/a13c30296f0507b1c6cdd70e42e693fe38d3c9df"
+      }
+    ],
+    "stats": {
+      "total": 44,
+      "additions": 42,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "4fcb43c8ea628c7e4a2d6c80474c3b77b78c852d",
+        "filename": "src/wallet/wallet.cpp",
+        "status": "modified",
+        "additions": 40,
+        "deletions": 2,
+        "changes": 42,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/39f49f653541ce172a91a8d6996f44831f9a8df2/src/wallet/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/39f49f653541ce172a91a8d6996f44831f9a8df2/src/wallet/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.cpp?ref=39f49f653541ce172a91a8d6996f44831f9a8df2",
+        "patch": "@@ -45,6 +45,9 @@ const std::map<uint64_t,std::string> WALLET_FLAG_CAVEATS{\n \n static const size_t OUTPUT_GROUP_MAX_ENTRIES = 10;\n \n+static const unsigned int ADDR_BLOOM_FILTER_TX_TO_ELEMENTS_FACTOR = 3 /* outputs */ * 2 /* room to grow */;\n+static const double ADDR_BLOOM_FILTER_FP_RATE = 0.000001;\n+\n static CCriticalSection cs_wallets;\n static std::vector<std::shared_ptr<CWallet>> vpwallets GUARDED_BY(cs_wallets);\n \n@@ -850,14 +853,49 @@ void CWallet::AddToAddressBloomFilter(const CWalletTx& wtx)\n \n void CWallet::BuildAddressBloomFilter()\n {\n-    m_address_bloom_filter_elems = std::max<size_t>(100, mapWallet.size() * 2);\n-    m_address_bloom_filter = CBloomFilter(m_address_bloom_filter_elems, 0.000001, 0, BLOOM_UPDATE_ALL);\n+    if (m_address_bloom_filter_elems < 100) m_address_bloom_filter_elems = 100;\n+    m_address_bloom_filter_elems = std::max<size_t>(m_address_bloom_filter_elems, mapWallet.size() * ADDR_BLOOM_FILTER_TX_TO_ELEMENTS_FACTOR);\n+    m_address_bloom_filter = CBloomFilter(m_address_bloom_filter_elems, ADDR_BLOOM_FILTER_FP_RATE, 0, BLOOM_UPDATE_ALL);\n     for (const auto& entry : mapWallet) {\n         const CWalletTx& wtx = entry.second;\n         AddToAddressBloomFilter(wtx);\n     }\n }\n \n+bool CWallet::FindScriptPubKeyUsed(const std::set<CScript>& keys, const boost::variant<boost::blank, std::function<void(const CWalletTx&)>, std::function<void(const CWalletTx&, uint32_t)>>& callback) const\n+{\n+    bool found_any = false;\n+    for (const auto& key : keys) {\n+        if (m_address_bloom_filter.contains(ToByteVector(key))) {\n+            found_any = true;\n+            break;\n+        }\n+    }\n+    if (!found_any) {\n+        return false;\n+    }\n+\n+    found_any = false;\n+    for (const auto& entry : mapWallet) {\n+        const CWalletTx& wtx = entry.second;\n+        for (uint32_t i = 0; i < wtx.tx->vout.size(); ++i) {\n+            const auto& output = wtx.tx->vout[i];\n+            if (keys.count(output.scriptPubKey)) {\n+                const auto callback_type = callback.which();\n+                if (callback_type == 0) return true;\n+                found_any = true;\n+                if (callback_type == 1) {\n+                    boost::get<std::function<void(const CWalletTx&)>>(callback)(wtx);\n+                    break;\n+                }\n+                boost::get<std::function<void(const CWalletTx&, uint32_t)>>(callback)(wtx, i);\n+            }\n+        }\n+    }\n+\n+    return found_any;\n+}\n+\n bool CWallet::EncryptWallet(const SecureString& strWalletPassphrase)\n {\n     if (IsCrypted())"
+      },
+      {
+        "sha": "7a65163b83176dac4cf6935ce4ceebd67d77eb26",
+        "filename": "src/wallet/wallet.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/39f49f653541ce172a91a8d6996f44831f9a8df2/src/wallet/wallet.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/39f49f653541ce172a91a8d6996f44831f9a8df2/src/wallet/wallet.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.h?ref=39f49f653541ce172a91a8d6996f44831f9a8df2",
+        "patch": "@@ -1019,6 +1019,8 @@ class CWallet final : public FillableSigningProvider, private interfaces::Chain:\n     void UnlockAllCoins() EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);\n     void ListLockedCoins(std::vector<COutPoint>& vOutpts) const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);\n \n+    bool FindScriptPubKeyUsed(const std::set<CScript>& keys, const boost::variant<boost::blank, std::function<void(const CWalletTx&)>, std::function<void(const CWalletTx&, uint32_t)>>& callback = boost::blank()) const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);\n+\n     /*\n      * Rescan abort properties\n      */"
+      }
+    ]
+  },
+  {
+    "sha": "7a452c5e914c8351abf3173481aeeac25f0a253a",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3YTQ1MmM1ZTkxNGM4MzUxYWJmMzE3MzQ4MWFlZWFjMjVmMGEyNTNh",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-05-07T13:15:46Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-10-25T21:38:53Z"
+      },
+      "message": "interfaces/wallet: Add checkAddressForUsage and findAddressUsage",
+      "tree": {
+        "sha": "81199a573607f5384071ee724e86f939cc93a0dd",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/81199a573607f5384071ee724e86f939cc93a0dd"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/7a452c5e914c8351abf3173481aeeac25f0a253a",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7a452c5e914c8351abf3173481aeeac25f0a253a",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/7a452c5e914c8351abf3173481aeeac25f0a253a",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7a452c5e914c8351abf3173481aeeac25f0a253a/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "39f49f653541ce172a91a8d6996f44831f9a8df2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/39f49f653541ce172a91a8d6996f44831f9a8df2",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/39f49f653541ce172a91a8d6996f44831f9a8df2"
+      }
+    ],
+    "stats": {
+      "total": 32,
+      "additions": 32,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "086392588d0baf4c51cf8ca041b3dddee0dbc107",
+        "filename": "src/interfaces/wallet.cpp",
+        "status": "modified",
+        "additions": 29,
+        "deletions": 0,
+        "changes": 29,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7a452c5e914c8351abf3173481aeeac25f0a253a/src/interfaces/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7a452c5e914c8351abf3173481aeeac25f0a253a/src/interfaces/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/interfaces/wallet.cpp?ref=7a452c5e914c8351abf3173481aeeac25f0a253a",
+        "patch": "@@ -7,6 +7,7 @@\n #include <amount.h>\n #include <interfaces/chain.h>\n #include <interfaces/handler.h>\n+#include <key_io.h>\n #include <policy/fees.h>\n #include <primitives/transaction.h>\n #include <script/standard.h>\n@@ -30,6 +31,16 @@\n namespace interfaces {\n namespace {\n \n+std::set<CScript> AddressesToKeys(std::vector<std::string> addresses)\n+{\n+    std::set<CScript> keys;\n+    for (const auto& address : addresses) {\n+        CScript scriptPubKey = GetScriptForDestination(DecodeDestination(address));\n+        keys.insert(scriptPubKey);\n+    }\n+    return keys;\n+}\n+\n //! Construct wallet tx struct.\n WalletTx MakeWalletTx(interfaces::Chain::Lock& locked_chain, CWallet& wallet, const CWalletTx& wtx)\n {\n@@ -175,6 +186,24 @@ class WalletImpl : public Wallet\n         LOCK(m_wallet->cs_wallet);\n         return m_wallet->GetDestValues(prefix);\n     }\n+    bool checkAddressForUsage(const std::vector<std::string>& addresses) const override\n+    {\n+        LOCK(m_wallet->cs_wallet);\n+        return m_wallet->FindScriptPubKeyUsed(AddressesToKeys(addresses));\n+    }\n+    bool findAddressUsage(const std::vector<std::string>& addresses, std::function<void(const std::string&, const WalletTx&, uint32_t)> callback) const override\n+    {\n+        auto locked_chain = m_wallet->chain().lock();\n+        LOCK(m_wallet->cs_wallet);\n+        return m_wallet->FindScriptPubKeyUsed(AddressesToKeys(addresses), [&callback, &locked_chain, this](const CWalletTx& wtx, uint32_t output_index){\n+            CTxDestination dest;\n+            bool success = ExtractDestination(wtx.tx->vout[output_index].scriptPubKey, dest);\n+            assert(success);  // It shouldn't be possible to end up here with anything unrecognised\n+            std::string address = EncodeDestination(dest);\n+            WalletTx interface_wtx = MakeWalletTx(*locked_chain, *m_wallet, wtx);\n+            callback(address, interface_wtx, output_index);\n+        });\n+    }\n     void lockCoin(const COutPoint& output) override\n     {\n         auto locked_chain = m_wallet->chain().lock();"
+      },
+      {
+        "sha": "fb974c3c058ba2c37447db215a55bdb1730a2f8d",
+        "filename": "src/interfaces/wallet.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7a452c5e914c8351abf3173481aeeac25f0a253a/src/interfaces/wallet.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7a452c5e914c8351abf3173481aeeac25f0a253a/src/interfaces/wallet.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/interfaces/wallet.h?ref=7a452c5e914c8351abf3173481aeeac25f0a253a",
+        "patch": "@@ -120,6 +120,9 @@ class Wallet\n     //! Get dest values with prefix.\n     virtual std::vector<std::string> getDestValues(const std::string& prefix) = 0;\n \n+    virtual bool checkAddressForUsage(const std::vector<std::string>& addresses) const = 0;\n+    virtual bool findAddressUsage(const std::vector<std::string>& addresses, std::function<void(const std::string&, const WalletTx&, uint32_t)> callback) const = 0;\n+\n     //! Lock coin.\n     virtual void lockCoin(const COutPoint& output) = 0;\n "
+      }
+    ]
+  },
+  {
+    "sha": "db6c738382cf432a8a4a1d8d07b2a8d2b7f747d4",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkYjZjNzM4MzgyY2Y0MzJhOGE0YTFkOGQwN2IyYThkMmI3Zjc0N2Q0",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-05-07T13:15:59Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-10-25T21:39:26Z"
+      },
+      "message": "GUI: WalletModel: Wrap checkAddressForUsage and findAddressUsage",
+      "tree": {
+        "sha": "3bf863f9294c970940cb5e1679f2fdcc8b5ccd4f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/3bf863f9294c970940cb5e1679f2fdcc8b5ccd4f"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/db6c738382cf432a8a4a1d8d07b2a8d2b7f747d4",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/db6c738382cf432a8a4a1d8d07b2a8d2b7f747d4",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/db6c738382cf432a8a4a1d8d07b2a8d2b7f747d4",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/db6c738382cf432a8a4a1d8d07b2a8d2b7f747d4/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "7a452c5e914c8351abf3173481aeeac25f0a253a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7a452c5e914c8351abf3173481aeeac25f0a253a",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/7a452c5e914c8351abf3173481aeeac25f0a253a"
+      }
+    ],
+    "stats": {
+      "total": 20,
+      "additions": 20,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "9e6433b87ce2c00b34ddd62962eb442c4936581f",
+        "filename": "src/qt/walletmodel.cpp",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 0,
+        "changes": 16,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/db6c738382cf432a8a4a1d8d07b2a8d2b7f747d4/src/qt/walletmodel.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/db6c738382cf432a8a4a1d8d07b2a8d2b7f747d4/src/qt/walletmodel.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/walletmodel.cpp?ref=db6c738382cf432a8a4a1d8d07b2a8d2b7f747d4",
+        "patch": "@@ -123,6 +123,22 @@ bool WalletModel::validateAddress(const QString &address)\n     return IsValidDestinationString(address.toStdString());\n }\n \n+bool WalletModel::checkAddressForUsage(const std::vector<std::string>& addresses) const\n+{\n+    return m_wallet->checkAddressForUsage(addresses);\n+}\n+\n+bool WalletModel::findAddressUsage(const QStringList& addresses, std::function<void(const QString&, const interfaces::WalletTx&, uint32_t)> callback) const\n+{\n+    std::vector<std::string> std_addresses;\n+    for (const auto& address : addresses) {\n+        std_addresses.push_back(address.toStdString());\n+    }\n+    return m_wallet->findAddressUsage(std_addresses, [&callback](const std::string& address, const interfaces::WalletTx& wtx, uint32_t output_index){\n+        callback(QString::fromStdString(address), wtx, output_index);\n+    });\n+}\n+\n WalletModel::SendCoinsReturn WalletModel::prepareTransaction(WalletModelTransaction &transaction, const CCoinControl& coinControl)\n {\n     CAmount total = 0;"
+      },
+      {
+        "sha": "4d7842ab1ae20db4966fcde3b55fc82e08659192",
+        "filename": "src/qt/walletmodel.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 0,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/db6c738382cf432a8a4a1d8d07b2a8d2b7f747d4/src/qt/walletmodel.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/db6c738382cf432a8a4a1d8d07b2a8d2b7f747d4/src/qt/walletmodel.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/walletmodel.h?ref=db6c738382cf432a8a4a1d8d07b2a8d2b7f747d4",
+        "patch": "@@ -7,6 +7,7 @@\n \n #include <amount.h>\n #include <key.h>\n+#include <primitives/transaction.h>\n #include <serialize.h>\n #include <script/standard.h>\n \n@@ -22,6 +23,7 @@\n #include <interfaces/wallet.h>\n #include <support/allocators/secure.h>\n \n+#include <string>\n #include <vector>\n \n #include <QObject>\n@@ -158,6 +160,8 @@ class WalletModel : public QObject\n \n     // Check address for validity\n     bool validateAddress(const QString &address);\n+    bool checkAddressForUsage(const std::vector<std::string>& addresses) const;\n+    bool findAddressUsage(const QStringList& addresses, std::function<void(const QString&, const interfaces::WalletTx&, uint32_t)> callback) const;\n \n     // Return status record for SendCoins, contains error id + information\n     struct SendCoinsReturn"
+      }
+    ]
+  },
+  {
+    "sha": "b62c4342c19f7b1bb4e7b9fec6df5ca86ba4a74f",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiNjJjNDM0MmMxOWY3YjFiYjRlN2I5ZmVjNmRmNWNhODZiYTRhNzRm",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-05-07T12:26:12Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-10-25T21:39:26Z"
+      },
+      "message": "GUI: QValidatedLineEdit: Add support for a warning-but-valid state",
+      "tree": {
+        "sha": "f875d8182c9ac331f62fbd67e399f8bdff830f9a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f875d8182c9ac331f62fbd67e399f8bdff830f9a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/b62c4342c19f7b1bb4e7b9fec6df5ca86ba4a74f",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b62c4342c19f7b1bb4e7b9fec6df5ca86ba4a74f",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/b62c4342c19f7b1bb4e7b9fec6df5ca86ba4a74f",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b62c4342c19f7b1bb4e7b9fec6df5ca86ba4a74f/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "db6c738382cf432a8a4a1d8d07b2a8d2b7f747d4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/db6c738382cf432a8a4a1d8d07b2a8d2b7f747d4",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/db6c738382cf432a8a4a1d8d07b2a8d2b7f747d4"
+      }
+    ],
+    "stats": {
+      "total": 58,
+      "additions": 52,
+      "deletions": 6
+    },
+    "files": [
+      {
+        "sha": "b6f99a9d8cdadff740f3408fc6a993227f7a5fe1",
+        "filename": "src/qt/guiconstants.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b62c4342c19f7b1bb4e7b9fec6df5ca86ba4a74f/src/qt/guiconstants.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b62c4342c19f7b1bb4e7b9fec6df5ca86ba4a74f/src/qt/guiconstants.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/guiconstants.h?ref=b62c4342c19f7b1bb4e7b9fec6df5ca86ba4a74f",
+        "patch": "@@ -20,6 +20,8 @@ static const bool DEFAULT_SPLASHSCREEN = true;\n \n /* Invalid field background style */\n #define STYLE_INVALID \"background:#FF8080\"\n+/* \"Warning\" field background style */\n+#define STYLE_INCORRECT \"background:#FFFF80\"\n \n /* Transaction list -- unconfirmed transaction */\n #define COLOR_UNCONFIRMED QColor(128, 128, 128)"
+      },
+      {
+        "sha": "8cd2de089ed7a82da45bf91a7fdce975d842dcbb",
+        "filename": "src/qt/qvalidatedlineedit.cpp",
+        "status": "modified",
+        "additions": 43,
+        "deletions": 5,
+        "changes": 48,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b62c4342c19f7b1bb4e7b9fec6df5ca86ba4a74f/src/qt/qvalidatedlineedit.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b62c4342c19f7b1bb4e7b9fec6df5ca86ba4a74f/src/qt/qvalidatedlineedit.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/qvalidatedlineedit.cpp?ref=b62c4342c19f7b1bb4e7b9fec6df5ca86ba4a74f",
+        "patch": "@@ -15,16 +15,28 @@ QValidatedLineEdit::QValidatedLineEdit(QWidget *parent) :\n     connect(this, &QValidatedLineEdit::textChanged, this, &QValidatedLineEdit::markValid);\n }\n \n-void QValidatedLineEdit::setValid(bool _valid)\n+QValidatedLineEdit::~QValidatedLineEdit()\n+{\n+    delete m_warning_validator;\n+}\n+\n+void QValidatedLineEdit::setValid(bool _valid, bool with_warning)\n {\n     if(_valid == this->valid)\n     {\n-        return;\n+        if (with_warning == m_has_warning || !valid) {\n+            return;\n+        }\n     }\n \n     if(_valid)\n     {\n-        setStyleSheet(\"\");\n+        m_has_warning = with_warning;\n+        if (with_warning) {\n+            setStyleSheet(STYLE_INCORRECT);\n+        } else {\n+            setStyleSheet(\"\");\n+        }\n     }\n     else\n     {\n@@ -78,21 +90,22 @@ void QValidatedLineEdit::setEnabled(bool enabled)\n \n void QValidatedLineEdit::checkValidity()\n {\n+    const bool has_warning = checkWarning();\n     if (text().isEmpty())\n     {\n         setValid(true);\n     }\n     else if (hasAcceptableInput())\n     {\n-        setValid(true);\n+        setValid(true, has_warning);\n \n         // Check contents on focus out\n         if (checkValidator)\n         {\n             QString address = text();\n             int pos = 0;\n             if (checkValidator->validate(address, pos) == QValidator::Acceptable)\n-                setValid(true);\n+                setValid(true, has_warning);\n             else\n                 setValid(false);\n         }\n@@ -121,3 +134,28 @@ bool QValidatedLineEdit::isValid()\n \n     return valid;\n }\n+\n+void QValidatedLineEdit::setWarningValidator(const QValidator *v)\n+{\n+    delete m_warning_validator;\n+    m_warning_validator = v;\n+    checkValidity();\n+}\n+\n+bool QValidatedLineEdit::checkWarning() const\n+{\n+    if (m_warning_validator && !text().isEmpty()) {\n+        QString address = text();\n+        int pos = 0;\n+        if (m_warning_validator->validate(address, pos) != QValidator::Acceptable) {\n+            return true;\n+        }\n+    }\n+\n+    return false;\n+}\n+\n+bool QValidatedLineEdit::hasWarning() const\n+{\n+    return m_has_warning;\n+}"
+      },
+      {
+        "sha": "0b3c23834f73e607b5b4c6ae95b9fa6b0dcec6cb",
+        "filename": "src/qt/qvalidatedlineedit.h",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 1,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b62c4342c19f7b1bb4e7b9fec6df5ca86ba4a74f/src/qt/qvalidatedlineedit.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b62c4342c19f7b1bb4e7b9fec6df5ca86ba4a74f/src/qt/qvalidatedlineedit.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/qvalidatedlineedit.h?ref=b62c4342c19f7b1bb4e7b9fec6df5ca86ba4a74f",
+        "patch": "@@ -16,9 +16,12 @@ class QValidatedLineEdit : public QLineEdit\n \n public:\n     explicit QValidatedLineEdit(QWidget *parent);\n+    ~QValidatedLineEdit();\n     void clear();\n     void setCheckValidator(const QValidator *v);\n     bool isValid();\n+    void setWarningValidator(const QValidator *);\n+    bool hasWarning() const;\n \n protected:\n     void focusInEvent(QFocusEvent *evt);\n@@ -27,9 +30,11 @@ class QValidatedLineEdit : public QLineEdit\n private:\n     bool valid;\n     const QValidator *checkValidator;\n+    bool m_has_warning{false};\n+    const QValidator *m_warning_validator{nullptr};\n \n public Q_SLOTS:\n-    void setValid(bool valid);\n+    void setValid(bool valid, bool with_warning=false);\n     void setEnabled(bool enabled);\n \n Q_SIGNALS:\n@@ -38,6 +43,7 @@ public Q_SLOTS:\n private Q_SLOTS:\n     void markValid();\n     void checkValidity();\n+    bool checkWarning() const;\n };\n \n #endif // BITCOIN_QT_QVALIDATEDLINEEDIT_H"
+      }
+    ]
+  },
+  {
+    "sha": "a5240757219fe5a3bf1b808fbca79c836df74e48",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphNTI0MDc1NzIxOWZlNWEzYmYxYjgwOGZiY2E3OWM4MzZkZjc0ZTQ4",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-05-07T13:26:26Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-10-25T21:39:26Z"
+      },
+      "message": "GUI: Implement BitcoinAddressUnusedInWalletValidator",
+      "tree": {
+        "sha": "118ddc2b3577440608694d584571571b5faf0f59",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/118ddc2b3577440608694d584571571b5faf0f59"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a5240757219fe5a3bf1b808fbca79c836df74e48",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a5240757219fe5a3bf1b808fbca79c836df74e48",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a5240757219fe5a3bf1b808fbca79c836df74e48",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a5240757219fe5a3bf1b808fbca79c836df74e48/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "b62c4342c19f7b1bb4e7b9fec6df5ca86ba4a74f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b62c4342c19f7b1bb4e7b9fec6df5ca86ba4a74f",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b62c4342c19f7b1bb4e7b9fec6df5ca86ba4a74f"
+      }
+    ],
+    "stats": {
+      "total": 28,
+      "additions": 28,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "d6c7f99be975de1a44da8029567e4193e6e94369",
+        "filename": "src/qt/walletmodel.cpp",
+        "status": "modified",
+        "additions": 15,
+        "deletions": 0,
+        "changes": 15,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a5240757219fe5a3bf1b808fbca79c836df74e48/src/qt/walletmodel.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a5240757219fe5a3bf1b808fbca79c836df74e48/src/qt/walletmodel.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/walletmodel.cpp?ref=a5240757219fe5a3bf1b808fbca79c836df74e48",
+        "patch": "@@ -620,3 +620,18 @@ bool WalletModel::isMultiwallet()\n {\n     return m_node.getWallets().size() > 1;\n }\n+\n+BitcoinAddressUnusedInWalletValidator::BitcoinAddressUnusedInWalletValidator(const WalletModel& wallet_model, QObject *parent) :\n+    QValidator(parent),\n+    m_wallet_model(wallet_model)\n+{\n+}\n+\n+QValidator::State BitcoinAddressUnusedInWalletValidator::validate(QString &input, int &pos) const\n+{\n+    Q_UNUSED(pos);\n+    if (m_wallet_model.checkAddressForUsage(std::vector<std::string>{input.toStdString()})) {\n+        return QValidator::Invalid;\n+    }\n+    return QValidator::Acceptable;\n+}"
+      },
+      {
+        "sha": "1e4dabd01d27cb30a984ab7adc3e6c9b1a19867d",
+        "filename": "src/qt/walletmodel.h",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 0,
+        "changes": 13,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a5240757219fe5a3bf1b808fbca79c836df74e48/src/qt/walletmodel.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a5240757219fe5a3bf1b808fbca79c836df74e48/src/qt/walletmodel.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/walletmodel.h?ref=a5240757219fe5a3bf1b808fbca79c836df74e48",
+        "patch": "@@ -27,6 +27,7 @@\n #include <vector>\n \n #include <QObject>\n+#include <QValidator>\n \n enum class OutputType;\n \n@@ -306,4 +307,16 @@ public Q_SLOTS:\n     void pollBalanceChanged();\n };\n \n+class BitcoinAddressUnusedInWalletValidator : public QValidator\n+{\n+    Q_OBJECT\n+\n+    const WalletModel& m_wallet_model;\n+\n+public:\n+    explicit BitcoinAddressUnusedInWalletValidator(const WalletModel&, QObject *parent=nullptr);\n+\n+    State validate(QString &input, int &pos) const;\n+};\n+\n #endif // BITCOIN_QT_WALLETMODEL_H"
+      }
+    ]
+  },
+  {
+    "sha": "400850c7821939faf68ca3dc02e9cfb56c08eb17",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0MDA4NTBjNzgyMTkzOWZhZjY4Y2EzZGMwMmU5Y2ZiNTZjMDhlYjE3",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-05-07T16:03:09Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-10-25T21:39:26Z"
+      },
+      "message": "GUI: Use warning indicator for send coins entries with reused addresses",
+      "tree": {
+        "sha": "e4815ef42a4d024e499ecd78051883b2a01e060e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/e4815ef42a4d024e499ecd78051883b2a01e060e"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/400850c7821939faf68ca3dc02e9cfb56c08eb17",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/400850c7821939faf68ca3dc02e9cfb56c08eb17",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/400850c7821939faf68ca3dc02e9cfb56c08eb17",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/400850c7821939faf68ca3dc02e9cfb56c08eb17/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "a5240757219fe5a3bf1b808fbca79c836df74e48",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a5240757219fe5a3bf1b808fbca79c836df74e48",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/a5240757219fe5a3bf1b808fbca79c836df74e48"
+      }
+    ],
+    "stats": {
+      "total": 6,
+      "additions": 6,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "5163fee18649e46e373504cd3ef5db74b46228ce",
+        "filename": "src/qt/sendcoinsentry.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 0,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/400850c7821939faf68ca3dc02e9cfb56c08eb17/src/qt/sendcoinsentry.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/400850c7821939faf68ca3dc02e9cfb56c08eb17/src/qt/sendcoinsentry.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/sendcoinsentry.cpp?ref=400850c7821939faf68ca3dc02e9cfb56c08eb17",
+        "patch": "@@ -85,6 +85,12 @@ void SendCoinsEntry::setModel(WalletModel *_model)\n {\n     this->model = _model;\n \n+    if (_model) {\n+        ui->payTo->setWarningValidator(new BitcoinAddressUnusedInWalletValidator(*_model));\n+    } else {\n+        ui->payTo->setWarningValidator(nullptr);\n+    }\n+\n     if (_model && _model->getOptionsModel())\n         connect(_model->getOptionsModel(), &OptionsModel::displayUnitChanged, this, &SendCoinsEntry::updateDisplayUnit);\n "
+      }
+    ]
+  },
+  {
+    "sha": "d08eb8eb1b7e01b68768736af99906d2b5bd3c54",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkMDhlYjhlYjFiN2UwMWI2ODc2ODczNmFmOTk5MDZkMmI1YmQzYzU0",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-05-08T19:48:13Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-10-25T21:39:26Z"
+      },
+      "message": "GUI: Use 64-bit safe QDateTime::fromMSecsSinceEpoch for dateTimeStr\n\nPartially reverts 0030c1bd6cdee44d9f59af9a023cd39cbd335bd5, which was presumably done for compatibility with Qt<4.7.",
+      "tree": {
+        "sha": "263ac097d18757e997a95ed885bcb834c7aa6139",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/263ac097d18757e997a95ed885bcb834c7aa6139"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/d08eb8eb1b7e01b68768736af99906d2b5bd3c54",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d08eb8eb1b7e01b68768736af99906d2b5bd3c54",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/d08eb8eb1b7e01b68768736af99906d2b5bd3c54",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d08eb8eb1b7e01b68768736af99906d2b5bd3c54/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "400850c7821939faf68ca3dc02e9cfb56c08eb17",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/400850c7821939faf68ca3dc02e9cfb56c08eb17",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/400850c7821939faf68ca3dc02e9cfb56c08eb17"
+      }
+    ],
+    "stats": {
+      "total": 2,
+      "additions": 1,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "32d19a21f4df6e633f41e3b3cc80d3b6c5b57db3",
+        "filename": "src/qt/guiutil.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d08eb8eb1b7e01b68768736af99906d2b5bd3c54/src/qt/guiutil.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d08eb8eb1b7e01b68768736af99906d2b5bd3c54/src/qt/guiutil.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/guiutil.cpp?ref=d08eb8eb1b7e01b68768736af99906d2b5bd3c54",
+        "patch": "@@ -72,7 +72,7 @@ QString dateTimeStr(const QDateTime &date)\n \n QString dateTimeStr(qint64 nTime)\n {\n-    return dateTimeStr(QDateTime::fromTime_t((qint32)nTime));\n+    return dateTimeStr(QDateTime::fromMSecsSinceEpoch(nTime*1000));\n }\n \n QFont fixedPitchFont()"
+      }
+    ]
+  },
+  {
+    "sha": "051ed3c72ba3132afd9dd98f1076f5d546432abe",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowNTFlZDNjNzJiYTMxMzJhZmQ5ZGQ5OGYxMDc2ZjVkNTQ2NDMyYWJl",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-05-08T19:49:40Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-10-25T21:39:26Z"
+      },
+      "message": "GUI: Add GUIUtil::dateStr",
+      "tree": {
+        "sha": "36a5fc31e3dc0ee42e33792db2711b84b2023c37",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/36a5fc31e3dc0ee42e33792db2711b84b2023c37"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/051ed3c72ba3132afd9dd98f1076f5d546432abe",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/051ed3c72ba3132afd9dd98f1076f5d546432abe",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/051ed3c72ba3132afd9dd98f1076f5d546432abe",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/051ed3c72ba3132afd9dd98f1076f5d546432abe/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "d08eb8eb1b7e01b68768736af99906d2b5bd3c54",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d08eb8eb1b7e01b68768736af99906d2b5bd3c54",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/d08eb8eb1b7e01b68768736af99906d2b5bd3c54"
+      }
+    ],
+    "stats": {
+      "total": 14,
+      "additions": 13,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "f901cbc88e4767b6aebe88cf4aeb371386959736",
+        "filename": "src/qt/guiutil.cpp",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 1,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/051ed3c72ba3132afd9dd98f1076f5d546432abe/src/qt/guiutil.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/051ed3c72ba3132afd9dd98f1076f5d546432abe/src/qt/guiutil.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/guiutil.cpp?ref=051ed3c72ba3132afd9dd98f1076f5d546432abe",
+        "patch": "@@ -65,9 +65,19 @@ void ForceActivation();\n \n namespace GUIUtil {\n \n+QString dateStr(const QDate &date)\n+{\n+    return date.toString(Qt::SystemLocaleShortDate);\n+}\n+\n+QString dateStr(qint64 nTime)\n+{\n+    return dateStr(QDateTime::fromMSecsSinceEpoch(nTime*1000).date());\n+}\n+\n QString dateTimeStr(const QDateTime &date)\n {\n-    return date.date().toString(Qt::SystemLocaleShortDate) + QString(\" \") + date.toString(\"hh:mm\");\n+    return dateStr(date.date()) + QString(\" \") + date.toString(\"hh:mm\");\n }\n \n QString dateTimeStr(qint64 nTime)"
+      },
+      {
+        "sha": "4804cdf596149420fef1a4e79fb5c244d347f5a2",
+        "filename": "src/qt/guiutil.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/051ed3c72ba3132afd9dd98f1076f5d546432abe/src/qt/guiutil.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/051ed3c72ba3132afd9dd98f1076f5d546432abe/src/qt/guiutil.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/guiutil.h?ref=051ed3c72ba3132afd9dd98f1076f5d546432abe",
+        "patch": "@@ -41,6 +41,8 @@ QT_END_NAMESPACE\n namespace GUIUtil\n {\n     // Create human-readable string from date\n+    QString dateStr(const QDate &datetime);\n+    QString dateStr(qint64 nTime);\n     QString dateTimeStr(const QDateTime &datetime);\n     QString dateTimeStr(qint64 nTime);\n "
+      }
+    ]
+  },
+  {
+    "sha": "4e10bdd433f5d1ba9069f4942cb89e69dd83d816",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0ZTEwYmRkNDMzZjVkMWJhOTA2OWY0OTQyY2I4OWU2OWRkODNkODE2",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-08-29T00:39:48Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-10-25T21:40:37Z"
+      },
+      "message": "GUI: SendConfirmationDialog: Enable customisation of dialog\n\n- Dialog icon can be changed\n- Both buttons can be replaced with other standard buttons\n- \"Yes\" button can be renamed",
+      "tree": {
+        "sha": "9c0d45094cbfeafd686be23181014ce4a38a2b1f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/9c0d45094cbfeafd686be23181014ce4a38a2b1f"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/4e10bdd433f5d1ba9069f4942cb89e69dd83d816",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4e10bdd433f5d1ba9069f4942cb89e69dd83d816",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/4e10bdd433f5d1ba9069f4942cb89e69dd83d816",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4e10bdd433f5d1ba9069f4942cb89e69dd83d816/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "051ed3c72ba3132afd9dd98f1076f5d546432abe",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/051ed3c72ba3132afd9dd98f1076f5d546432abe",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/051ed3c72ba3132afd9dd98f1076f5d546432abe"
+      }
+    ],
+    "stats": {
+      "total": 57,
+      "additions": 36,
+      "deletions": 21
+    },
+    "files": [
+      {
+        "sha": "76e14b8bb35e73d273718e5b84e83aae92962135",
+        "filename": "src/qt/sendcoinsdialog.cpp",
+        "status": "modified",
+        "additions": 24,
+        "deletions": 15,
+        "changes": 39,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4e10bdd433f5d1ba9069f4942cb89e69dd83d816/src/qt/sendcoinsdialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4e10bdd433f5d1ba9069f4942cb89e69dd83d816/src/qt/sendcoinsdialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/sendcoinsdialog.cpp?ref=4e10bdd433f5d1ba9069f4942cb89e69dd83d816",
+        "patch": "@@ -373,12 +373,8 @@ void SendCoinsDialog::on_sendButton_clicked()\n         questionString = questionString.arg(\"<br /><br />\" + formatted.at(0));\n     }\n \n-    SendConfirmationDialog confirmationDialog(tr(\"Confirm send coins\"), questionString, informative_text, detailed_text, SEND_CONFIRM_DELAY, this);\n-    confirmationDialog.exec();\n-    QMessageBox::StandardButton retval = static_cast<QMessageBox::StandardButton>(confirmationDialog.result());\n-\n-    if(retval != QMessageBox::Yes)\n-    {\n+    SendConfirmationDialog confirmationDialog(QMessageBox::Question, tr(\"Confirm send coins\"), questionString, QMessageBox::Yes, \"\", QMessageBox::Cancel, informative_text, detailed_text, SEND_CONFIRM_DELAY, this);\n+    if (!confirmationDialog.exec()) {\n         fNewRecipientAllowed = true;\n         return;\n     }\n@@ -884,17 +880,29 @@ void SendCoinsDialog::coinControlUpdateLabels()\n     }\n }\n \n-SendConfirmationDialog::SendConfirmationDialog(const QString& title, const QString& text, const QString& informative_text, const QString& detailed_text, int _secDelay, QWidget* parent)\n-    : QMessageBox(parent), secDelay(_secDelay)\n+SendConfirmationDialog::SendConfirmationDialog(const QMessageBox::Icon icon, const QString& title, const QString& text, const QMessageBox::StandardButton yes_button, const QString &yes_button_text, const QMessageBox::StandardButton cancel_button, const QString& informative_text, const QString& detailed_text, int _secDelay, QWidget *parent)\n+    : QMessageBox(parent),\n+    m_yes_button_text(yes_button_text),\n+    secDelay(_secDelay)\n {\n-    setIcon(QMessageBox::Question);\n+    setIcon(icon);\n     setWindowTitle(title); // On macOS, the window title is ignored (as required by the macOS Guidelines).\n     setText(text);\n     setInformativeText(informative_text);\n     setDetailedText(detailed_text);\n-    setStandardButtons(QMessageBox::Yes | QMessageBox::Cancel);\n-    setDefaultButton(QMessageBox::Cancel);\n-    yesButton = button(QMessageBox::Yes);\n+    setStandardButtons(yes_button | cancel_button);\n+\n+    // We need to ensure the buttons have Yes/No roles, or they'll get ordered weird\n+    QAbstractButton * const cancel_button_obj = button(cancel_button);\n+    removeButton(cancel_button_obj);\n+    addButton(cancel_button_obj, QMessageBox::NoRole);\n+    setEscapeButton(cancel_button_obj);\n+    setDefaultButton(cancel_button);\n+\n+    yesButton = button(yes_button);\n+    removeButton(yesButton);\n+    addButton(yesButton, QMessageBox::YesRole);\n+    if (yes_button_text.isEmpty()) m_yes_button_text = tr(\"Send\");\n     updateYesButton();\n     connect(&countDownTimer, &QTimer::timeout, this, &SendConfirmationDialog::countDown);\n }\n@@ -903,7 +911,8 @@ int SendConfirmationDialog::exec()\n {\n     updateYesButton();\n     countDownTimer.start(1000);\n-    return QMessageBox::exec();\n+    QMessageBox::exec();\n+    return (buttonRole(clickedButton()) == QMessageBox::YesRole);\n }\n \n void SendConfirmationDialog::countDown()\n@@ -922,11 +931,11 @@ void SendConfirmationDialog::updateYesButton()\n     if(secDelay > 0)\n     {\n         yesButton->setEnabled(false);\n-        yesButton->setText(tr(\"Send\") + \" (\" + QString::number(secDelay) + \")\");\n+        yesButton->setText(m_yes_button_text + \" (\" + QString::number(secDelay) + \")\");\n     }\n     else\n     {\n         yesButton->setEnabled(true);\n-        yesButton->setText(tr(\"Send\"));\n+        yesButton->setText(m_yes_button_text);\n     }\n }"
+      },
+      {
+        "sha": "45cadcb638077d2961d75dd770ecfadc54f9e697",
+        "filename": "src/qt/sendcoinsdialog.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 1,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4e10bdd433f5d1ba9069f4942cb89e69dd83d816/src/qt/sendcoinsdialog.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4e10bdd433f5d1ba9069f4942cb89e69dd83d816/src/qt/sendcoinsdialog.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/sendcoinsdialog.h?ref=4e10bdd433f5d1ba9069f4942cb89e69dd83d816",
+        "patch": "@@ -108,7 +108,7 @@ class SendConfirmationDialog : public QMessageBox\n     Q_OBJECT\n \n public:\n-    SendConfirmationDialog(const QString& title, const QString& text, const QString& informative_text = \"\", const QString& detailed_text = \"\", int secDelay = SEND_CONFIRM_DELAY, QWidget* parent = nullptr);\n+    SendConfirmationDialog(QMessageBox::Icon, const QString& title, const QString& text, QMessageBox::StandardButton yes_button = QMessageBox::Yes, const QString &yes_button_text = \"\", QMessageBox::StandardButton cancel_button = QMessageBox::Cancel, const QString& informative_text = \"\", const QString& detailed_text = \"\", int secDelay = SEND_CONFIRM_DELAY, QWidget* parent = nullptr);\n     int exec();\n \n private Q_SLOTS:\n@@ -117,6 +117,7 @@ private Q_SLOTS:\n \n private:\n     QAbstractButton *yesButton;\n+    QString m_yes_button_text;\n     QTimer countDownTimer;\n     int secDelay;\n };"
+      },
+      {
+        "sha": "e777c75d819e477834bf6e258101ca438f0472ba",
+        "filename": "src/qt/test/wallettests.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 1,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4e10bdd433f5d1ba9069f4942cb89e69dd83d816/src/qt/test/wallettests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4e10bdd433f5d1ba9069f4942cb89e69dd83d816/src/qt/test/wallettests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/test/wallettests.cpp?ref=4e10bdd433f5d1ba9069f4942cb89e69dd83d816",
+        "patch": "@@ -44,7 +44,14 @@ void ConfirmSend(QString* text = nullptr, bool cancel = false)\n             if (widget->inherits(\"SendConfirmationDialog\")) {\n                 SendConfirmationDialog* dialog = qobject_cast<SendConfirmationDialog*>(widget);\n                 if (text) *text = dialog->text();\n-                QAbstractButton* button = dialog->button(cancel ? QMessageBox::Cancel : QMessageBox::Yes);\n+                QAbstractButton* button = nullptr;\n+                auto desired_button_role = cancel ? QMessageBox::NoRole : QMessageBox::YesRole;\n+                for (QAbstractButton* maybe_button : dialog->buttons()) {\n+                    if (dialog->buttonRole(maybe_button) == desired_button_role) {\n+                        button = maybe_button;\n+                        break;\n+                    }\n+                }\n                 button->setEnabled(true);\n                 button->click();\n             }"
+      },
+      {
+        "sha": "c0a4b52964703cfc49cde4c2a826e657b40813f4",
+        "filename": "src/qt/walletmodel.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 4,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4e10bdd433f5d1ba9069f4942cb89e69dd83d816/src/qt/walletmodel.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4e10bdd433f5d1ba9069f4942cb89e69dd83d816/src/qt/walletmodel.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/walletmodel.cpp?ref=4e10bdd433f5d1ba9069f4942cb89e69dd83d816",
+        "patch": "@@ -561,12 +561,10 @@ bool WalletModel::bumpFee(uint256 hash, uint256& new_hash)\n     questionString.append(\"</td><td>\");\n     questionString.append(BitcoinUnits::formatHtmlWithUnit(getOptionsModel()->getDisplayUnit(), new_fee));\n     questionString.append(\"</td></tr></table>\");\n-    SendConfirmationDialog confirmationDialog(tr(\"Confirm fee bump\"), questionString);\n-    confirmationDialog.exec();\n-    QMessageBox::StandardButton retval = static_cast<QMessageBox::StandardButton>(confirmationDialog.result());\n \n+    SendConfirmationDialog confirmationDialog(QMessageBox::Question, tr(\"Confirm fee bump\"), questionString);\n     // cancel sign&broadcast if user doesn't want to bump the fee\n-    if (retval != QMessageBox::Yes) {\n+    if (!confirmationDialog.exec()) {\n         return false;\n     }\n "
+      }
+    ]
+  },
+  {
+    "sha": "e9bd26532e2824952814112471815517f585a971",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplOWJkMjY1MzJlMjgyNDk1MjgxNDExMjQ3MTgxNTUxN2Y1ODVhOTcx",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-05-08T21:34:13Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-10-25T21:40:37Z"
+      },
+      "message": "GUI: Add a warning prompt when sending to an already-used address",
+      "tree": {
+        "sha": "f39568edc4d41e953da4affe6f8cbe86b03967d4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f39568edc4d41e953da4affe6f8cbe86b03967d4"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/e9bd26532e2824952814112471815517f585a971",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e9bd26532e2824952814112471815517f585a971",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/e9bd26532e2824952814112471815517f585a971",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e9bd26532e2824952814112471815517f585a971/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "4e10bdd433f5d1ba9069f4942cb89e69dd83d816",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4e10bdd433f5d1ba9069f4942cb89e69dd83d816",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/4e10bdd433f5d1ba9069f4942cb89e69dd83d816"
+      }
+    ],
+    "stats": {
+      "total": 74,
+      "additions": 74,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "8b62f6f829d8a4007d56a6c715022d404a4a2e34",
+        "filename": "src/qt/sendcoinsdialog.cpp",
+        "status": "modified",
+        "additions": 67,
+        "deletions": 0,
+        "changes": 67,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e9bd26532e2824952814112471815517f585a971/src/qt/sendcoinsdialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e9bd26532e2824952814112471815517f585a971/src/qt/sendcoinsdialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/sendcoinsdialog.cpp?ref=e9bd26532e2824952814112471815517f585a971",
+        "patch": "@@ -220,6 +220,7 @@ void SendCoinsDialog::on_sendButton_clicked()\n \n     QList<SendCoinsRecipient> recipients;\n     bool valid = true;\n+    bool have_warning = false;\n \n     for(int i = 0; i < ui->entries->count(); ++i)\n     {\n@@ -229,6 +230,7 @@ void SendCoinsDialog::on_sendButton_clicked()\n             if(entry->validate(model->node()))\n             {\n                 recipients.append(entry->getValue());\n+                have_warning |= entry->hasPaytoWarning();\n             }\n             else if (valid)\n             {\n@@ -274,6 +276,71 @@ void SendCoinsDialog::on_sendButton_clicked()\n         return;\n     }\n \n+    if (have_warning) {\n+        struct prior_usage_info_t {\n+            CAmount total_amount{0};\n+            int num_txs{0};\n+            qint64 tx_time_oldest;\n+            qint64 tx_time_newest;\n+        };\n+        QMap<QString, prior_usage_info_t> prior_usage_info;\n+        {\n+            QStringList addresses;\n+            for (const auto& recipient : recipients) {\n+#ifdef ENABLE_BIP70\n+                if (recipient.paymentRequest.IsInitialized()) continue;\n+#endif\n+                addresses.append(recipient.address);\n+            }\n+            model->findAddressUsage(addresses, [&prior_usage_info](const QString& address, const interfaces::WalletTx& wtx, uint32_t output_index){\n+                auto& info = prior_usage_info[address];\n+                info.total_amount += wtx.tx->vout[output_index].nValue;\n+                ++info.num_txs;\n+                if (info.num_txs == 1 || wtx.time < info.tx_time_oldest) {\n+                    info.tx_time_oldest = wtx.time;\n+                }\n+                if (info.num_txs == 1 || wtx.time > info.tx_time_newest) {\n+                    info.tx_time_newest = wtx.time;\n+                }\n+            });\n+        }\n+\n+        QString reuse_question;\n+        if (recipients.size() > 1) {\n+            reuse_question = tr(\"You've already paid some of these addresses.\");\n+        } else {\n+            reuse_question = tr(\"You've already paid this address.\");\n+        }\n+        reuse_question.append(\"<br />\");\n+\n+        for (const auto& rcp : recipients) {\n+#ifdef ENABLE_BIP70\n+            if (rcp.paymentRequest.IsInitialized()) continue;\n+#endif\n+            if (!prior_usage_info.contains(rcp.address)) continue;\n+            const auto& rcp_prior_usage_info = prior_usage_info.value(rcp.address);\n+            const QString label_and_address = rcp.label.isEmpty() ? rcp.address : (QString(\"'\") + rcp.label + \"' (\" + rcp.address + \")\");\n+            reuse_question.append(\"<br />\");\n+            if (rcp_prior_usage_info.num_txs == 1) {\n+                //: %1 is an amount (eg, \"1 BTC\"); %2 is a Bitcoin address and its label; %3 is a date (eg, \"2019-05-08\")\n+                reuse_question.append(tr(\"Sent %1 to %2 on %3\").arg(BitcoinUnits::formatHtmlWithUnit(model->getOptionsModel()->getDisplayUnit(), rcp_prior_usage_info.total_amount), label_and_address, GUIUtil::dateStr(rcp_prior_usage_info.tx_time_newest)));\n+            } else {\n+                //: %1 is an amount (eg, \"1 BTC\"); %2 is a Bitcoin address and its label; %3 is the number of transactions; %4 and %5 are dates (eg, \"2019-05-08\"), earlier first\n+                reuse_question.append(tr(\"Sent %1 to %2 across %3 transactions from %4 through %5\").arg(BitcoinUnits::formatHtmlWithUnit(model->getOptionsModel()->getDisplayUnit(), rcp_prior_usage_info.total_amount), label_and_address, QString::number(rcp_prior_usage_info.num_txs), GUIUtil::dateStr(rcp_prior_usage_info.tx_time_oldest), GUIUtil::dateStr(rcp_prior_usage_info.tx_time_newest)));\n+            }\n+        }\n+\n+        reuse_question.append(\"<br /><br /><span style='font-size:10pt;'>\");\n+        reuse_question.append(tr(\"Bitcoin addresses are intended to only be used once, for a single payment. Sending to the same address again will harm the recipient's security, as well as the privacy of all Bitcoin users!\"));\n+        reuse_question.append(\"</span>\");\n+\n+        SendConfirmationDialog confirmation_dialog(QMessageBox::Warning, tr(\"Already paid\"), reuse_question, QMessageBox::Ignore, tr(\"Override\"), QMessageBox::Ok, \"\", \"\", ADDRESS_REUSE_OVERRIDE_DELAY, this);\n+        if (!confirmation_dialog.exec()) {\n+            fNewRecipientAllowed = true;\n+            return;\n+        }\n+    }\n+\n     CAmount txFee = currentTransaction.getTransactionFee();\n \n     // Format confirmation message"
+      },
+      {
+        "sha": "4b0b55591e63a0e4bfc5c978850ff4338f45c018",
+        "filename": "src/qt/sendcoinsdialog.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e9bd26532e2824952814112471815517f585a971/src/qt/sendcoinsdialog.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e9bd26532e2824952814112471815517f585a971/src/qt/sendcoinsdialog.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/sendcoinsdialog.h?ref=e9bd26532e2824952814112471815517f585a971",
+        "patch": "@@ -102,6 +102,7 @@ private Q_SLOTS:\n \n \n #define SEND_CONFIRM_DELAY   3\n+#define ADDRESS_REUSE_OVERRIDE_DELAY   10\n \n class SendConfirmationDialog : public QMessageBox\n {"
+      },
+      {
+        "sha": "5750208d367ad9f36115b27b326820a05d98a2fd",
+        "filename": "src/qt/sendcoinsentry.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 0,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e9bd26532e2824952814112471815517f585a971/src/qt/sendcoinsentry.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e9bd26532e2824952814112471815517f585a971/src/qt/sendcoinsentry.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/sendcoinsentry.cpp?ref=e9bd26532e2824952814112471815517f585a971",
+        "patch": "@@ -176,6 +176,11 @@ bool SendCoinsEntry::validate(interfaces::Node& node)\n     return retval;\n }\n \n+bool SendCoinsEntry::hasPaytoWarning() const\n+{\n+    return ui->payTo->hasWarning();\n+}\n+\n SendCoinsRecipient SendCoinsEntry::getValue()\n {\n #ifdef ENABLE_BIP70"
+      },
+      {
+        "sha": "a3b4243679a223c9ce211b99807d554f397a2245",
+        "filename": "src/qt/sendcoinsentry.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e9bd26532e2824952814112471815517f585a971/src/qt/sendcoinsentry.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e9bd26532e2824952814112471815517f585a971/src/qt/sendcoinsentry.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/sendcoinsentry.h?ref=e9bd26532e2824952814112471815517f585a971",
+        "patch": "@@ -31,6 +31,7 @@ class SendCoinsEntry : public QStackedWidget\n \n     void setModel(WalletModel *model);\n     bool validate(interfaces::Node& node);\n+    bool hasPaytoWarning() const;\n     SendCoinsRecipient getValue();\n \n     /** Return whether the entry is still empty and unedited */"
+      }
+    ]
+  },
+  {
+    "sha": "391c5d9a97211b46bc6b4d701e98bf10aae197fa",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozOTFjNWQ5YTk3MjExYjQ2YmM2YjRkNzAxZTk4YmYxMGFhZTE5N2Zh",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-09-01T01:56:36Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2019-10-25T21:40:37Z"
+      },
+      "message": "GUI/Send: Use detailedText for address reuse error",
+      "tree": {
+        "sha": "312f4b522e1822807f44036ca347c20b267a223f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/312f4b522e1822807f44036ca347c20b267a223f"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/391c5d9a97211b46bc6b4d701e98bf10aae197fa",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/391c5d9a97211b46bc6b4d701e98bf10aae197fa",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/391c5d9a97211b46bc6b4d701e98bf10aae197fa",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/391c5d9a97211b46bc6b4d701e98bf10aae197fa/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "e9bd26532e2824952814112471815517f585a971",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e9bd26532e2824952814112471815517f585a971",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/e9bd26532e2824952814112471815517f585a971"
+      }
+    ],
+    "stats": {
+      "total": 11,
+      "additions": 5,
+      "deletions": 6
+    },
+    "files": [
+      {
+        "sha": "0cdaed63ceaedb93c1dc1a1001ca793e454120e8",
+        "filename": "src/qt/sendcoinsdialog.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 6,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/391c5d9a97211b46bc6b4d701e98bf10aae197fa/src/qt/sendcoinsdialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/391c5d9a97211b46bc6b4d701e98bf10aae197fa/src/qt/sendcoinsdialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/sendcoinsdialog.cpp?ref=391c5d9a97211b46bc6b4d701e98bf10aae197fa",
+        "patch": "@@ -305,36 +305,35 @@ void SendCoinsDialog::on_sendButton_clicked()\n             });\n         }\n \n-        QString reuse_question;\n+        QString reuse_question, reuse_details;\n         if (recipients.size() > 1) {\n             reuse_question = tr(\"You've already paid some of these addresses.\");\n         } else {\n             reuse_question = tr(\"You've already paid this address.\");\n         }\n-        reuse_question.append(\"<br />\");\n \n         for (const auto& rcp : recipients) {\n #ifdef ENABLE_BIP70\n             if (rcp.paymentRequest.IsInitialized()) continue;\n #endif\n             if (!prior_usage_info.contains(rcp.address)) continue;\n+            if (!reuse_details.isEmpty()) reuse_details.append(\"\\n\\n\");\n             const auto& rcp_prior_usage_info = prior_usage_info.value(rcp.address);\n             const QString label_and_address = rcp.label.isEmpty() ? rcp.address : (QString(\"'\") + rcp.label + \"' (\" + rcp.address + \")\");\n-            reuse_question.append(\"<br />\");\n             if (rcp_prior_usage_info.num_txs == 1) {\n                 //: %1 is an amount (eg, \"1 BTC\"); %2 is a Bitcoin address and its label; %3 is a date (eg, \"2019-05-08\")\n-                reuse_question.append(tr(\"Sent %1 to %2 on %3\").arg(BitcoinUnits::formatHtmlWithUnit(model->getOptionsModel()->getDisplayUnit(), rcp_prior_usage_info.total_amount), label_and_address, GUIUtil::dateStr(rcp_prior_usage_info.tx_time_newest)));\n+                reuse_details.append(tr(\"Sent %1 to %2 on %3\").arg(BitcoinUnits::formatWithUnit(model->getOptionsModel()->getDisplayUnit(), rcp_prior_usage_info.total_amount), label_and_address, GUIUtil::dateStr(rcp_prior_usage_info.tx_time_newest)));\n             } else {\n                 //: %1 is an amount (eg, \"1 BTC\"); %2 is a Bitcoin address and its label; %3 is the number of transactions; %4 and %5 are dates (eg, \"2019-05-08\"), earlier first\n-                reuse_question.append(tr(\"Sent %1 to %2 across %3 transactions from %4 through %5\").arg(BitcoinUnits::formatHtmlWithUnit(model->getOptionsModel()->getDisplayUnit(), rcp_prior_usage_info.total_amount), label_and_address, QString::number(rcp_prior_usage_info.num_txs), GUIUtil::dateStr(rcp_prior_usage_info.tx_time_oldest), GUIUtil::dateStr(rcp_prior_usage_info.tx_time_newest)));\n+                reuse_details.append(tr(\"Sent %1 to %2 across %3 transactions from %4 through %5\").arg(BitcoinUnits::formatWithUnit(model->getOptionsModel()->getDisplayUnit(), rcp_prior_usage_info.total_amount), label_and_address, QString::number(rcp_prior_usage_info.num_txs), GUIUtil::dateStr(rcp_prior_usage_info.tx_time_oldest), GUIUtil::dateStr(rcp_prior_usage_info.tx_time_newest)));\n             }\n         }\n \n         reuse_question.append(\"<br /><br /><span style='font-size:10pt;'>\");\n         reuse_question.append(tr(\"Bitcoin addresses are intended to only be used once, for a single payment. Sending to the same address again will harm the recipient's security, as well as the privacy of all Bitcoin users!\"));\n         reuse_question.append(\"</span>\");\n \n-        SendConfirmationDialog confirmation_dialog(QMessageBox::Warning, tr(\"Already paid\"), reuse_question, QMessageBox::Ignore, tr(\"Override\"), QMessageBox::Ok, \"\", \"\", ADDRESS_REUSE_OVERRIDE_DELAY, this);\n+        SendConfirmationDialog confirmation_dialog(QMessageBox::Warning, tr(\"Already paid\"), reuse_question, QMessageBox::Ignore, tr(\"Override\"), QMessageBox::Ok, \"\", reuse_details, ADDRESS_REUSE_OVERRIDE_DELAY, this);\n         if (!confirmation_dialog.exec()) {\n             fNewRecipientAllowed = true;\n             return;"
+      }
+    ]
+  }
+]

@@ -1,0 +1,234 @@
+[
+  {
+    "sha": "104b3a5069c937383e6f88f2f3fb804ef61b208f",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxMDRiM2E1MDY5YzkzNzM4M2U2Zjg4ZjJmM2ZiODA0ZWY2MWIyMDhm",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2019-05-08T21:01:35Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2019-08-07T00:11:12Z"
+      },
+      "message": "Factor out checksum checking from descriptor parsing",
+      "tree": {
+        "sha": "b4a8ba700758401d545b9a9e75211cd6685f83a1",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/b4a8ba700758401d545b9a9e75211cd6685f83a1"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/104b3a5069c937383e6f88f2f3fb804ef61b208f",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/104b3a5069c937383e6f88f2f3fb804ef61b208f",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/104b3a5069c937383e6f88f2f3fb804ef61b208f",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/104b3a5069c937383e6f88f2f3fb804ef61b208f/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "e5fdda68c6d2313edb74443f0d1e6d2ce2d97f5e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e5fdda68c6d2313edb74443f0d1e6d2ce2d97f5e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/e5fdda68c6d2313edb74443f0d1e6d2ce2d97f5e"
+      }
+    ],
+    "stats": {
+      "total": 27,
+      "additions": 17,
+      "deletions": 10
+    },
+    "files": [
+      {
+        "sha": "95b949e9c295ec36211a06049a01cf84d2ac6ac5",
+        "filename": "src/script/descriptor.cpp",
+        "status": "modified",
+        "additions": 17,
+        "deletions": 10,
+        "changes": 27,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/104b3a5069c937383e6f88f2f3fb804ef61b208f/src/script/descriptor.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/104b3a5069c937383e6f88f2f3fb804ef61b208f/src/script/descriptor.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/descriptor.cpp?ref=104b3a5069c937383e6f88f2f3fb804ef61b208f",
+        "patch": "@@ -910,22 +910,29 @@ std::unique_ptr<DescriptorImpl> InferScript(const CScript& script, ParseScriptCo\n \n } // namespace\n \n-std::unique_ptr<Descriptor> Parse(const std::string& descriptor, FlatSigningProvider& out, bool require_checksum)\n+/** Check a descriptor checksum, and update desc to be the checksum-less part. */\n+bool CheckChecksum(Span<const char>& sp, bool require_checksum, std::string* out_checksum = nullptr)\n {\n-    Span<const char> sp(descriptor.data(), descriptor.size());\n-\n-    // Checksum checks\n     auto check_split = Split(sp, '#');\n-    if (check_split.size() > 2) return nullptr; // Multiple '#' symbols\n-    if (check_split.size() == 1 && require_checksum) return nullptr; // Missing checksum\n+    if (check_split.size() > 2) return false; // Multiple '#' symbols\n+    if (check_split.size() == 1 && require_checksum) return false; // Missing checksum\n+    if (check_split.size() == 2) {\n+        if (check_split[1].size() != 8) return false; // Unexpected length for checksum\n+    }\n+    auto checksum = DescriptorChecksum(check_split[0]);\n+    if (checksum.empty()) return false; // Invalid characters in payload\n     if (check_split.size() == 2) {\n-        if (check_split[1].size() != 8) return nullptr; // Unexpected length for checksum\n-        auto checksum = DescriptorChecksum(check_split[0]);\n-        if (checksum.empty()) return nullptr; // Invalid characters in payload\n-        if (!std::equal(checksum.begin(), checksum.end(), check_split[1].begin())) return nullptr; // Checksum mismatch\n+        if (!std::equal(checksum.begin(), checksum.end(), check_split[1].begin())) return false; // Checksum mismatch\n     }\n+    if (out_checksum) *out_checksum = std::move(checksum);\n     sp = check_split[0];\n+    return true;\n+}\n \n+std::unique_ptr<Descriptor> Parse(const std::string& descriptor, FlatSigningProvider& out, bool require_checksum)\n+{\n+    Span<const char> sp(descriptor.data(), descriptor.size());\n+    if (!CheckChecksum(sp, require_checksum)) return nullptr;\n     auto ret = ParseScript(sp, ParseScriptContext::TOP, out);\n     if (sp.size() == 0 && ret) return std::unique_ptr<Descriptor>(std::move(ret));\n     return nullptr;"
+      }
+    ]
+  },
+  {
+    "sha": "26d3fad1093dfc697048313be7a96c9adf723654",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyNmQzZmFkMTA5M2RmYzY5NzA0ODMxM2JlN2E5NmM5YWRmNzIzNjU0",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2019-05-08T21:03:29Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2019-08-07T00:11:12Z"
+      },
+      "message": "Add unmodified-but-with-checksum to getdescriptorinfo",
+      "tree": {
+        "sha": "c3b4b85506298304ff339ba92f518353a177fa63",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/c3b4b85506298304ff339ba92f518353a177fa63"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/26d3fad1093dfc697048313be7a96c9adf723654",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/26d3fad1093dfc697048313be7a96c9adf723654",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/26d3fad1093dfc697048313be7a96c9adf723654",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/26d3fad1093dfc697048313be7a96c9adf723654/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "104b3a5069c937383e6f88f2f3fb804ef61b208f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/104b3a5069c937383e6f88f2f3fb804ef61b208f",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/104b3a5069c937383e6f88f2f3fb804ef61b208f"
+      }
+    ],
+    "stats": {
+      "total": 22,
+      "additions": 22,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "d1e9682416169f490be1e7ce49faa4596beff486",
+        "filename": "src/rpc/misc.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/26d3fad1093dfc697048313be7a96c9adf723654/src/rpc/misc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/26d3fad1093dfc697048313be7a96c9adf723654/src/rpc/misc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/misc.cpp?ref=26d3fad1093dfc697048313be7a96c9adf723654",
+        "patch": "@@ -136,6 +136,7 @@ UniValue getdescriptorinfo(const JSONRPCRequest& request)\n             RPCResult{\n             \"{\\n\"\n             \"  \\\"descriptor\\\" : \\\"desc\\\",         (string) The descriptor in canonical form, without private keys\\n\"\n+            \"  \\\"checksum\\\" : \\\"chksum\\\",         (string) The checksum for the input descriptor\\n\"\n             \"  \\\"isrange\\\" : true|false,        (boolean) Whether the descriptor is ranged\\n\"\n             \"  \\\"issolvable\\\" : true|false,     (boolean) Whether the descriptor is solvable\\n\"\n             \"  \\\"hasprivatekeys\\\" : true|false, (boolean) Whether the input descriptor contained at least one private key\\n\"\n@@ -156,6 +157,7 @@ UniValue getdescriptorinfo(const JSONRPCRequest& request)\n \n     UniValue result(UniValue::VOBJ);\n     result.pushKV(\"descriptor\", desc->ToString());\n+    result.pushKV(\"checksum\", GetDescriptorChecksum(request.params[0].get_str()));\n     result.pushKV(\"isrange\", desc->IsRange());\n     result.pushKV(\"issolvable\", desc->IsSolvable());\n     result.pushKV(\"hasprivatekeys\", provider.keys.size() > 0);"
+      },
+      {
+        "sha": "a39cf635aa45cfd6b839802ae6d40622f35f1df2",
+        "filename": "src/script/descriptor.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 0,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/26d3fad1093dfc697048313be7a96c9adf723654/src/script/descriptor.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/26d3fad1093dfc697048313be7a96c9adf723654/src/script/descriptor.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/descriptor.cpp?ref=26d3fad1093dfc697048313be7a96c9adf723654",
+        "patch": "@@ -938,6 +938,14 @@ std::unique_ptr<Descriptor> Parse(const std::string& descriptor, FlatSigningProv\n     return nullptr;\n }\n \n+std::string GetDescriptorChecksum(const std::string& descriptor)\n+{\n+    std::string ret;\n+    Span<const char> sp(descriptor.data(), descriptor.size());\n+    if (!CheckChecksum(sp, false, &ret)) return \"\";\n+    return ret;\n+}\n+\n std::unique_ptr<Descriptor> InferDescriptor(const CScript& script, const SigningProvider& provider)\n {\n     return InferScript(script, ParseScriptContext::TOP, provider);"
+      },
+      {
+        "sha": "8c937d7fe5efdc82a1a2f6f1ad4c55028dadf38c",
+        "filename": "src/script/descriptor.h",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 0,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/26d3fad1093dfc697048313be7a96c9adf723654/src/script/descriptor.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/26d3fad1093dfc697048313be7a96c9adf723654/src/script/descriptor.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/descriptor.h?ref=26d3fad1093dfc697048313be7a96c9adf723654",
+        "patch": "@@ -81,6 +81,14 @@ struct Descriptor {\n  */\n std::unique_ptr<Descriptor> Parse(const std::string& descriptor, FlatSigningProvider& out, bool require_checksum = false);\n \n+/** Get the checksum for a descriptor.\n+ *\n+ * If it already has one, and it is correct, return the checksum in the input.\n+ * If it already has one that is wrong, return \"\".\n+ * If it does not already have one, return the checksum that would need to be added.\n+ */\n+std::string GetDescriptorChecksum(const std::string& descriptor);\n+\n /** Find a descriptor for the specified script, using information from provider where possible.\n  *\n  * A non-ranged descriptor which only generates the specified script will be returned in all"
+      },
+      {
+        "sha": "4e4ed8f26b39fb895ff560d3eaca3100589814b1",
+        "filename": "test/functional/wallet_address_types.py",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 0,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/26d3fad1093dfc697048313be7a96c9adf723654/test/functional/wallet_address_types.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/26d3fad1093dfc697048313be7a96c9adf723654/test/functional/wallet_address_types.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/wallet_address_types.py?ref=26d3fad1093dfc697048313be7a96c9adf723654",
+        "patch": "@@ -175,6 +175,10 @@ def test_desc(self, node, address, multisig, typ, utxo):\n         assert info['desc'] == descsum_create(info['desc'][:-9])\n         # Verify that stripping the checksum and feeding it to getdescriptorinfo roundtrips\n         assert info['desc'] == self.nodes[0].getdescriptorinfo(info['desc'][:-9])['descriptor']\n+        assert_equal(info['desc'][-8:], self.nodes[0].getdescriptorinfo(info['desc'][:-9])['checksum'])\n+        # Verify that keeping the checksum and feeding it to getdescriptorinfo roundtrips\n+        assert info['desc'] == self.nodes[0].getdescriptorinfo(info['desc'])['descriptor']\n+        assert_equal(info['desc'][-8:], self.nodes[0].getdescriptorinfo(info['desc'])['checksum'])\n \n         if not multisig and typ == 'legacy':\n             # P2PKH"
+      }
+    ]
+  }
+]

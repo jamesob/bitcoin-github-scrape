@@ -1,0 +1,98 @@
+[
+  {
+    "sha": "93b7af309904e68d8b7b2f6bdd2b9bcfb18f9e24",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5M2I3YWYzMDk5MDRlNjhkOGI3YjJmNmJkZDJiOWJjZmIxOGY5ZTI0",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-03-28T12:55:29Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-06-14T05:59:27Z"
+      },
+      "message": "URI-handling code update: added safety checks and tray-notifications",
+      "tree": {
+        "sha": "56f207b07989d0dd4950419990c4db760f228870",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/56f207b07989d0dd4950419990c4db760f228870"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/93b7af309904e68d8b7b2f6bdd2b9bcfb18f9e24",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/93b7af309904e68d8b7b2f6bdd2b9bcfb18f9e24",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/93b7af309904e68d8b7b2f6bdd2b9bcfb18f9e24",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/93b7af309904e68d8b7b2f6bdd2b9bcfb18f9e24/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "7a98f19fb6e40e2929abfff6b1f20f13c091d32d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7a98f19fb6e40e2929abfff6b1f20f13c091d32d",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/7a98f19fb6e40e2929abfff6b1f20f13c091d32d"
+      }
+    ],
+    "stats": {
+      "total": 60,
+      "additions": 39,
+      "deletions": 21
+    },
+    "files": [
+      {
+        "sha": "c143411c76a65ee34e3a4e02b949c4cbeaa4404a",
+        "filename": "src/qt/bitcoingui.cpp",
+        "status": "modified",
+        "additions": 17,
+        "deletions": 6,
+        "changes": 23,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/93b7af309904e68d8b7b2f6bdd2b9bcfb18f9e24/src/qt/bitcoingui.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/93b7af309904e68d8b7b2f6bdd2b9bcfb18f9e24/src/qt/bitcoingui.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoingui.cpp?ref=93b7af309904e68d8b7b2f6bdd2b9bcfb18f9e24",
+        "patch": "@@ -744,23 +744,34 @@ void BitcoinGUI::dropEvent(QDropEvent *event)\n {\n     if(event->mimeData()->hasUrls())\n     {\n-        gotoSendCoinsPage();\n+        int nValidUrisFound = 0;\n         QList<QUrl> uris = event->mimeData()->urls();\n         foreach(const QUrl &uri, uris)\n         {\n-            sendCoinsPage->handleURI(uri.toString());\n+            if (sendCoinsPage->handleURI(uri.toString()))\n+                nValidUrisFound++;\n         }\n+\n+        // if valid URIs were found\n+        if (nValidUrisFound)\n+            gotoSendCoinsPage();\n+        else\n+            notificator->notify(Notificator::Warning, tr(\"URI handling\"), tr(\"URI can not be parsed! This can be caused by an invalid Bitcoin address or malformed URI parameters.\"));\n     }\n \n     event->acceptProposedAction();\n }\n \n void BitcoinGUI::handleURI(QString strURI)\n {\n-    gotoSendCoinsPage();\n-    sendCoinsPage->handleURI(strURI);\n-\n-    showNormalIfMinimized();\n+    // URI has to be valid\n+    if (sendCoinsPage->handleURI(strURI))\n+    {\n+        showNormalIfMinimized();\n+        gotoSendCoinsPage();\n+    }\n+    else\n+        notificator->notify(Notificator::Warning, tr(\"URI handling\"), tr(\"URI can not be parsed! This can be caused by an invalid Bitcoin address or malformed URI parameters.\"));\n }\n \n void BitcoinGUI::setEncryptionStatus(int status)"
+      },
+      {
+        "sha": "a8c2328853a3ab21eb4842f2915706135d4b6557",
+        "filename": "src/qt/guiutil.cpp",
+        "status": "modified",
+        "additions": 14,
+        "deletions": 9,
+        "changes": 23,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/93b7af309904e68d8b7b2f6bdd2b9bcfb18f9e24/src/qt/guiutil.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/93b7af309904e68d8b7b2f6bdd2b9bcfb18f9e24/src/qt/guiutil.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/guiutil.cpp?ref=93b7af309904e68d8b7b2f6bdd2b9bcfb18f9e24",
+        "patch": "@@ -4,6 +4,7 @@\n #include \"bitcoinunits.h\"\n #include \"util.h\"\n #include \"init.h\"\n+#include \"base58.h\"\n \n #include <QString>\n #include <QDateTime>\n@@ -80,6 +81,11 @@ bool parseBitcoinURI(const QUrl &uri, SendCoinsRecipient *out)\n     if(uri.scheme() != QString(\"bitcoin\"))\n         return false;\n \n+    // check if the address is valid\n+    CBitcoinAddress addressFromUri(uri.path().toStdString());\n+    if (!addressFromUri.IsValid())\n+        return false;\n+\n     SendCoinsRecipient rv;\n     rv.address = uri.path();\n     rv.amount = 0;\n@@ -222,19 +228,18 @@ Qt::ConnectionType blockingGUIThreadConnection()\n \n bool checkPoint(const QPoint &p, const QWidget *w)\n {\n-  QWidget *atW = qApp->widgetAt(w->mapToGlobal(p));\n-  if(!atW) return false;\n-  return atW->topLevelWidget() == w;\n+    QWidget *atW = qApp->widgetAt(w->mapToGlobal(p));\n+    if (!atW) return false;\n+    return atW->topLevelWidget() == w;\n }\n \n bool isObscured(QWidget *w)\n {\n-\n-  return !(checkPoint(QPoint(0, 0), w)\n-           && checkPoint(QPoint(w->width() - 1, 0), w)\n-           && checkPoint(QPoint(0, w->height() - 1), w)\n-           && checkPoint(QPoint(w->width() - 1, w->height() - 1), w)\n-           && checkPoint(QPoint(w->width()/2, w->height()/2), w));\n+    return !(checkPoint(QPoint(0, 0), w)\n+        && checkPoint(QPoint(w->width() - 1, 0), w)\n+        && checkPoint(QPoint(0, w->height() - 1), w)\n+        && checkPoint(QPoint(w->width() - 1, w->height() - 1), w)\n+        && checkPoint(QPoint(w->width() / 2, w->height() / 2), w));\n }\n \n void openDebugLogfile()"
+      },
+      {
+        "sha": "76952e44ec08c278f1c3a932262003f12fc41fc5",
+        "filename": "src/qt/sendcoinsdialog.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 5,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/93b7af309904e68d8b7b2f6bdd2b9bcfb18f9e24/src/qt/sendcoinsdialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/93b7af309904e68d8b7b2f6bdd2b9bcfb18f9e24/src/qt/sendcoinsdialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/sendcoinsdialog.cpp?ref=93b7af309904e68d8b7b2f6bdd2b9bcfb18f9e24",
+        "patch": "@@ -266,15 +266,17 @@ void SendCoinsDialog::pasteEntry(const SendCoinsRecipient &rv)\n     entry->setValue(rv);\n }\n \n-\n-void SendCoinsDialog::handleURI(const QString &uri)\n+bool SendCoinsDialog::handleURI(const QString &uri)\n {\n     SendCoinsRecipient rv;\n-    if(!GUIUtil::parseBitcoinURI(uri, &rv))\n+    // URI has to be valid\n+    if (GUIUtil::parseBitcoinURI(uri, &rv))\n     {\n-        return;\n+        pasteEntry(rv);\n+        return true;\n     }\n-    pasteEntry(rv);\n+\n+    return false;\n }\n \n void SendCoinsDialog::setBalance(qint64 balance, qint64 unconfirmedBalance, qint64 immatureBalance)"
+      },
+      {
+        "sha": "915b7ad465469d044513c988bf32be4ee8e3e357",
+        "filename": "src/qt/sendcoinsdialog.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/93b7af309904e68d8b7b2f6bdd2b9bcfb18f9e24/src/qt/sendcoinsdialog.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/93b7af309904e68d8b7b2f6bdd2b9bcfb18f9e24/src/qt/sendcoinsdialog.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/sendcoinsdialog.h?ref=93b7af309904e68d8b7b2f6bdd2b9bcfb18f9e24",
+        "patch": "@@ -30,7 +30,7 @@ class SendCoinsDialog : public QDialog\n     QWidget *setupTabChain(QWidget *prev);\n \n     void pasteEntry(const SendCoinsRecipient &rv);\n-    void handleURI(const QString &uri);\n+    bool handleURI(const QString &uri);\n \n public slots:\n     void clear();"
+      }
+    ]
+  }
+]

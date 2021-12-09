@@ -1,0 +1,301 @@
+[
+  {
+    "sha": "dc42bf52c12e197984b20392bad26aa4303ab72f",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkYzQyYmY1MmMxMmUxOTc5ODRiMjAzOTJiYWQyNmFhNDMwM2FiNzJm",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jeff@garzik.org",
+        "date": "2012-04-15T03:55:05Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2012-04-20T23:20:05Z"
+      },
+      "message": "Encapsulate RPC command dispatch in an array of CRPCCommand's",
+      "tree": {
+        "sha": "7dff7cb0bb919d229b1a94a9d2913ff488769bc1",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/7dff7cb0bb919d229b1a94a9d2913ff488769bc1"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/dc42bf52c12e197984b20392bad26aa4303ab72f",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/dc42bf52c12e197984b20392bad26aa4303ab72f",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/dc42bf52c12e197984b20392bad26aa4303ab72f",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/dc42bf52c12e197984b20392bad26aa4303ab72f/comments",
+    "author": null,
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "00b9c0f4b20f6eb714fa55eb00df326a6f74fd10",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/00b9c0f4b20f6eb714fa55eb00df326a6f74fd10",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/00b9c0f4b20f6eb714fa55eb00df326a6f74fd10"
+      }
+    ],
+    "stats": {
+      "total": 173,
+      "additions": 89,
+      "deletions": 84
+    },
+    "files": [
+      {
+        "sha": "4dfb61bf840a363f12fb9a78fb11f11b72ee0bc6",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 89,
+        "deletions": 84,
+        "changes": 173,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/dc42bf52c12e197984b20392bad26aa4303ab72f/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/dc42bf52c12e197984b20392bad26aa4303ab72f/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=dc42bf52c12e197984b20392bad26aa4303ab72f",
+        "patch": "@@ -38,7 +38,16 @@ using namespace json_spirit;\n \n void ThreadRPCServer2(void* parg);\n typedef Value(*rpcfn_type)(const Array& params, bool fHelp);\n-extern map<string, rpcfn_type> mapCallTable;\n+\n+class CRPCCommand\n+{\n+public:\n+    string name;\n+    rpcfn_type actor;\n+    bool okSafeMode;\n+};\n+\n+extern map<string, CRPCCommand*> mapCommands;\n \n static std::string strRPCUserColonPass;\n \n@@ -182,9 +191,10 @@ Value help(const Array& params, bool fHelp)\n \n     string strRet;\n     set<rpcfn_type> setDone;\n-    for (map<string, rpcfn_type>::iterator mi = mapCallTable.begin(); mi != mapCallTable.end(); ++mi)\n+    for (map<string, CRPCCommand*>::iterator mi = mapCommands.begin(); mi != mapCommands.end(); ++mi)\n     {\n-        string strMethod = (*mi).first;\n+        CRPCCommand *pcmd = mi->second;\n+        string strMethod = mi->first;\n         // We already filter duplicates, but these deprecated screw up the sort order\n         if (strMethod == \"getamountreceived\" ||\n             strMethod == \"getallreceived\" ||\n@@ -196,7 +206,7 @@ Value help(const Array& params, bool fHelp)\n         try\n         {\n             Array params;\n-            rpcfn_type pfn = (*mi).second;\n+            rpcfn_type pfn = pcmd->actor;\n             if (setDone.insert(pfn).second)\n                 (*pfn)(params, true);\n         }\n@@ -2003,85 +2013,76 @@ Value getblock(const Array& params, bool fHelp)\n // Call Table\n //\n \n-pair<string, rpcfn_type> pCallTable[] =\n-{\n-    make_pair(\"help\",                   &help),\n-    make_pair(\"stop\",                   &stop),\n-    make_pair(\"getblockcount\",          &getblockcount),\n-    make_pair(\"getblocknumber\",         &getblocknumber),\n-    make_pair(\"getconnectioncount\",     &getconnectioncount),\n-    make_pair(\"getdifficulty\",          &getdifficulty),\n-    make_pair(\"getgenerate\",            &getgenerate),\n-    make_pair(\"setgenerate\",            &setgenerate),\n-    make_pair(\"gethashespersec\",        &gethashespersec),\n-    make_pair(\"getinfo\",                &getinfo),\n-    make_pair(\"getmininginfo\",          &getmininginfo),\n-    make_pair(\"getnewaddress\",          &getnewaddress),\n-    make_pair(\"getaccountaddress\",      &getaccountaddress),\n-    make_pair(\"setaccount\",             &setaccount),\n-    make_pair(\"getaccount\",             &getaccount),\n-    make_pair(\"getaddressesbyaccount\",  &getaddressesbyaccount),\n-    make_pair(\"sendtoaddress\",          &sendtoaddress),\n-    make_pair(\"getreceivedbyaddress\",   &getreceivedbyaddress),\n-    make_pair(\"getreceivedbyaccount\",   &getreceivedbyaccount),\n-    make_pair(\"listreceivedbyaddress\",  &listreceivedbyaddress),\n-    make_pair(\"listreceivedbyaccount\",  &listreceivedbyaccount),\n-    make_pair(\"backupwallet\",           &backupwallet),\n-    make_pair(\"keypoolrefill\",          &keypoolrefill),\n-    make_pair(\"walletpassphrase\",       &walletpassphrase),\n-    make_pair(\"walletpassphrasechange\", &walletpassphrasechange),\n-    make_pair(\"walletlock\",             &walletlock),\n-    make_pair(\"encryptwallet\",          &encryptwallet),\n-    make_pair(\"validateaddress\",        &validateaddress),\n-    make_pair(\"getbalance\",             &getbalance),\n-    make_pair(\"move\",                   &movecmd),\n-    make_pair(\"sendfrom\",               &sendfrom),\n-    make_pair(\"sendmany\",               &sendmany),\n-    make_pair(\"addmultisigaddress\",     &addmultisigaddress),\n-    make_pair(\"getblock\",               &getblock),\n-    make_pair(\"getblockhash\",           &getblockhash),\n-    make_pair(\"gettransaction\",         &gettransaction),\n-    make_pair(\"listtransactions\",       &listtransactions),\n-    make_pair(\"signmessage\",            &signmessage),\n-    make_pair(\"verifymessage\",          &verifymessage),\n-    make_pair(\"getwork\",                &getwork),\n-    make_pair(\"listaccounts\",           &listaccounts),\n-    make_pair(\"settxfee\",               &settxfee),\n-    make_pair(\"getmemorypool\",          &getmemorypool),\n-    make_pair(\"listsinceblock\",         &listsinceblock),\n-    make_pair(\"dumpprivkey\",            &dumpprivkey),\n-    make_pair(\"importprivkey\",          &importprivkey)\n-};\n-map<string, rpcfn_type> mapCallTable(pCallTable, pCallTable + sizeof(pCallTable)/sizeof(pCallTable[0]));\n-\n-string pAllowInSafeMode[] =\n-{\n-    \"help\",\n-    \"stop\",\n-    \"getblockcount\",\n-    \"getblocknumber\",  // deprecated\n-    \"getconnectioncount\",\n-    \"getdifficulty\",\n-    \"getgenerate\",\n-    \"setgenerate\",\n-    \"gethashespersec\",\n-    \"getinfo\",\n-    \"getmininginfo\",\n-    \"getnewaddress\",\n-    \"getaccountaddress\",\n-    \"getaccount\",\n-    \"getaddressesbyaccount\",\n-    \"backupwallet\",\n-    \"keypoolrefill\",\n-    \"walletpassphrase\",\n-    \"walletlock\",\n-    \"validateaddress\",\n-    \"getwork\",\n-    \"getmemorypool\",\n+\n+static CRPCCommand vRPCCommands[] =\n+{ //  name                      function                 safe mode?\n+  //  ------------------------  -----------------------  ----------\n+    { \"help\",                   &help,                   true },\n+    { \"stop\",                   &stop,                   true },\n+    { \"getblockcount\",          &getblockcount,          true },\n+    { \"getblocknumber\",         &getblocknumber,         true },\n+    { \"getconnectioncount\",     &getconnectioncount,     true },\n+    { \"getdifficulty\",          &getdifficulty,          true },\n+    { \"getgenerate\",            &getgenerate,            true },\n+    { \"setgenerate\",            &setgenerate,            true },\n+    { \"gethashespersec\",        &gethashespersec,        true },\n+    { \"getinfo\",                &getinfo,                true },\n+    { \"getmininginfo\",          &getmininginfo,          true },\n+    { \"getnewaddress\",          &getnewaddress,          true },\n+    { \"getaccountaddress\",      &getaccountaddress,      true },\n+    { \"setaccount\",             &setaccount,             true },\n+    { \"getaccount\",             &getaccount,             false },\n+    { \"getaddressesbyaccount\",  &getaddressesbyaccount,  true },\n+    { \"sendtoaddress\",          &sendtoaddress,          false },\n+    { \"getreceivedbyaddress\",   &getreceivedbyaddress,   false },\n+    { \"getreceivedbyaccount\",   &getreceivedbyaccount,   false },\n+    { \"listreceivedbyaddress\",  &listreceivedbyaddress,  false },\n+    { \"listreceivedbyaccount\",  &listreceivedbyaccount,  false },\n+    { \"backupwallet\",           &backupwallet,           true },\n+    { \"keypoolrefill\",          &keypoolrefill,          true },\n+    { \"walletpassphrase\",       &walletpassphrase,       true },\n+    { \"walletpassphrasechange\", &walletpassphrasechange, false },\n+    { \"walletlock\",             &walletlock,             true },\n+    { \"encryptwallet\",          &encryptwallet,          false },\n+    { \"validateaddress\",        &validateaddress,        true },\n+    { \"getbalance\",             &getbalance,             false },\n+    { \"move\",                   &movecmd,                false },\n+    { \"sendfrom\",               &sendfrom,               false },\n+    { \"sendmany\",               &sendmany,               false },\n+    { \"addmultisigaddress\",     &addmultisigaddress,     false },\n+    { \"getblock\",               &getblock,               false },\n+    { \"getblockhash\",           &getblockhash,           false },\n+    { \"gettransaction\",         &gettransaction,         false },\n+    { \"listtransactions\",       &listtransactions,       false },\n+    { \"signmessage\",            &signmessage,            false },\n+    { \"verifymessage\",          &verifymessage,          false },\n+    { \"getwork\",                &getwork,                true },\n+    { \"listaccounts\",           &listaccounts,           false },\n+    { \"settxfee\",               &settxfee,               false },\n+    { \"getmemorypool\",          &getmemorypool,          true },\n+    { \"listsinceblock\",         &listsinceblock,         false },\n+    { \"dumpprivkey\",            &dumpprivkey,            false },\n+    { \"importprivkey\",          &importprivkey,          false },\n };\n-set<string> setAllowInSafeMode(pAllowInSafeMode, pAllowInSafeMode + sizeof(pAllowInSafeMode)/sizeof(pAllowInSafeMode[0]));\n \n+map<string, CRPCCommand*> mapCommands;\n+\n+static void RegisterRPCCommands()\n+{\n+    static bool registered = false;\n+    if (registered)\n+        return;\n+    registered = true;\n+\n+    unsigned int vcidx;\n+    for (vcidx = 0; vcidx < (sizeof(vRPCCommands) / sizeof(vRPCCommands[0])); vcidx++)\n+    {\n+        CRPCCommand *pcmd;\n \n+        pcmd = &vRPCCommands[vcidx];\n+        mapCommands[pcmd->name] = pcmd;\n+    }\n+}\n \n \n //\n@@ -2362,6 +2363,8 @@ void ThreadRPCServer2(void* parg)\n {\n     printf(\"ThreadRPCServer started\\n\");\n \n+    RegisterRPCCommands();\n+\n     strRPCUserColonPass = mapArgs[\"-rpcuser\"] + \":\" + mapArgs[\"-rpcpassword\"];\n     if (mapArgs[\"-rpcpassword\"] == \"\")\n     {\n@@ -2513,13 +2516,15 @@ void ThreadRPCServer2(void* parg)\n                 throw JSONRPCError(-32600, \"Params must be an array\");\n \n             // Find method\n-            map<string, rpcfn_type>::iterator mi = mapCallTable.find(strMethod);\n-            if (mi == mapCallTable.end())\n+            if (!mapCommands.count(strMethod))\n                 throw JSONRPCError(-32601, \"Method not found\");\n \n+            CRPCCommand *pcmd = mapCommands[strMethod];\n+\n             // Observe safe mode\n             string strWarning = GetWarnings(\"rpc\");\n-            if (strWarning != \"\" && !GetBoolArg(\"-disablesafemode\") && !setAllowInSafeMode.count(strMethod))\n+            if (strWarning != \"\" && !GetBoolArg(\"-disablesafemode\") &&\n+                !pcmd->okSafeMode)\n                 throw JSONRPCError(-2, string(\"Safe mode: \") + strWarning);\n \n             try\n@@ -2528,7 +2533,7 @@ void ThreadRPCServer2(void* parg)\n                 Value result;\n                 {\n                     LOCK2(cs_main, pwalletMain->cs_wallet);\n-                    result = (*(*mi).second)(params, false);\n+                    result = pcmd->actor(params, false);\n                 }\n \n                 // Send reply"
+      }
+    ]
+  },
+  {
+    "sha": "9862229d4d852279b937c18cdbe076418585844e",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5ODYyMjI5ZDRkODUyMjc5YjkzN2MxOGNkYmUwNzY0MTg1ODU4NDRl",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2012-04-18T20:42:17Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2012-04-20T23:20:05Z"
+      },
+      "message": "Encapsulate mapCommands in class CRPCTable",
+      "tree": {
+        "sha": "77882eb602d8e65a6abcba45689978bb4e42a60e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/77882eb602d8e65a6abcba45689978bb4e42a60e"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/9862229d4d852279b937c18cdbe076418585844e",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9862229d4d852279b937c18cdbe076418585844e",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/9862229d4d852279b937c18cdbe076418585844e",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9862229d4d852279b937c18cdbe076418585844e/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "dc42bf52c12e197984b20392bad26aa4303ab72f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/dc42bf52c12e197984b20392bad26aa4303ab72f",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/dc42bf52c12e197984b20392bad26aa4303ab72f"
+      }
+    ],
+    "stats": {
+      "total": 65,
+      "additions": 38,
+      "deletions": 27
+    },
+    "files": [
+      {
+        "sha": "24b122077083a4395ac85e37cea41e397a1c76cb",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 38,
+        "deletions": 27,
+        "changes": 65,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9862229d4d852279b937c18cdbe076418585844e/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9862229d4d852279b937c18cdbe076418585844e/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=9862229d4d852279b937c18cdbe076418585844e",
+        "patch": "@@ -47,7 +47,17 @@ class CRPCCommand\n     bool okSafeMode;\n };\n \n-extern map<string, CRPCCommand*> mapCommands;\n+class CRPCTable\n+{\n+private:\n+    map<string, const CRPCCommand*> mapCommands;\n+public:\n+    CRPCTable();\n+    const CRPCCommand* operator[](string name) const;\n+    string help(string name) const;\n+};\n+\n+const CRPCTable tableRPC;\n \n static std::string strRPCUserColonPass;\n \n@@ -177,23 +187,13 @@ Object blockToJSON(const CBlock& block, const CBlockIndex* blockindex)\n /// Note: This interface may still be subject to change.\n ///\n \n-\n-Value help(const Array& params, bool fHelp)\n+string CRPCTable::help(string strCommand) const\n {\n-    if (fHelp || params.size() > 1)\n-        throw runtime_error(\n-            \"help [command]\\n\"\n-            \"List commands, or get help for a command.\");\n-\n-    string strCommand;\n-    if (params.size() > 0)\n-        strCommand = params[0].get_str();\n-\n     string strRet;\n     set<rpcfn_type> setDone;\n-    for (map<string, CRPCCommand*>::iterator mi = mapCommands.begin(); mi != mapCommands.end(); ++mi)\n+    for (map<string, const CRPCCommand*>::const_iterator mi = mapCommands.begin(); mi != mapCommands.end(); ++mi)\n     {\n-        CRPCCommand *pcmd = mi->second;\n+        const CRPCCommand *pcmd = mi->second;\n         string strMethod = mi->first;\n         // We already filter duplicates, but these deprecated screw up the sort order\n         if (strMethod == \"getamountreceived\" ||\n@@ -226,6 +226,20 @@ Value help(const Array& params, bool fHelp)\n     return strRet;\n }\n \n+Value help(const Array& params, bool fHelp)\n+{\n+    if (fHelp || params.size() > 1)\n+        throw runtime_error(\n+            \"help [command]\\n\"\n+            \"List commands, or get help for a command.\");\n+\n+    string strCommand;\n+    if (params.size() > 0)\n+        strCommand = params[0].get_str();\n+\n+    return tableRPC.help(strCommand);\n+}\n+\n \n Value stop(const Array& params, bool fHelp)\n {\n@@ -2065,15 +2079,8 @@ static CRPCCommand vRPCCommands[] =\n     { \"importprivkey\",          &importprivkey,          false },\n };\n \n-map<string, CRPCCommand*> mapCommands;\n-\n-static void RegisterRPCCommands()\n+CRPCTable::CRPCTable()\n {\n-    static bool registered = false;\n-    if (registered)\n-        return;\n-    registered = true;\n-\n     unsigned int vcidx;\n     for (vcidx = 0; vcidx < (sizeof(vRPCCommands) / sizeof(vRPCCommands[0])); vcidx++)\n     {\n@@ -2084,6 +2091,13 @@ static void RegisterRPCCommands()\n     }\n }\n \n+const CRPCCommand *CRPCTable::operator[](string name) const\n+{\n+    map<string, const CRPCCommand*>::const_iterator it = mapCommands.find(name);\n+    if (it == mapCommands.end())\n+        return NULL;\n+    return (*it).second;\n+}\n \n //\n // HTTP protocol\n@@ -2363,8 +2377,6 @@ void ThreadRPCServer2(void* parg)\n {\n     printf(\"ThreadRPCServer started\\n\");\n \n-    RegisterRPCCommands();\n-\n     strRPCUserColonPass = mapArgs[\"-rpcuser\"] + \":\" + mapArgs[\"-rpcpassword\"];\n     if (mapArgs[\"-rpcpassword\"] == \"\")\n     {\n@@ -2516,11 +2528,10 @@ void ThreadRPCServer2(void* parg)\n                 throw JSONRPCError(-32600, \"Params must be an array\");\n \n             // Find method\n-            if (!mapCommands.count(strMethod))\n+            const CRPCCommand *pcmd = tableRPC[strMethod];\n+            if (!pcmd)\n                 throw JSONRPCError(-32601, \"Method not found\");\n \n-            CRPCCommand *pcmd = mapCommands[strMethod];\n-\n             // Observe safe mode\n             string strWarning = GetWarnings(\"rpc\");\n             if (strWarning != \"\" && !GetBoolArg(\"-disablesafemode\") &&"
+      }
+    ]
+  },
+  {
+    "sha": "e46704dd904192d8731eae1226805252e5252a0e",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplNDY3MDRkZDkwNDE5MmQ4NzMxZWFlMTIyNjgwNTI1MmU1MjUyYTBl",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2012-04-20T23:37:34Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2012-04-20T23:37:34Z"
+      },
+      "message": "Expose CRPCTable via bitcoinrpc.h for testing",
+      "tree": {
+        "sha": "f666357cc03a91c4be20331983c335d1ad603ad2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f666357cc03a91c4be20331983c335d1ad603ad2"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/e46704dd904192d8731eae1226805252e5252a0e",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e46704dd904192d8731eae1226805252e5252a0e",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/e46704dd904192d8731eae1226805252e5252a0e",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e46704dd904192d8731eae1226805252e5252a0e/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "9862229d4d852279b937c18cdbe076418585844e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9862229d4d852279b937c18cdbe076418585844e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/9862229d4d852279b937c18cdbe076418585844e"
+      }
+    ],
+    "stats": {
+      "total": 74,
+      "additions": 41,
+      "deletions": 33
+    },
+    "files": [
+      {
+        "sha": "206347faf87c4a63ccda55f9dcbcc4c188dc7eb6",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 26,
+        "changes": 31,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e46704dd904192d8731eae1226805252e5252a0e/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e46704dd904192d8731eae1226805252e5252a0e/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=e46704dd904192d8731eae1226805252e5252a0e",
+        "patch": "@@ -10,6 +10,7 @@\n #include \"net.h\"\n #include \"init.h\"\n #include \"ui_interface.h\"\n+#include \"bitcoinrpc.h\"\n \n #undef printf\n #include <boost/asio.hpp>\n@@ -22,9 +23,6 @@\n #include <boost/filesystem/fstream.hpp>\n typedef boost::asio::ssl::stream<boost::asio::ip::tcp::socket> SSLStream;\n \n-#include \"json/json_spirit_reader_template.h\"\n-#include \"json/json_spirit_writer_template.h\"\n-#include \"json/json_spirit_utils.h\"\n #define printf OutputDebugStringF\n // MinGW 3.4.5 gets \"fatal error: had to relocate PCH\" if the json headers are\n // precompiled in headers.h.  The problem might be when the pch file goes over\n@@ -37,27 +35,6 @@ using namespace boost::asio;\n using namespace json_spirit;\n \n void ThreadRPCServer2(void* parg);\n-typedef Value(*rpcfn_type)(const Array& params, bool fHelp);\n-\n-class CRPCCommand\n-{\n-public:\n-    string name;\n-    rpcfn_type actor;\n-    bool okSafeMode;\n-};\n-\n-class CRPCTable\n-{\n-private:\n-    map<string, const CRPCCommand*> mapCommands;\n-public:\n-    CRPCTable();\n-    const CRPCCommand* operator[](string name) const;\n-    string help(string name) const;\n-};\n-\n-const CRPCTable tableRPC;\n \n static std::string strRPCUserColonPass;\n \n@@ -2028,7 +2005,7 @@ Value getblock(const Array& params, bool fHelp)\n //\n \n \n-static CRPCCommand vRPCCommands[] =\n+static const CRPCCommand vRPCCommands[] =\n { //  name                      function                 safe mode?\n   //  ------------------------  -----------------------  ----------\n     { \"help\",                   &help,                   true },\n@@ -2084,7 +2061,7 @@ CRPCTable::CRPCTable()\n     unsigned int vcidx;\n     for (vcidx = 0; vcidx < (sizeof(vRPCCommands) / sizeof(vRPCCommands[0])); vcidx++)\n     {\n-        CRPCCommand *pcmd;\n+        const CRPCCommand *pcmd;\n \n         pcmd = &vRPCCommands[vcidx];\n         mapCommands[pcmd->name] = pcmd;\n@@ -2785,3 +2762,5 @@ int main(int argc, char *argv[])\n     return 0;\n }\n #endif\n+\n+const CRPCTable tableRPC;"
+      },
+      {
+        "sha": "6b7293ed19b3b1ecb0e78fc03f698649d5cacb2e",
+        "filename": "src/bitcoinrpc.h",
+        "status": "modified",
+        "additions": 34,
+        "deletions": 0,
+        "changes": 34,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e46704dd904192d8731eae1226805252e5252a0e/src/bitcoinrpc.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e46704dd904192d8731eae1226805252e5252a0e/src/bitcoinrpc.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.h?ref=e46704dd904192d8731eae1226805252e5252a0e",
+        "patch": "@@ -3,5 +3,39 @@\n // Distributed under the MIT/X11 software license, see the accompanying\n // file license.txt or http://www.opensource.org/licenses/mit-license.php.\n \n+#ifndef _BITCOINRPC_H_\n+#define _BITCOINRPC_H_ 1\n+\n+#include <string>\n+#include <map>\n+\n+#include \"json/json_spirit_reader_template.h\"\n+#include \"json/json_spirit_writer_template.h\"\n+#include \"json/json_spirit_utils.h\"\n+\n void ThreadRPCServer(void* parg);\n int CommandLineRPC(int argc, char *argv[]);\n+\n+typedef json_spirit::Value(*rpcfn_type)(const json_spirit::Array& params, bool fHelp);\n+\n+class CRPCCommand\n+{\n+public:\n+    std::string name;\n+    rpcfn_type actor;\n+    bool okSafeMode;\n+};\n+\n+class CRPCTable\n+{\n+private:\n+    std::map<std::string, const CRPCCommand*> mapCommands;\n+public:\n+    CRPCTable();\n+    const CRPCCommand* operator[](std::string name) const;\n+    std::string help(std::string name) const;\n+};\n+\n+extern const CRPCTable tableRPC;\n+\n+#endif"
+      },
+      {
+        "sha": "7a438e5d51de80148b64b440bf3108e9422256f2",
+        "filename": "src/test/rpc_tests.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 7,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e46704dd904192d8731eae1226805252e5252a0e/src/test/rpc_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e46704dd904192d8731eae1226805252e5252a0e/src/test/rpc_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/rpc_tests.cpp?ref=e46704dd904192d8731eae1226805252e5252a0e",
+        "patch": "@@ -3,16 +3,11 @@\n \n #include \"base58.h\"\n #include \"util.h\"\n-#include \"json/json_spirit_reader_template.h\"\n-#include \"json/json_spirit_writer_template.h\"\n-#include \"json/json_spirit_utils.h\"\n+#include \"bitcoinrpc.h\"\n \n using namespace std;\n using namespace json_spirit;\n \n-typedef Value(*rpcfn_type)(const Array& params, bool fHelp);\n-extern map<string, rpcfn_type> mapCallTable;\n-\n BOOST_AUTO_TEST_SUITE(rpc_tests)\n \n static Array\n@@ -36,7 +31,7 @@ struct TestNetFixture\n \n BOOST_FIXTURE_TEST_CASE(rpc_addmultisig, TestNetFixture)\n {\n-    rpcfn_type addmultisig = mapCallTable[\"addmultisigaddress\"];\n+    rpcfn_type addmultisig = tableRPC[\"addmultisigaddress\"]->actor;\n \n     // old, 65-byte-long:\n     const char* address1Hex = \"0434e3e09f49ea168c5bbf53f877ff4206923858aab7c7e1df25bc263978107c95e35065a27ef6f1b27222db0ec97e0e895eaca603d3ee0d4c060ce3d8a00286c8\";"
+      }
+    ]
+  }
+]

@@ -1,0 +1,98 @@
+[
+  {
+    "sha": "40c485aeb4f4bf2cb084ca1f893ec09c8be92832",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0MGM0ODVhZWI0ZjRiZjJjYjA4NGNhMWY4OTNlYzA5YzhiZTkyODMy",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-06-24T00:26:43Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-06-24T00:26:43Z"
+      },
+      "message": "RPC: add 'getnetstats' op, to return data on messages and peers\n\nThe returned data is\n\n1. Per-message arrays.\n\n   Index 0 is total number of $ThisType messages\n   received since program start (or uint64 counter wrap).\n\n   Index 1 is total byte count since program start (or uint64\n   counter wrap).\n\n   They are returned as strings due to unfortunate JSON implementations\n   in the field that do not handle unquoted uint64 numbers correctly.\n\n2. Peer information.  Returns number of inbound, outbound and total peers.\n   Total peer count is equivalent to RPC 'getconnectioncount'.",
+      "tree": {
+        "sha": "dbcde3751ff6d4af65c434ba740463c97daa2385",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/dbcde3751ff6d4af65c434ba740463c97daa2385"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/40c485aeb4f4bf2cb084ca1f893ec09c8be92832",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/40c485aeb4f4bf2cb084ca1f893ec09c8be92832",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/40c485aeb4f4bf2cb084ca1f893ec09c8be92832",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/40c485aeb4f4bf2cb084ca1f893ec09c8be92832/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "d62a1947be5350ed60066ccacc7aba43bbdf48fb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d62a1947be5350ed60066ccacc7aba43bbdf48fb",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/d62a1947be5350ed60066ccacc7aba43bbdf48fb"
+      }
+    ],
+    "stats": {
+      "total": 73,
+      "additions": 73,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "1fa7ec2d583b649a75aef0591c6415a542ed244c",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 31,
+        "deletions": 0,
+        "changes": 31,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/40c485aeb4f4bf2cb084ca1f893ec09c8be92832/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/40c485aeb4f4bf2cb084ca1f893ec09c8be92832/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=40c485aeb4f4bf2cb084ca1f893ec09c8be92832",
+        "patch": "@@ -2284,7 +2284,37 @@ Value sendrawtx(const Array& params, bool fHelp)\n     return tx.GetHash().GetHex();\n }\n \n+Value getnetstats(const Array& params, bool fHelp)\n+{\n+    if (fHelp || params.size() != 0)\n+        throw runtime_error(\n+            \"getnetstats\\n\"\n+            \"Obtain various network node statistics.\");\n+\n+    LOCK(netstats.cs);\n+    Object ret, ret_cmd, ret_peers;\n+\n+    for (map<string, uint64>::const_iterator mi = netstats.mapCmdCount.begin(); mi != netstats.mapCmdCount.end(); ++mi) {\n+        Array a;\n+        string strCommand = (*mi).first;\n+\n+        a.resize(2);\n+        a[0] = strprintf(\"%\"PRI64u, netstats.mapCmdCount[strCommand]);\n+        a[1] = strprintf(\"%\"PRI64u, netstats.mapCmdBytes[strCommand]);\n \n+        ret_cmd.push_back(Pair(strCommand, a));\n+    }\n+\n+    netstats.countPeers();\n+    ret_peers.push_back(Pair(\"connected\", (int)netstats.nConn));\n+    ret_peers.push_back(Pair(\"inbound\", (int)netstats.nInbound));\n+    ret_peers.push_back(Pair(\"outbound\", (int)netstats.nOutbound));\n+\n+    ret.push_back(Pair(\"messages\", ret_cmd));\n+    ret.push_back(Pair(\"peers\", ret_peers));\n+\n+    return ret;\n+}\n \n \n \n@@ -2349,6 +2379,7 @@ static const CRPCCommand vRPCCommands[] =\n     { \"dumpprivkey\",            &dumpprivkey,            false },\n     { \"importprivkey\",          &importprivkey,          false },\n     { \"sendrawtx\",              &sendrawtx,              false },\n+    { \"getnetstats\",            &getnetstats,            true },\n };\n \n CRPCTable::CRPCTable()"
+      },
+      {
+        "sha": "9cae86452b421f61312eb33259a4ee69cff1cd13",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/40c485aeb4f4bf2cb084ca1f893ec09c8be92832/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/40c485aeb4f4bf2cb084ca1f893ec09c8be92832/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=40c485aeb4f4bf2cb084ca1f893ec09c8be92832",
+        "patch": "@@ -2967,6 +2967,9 @@ bool ProcessMessages(CNode* pfrom)\n         CDataStream vMsg(vRecv.begin(), vRecv.begin() + nMessageSize, vRecv.nType, vRecv.nVersion);\n         vRecv.ignore(nMessageSize);\n \n+        // Collect statistics\n+        netstats.msg(strCommand, nHeaderSize + nMessageSize);\n+\n         // Process message\n         bool fRet = false;\n         try"
+      },
+      {
+        "sha": "615f68c6578b7d1b056151cdea70ea18d059cd1e",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 0,
+        "changes": 16,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/40c485aeb4f4bf2cb084ca1f893ec09c8be92832/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/40c485aeb4f4bf2cb084ca1f893ec09c8be92832/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=40c485aeb4f4bf2cb084ca1f893ec09c8be92832",
+        "patch": "@@ -59,6 +59,7 @@ uint64 nLocalHostNonce = 0;\n array<int, THREAD_MAX> vnThreadsRunning;\n static std::vector<SOCKET> vhListenSocket;\n CAddrMan addrman;\n+CNetStats netstats;\n \n vector<CNode*> vNodes;\n CCriticalSection cs_vNodes;\n@@ -1949,3 +1950,18 @@ class CNetCleanup\n     }\n }\n instance_of_cnetcleanup;\n+\n+\n+void CNetStats::countPeers()\n+{\n+    nInbound = nOutbound = 0;\n+\n+    LOCK(cs_vNodes);\n+    nConn = vNodes.size();\n+    BOOST_FOREACH(CNode* pnode, vNodes) {\n+        if (pnode->fInbound)\n+            nInbound++;\n+        else\n+            nOutbound++;\n+    }\n+}"
+      },
+      {
+        "sha": "c962d937aee26165e0bb886e36e1bca64dcaf5f7",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 23,
+        "deletions": 0,
+        "changes": 23,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/40c485aeb4f4bf2cb084ca1f893ec09c8be92832/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/40c485aeb4f4bf2cb084ca1f893ec09c8be92832/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=40c485aeb4f4bf2cb084ca1f893ec09c8be92832",
+        "patch": "@@ -667,4 +667,27 @@ inline void RelayMessage<>(const CInv& inv, const CDataStream& ss)\n }\n \n \n+\n+\n+\n+class CNetStats\n+{\n+public:\n+    std::map<std::string, uint64> mapCmdCount;\n+    std::map<std::string, uint64> mapCmdBytes;\n+    mutable CCriticalSection cs;\n+\n+    unsigned int nConn, nInbound, nOutbound;\n+\n+    void msg(std::string strCommand, unsigned long msgSize)\n+    {\n+       LOCK(cs);\n+       mapCmdCount[strCommand]++;\n+       mapCmdBytes[strCommand] += msgSize;\n+    }\n+    void countPeers();\n+};\n+\n+extern CNetStats netstats;\n+\n #endif"
+      }
+    ]
+  }
+]

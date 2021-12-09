@@ -1,0 +1,1490 @@
+[
+  {
+    "sha": "877e3af8bac76c00bc060943649debdab40e0344",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4NzdlM2FmOGJhYzc2YzAwYmMwNjA5NDM2NDlkZWJkYWI0MGUwMzQ0",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-05-29T15:15:38Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-10T20:20:42Z"
+      },
+      "message": "Add a CHub for communication from p2p/wallet to blockstore.\n\nThe goal is for p2p code/wallet to only get information/communicate\ninformation about the blockchain through CHub, giving Bitcoin a\nmuch more clearly-defined structure and allowing for the removal\nof a ton of the current global mess.",
+      "tree": {
+        "sha": "5749ad1ee14d33fcde07f1e3dcf573860cac57a4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/5749ad1ee14d33fcde07f1e3dcf573860cac57a4"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/877e3af8bac76c00bc060943649debdab40e0344",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/877e3af8bac76c00bc060943649debdab40e0344",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/877e3af8bac76c00bc060943649debdab40e0344",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/877e3af8bac76c00bc060943649debdab40e0344/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "883a310904b3d36c9d74b887d47c14a072ebae7d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/883a310904b3d36c9d74b887d47c14a072ebae7d",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/883a310904b3d36c9d74b887d47c14a072ebae7d"
+      }
+    ],
+    "stats": {
+      "total": 128,
+      "additions": 128,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "68a01ad4312a8d4c629fc24d4dbd8749cd3eadf6",
+        "filename": "bitcoin-qt.pro",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/877e3af8bac76c00bc060943649debdab40e0344/bitcoin-qt.pro",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/877e3af8bac76c00bc060943649debdab40e0344/bitcoin-qt.pro",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/bitcoin-qt.pro?ref=877e3af8bac76c00bc060943649debdab40e0344",
+        "patch": "@@ -115,6 +115,7 @@ HEADERS += src/qt/bitcoingui.h \\\n     src/serialize.h \\\n     src/strlcpy.h \\\n     src/main.h \\\n+    src/hub.h \\\n     src/net.h \\\n     src/key.h \\\n     src/db.h \\\n@@ -180,6 +181,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \\\n     src/key.cpp \\\n     src/script.cpp \\\n     src/main.cpp \\\n+    src/hub.cpp \\\n     src/init.cpp \\\n     src/net.cpp \\\n     src/irc.cpp \\"
+      },
+      {
+        "sha": "4e60a2336de89aa4f6e41b0c6576289865d6f4c0",
+        "filename": "src/hub.cpp",
+        "status": "added",
+        "additions": 61,
+        "deletions": 0,
+        "changes": 61,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/877e3af8bac76c00bc060943649debdab40e0344/src/hub.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/877e3af8bac76c00bc060943649debdab40e0344/src/hub.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/hub.cpp?ref=877e3af8bac76c00bc060943649debdab40e0344",
+        "patch": "@@ -0,0 +1,61 @@\n+#include \"hub.h\"\n+#include \"main.h\"\n+\n+CHub* phub;\n+\n+void CHub::ProcessCallbacks()\n+{\n+    {\n+        LOCK(cs_callbacks);\n+        if (fProcessCallbacks)\n+            nCallbackThreads++;\n+        else\n+            return;\n+    }\n+\n+    loop\n+    {\n+        CHubCallback *pcallback = NULL;\n+        sem_callbacks.wait();\n+        if (fProcessCallbacks)\n+        {\n+            LOCK(cs_callbacks);\n+            assert(queueCallbacks.size() > 0);\n+            pcallback = queueCallbacks.front();\n+            queueCallbacks.pop();\n+        }\n+        else\n+        {\n+            LOCK(cs_callbacks);\n+            nCallbackThreads--;\n+            return;\n+        }\n+\n+        pcallback->Signal(sigtable);\n+        delete pcallback;\n+    }\n+}\n+\n+void CHub::StopProcessCallbacks()\n+{\n+    {\n+        LOCK(cs_callbacks);\n+        fProcessCallbacks = false;\n+        for (int i = 0; i < nCallbackThreads; i++)\n+            sem_callbacks.post();\n+    }\n+    while (nCallbackThreads > 0)\n+        Sleep(20);\n+}\n+\n+void ProcessCallbacks(void* parg)\n+{\n+    ((CHub*)parg)->ProcessCallbacks();\n+}\n+\n+CHub::CHub() : sem_callbacks(0), fProcessCallbacks(true), nCallbackThreads(0)\n+{\n+    for (int i = 0; i < GetArg(\"-callbackconcurrency\", 1); i++)\n+        if (!CreateThread(::ProcessCallbacks, this))\n+            throw std::runtime_error(\"Couldn't create callback threads\");\n+}"
+      },
+      {
+        "sha": "68b926ca620d7bc7e459399825c80e2cc6757773",
+        "filename": "src/hub.h",
+        "status": "added",
+        "additions": 53,
+        "deletions": 0,
+        "changes": 53,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/877e3af8bac76c00bc060943649debdab40e0344/src/hub.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/877e3af8bac76c00bc060943649debdab40e0344/src/hub.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/hub.h?ref=877e3af8bac76c00bc060943649debdab40e0344",
+        "patch": "@@ -0,0 +1,53 @@\n+#ifndef BITCOIN_HUB_H\n+#define BITCOIN_HUB_H\n+\n+// This API is considered stable ONLY for existing bitcoin codebases,\n+// any futher uses are not yet supported.\n+// This API is subject to change dramatically overnight, do not\n+// depend on it for anything.\n+\n+#include <boost/signals2/signal.hpp>\n+#include <queue>\n+\n+#include \"sync.h\"\n+\n+class CBlock;\n+\n+class CHubSignalTable\n+{\n+public:\n+};\n+\n+class CHubCallback\n+{\n+public:\n+    virtual ~CHubCallback() {};\n+    virtual void Signal(CHubSignalTable& sigtable) =0;\n+};\n+\n+class CHub\n+{\n+private:\n+    CHubSignalTable sigtable;\n+\n+    CCriticalSection cs_callbacks;\n+    std::queue<CHubCallback*> queueCallbacks;\n+    CSemaphore sem_callbacks;\n+\n+    bool fProcessCallbacks;\n+    int nCallbackThreads;\n+\n+public:\n+//Util methods\n+    // Loops to process callbacks (do not call manually, automatically started in the constructor)\n+        void ProcessCallbacks();\n+    // Stop callback processing threads \n+    void StopProcessCallbacks();\n+\n+    CHub();\n+    ~CHub()  { StopProcessCallbacks(); }\n+};\n+\n+extern CHub* phub;\n+\n+#endif"
+      },
+      {
+        "sha": "f49f43d7542bebdba40a596988398803f1a4026f",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 0,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/877e3af8bac76c00bc060943649debdab40e0344/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/877e3af8bac76c00bc060943649debdab40e0344/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=877e3af8bac76c00bc060943649debdab40e0344",
+        "patch": "@@ -9,6 +9,7 @@\n #include \"init.h\"\n #include \"util.h\"\n #include \"ui_interface.h\"\n+#include \"hub.h\"\n #include <boost/filesystem.hpp>\n #include <boost/filesystem/fstream.hpp>\n #include <boost/filesystem/convenience.hpp>\n@@ -55,6 +56,7 @@ void Shutdown(void* parg)\n     if (fFirstThread)\n     {\n         fShutdown = true;\n+        if (phub) phub->StopProcessCallbacks();\n         nTransactionsUpdated++;\n         bitdb.Flush(false);\n         StopNode();\n@@ -527,6 +529,12 @@ bool AppInit2()\n         return false;\n     }\n \n+    try {\n+        phub = new CHub();\n+    } catch (runtime_error& e) {\n+        return InitError(_(\"Unable to create CHub.\"));\n+    }\n+\n     uiInterface.InitMessage(_(\"Loading block index...\"));\n     printf(\"Loading block index...\\n\");\n     nStart = GetTimeMillis();"
+      },
+      {
+        "sha": "464eb674e18026d4ffdda13a0f523f1ad6c2fe1a",
+        "filename": "src/makefile.linux-mingw",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/877e3af8bac76c00bc060943649debdab40e0344/src/makefile.linux-mingw",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/877e3af8bac76c00bc060943649debdab40e0344/src/makefile.linux-mingw",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/makefile.linux-mingw?ref=877e3af8bac76c00bc060943649debdab40e0344",
+        "patch": "@@ -65,6 +65,7 @@ OBJS= \\\n     obj/util.o \\\n     obj/wallet.o \\\n     obj/walletdb.o \\\n+    obj/hub.o \\\n     obj/noui.o\n \n all: bitcoind.exe"
+      },
+      {
+        "sha": "5e2707ac5279c5ca2c3216333ac4ade16e672c42",
+        "filename": "src/makefile.mingw",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/877e3af8bac76c00bc060943649debdab40e0344/src/makefile.mingw",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/877e3af8bac76c00bc060943649debdab40e0344/src/makefile.mingw",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/makefile.mingw?ref=877e3af8bac76c00bc060943649debdab40e0344",
+        "patch": "@@ -62,6 +62,7 @@ OBJS= \\\n     obj/util.o \\\n     obj/wallet.o \\\n     obj/walletdb.o \\\n+    obj/hub.o \\\n     obj/noui.o\n \n "
+      },
+      {
+        "sha": "74fa94387803cf5b8b4a02e866eae9a56a458fd5",
+        "filename": "src/makefile.osx",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/877e3af8bac76c00bc060943649debdab40e0344/src/makefile.osx",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/877e3af8bac76c00bc060943649debdab40e0344/src/makefile.osx",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/makefile.osx?ref=877e3af8bac76c00bc060943649debdab40e0344",
+        "patch": "@@ -89,6 +89,7 @@ OBJS= \\\n     obj/util.o \\\n     obj/wallet.o \\\n     obj/walletdb.o \\\n+    obj/hub.o \\\n     obj/noui.o\n \n ifdef USE_UPNP"
+      },
+      {
+        "sha": "1d8a75d5bcb01bd1b632d347e6b04685ee130cd3",
+        "filename": "src/makefile.unix",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/877e3af8bac76c00bc060943649debdab40e0344/src/makefile.unix",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/877e3af8bac76c00bc060943649debdab40e0344/src/makefile.unix",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/makefile.unix?ref=877e3af8bac76c00bc060943649debdab40e0344",
+        "patch": "@@ -109,6 +109,7 @@ OBJS= \\\n     obj/util.o \\\n     obj/wallet.o \\\n     obj/walletdb.o \\\n+    obj/hub.o \\\n     obj/noui.o\n \n "
+      }
+    ]
+  },
+  {
+    "sha": "c42d0f15a2d7ad7779287643c7f087ca546e3a25",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjNDJkMGYxNWEyZDdhZDc3NzkyODc2NDNjN2YwODdjYTU0NmUzYTI1",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-01T15:47:30Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-10T20:20:42Z"
+      },
+      "message": "Add a basic CHubListener that can be extended.",
+      "tree": {
+        "sha": "fe4f1706adf29237bf3e418fc37451ac7074af7d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/fe4f1706adf29237bf3e418fc37451ac7074af7d"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/c42d0f15a2d7ad7779287643c7f087ca546e3a25",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c42d0f15a2d7ad7779287643c7f087ca546e3a25",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/c42d0f15a2d7ad7779287643c7f087ca546e3a25",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c42d0f15a2d7ad7779287643c7f087ca546e3a25/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "877e3af8bac76c00bc060943649debdab40e0344",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/877e3af8bac76c00bc060943649debdab40e0344",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/877e3af8bac76c00bc060943649debdab40e0344"
+      }
+    ],
+    "stats": {
+      "total": 90,
+      "additions": 90,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "82b9ccba3999ea1fb5620977568c7c2075629642",
+        "filename": "src/hub.cpp",
+        "status": "modified",
+        "additions": 28,
+        "deletions": 0,
+        "changes": 28,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c42d0f15a2d7ad7779287643c7f087ca546e3a25/src/hub.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c42d0f15a2d7ad7779287643c7f087ca546e3a25/src/hub.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/hub.cpp?ref=c42d0f15a2d7ad7779287643c7f087ca546e3a25",
+        "patch": "@@ -3,6 +3,22 @@\n \n CHub* phub;\n \n+class CHubCallbackAskForBlocks : public CHubCallback\n+{\n+private:\n+    uint256 hashEnd, hashOrig;\n+public:\n+    CHubCallbackAskForBlocks(uint256 hashEndIn, uint256 hashOrigIn) : hashEnd(hashEndIn), hashOrig(hashOrigIn) {}\n+    void Signal(CHubSignalTable& sigtable) { LOCK(sigtable.cs_sigAskForBlocks); sigtable.sigAskForBlocks(hashEnd, hashOrig); }\n+};\n+\n+void CHub::AskForBlocks(const uint256 hashEnd, const uint256 hashOriginator)\n+{\n+    LOCK(cs_callbacks);\n+        queueCallbacks.push(new CHubCallbackAskForBlocks(hashEnd, hashOriginator));\n+    sem_callbacks.post();\n+}\n+\n void CHub::ProcessCallbacks()\n {\n     {\n@@ -59,3 +75,15 @@ CHub::CHub() : sem_callbacks(0), fProcessCallbacks(true), nCallbackThreads(0)\n         if (!CreateThread(::ProcessCallbacks, this))\n             throw std::runtime_error(\"Couldn't create callback threads\");\n }\n+\n+\n+\n+void CHubListener::RegisterWithHub(CHub* phub)\n+{\n+    phub->RegisterAskForBlocks(boost::bind(&CHubListener::HandleAskForBlocks, this, _1, _2));\n+}\n+\n+void CHubListener::DeregisterFromHub()\n+{\n+    // TODO: Allow deregistration from CHub callbacks\n+}"
+      },
+      {
+        "sha": "3cc7f65d1ef5670d1fc547518e49ec1675920e2b",
+        "filename": "src/hub.h",
+        "status": "modified",
+        "additions": 33,
+        "deletions": 0,
+        "changes": 33,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c42d0f15a2d7ad7779287643c7f087ca546e3a25/src/hub.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c42d0f15a2d7ad7779287643c7f087ca546e3a25/src/hub.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/hub.h?ref=c42d0f15a2d7ad7779287643c7f087ca546e3a25",
+        "patch": "@@ -9,13 +9,16 @@\n #include <boost/signals2/signal.hpp>\n #include <queue>\n \n+#include \"uint256.h\"\n #include \"sync.h\"\n \n class CBlock;\n \n class CHubSignalTable\n {\n public:\n+    CCriticalSection cs_sigAskForBlocks;\n+    boost::signals2::signal<void (const uint256, const uint256)> sigAskForBlocks;\n };\n \n class CHubCallback\n@@ -46,6 +49,36 @@ class CHub\n \n     CHub();\n     ~CHub()  { StopProcessCallbacks(); }\n+\n+//Register methods\n+    // Register a handler (of the form void f(const uint256 hashEnd, const uint256 hashOriginator)) to be called when we need to ask for blocks up to hashEnd\n+    //   Should always start from the best block (GetBestBlockIndex())\n+    //   The receiver should check if it has a peer which is known to have a block with hash hashOriginator and if it does, it should\n+    //    send the block query to that node.\n+    void RegisterAskForBlocks(boost::function<void (const uint256, const uint256)> func) { LOCK(sigtable.cs_sigAskForBlocks); sigtable.sigAskForBlocks.connect(func); }\n+\n+//Connected wallet/etc access methods\n+\n+    // Ask that any listeners who have access to ask other nodes for blocks\n+    // (ie net) ask for all blocks between GetBestBlockIndex() and hashEnd\n+    // If hashOriginator is specified, then a node which is known to have a block\n+    //   with that hash will be the one to get the block request, unless no connected\n+    //   nodes are known to have this block, in which case a random one will be queried.\n+    void AskForBlocks(const uint256 hashEnd, const uint256 hashOriginator);\n+};\n+\n+// A simple generic CHub Listening class which can be extended, if you wish\n+class CHubListener\n+{\n+public:\n+    void RegisterWithHub(CHub* phub);\n+    void DeregisterFromHub();\n+\n+    CHubListener() {}\n+    CHubListener(CHub* phub) { RegisterWithHub(phub); }\n+    ~CHubListener() { DeregisterFromHub(); }\n+\n+    virtual void HandleAskForBlocks(const uint256, const uint256) {}\n };\n \n extern CHub* phub;"
+      },
+      {
+        "sha": "99febe0cc0412847e3a52604c85ecc383658b420",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 29,
+        "deletions": 0,
+        "changes": 29,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c42d0f15a2d7ad7779287643c7f087ca546e3a25/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c42d0f15a2d7ad7779287643c7f087ca546e3a25/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=c42d0f15a2d7ad7779287643c7f087ca546e3a25",
+        "patch": "@@ -10,6 +10,7 @@\n #include \"strlcpy.h\"\n #include \"addrman.h\"\n #include \"ui_interface.h\"\n+#include \"hub.h\"\n \n #ifdef WIN32\n #include <string.h>\n@@ -86,6 +87,32 @@ unsigned short GetListenPort()\n     return (unsigned short)(GetArg(\"-port\", GetDefaultPort()));\n }\n \n+void AskForBlocks(const uint256 hashEnd, const uint256 hashOriginator)\n+{\n+    CInv inv(MSG_BLOCK, hashOriginator);\n+    CNode* pnodeToAsk = NULL;\n+    {\n+        LOCK(cs_vNodes);\n+        if (hashOriginator != 0)\n+        {\n+            BOOST_FOREACH(CNode* pnode, vNodes)\n+            {\n+                LOCK(pnode->cs_inventory);\n+                if (pnode->setInventoryKnown.count(inv))\n+                {\n+                    pnodeToAsk = pnode;\n+                    break;\n+                }\n+            }\n+        }\n+        if (pnodeToAsk == NULL)\n+            pnodeToAsk = vNodes.front();\n+        pnodeToAsk->AddRef();\n+    }\n+    pnodeToAsk->PushGetBlocks(pindexBest, hashEnd);\n+    pnodeToAsk->Release();\n+}\n+\n void CNode::PushGetBlocks(CBlockIndex* pindexBegin, uint256 hashEnd)\n {\n     // Filter out duplicate requests\n@@ -1833,6 +1860,8 @@ void static Discover()\n \n void StartNode(void* parg)\n {\n+    phub->RegisterAskForBlocks(&AskForBlocks);\n+\n     if (semOutbound == NULL) {\n         // initialize semaphore\n         int nMaxOutbound = min(MAX_OUTBOUND_CONNECTIONS, (int)GetArg(\"-maxconnections\", 125));"
+      }
+    ]
+  },
+  {
+    "sha": "dd3593c500f931aab72af5929a72bfcc7ca99355",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkZDM1OTNjNTAwZjkzMWFhYjcyYWY1OTI5YTcyYmZjYzdjYTk5MzU1",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-01T00:45:00Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-10T20:32:21Z"
+      },
+      "message": "Add EmitBlock/CommitBlock functionality to CHub.\n\nReplacing ProcessBlock with EmitBlock, and creating callbacks for\nCommitBlock.",
+      "tree": {
+        "sha": "8f6154598c7ea2d2bb82a600f61079be9c5c6f9d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/8f6154598c7ea2d2bb82a600f61079be9c5c6f9d"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/dd3593c500f931aab72af5929a72bfcc7ca99355",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/dd3593c500f931aab72af5929a72bfcc7ca99355",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/dd3593c500f931aab72af5929a72bfcc7ca99355",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/dd3593c500f931aab72af5929a72bfcc7ca99355/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "c42d0f15a2d7ad7779287643c7f087ca546e3a25",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c42d0f15a2d7ad7779287643c7f087ca546e3a25",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c42d0f15a2d7ad7779287643c7f087ca546e3a25"
+      }
+    ],
+    "stats": {
+      "total": 100,
+      "additions": 69,
+      "deletions": 31
+    },
+    "files": [
+      {
+        "sha": "19ead36861f3a897f10fcc643c31c634754db367",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 1,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/dd3593c500f931aab72af5929a72bfcc7ca99355/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/dd3593c500f931aab72af5929a72bfcc7ca99355/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=dd3593c500f931aab72af5929a72bfcc7ca99355",
+        "patch": "@@ -12,6 +12,7 @@\n #include \"ui_interface.h\"\n #include \"base58.h\"\n #include \"bitcoinrpc.h\"\n+#include \"hub.h\"\n \n #undef printf\n #include <boost/asio.hpp>\n@@ -2190,7 +2191,7 @@ Value getmemorypool(const Array& params, bool fHelp)\n         CBlock pblock;\n         ssBlock >> pblock;\n \n-        return ProcessBlock(NULL, &pblock);\n+        return phub->EmitBlock(pblock);\n     }\n }\n "
+      },
+      {
+        "sha": "93555cf6bf3d6c2e8d50e41ec030583e651e7a7c",
+        "filename": "src/hub.cpp",
+        "status": "modified",
+        "additions": 18,
+        "deletions": 0,
+        "changes": 18,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/dd3593c500f931aab72af5929a72bfcc7ca99355/src/hub.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/dd3593c500f931aab72af5929a72bfcc7ca99355/src/hub.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/hub.cpp?ref=dd3593c500f931aab72af5929a72bfcc7ca99355",
+        "patch": "@@ -3,6 +3,15 @@\n \n CHub* phub;\n \n+class CHubCallbackCommitBlock : public CHubCallback\n+{\n+private:\n+    CBlock block;\n+public:\n+    CHubCallbackCommitBlock(const CBlock &blockIn) : block(blockIn) {}\n+    void Signal(CHubSignalTable& sigtable) { LOCK(sigtable.cs_sigCommitBlock); sigtable.sigCommitBlock(block); }\n+};\n+\n class CHubCallbackAskForBlocks : public CHubCallback\n {\n private:\n@@ -12,6 +21,13 @@ class CHubCallbackAskForBlocks : public CHubCallback\n     void Signal(CHubSignalTable& sigtable) { LOCK(sigtable.cs_sigAskForBlocks); sigtable.sigAskForBlocks(hashEnd, hashOrig); }\n };\n \n+void CHub::SubmitCallbackCommitBlock(const CBlock &block)\n+{\n+    LOCK(cs_callbacks);\n+        queueCallbacks.push(new CHubCallbackCommitBlock(block));\n+    sem_callbacks.post();\n+}\n+\n void CHub::AskForBlocks(const uint256 hashEnd, const uint256 hashOriginator)\n {\n     LOCK(cs_callbacks);\n@@ -80,6 +96,8 @@ CHub::CHub() : sem_callbacks(0), fProcessCallbacks(true), nCallbackThreads(0)\n \n void CHubListener::RegisterWithHub(CHub* phub)\n {\n+    phub->RegisterCommitBlock(boost::bind(&CHubListener::HandleCommitBlock, this, _1));\n+\n     phub->RegisterAskForBlocks(boost::bind(&CHubListener::HandleAskForBlocks, this, _1, _2));\n }\n "
+      },
+      {
+        "sha": "5264a81383faadb3edd660c29e436c94dd6920f9",
+        "filename": "src/hub.h",
+        "status": "modified",
+        "additions": 15,
+        "deletions": 0,
+        "changes": 15,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/dd3593c500f931aab72af5929a72bfcc7ca99355/src/hub.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/dd3593c500f931aab72af5929a72bfcc7ca99355/src/hub.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/hub.h?ref=dd3593c500f931aab72af5929a72bfcc7ca99355",
+        "patch": "@@ -17,6 +17,9 @@ class CBlock;\n class CHubSignalTable\n {\n public:\n+    CCriticalSection cs_sigCommitBlock;\n+    boost::signals2::signal<void (const CBlock&)> sigCommitBlock;\n+\n     CCriticalSection cs_sigAskForBlocks;\n     boost::signals2::signal<void (const uint256, const uint256)> sigAskForBlocks;\n };\n@@ -40,6 +43,7 @@ class CHub\n     bool fProcessCallbacks;\n     int nCallbackThreads;\n \n+    void SubmitCallbackCommitBlock(const CBlock &block);\n public:\n //Util methods\n     // Loops to process callbacks (do not call manually, automatically started in the constructor)\n@@ -51,12 +55,20 @@ class CHub\n     ~CHub()  { StopProcessCallbacks(); }\n \n //Register methods\n+    // Register a handler (of the form void f(const CBlock& block)) to be called after every block commit\n+    void RegisterCommitBlock(boost::function<void (const CBlock&)> func) { LOCK(sigtable.cs_sigCommitBlock); sigtable.sigCommitBlock.connect(func); }\n+\n     // Register a handler (of the form void f(const uint256 hashEnd, const uint256 hashOriginator)) to be called when we need to ask for blocks up to hashEnd\n     //   Should always start from the best block (GetBestBlockIndex())\n     //   The receiver should check if it has a peer which is known to have a block with hash hashOriginator and if it does, it should\n     //    send the block query to that node.\n     void RegisterAskForBlocks(boost::function<void (const uint256, const uint256)> func) { LOCK(sigtable.cs_sigAskForBlocks); sigtable.sigAskForBlocks.connect(func); }\n \n+//Blockchain access methods\n+    // Emit methods will verify the object, commit it to memory/disk and then place it in queue to\n+    //   be handled by listeners\n+    bool EmitBlock(CBlock& block);\n+\n //Connected wallet/etc access methods\n \n     // Ask that any listeners who have access to ask other nodes for blocks\n@@ -78,6 +90,9 @@ class CHubListener\n     CHubListener(CHub* phub) { RegisterWithHub(phub); }\n     ~CHubListener() { DeregisterFromHub(); }\n \n+protected:\n+    virtual void HandleCommitBlock(const CBlock& block) {}\n+\n     virtual void HandleAskForBlocks(const uint256, const uint256) {}\n };\n "
+      },
+      {
+        "sha": "cf89602dcadb6e983efa96aa90cb12a032a471d7",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 34,
+        "deletions": 29,
+        "changes": 63,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/dd3593c500f931aab72af5929a72bfcc7ca99355/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/dd3593c500f931aab72af5929a72bfcc7ca99355/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=dd3593c500f931aab72af5929a72bfcc7ca99355",
+        "patch": "@@ -8,6 +8,7 @@\n #include \"net.h\"\n #include \"init.h\"\n #include \"ui_interface.h\"\n+#include \"hub.h\"\n #include <boost/algorithm/string/replace.hpp>\n #include <boost/filesystem.hpp>\n #include <boost/filesystem/fstream.hpp>\n@@ -1778,60 +1779,60 @@ bool CBlock::AcceptBlock()\n     return true;\n }\n \n-bool ProcessBlock(CNode* pfrom, CBlock* pblock)\n+bool CHub::EmitBlock(CBlock& block)\n {\n     // Check for duplicate\n-    uint256 hash = pblock->GetHash();\n+    uint256 hash = block.GetHash();\n+\n+    LOCK(cs_main);\n+\n     if (mapBlockIndex.count(hash))\n-        return error(\"ProcessBlock() : already have block %d %s\", mapBlockIndex[hash]->nHeight, hash.ToString().substr(0,20).c_str());\n+        return error(\"CHub::EmitBlock() : already have block %d %s\", mapBlockIndex[hash]->nHeight, hash.ToString().substr(0,20).c_str());\n     if (mapOrphanBlocks.count(hash))\n-        return error(\"ProcessBlock() : already have block (orphan) %s\", hash.ToString().substr(0,20).c_str());\n+        return error(\"CHub::EmitBlock() : already have block (orphan) %s\", hash.ToString().substr(0,20).c_str());\n \n     // Preliminary checks\n-    if (!pblock->CheckBlock())\n-        return error(\"ProcessBlock() : CheckBlock FAILED\");\n+    if (!block.CheckBlock())\n+        return error(\"CHub::EmitBlock() : CheckBlock FAILED\");\n \n     CBlockIndex* pcheckpoint = Checkpoints::GetLastCheckpoint(mapBlockIndex);\n-    if (pcheckpoint && pblock->hashPrevBlock != hashBestChain)\n+    if (pcheckpoint && block.hashPrevBlock != hashBestChain)\n     {\n         // Extra checks to prevent \"fill up memory by spamming with bogus blocks\"\n-        int64 deltaTime = pblock->GetBlockTime() - pcheckpoint->nTime;\n+        int64 deltaTime = block.GetBlockTime() - pcheckpoint->nTime;\n         if (deltaTime < 0)\n         {\n-            if (pfrom)\n-                pfrom->Misbehaving(100);\n-            return error(\"ProcessBlock() : block with timestamp before last checkpoint\");\n+            return block.DoS(100, error(\"CHub::EmitBlock() : block with timestamp before last checkpoint\"));\n         }\n         CBigNum bnNewBlock;\n-        bnNewBlock.SetCompact(pblock->nBits);\n+        bnNewBlock.SetCompact(block.nBits);\n         CBigNum bnRequired;\n         bnRequired.SetCompact(ComputeMinWork(pcheckpoint->nBits, deltaTime));\n         if (bnNewBlock > bnRequired)\n         {\n-            if (pfrom)\n-                pfrom->Misbehaving(100);\n-            return error(\"ProcessBlock() : block with too little proof-of-work\");\n+            return block.DoS(100, error(\"CHub::EmitBlock() : block with too little proof-of-work\"));\n         }\n     }\n \n \n     // If don't already have its previous block, shunt it off to holding area until we get it\n-    if (!mapBlockIndex.count(pblock->hashPrevBlock))\n+    if (!mapBlockIndex.count(block.hashPrevBlock))\n     {\n-        printf(\"ProcessBlock: ORPHAN BLOCK, prev=%s\\n\", pblock->hashPrevBlock.ToString().substr(0,20).c_str());\n-        CBlock* pblock2 = new CBlock(*pblock);\n-        mapOrphanBlocks.insert(make_pair(hash, pblock2));\n-        mapOrphanBlocksByPrev.insert(make_pair(pblock2->hashPrevBlock, pblock2));\n+        printf(\"CHub::EmitBlock: ORPHAN BLOCK, prev=%s\\n\", block.hashPrevBlock.ToString().substr(0,20).c_str());\n+        CBlock* pblock = new CBlock(block);\n+        mapOrphanBlocks.insert(make_pair(hash, pblock));\n+        mapOrphanBlocksByPrev.insert(make_pair(pblock->hashPrevBlock, pblock));\n \n         // Ask this guy to fill in what we're missing\n-        if (pfrom)\n-            pfrom->PushGetBlocks(pindexBest, GetOrphanRoot(pblock2));\n+        AskForBlocks(GetOrphanRoot(pblock), hash);\n         return true;\n     }\n \n     // Store to disk\n-    if (!pblock->AcceptBlock())\n-        return error(\"ProcessBlock() : AcceptBlock FAILED\");\n+    if (!block.AcceptBlock())\n+        return error(\"CHub::EmitBlock() : AcceptBlock FAILED\");\n+\n+    SubmitCallbackCommitBlock(block);\n \n     // Recursively process any orphan blocks that depended on this one\n     vector<uint256> vWorkQueue;\n@@ -1845,14 +1846,18 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)\n         {\n             CBlock* pblockOrphan = (*mi).second;\n             if (pblockOrphan->AcceptBlock())\n+            {\n                 vWorkQueue.push_back(pblockOrphan->GetHash());\n+                SubmitCallbackCommitBlock(*pblockOrphan);\n+            }\n             mapOrphanBlocks.erase(pblockOrphan->GetHash());\n             delete pblockOrphan;\n         }\n         mapOrphanBlocksByPrev.erase(hashPrev);\n     }\n \n-    printf(\"ProcessBlock: ACCEPTED\\n\");\n+    printf(\"CHub::EmitBlock: ACCEPTED\\n\");\n+\n     return true;\n }\n \n@@ -2114,7 +2119,7 @@ bool LoadExternalBlockFile(FILE* fileIn)\n                 {\n                     CBlock block;\n                     blkdat >> block;\n-                    if (ProcessBlock(NULL,&block))\n+                    if (phub->EmitBlock(block))\n                     {\n                         nLoaded++;\n                         nPos += 4 + nSize;\n@@ -2767,7 +2772,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n         CInv inv(MSG_BLOCK, block.GetHash());\n         pfrom->AddInventoryKnown(inv);\n \n-        if (ProcessBlock(pfrom, &block))\n+        if (phub->EmitBlock(block))\n             mapAlreadyAskedFor.erase(inv);\n         if (block.nDoS) pfrom->Misbehaving(block.nDoS);\n     }\n@@ -3537,8 +3542,8 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)\n         }\n \n         // Process this block the same as if we had received it from another node\n-        if (!ProcessBlock(NULL, pblock))\n-            return error(\"BitcoinMiner : ProcessBlock, block not accepted\");\n+        if (!phub->EmitBlock(*pblock))\n+            return error(\"BitcoinMiner : phub->EmitBlock, block not accepted\");\n     }\n \n     return true;"
+      },
+      {
+        "sha": "63c61043e967682fed2f5fe883b85c8466e98abe",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 1,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/dd3593c500f931aab72af5929a72bfcc7ca99355/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/dd3593c500f931aab72af5929a72bfcc7ca99355/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=dd3593c500f931aab72af5929a72bfcc7ca99355",
+        "patch": "@@ -82,7 +82,6 @@ class CTxIndex;\n void RegisterWallet(CWallet* pwalletIn);\n void UnregisterWallet(CWallet* pwalletIn);\n void SyncWithWallets(const CTransaction& tx, const CBlock* pblock = NULL, bool fUpdate = false);\n-bool ProcessBlock(CNode* pfrom, CBlock* pblock);\n bool CheckDiskSpace(uint64 nAdditionalBytes=0);\n FILE* OpenBlockFile(unsigned int nFile, unsigned int nBlockPos, const char* pszMode=\"rb\");\n FILE* AppendBlockFile(unsigned int& nFileRet);"
+      }
+    ]
+  },
+  {
+    "sha": "e6d39a887308fd65b62051380477528ef6f6b9f6",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplNmQzOWE4ODczMDhmZDY1YjYyMDUxMzgwNDc3NTI4ZWY2ZjZiOWY2",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-01T01:00:42Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-10T20:32:22Z"
+      },
+      "message": "Fix typo",
+      "tree": {
+        "sha": "0b62a999a63e580caacf1058e9f6c4b07319c2d4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/0b62a999a63e580caacf1058e9f6c4b07319c2d4"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/e6d39a887308fd65b62051380477528ef6f6b9f6",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e6d39a887308fd65b62051380477528ef6f6b9f6",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/e6d39a887308fd65b62051380477528ef6f6b9f6",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e6d39a887308fd65b62051380477528ef6f6b9f6/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "dd3593c500f931aab72af5929a72bfcc7ca99355",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/dd3593c500f931aab72af5929a72bfcc7ca99355",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/dd3593c500f931aab72af5929a72bfcc7ca99355"
+      }
+    ],
+    "stats": {
+      "total": 6,
+      "additions": 3,
+      "deletions": 3
+    },
+    "files": [
+      {
+        "sha": "a53364f284caef558835d7b9e778d46bbc3adf31",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 3,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e6d39a887308fd65b62051380477528ef6f6b9f6/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e6d39a887308fd65b62051380477528ef6f6b9f6/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=e6d39a887308fd65b62051380477528ef6f6b9f6",
+        "patch": "@@ -2188,10 +2188,10 @@ Value getmemorypool(const Array& params, bool fHelp)\n     {\n         // Parse parameters\n         CDataStream ssBlock(ParseHex(params[0].get_str()), SER_NETWORK, PROTOCOL_VERSION);\n-        CBlock pblock;\n-        ssBlock >> pblock;\n+        CBlock block;\n+        ssBlock >> block;\n \n-        return phub->EmitBlock(pblock);\n+        return phub->EmitBlock(block);\n     }\n }\n "
+      }
+    ]
+  },
+  {
+    "sha": "159c528cec68498d202f6f17d57825bdcf89d0c5",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxNTljNTI4Y2VjNjg0OThkMjAyZjZmMTdkNTc4MjViZGNmODlkMGM1",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-01T01:21:59Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-10T20:32:23Z"
+      },
+      "message": "Add HandleCommitBlock to net.cpp & move stuff from main.cpp to it",
+      "tree": {
+        "sha": "0ef1ac35b26268a4fa934763f3b331f57a9a22ba",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/0ef1ac35b26268a4fa934763f3b331f57a9a22ba"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/159c528cec68498d202f6f17d57825bdcf89d0c5",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/159c528cec68498d202f6f17d57825bdcf89d0c5",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/159c528cec68498d202f6f17d57825bdcf89d0c5",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/159c528cec68498d202f6f17d57825bdcf89d0c5/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "e6d39a887308fd65b62051380477528ef6f6b9f6",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e6d39a887308fd65b62051380477528ef6f6b9f6",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/e6d39a887308fd65b62051380477528ef6f6b9f6"
+      }
+    ],
+    "stats": {
+      "total": 31,
+      "additions": 21,
+      "deletions": 10
+    },
+    "files": [
+      {
+        "sha": "ac269c89c731fdc06fa3f70cde8d4b5e7b322e89",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 10,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/159c528cec68498d202f6f17d57825bdcf89d0c5/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/159c528cec68498d202f6f17d57825bdcf89d0c5/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=159c528cec68498d202f6f17d57825bdcf89d0c5",
+        "patch": "@@ -1766,16 +1766,6 @@ bool CBlock::AcceptBlock()\n     if (!AddToBlockIndex(nFile, nBlockPos))\n         return error(\"AcceptBlock() : AddToBlockIndex failed\");\n \n-    // Relay inventory, but don't relay old inventory during initial block download\n-    int nBlockEstimate = Checkpoints::GetTotalBlocksEstimate();\n-    if (hashBestChain == hash)\n-    {\n-        LOCK(cs_vNodes);\n-        BOOST_FOREACH(CNode* pnode, vNodes)\n-            if (nBestHeight > (pnode->nStartingHeight != -1 ? pnode->nStartingHeight - 2000 : nBlockEstimate))\n-                pnode->PushInventory(CInv(MSG_BLOCK, hash));\n-    }\n-\n     return true;\n }\n "
+      },
+      {
+        "sha": "63824698b2f01f2bf31ac55fab632f7ddac26852",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 21,
+        "deletions": 0,
+        "changes": 21,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/159c528cec68498d202f6f17d57825bdcf89d0c5/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/159c528cec68498d202f6f17d57825bdcf89d0c5/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=159c528cec68498d202f6f17d57825bdcf89d0c5",
+        "patch": "@@ -11,6 +11,7 @@\n #include \"addrman.h\"\n #include \"ui_interface.h\"\n #include \"hub.h\"\n+#include \"checkpoints.h\"\n \n #ifdef WIN32\n #include <string.h>\n@@ -87,6 +88,25 @@ unsigned short GetListenPort()\n     return (unsigned short)(GetArg(\"-port\", GetDefaultPort()));\n }\n \n+\n+\n+void HandleCommitBlock(const CBlock& block)\n+{\n+    // Relay inventory, but don't relay old inventory during initial block download\n+    uint256 hash = block.GetHash();\n+    int nBlockEstimate = Checkpoints::GetTotalBlocksEstimate();\n+    if (hashBestChain == hash)\n+    {\n+        LOCK(cs_vNodes);\n+        BOOST_FOREACH(CNode* pnode, vNodes)\n+            if (nBestHeight > (pnode->nStartingHeight != -1 ? pnode->nStartingHeight - 2000 : nBlockEstimate))\n+                pnode->PushInventory(CInv(MSG_BLOCK, hash));\n+    }\n+}\n+\n+\n+\n+\n void AskForBlocks(const uint256 hashEnd, const uint256 hashOriginator)\n {\n     CInv inv(MSG_BLOCK, hashOriginator);\n@@ -1861,6 +1881,7 @@ void static Discover()\n void StartNode(void* parg)\n {\n     phub->RegisterAskForBlocks(&AskForBlocks);\n+    phub->RegisterCommitBlock(&HandleCommitBlock);\n \n     if (semOutbound == NULL) {\n         // initialize semaphore"
+      }
+    ]
+  },
+  {
+    "sha": "94a440ae79cd865e235b8c59a8b4ad59781cc42a",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5NGE0NDBhZTc5Y2Q4NjVlMjM1YjhjNTlhOGI0YWQ1OTc4MWNjNDJh",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-01T01:43:29Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-10T20:32:24Z"
+      },
+      "message": "Remove uiInterface.NotifyBlocksChanged and replace with CommitBlock\n\nAlso rename NotifyBlocksChanged to NotifyNewBlock and remove from\nthe uiInterface signals list.\n\nThis removes some functionality, but NofiyBlocksChanged was not\nused anyway, so it shouldn't matter.  That said, if it is ever\nneeded, it would be fairly trivial to add a new callback for it\nin CHub.",
+      "tree": {
+        "sha": "11508385e1ca31fed5a6b545d08d31d2cf2d153a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/11508385e1ca31fed5a6b545d08d31d2cf2d153a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/94a440ae79cd865e235b8c59a8b4ad59781cc42a",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/94a440ae79cd865e235b8c59a8b4ad59781cc42a",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/94a440ae79cd865e235b8c59a8b4ad59781cc42a",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/94a440ae79cd865e235b8c59a8b4ad59781cc42a/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "159c528cec68498d202f6f17d57825bdcf89d0c5",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/159c528cec68498d202f6f17d57825bdcf89d0c5",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/159c528cec68498d202f6f17d57825bdcf89d0c5"
+      }
+    ],
+    "stats": {
+      "total": 12,
+      "additions": 4,
+      "deletions": 8
+    },
+    "files": [
+      {
+        "sha": "22e57a105faf5ff57d40a543d978c650d1b6a4c3",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 2,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/94a440ae79cd865e235b8c59a8b4ad59781cc42a/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/94a440ae79cd865e235b8c59a8b4ad59781cc42a/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=94a440ae79cd865e235b8c59a8b4ad59781cc42a",
+        "patch": "@@ -961,7 +961,6 @@ void static InvalidChainFound(CBlockIndex* pindexNew)\n     {\n         bnBestInvalidWork = pindexNew->bnChainWork;\n         CTxDB().WriteBestInvalidWork(bnBestInvalidWork);\n-        uiInterface.NotifyBlocksChanged();\n     }\n     printf(\"InvalidChainFound: invalid block=%s  height=%d  work=%s\\n\", pindexNew->GetBlockHash().ToString().substr(0,20).c_str(), pindexNew->nHeight, pindexNew->bnChainWork.ToString().c_str());\n     printf(\"InvalidChainFound:  current best=%s  height=%d  work=%s\\n\", hashBestChain.ToString().substr(0,20).c_str(), nBestHeight, bnBestChainWork.ToString().c_str());\n@@ -1664,7 +1663,6 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos)\n         hashPrevBestCoinBase = vtx[0].GetHash();\n     }\n \n-    uiInterface.NotifyBlocksChanged();\n     return true;\n }\n "
+      },
+      {
+        "sha": "4955d0eca80ebbd801fd1791caf45b375cbbe944",
+        "filename": "src/qt/clientmodel.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 3,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/94a440ae79cd865e235b8c59a8b4ad59781cc42a/src/qt/clientmodel.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/94a440ae79cd865e235b8c59a8b4ad59781cc42a/src/qt/clientmodel.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/clientmodel.cpp?ref=94a440ae79cd865e235b8c59a8b4ad59781cc42a",
+        "patch": "@@ -5,6 +5,7 @@\n #include \"transactiontablemodel.h\"\n \n #include \"main.h\"\n+#include \"hub.h\"\n #include \"ui_interface.h\"\n \n #include <QDateTime>\n@@ -136,7 +137,7 @@ QString ClientModel::formatClientStartupTime() const\n }\n \n // Handlers for core signals\n-static void NotifyBlocksChanged(ClientModel *clientmodel)\n+static void NotifyNewBlock(ClientModel *clientmodel, const CBlock& block)\n {\n     // This notification is too frequent. Don't trigger a signal.\n     // Don't remove it, though, as it might be useful later.\n@@ -160,15 +161,15 @@ static void NotifyAlertChanged(ClientModel *clientmodel, const uint256 &hash, Ch\n void ClientModel::subscribeToCoreSignals()\n {\n     // Connect signals to client\n-    uiInterface.NotifyBlocksChanged.connect(boost::bind(NotifyBlocksChanged, this));\n+    phub->RegisterCommitBlock(boost::bind(NotifyNewBlock, this, _1));\n     uiInterface.NotifyNumConnectionsChanged.connect(boost::bind(NotifyNumConnectionsChanged, this, _1));\n     uiInterface.NotifyAlertChanged.connect(boost::bind(NotifyAlertChanged, this, _1, _2));\n }\n \n void ClientModel::unsubscribeFromCoreSignals()\n {\n     // Disconnect signals from client\n-    uiInterface.NotifyBlocksChanged.disconnect(boost::bind(NotifyBlocksChanged, this));\n+    //  Note that CHub does not support disconnecting (yet)!\n     uiInterface.NotifyNumConnectionsChanged.disconnect(boost::bind(NotifyNumConnectionsChanged, this, _1));\n     uiInterface.NotifyAlertChanged.disconnect(boost::bind(NotifyAlertChanged, this, _1, _2));\n }"
+      },
+      {
+        "sha": "dba72314b5c3e8020ca06b038891be880b90e2b5",
+        "filename": "src/ui_interface.h",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 3,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/94a440ae79cd865e235b8c59a8b4ad59781cc42a/src/ui_interface.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/94a440ae79cd865e235b8c59a8b4ad59781cc42a/src/ui_interface.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/ui_interface.h?ref=94a440ae79cd865e235b8c59a8b4ad59781cc42a",
+        "patch": "@@ -76,9 +76,6 @@ class CClientUIInterface\n     /** Translate a message to the native language of the user. */\n     boost::signals2::signal<std::string (const char* psz)> Translate;\n \n-    /** Block chain changed. */\n-    boost::signals2::signal<void ()> NotifyBlocksChanged;\n-\n     /** Number of network connections changed. */\n     boost::signals2::signal<void (int newNumConnections)> NotifyNumConnectionsChanged;\n "
+      }
+    ]
+  },
+  {
+    "sha": "1aad2e99bbc48b03197d389d59243a9efc1add29",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxYWFkMmU5OWJiYzQ4YjAzMTk3ZDM4OWQ1OTI0M2E5ZWZjMWFkZDI5",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-01T02:03:49Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-10T20:32:25Z"
+      },
+      "message": "Add EmitAlert/CommitAlert functionality to CHub.\n\nReplace ProcessAlert with calls to EmitAlert and create callbacks\nfor CommitAlert.",
+      "tree": {
+        "sha": "ca27ab024da3f0a52462195983dcc0ef17c7c207",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/ca27ab024da3f0a52462195983dcc0ef17c7c207"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/1aad2e99bbc48b03197d389d59243a9efc1add29",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1aad2e99bbc48b03197d389d59243a9efc1add29",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/1aad2e99bbc48b03197d389d59243a9efc1add29",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1aad2e99bbc48b03197d389d59243a9efc1add29/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "94a440ae79cd865e235b8c59a8b4ad59781cc42a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/94a440ae79cd865e235b8c59a8b4ad59781cc42a",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/94a440ae79cd865e235b8c59a8b4ad59781cc42a"
+      }
+    ],
+    "stats": {
+      "total": 62,
+      "additions": 44,
+      "deletions": 18
+    },
+    "files": [
+      {
+        "sha": "640849ea3ce625af59c44d6af1e311e41d300eb8",
+        "filename": "src/hub.cpp",
+        "status": "modified",
+        "additions": 17,
+        "deletions": 0,
+        "changes": 17,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1aad2e99bbc48b03197d389d59243a9efc1add29/src/hub.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1aad2e99bbc48b03197d389d59243a9efc1add29/src/hub.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/hub.cpp?ref=1aad2e99bbc48b03197d389d59243a9efc1add29",
+        "patch": "@@ -12,6 +12,15 @@ class CHubCallbackCommitBlock : public CHubCallback\n     void Signal(CHubSignalTable& sigtable) { LOCK(sigtable.cs_sigCommitBlock); sigtable.sigCommitBlock(block); }\n };\n \n+class CHubCallbackCommitAlert : public CHubCallback\n+{\n+private:\n+    CAlert alert;\n+public:\n+    CHubCallbackCommitAlert(const CAlert &alertIn) : alert(alertIn) {}\n+    void Signal(CHubSignalTable& sigtable) { LOCK(sigtable.cs_sigCommitAlert); sigtable.sigCommitAlert(alert); }\n+};\n+\n class CHubCallbackAskForBlocks : public CHubCallback\n {\n private:\n@@ -28,6 +37,13 @@ void CHub::SubmitCallbackCommitBlock(const CBlock &block)\n     sem_callbacks.post();\n }\n \n+void CHub::SubmitCallbackCommitAlert(const CAlert &alert)\n+{\n+    LOCK(cs_callbacks);\n+        queueCallbacks.push(new CHubCallbackCommitAlert(alert));\n+    sem_callbacks.post();\n+}\n+\n void CHub::AskForBlocks(const uint256 hashEnd, const uint256 hashOriginator)\n {\n     LOCK(cs_callbacks);\n@@ -97,6 +113,7 @@ CHub::CHub() : sem_callbacks(0), fProcessCallbacks(true), nCallbackThreads(0)\n void CHubListener::RegisterWithHub(CHub* phub)\n {\n     phub->RegisterCommitBlock(boost::bind(&CHubListener::HandleCommitBlock, this, _1));\n+    phub->RegisterCommitAlert(boost::bind(&CHubListener::HandleCommitAlert, this, _1));\n \n     phub->RegisterAskForBlocks(boost::bind(&CHubListener::HandleAskForBlocks, this, _1, _2));\n }"
+      },
+      {
+        "sha": "9f4a99fd59a566ce85a87663a020647b52a05682",
+        "filename": "src/hub.h",
+        "status": "modified",
+        "additions": 10,
+        "deletions": 0,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1aad2e99bbc48b03197d389d59243a9efc1add29/src/hub.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1aad2e99bbc48b03197d389d59243a9efc1add29/src/hub.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/hub.h?ref=1aad2e99bbc48b03197d389d59243a9efc1add29",
+        "patch": "@@ -13,13 +13,17 @@\n #include \"sync.h\"\n \n class CBlock;\n+class CAlert;\n \n class CHubSignalTable\n {\n public:\n     CCriticalSection cs_sigCommitBlock;\n     boost::signals2::signal<void (const CBlock&)> sigCommitBlock;\n \n+    CCriticalSection cs_sigCommitAlert;\n+    boost::signals2::signal<void (const CAlert&)> sigCommitAlert;\n+\n     CCriticalSection cs_sigAskForBlocks;\n     boost::signals2::signal<void (const uint256, const uint256)> sigAskForBlocks;\n };\n@@ -44,6 +48,7 @@ class CHub\n     int nCallbackThreads;\n \n     void SubmitCallbackCommitBlock(const CBlock &block);\n+    void SubmitCallbackCommitAlert(const CAlert &alert);\n public:\n //Util methods\n     // Loops to process callbacks (do not call manually, automatically started in the constructor)\n@@ -58,6 +63,9 @@ class CHub\n     // Register a handler (of the form void f(const CBlock& block)) to be called after every block commit\n     void RegisterCommitBlock(boost::function<void (const CBlock&)> func) { LOCK(sigtable.cs_sigCommitBlock); sigtable.sigCommitBlock.connect(func); }\n \n+    // Register a handler (of the form void f(const CAlert& alert)) to be called after every alert commit\n+    void RegisterCommitAlert(boost::function<void (const CAlert&)> func) { LOCK(sigtable.cs_sigCommitAlert); sigtable.sigCommitAlert.connect(func); }\n+\n     // Register a handler (of the form void f(const uint256 hashEnd, const uint256 hashOriginator)) to be called when we need to ask for blocks up to hashEnd\n     //   Should always start from the best block (GetBestBlockIndex())\n     //   The receiver should check if it has a peer which is known to have a block with hash hashOriginator and if it does, it should\n@@ -68,6 +76,7 @@ class CHub\n     // Emit methods will verify the object, commit it to memory/disk and then place it in queue to\n     //   be handled by listeners\n     bool EmitBlock(CBlock& block);\n+    bool EmitAlert(CAlert& alert);\n \n //Connected wallet/etc access methods\n \n@@ -92,6 +101,7 @@ class CHubListener\n \n protected:\n     virtual void HandleCommitBlock(const CBlock& block) {}\n+    virtual void HandleCommitAlert(const CAlert& alert) {}\n \n     virtual void HandleAskForBlocks(const uint256, const uint256) {}\n };"
+      },
+      {
+        "sha": "635469494818438254bafbaae8711a840e6dbf37",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 17,
+        "deletions": 16,
+        "changes": 33,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1aad2e99bbc48b03197d389d59243a9efc1add29/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1aad2e99bbc48b03197d389d59243a9efc1add29/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=1aad2e99bbc48b03197d389d59243a9efc1add29",
+        "patch": "@@ -2196,28 +2196,28 @@ CAlert CAlert::getAlertByHash(const uint256 &hash)\n     return retval;\n }\n \n-bool CAlert::ProcessAlert()\n+bool CHub::EmitAlert(CAlert& alert)\n {\n-    if (!CheckSignature())\n+    if (!alert.CheckSignature())\n         return false;\n-    if (!IsInEffect())\n+    if (!alert.IsInEffect())\n         return false;\n \n     {\n         LOCK(cs_mapAlerts);\n         // Cancel previous alerts\n         for (map<uint256, CAlert>::iterator mi = mapAlerts.begin(); mi != mapAlerts.end();)\n         {\n-            const CAlert& alert = (*mi).second;\n-            if (Cancels(alert))\n+            const CAlert& alert2 = (*mi).second;\n+            if (alert.Cancels(alert2))\n             {\n-                printf(\"cancelling alert %d\\n\", alert.nID);\n+                printf(\"cancelling alert %d\\n\", alert2.nID);\n                 uiInterface.NotifyAlertChanged((*mi).first, CT_DELETED);\n                 mapAlerts.erase(mi++);\n             }\n-            else if (!alert.IsInEffect())\n+            else if (!alert2.IsInEffect())\n             {\n-                printf(\"expiring alert %d\\n\", alert.nID);\n+                printf(\"expiring alert %d\\n\", alert2.nID);\n                 uiInterface.NotifyAlertChanged((*mi).first, CT_DELETED);\n                 mapAlerts.erase(mi++);\n             }\n@@ -2228,22 +2228,23 @@ bool CAlert::ProcessAlert()\n         // Check if this alert has been cancelled\n         BOOST_FOREACH(PAIRTYPE(const uint256, CAlert)& item, mapAlerts)\n         {\n-            const CAlert& alert = item.second;\n-            if (alert.Cancels(*this))\n+            const CAlert& alert2 = item.second;\n+            if (alert2.Cancels(alert))\n             {\n-                printf(\"alert already cancelled by %d\\n\", alert.nID);\n+                printf(\"alert already cancelled by %d\\n\", alert2.nID);\n                 return false;\n             }\n         }\n \n         // Add to mapAlerts\n-        mapAlerts.insert(make_pair(GetHash(), *this));\n+        mapAlerts.insert(make_pair(alert.GetHash(), alert));\n         // Notify UI if it applies to me\n-        if(AppliesToMe())\n-            uiInterface.NotifyAlertChanged(GetHash(), CT_NEW);\n+        if(alert.AppliesToMe())\n+            uiInterface.NotifyAlertChanged(alert.GetHash(), CT_NEW);\n     }\n \n-    printf(\"accepted alert %d, AppliesToMe()=%d\\n\", nID, AppliesToMe());\n+    printf(\"accepted alert %d, AppliesToMe()=%d\\n\", alert.nID, alert.AppliesToMe());\n+    SubmitCallbackCommitAlert(alert);\n     return true;\n }\n \n@@ -2849,7 +2850,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n         CAlert alert;\n         vRecv >> alert;\n \n-        if (alert.ProcessAlert())\n+        if (phub->EmitAlert(alert))\n         {\n             // Relay\n             pfrom->setKnown.insert(alert.GetHash());"
+      },
+      {
+        "sha": "beb930eb35c67fd3698cc1664f6499f2d208f248",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 2,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1aad2e99bbc48b03197d389d59243a9efc1add29/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1aad2e99bbc48b03197d389d59243a9efc1add29/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=1aad2e99bbc48b03197d389d59243a9efc1add29",
+        "patch": "@@ -1584,8 +1584,6 @@ class CAlert : public CUnsignedAlert\n         return true;\n     }\n \n-    bool ProcessAlert();\n-\n     /*\n      * Get copy of (active) alert object by hash. Returns a null alert if it is not found.\n      */"
+      }
+    ]
+  },
+  {
+    "sha": "5365eca78c4458fbb88ec5c1641d6826d80d8d68",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1MzY1ZWNhNzhjNDQ1OGZiYjg4ZWM1YzE2NDFkNjgyNmQ4MGQ4ZDY4",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-01T02:23:55Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-10T20:32:26Z"
+      },
+      "message": "Use CommitAlert in qt/clientmodel.cpp",
+      "tree": {
+        "sha": "cc1a22f1111c64a35ba2e36ede92ad7940eda039",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/cc1a22f1111c64a35ba2e36ede92ad7940eda039"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/5365eca78c4458fbb88ec5c1641d6826d80d8d68",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5365eca78c4458fbb88ec5c1641d6826d80d8d68",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/5365eca78c4458fbb88ec5c1641d6826d80d8d68",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5365eca78c4458fbb88ec5c1641d6826d80d8d68/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "1aad2e99bbc48b03197d389d59243a9efc1add29",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1aad2e99bbc48b03197d389d59243a9efc1add29",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/1aad2e99bbc48b03197d389d59243a9efc1add29"
+      }
+    ],
+    "stats": {
+      "total": 10,
+      "additions": 7,
+      "deletions": 3
+    },
+    "files": [
+      {
+        "sha": "565e32c861bea2dd0ae6098b29227e1453be0833",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 3,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5365eca78c4458fbb88ec5c1641d6826d80d8d68/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5365eca78c4458fbb88ec5c1641d6826d80d8d68/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=5365eca78c4458fbb88ec5c1641d6826d80d8d68",
+        "patch": "@@ -2238,9 +2238,6 @@ bool CHub::EmitAlert(CAlert& alert)\n \n         // Add to mapAlerts\n         mapAlerts.insert(make_pair(alert.GetHash(), alert));\n-        // Notify UI if it applies to me\n-        if(alert.AppliesToMe())\n-            uiInterface.NotifyAlertChanged(alert.GetHash(), CT_NEW);\n     }\n \n     printf(\"accepted alert %d, AppliesToMe()=%d\\n\", alert.nID, alert.AppliesToMe());"
+      },
+      {
+        "sha": "f8fee212b90c1e9f18bd8248cb5211a4f0fed96a",
+        "filename": "src/qt/clientmodel.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 0,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5365eca78c4458fbb88ec5c1641d6826d80d8d68/src/qt/clientmodel.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5365eca78c4458fbb88ec5c1641d6826d80d8d68/src/qt/clientmodel.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/clientmodel.cpp?ref=5365eca78c4458fbb88ec5c1641d6826d80d8d68",
+        "patch": "@@ -158,12 +158,19 @@ static void NotifyAlertChanged(ClientModel *clientmodel, const uint256 &hash, Ch\n                               Q_ARG(int, status));\n }\n \n+static void NotifyAlertCommitted(ClientModel *clientmodel, const CAlert& alert)\n+{\n+    if (alert.AppliesToMe())\n+        NotifyAlertChanged(clientmodel, alert.GetHash(), CT_NEW);\n+}\n+\n void ClientModel::subscribeToCoreSignals()\n {\n     // Connect signals to client\n     phub->RegisterCommitBlock(boost::bind(NotifyNewBlock, this, _1));\n     uiInterface.NotifyNumConnectionsChanged.connect(boost::bind(NotifyNumConnectionsChanged, this, _1));\n     uiInterface.NotifyAlertChanged.connect(boost::bind(NotifyAlertChanged, this, _1, _2));\n+    phub->RegisterCommitAlert(boost::bind(NotifyAlertCommitted, this, _1));\n }\n \n void ClientModel::unsubscribeFromCoreSignals()"
+      }
+    ]
+  },
+  {
+    "sha": "7da0bed1f29bd3c0401191ea9c8ea749fff436ce",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3ZGEwYmVkMWYyOWJkM2MwNDAxMTkxZWE5YzhlYTc0OWZmZjQzNmNl",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-01T02:30:27Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-10T20:32:27Z"
+      },
+      "message": "Add RegisterRemoveAlert functionality to CHub.",
+      "tree": {
+        "sha": "941c9cb687edff60a0ae5384bcd90710c38bf5c4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/941c9cb687edff60a0ae5384bcd90710c38bf5c4"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/7da0bed1f29bd3c0401191ea9c8ea749fff436ce",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7da0bed1f29bd3c0401191ea9c8ea749fff436ce",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/7da0bed1f29bd3c0401191ea9c8ea749fff436ce",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7da0bed1f29bd3c0401191ea9c8ea749fff436ce/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "5365eca78c4458fbb88ec5c1641d6826d80d8d68",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5365eca78c4458fbb88ec5c1641d6826d80d8d68",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/5365eca78c4458fbb88ec5c1641d6826d80d8d68"
+      }
+    ],
+    "stats": {
+      "total": 28,
+      "additions": 28,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "851f97061acc0cf912b7e50acee8c2f61b7b6d0f",
+        "filename": "src/hub.cpp",
+        "status": "modified",
+        "additions": 18,
+        "deletions": 0,
+        "changes": 18,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7da0bed1f29bd3c0401191ea9c8ea749fff436ce/src/hub.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7da0bed1f29bd3c0401191ea9c8ea749fff436ce/src/hub.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/hub.cpp?ref=7da0bed1f29bd3c0401191ea9c8ea749fff436ce",
+        "patch": "@@ -21,6 +21,15 @@ class CHubCallbackCommitAlert : public CHubCallback\n     void Signal(CHubSignalTable& sigtable) { LOCK(sigtable.cs_sigCommitAlert); sigtable.sigCommitAlert(alert); }\n };\n \n+class CHubCallbackRemoveAlert : public CHubCallback\n+{\n+private:\n+    CAlert alert;\n+public:\n+    CHubCallbackRemoveAlert(const CAlert &alertIn) : alert(alertIn) {}\n+    void Signal(CHubSignalTable& sigtable) { LOCK(sigtable.cs_sigRemoveAlert); sigtable.sigRemoveAlert(alert); }\n+};\n+\n class CHubCallbackAskForBlocks : public CHubCallback\n {\n private:\n@@ -44,6 +53,13 @@ void CHub::SubmitCallbackCommitAlert(const CAlert &alert)\n     sem_callbacks.post();\n }\n \n+void CHub::SubmitCallbackRemoveAlert(const CAlert &alert)\n+{\n+    LOCK(cs_callbacks);\n+        queueCallbacks.push(new CHubCallbackRemoveAlert(alert));\n+    sem_callbacks.post();\n+}\n+\n void CHub::AskForBlocks(const uint256 hashEnd, const uint256 hashOriginator)\n {\n     LOCK(cs_callbacks);\n@@ -113,7 +129,9 @@ CHub::CHub() : sem_callbacks(0), fProcessCallbacks(true), nCallbackThreads(0)\n void CHubListener::RegisterWithHub(CHub* phub)\n {\n     phub->RegisterCommitBlock(boost::bind(&CHubListener::HandleCommitBlock, this, _1));\n+\n     phub->RegisterCommitAlert(boost::bind(&CHubListener::HandleCommitAlert, this, _1));\n+    phub->RegisterRemoveAlert(boost::bind(&CHubListener::HandleRemoveAlert, this, _1));\n \n     phub->RegisterAskForBlocks(boost::bind(&CHubListener::HandleAskForBlocks, this, _1, _2));\n }"
+      },
+      {
+        "sha": "de0bb082d69daa8021a99259839046c47c3bc2e1",
+        "filename": "src/hub.h",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 0,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7da0bed1f29bd3c0401191ea9c8ea749fff436ce/src/hub.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7da0bed1f29bd3c0401191ea9c8ea749fff436ce/src/hub.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/hub.h?ref=7da0bed1f29bd3c0401191ea9c8ea749fff436ce",
+        "patch": "@@ -23,6 +23,8 @@ class CHubSignalTable\n \n     CCriticalSection cs_sigCommitAlert;\n     boost::signals2::signal<void (const CAlert&)> sigCommitAlert;\n+    CCriticalSection cs_sigRemoveAlert;\n+    boost::signals2::signal<void (const CAlert&)> sigRemoveAlert;\n \n     CCriticalSection cs_sigAskForBlocks;\n     boost::signals2::signal<void (const uint256, const uint256)> sigAskForBlocks;\n@@ -48,7 +50,9 @@ class CHub\n     int nCallbackThreads;\n \n     void SubmitCallbackCommitBlock(const CBlock &block);\n+\n     void SubmitCallbackCommitAlert(const CAlert &alert);\n+    void SubmitCallbackRemoveAlert(const CAlert &alert);\n public:\n //Util methods\n     // Loops to process callbacks (do not call manually, automatically started in the constructor)\n@@ -65,6 +69,8 @@ class CHub\n \n     // Register a handler (of the form void f(const CAlert& alert)) to be called after every alert commit\n     void RegisterCommitAlert(boost::function<void (const CAlert&)> func) { LOCK(sigtable.cs_sigCommitAlert); sigtable.sigCommitAlert.connect(func); }\n+    // Register a handler (of the form void f(const CAlert& alert)) to be called after every alert cancel or expire\n+    void RegisterRemoveAlert(boost::function<void (const CAlert&)> func) { LOCK(sigtable.cs_sigRemoveAlert); sigtable.sigRemoveAlert.connect(func); }\n \n     // Register a handler (of the form void f(const uint256 hashEnd, const uint256 hashOriginator)) to be called when we need to ask for blocks up to hashEnd\n     //   Should always start from the best block (GetBestBlockIndex())\n@@ -101,7 +107,9 @@ class CHubListener\n \n protected:\n     virtual void HandleCommitBlock(const CBlock& block) {}\n+\n     virtual void HandleCommitAlert(const CAlert& alert) {}\n+    virtual void HandleRemoveAlert(const CAlert& alert) {}\n \n     virtual void HandleAskForBlocks(const uint256, const uint256) {}\n };"
+      },
+      {
+        "sha": "a74e12a7496c4a07b0015b0894fd516d3623dba4",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7da0bed1f29bd3c0401191ea9c8ea749fff436ce/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7da0bed1f29bd3c0401191ea9c8ea749fff436ce/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=7da0bed1f29bd3c0401191ea9c8ea749fff436ce",
+        "patch": "@@ -2213,12 +2213,14 @@ bool CHub::EmitAlert(CAlert& alert)\n             {\n                 printf(\"cancelling alert %d\\n\", alert2.nID);\n                 uiInterface.NotifyAlertChanged((*mi).first, CT_DELETED);\n+                SubmitCallbackRemoveAlert(alert2);\n                 mapAlerts.erase(mi++);\n             }\n             else if (!alert2.IsInEffect())\n             {\n                 printf(\"expiring alert %d\\n\", alert2.nID);\n                 uiInterface.NotifyAlertChanged((*mi).first, CT_DELETED);\n+                SubmitCallbackRemoveAlert(alert2);\n                 mapAlerts.erase(mi++);\n             }\n             else"
+      }
+    ]
+  },
+  {
+    "sha": "8f6c206561365668f31a75c8ef46d6acb1e8d2f3",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4ZjZjMjA2NTYxMzY1NjY4ZjMxYTc1YzhlZjQ2ZDZhY2IxZThkMmYz",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-01T02:34:35Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-10T20:32:28Z"
+      },
+      "message": "Replace NotifyAlertChanged with RegisterRemoveAlert.",
+      "tree": {
+        "sha": "150594ccdfac38e998b7e5d4cf4cb29ab1a71ac1",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/150594ccdfac38e998b7e5d4cf4cb29ab1a71ac1"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/8f6c206561365668f31a75c8ef46d6acb1e8d2f3",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8f6c206561365668f31a75c8ef46d6acb1e8d2f3",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/8f6c206561365668f31a75c8ef46d6acb1e8d2f3",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8f6c206561365668f31a75c8ef46d6acb1e8d2f3/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "7da0bed1f29bd3c0401191ea9c8ea749fff436ce",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7da0bed1f29bd3c0401191ea9c8ea749fff436ce",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/7da0bed1f29bd3c0401191ea9c8ea749fff436ce"
+      }
+    ],
+    "stats": {
+      "total": 17,
+      "additions": 7,
+      "deletions": 10
+    },
+    "files": [
+      {
+        "sha": "493d4f8d8d423ea4b4a639ce86316164d7ce3c1f",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 2,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8f6c206561365668f31a75c8ef46d6acb1e8d2f3/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8f6c206561365668f31a75c8ef46d6acb1e8d2f3/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=8f6c206561365668f31a75c8ef46d6acb1e8d2f3",
+        "patch": "@@ -2212,14 +2212,12 @@ bool CHub::EmitAlert(CAlert& alert)\n             if (alert.Cancels(alert2))\n             {\n                 printf(\"cancelling alert %d\\n\", alert2.nID);\n-                uiInterface.NotifyAlertChanged((*mi).first, CT_DELETED);\n                 SubmitCallbackRemoveAlert(alert2);\n                 mapAlerts.erase(mi++);\n             }\n             else if (!alert2.IsInEffect())\n             {\n                 printf(\"expiring alert %d\\n\", alert2.nID);\n-                uiInterface.NotifyAlertChanged((*mi).first, CT_DELETED);\n                 SubmitCallbackRemoveAlert(alert2);\n                 mapAlerts.erase(mi++);\n             }"
+      },
+      {
+        "sha": "e5c0f48a20048dc90c9417a59b9b173f0a7c2cc3",
+        "filename": "src/qt/clientmodel.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 2,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8f6c206561365668f31a75c8ef46d6acb1e8d2f3/src/qt/clientmodel.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8f6c206561365668f31a75c8ef46d6acb1e8d2f3/src/qt/clientmodel.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/clientmodel.cpp?ref=8f6c206561365668f31a75c8ef46d6acb1e8d2f3",
+        "patch": "@@ -164,19 +164,24 @@ static void NotifyAlertCommitted(ClientModel *clientmodel, const CAlert& alert)\n         NotifyAlertChanged(clientmodel, alert.GetHash(), CT_NEW);\n }\n \n+static void NotifyAlertRemoved(ClientModel *clientmodel, const CAlert& alert)\n+{\n+    if (alert.AppliesToMe())\n+        NotifyAlertChanged(clientmodel, alert.GetHash(), CT_DELETED);\n+}\n+\n void ClientModel::subscribeToCoreSignals()\n {\n     // Connect signals to client\n     phub->RegisterCommitBlock(boost::bind(NotifyNewBlock, this, _1));\n     uiInterface.NotifyNumConnectionsChanged.connect(boost::bind(NotifyNumConnectionsChanged, this, _1));\n-    uiInterface.NotifyAlertChanged.connect(boost::bind(NotifyAlertChanged, this, _1, _2));\n     phub->RegisterCommitAlert(boost::bind(NotifyAlertCommitted, this, _1));\n+    phub->RegisterRemoveAlert(boost::bind(NotifyAlertRemoved, this, _1));\n }\n \n void ClientModel::unsubscribeFromCoreSignals()\n {\n     // Disconnect signals from client\n     //  Note that CHub does not support disconnecting (yet)!\n     uiInterface.NotifyNumConnectionsChanged.disconnect(boost::bind(NotifyNumConnectionsChanged, this, _1));\n-    uiInterface.NotifyAlertChanged.disconnect(boost::bind(NotifyAlertChanged, this, _1, _2));\n }"
+      },
+      {
+        "sha": "3bb1ff0a94465a48f520c1fd07373884d2930aeb",
+        "filename": "src/ui_interface.h",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 6,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8f6c206561365668f31a75c8ef46d6acb1e8d2f3/src/ui_interface.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8f6c206561365668f31a75c8ef46d6acb1e8d2f3/src/ui_interface.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/ui_interface.h?ref=8f6c206561365668f31a75c8ef46d6acb1e8d2f3",
+        "patch": "@@ -78,12 +78,6 @@ class CClientUIInterface\n \n     /** Number of network connections changed. */\n     boost::signals2::signal<void (int newNumConnections)> NotifyNumConnectionsChanged;\n-\n-    /**\n-     * New, updated or cancelled alert.\n-     * @note called with lock cs_mapAlerts held.\n-     */\n-    boost::signals2::signal<void (const uint256 &hash, ChangeType status)> NotifyAlertChanged;\n };\n \n extern CClientUIInterface uiInterface;"
+      }
+    ]
+  },
+  {
+    "sha": "c6c30dca1a3918eac85d455308817fbd33ec7345",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjNmMzMGRjYTFhMzkxOGVhYzg1ZDQ1NTMwODgxN2ZiZDMzZWM3MzQ1",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-01T23:12:27Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-10T20:32:30Z"
+      },
+      "message": "Convert Orphan Tx storage to CTransactions from CDataStreams.\n\nThere was no reason to use CDataStream as the transaction was\nalready being serialized/deserialized several times, with this\nchange, transactions coming in over network are deserialized once\nwhen received, and then only reserialized in the call to\nRelayMessage, which will be called in a callback thread, not\nblocking cs_main.",
+      "tree": {
+        "sha": "a1cc950b9806fab1b272207290b1cfdc0c876486",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/a1cc950b9806fab1b272207290b1cfdc0c876486"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/c6c30dca1a3918eac85d455308817fbd33ec7345",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c6c30dca1a3918eac85d455308817fbd33ec7345",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/c6c30dca1a3918eac85d455308817fbd33ec7345",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c6c30dca1a3918eac85d455308817fbd33ec7345/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "8f6c206561365668f31a75c8ef46d6acb1e8d2f3",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8f6c206561365668f31a75c8ef46d6acb1e8d2f3",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/8f6c206561365668f31a75c8ef46d6acb1e8d2f3"
+      }
+    ],
+    "stats": {
+      "total": 70,
+      "additions": 27,
+      "deletions": 43
+    },
+    "files": [
+      {
+        "sha": "3a56856fed7e87709e61ee24c4f9a8ae998d3964",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 18,
+        "deletions": 23,
+        "changes": 41,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c6c30dca1a3918eac85d455308817fbd33ec7345/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c6c30dca1a3918eac85d455308817fbd33ec7345/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=c6c30dca1a3918eac85d455308817fbd33ec7345",
+        "patch": "@@ -44,8 +44,8 @@ CMedianFilter<int> cPeerBlockCounts(5, 0); // Amount of blocks that other nodes\n map<uint256, CBlock*> mapOrphanBlocks;\n multimap<uint256, CBlock*> mapOrphanBlocksByPrev;\n \n-map<uint256, CDataStream*> mapOrphanTransactions;\n-map<uint256, map<uint256, CDataStream*> > mapOrphanTransactionsByPrev;\n+map<uint256, CTransaction*> mapOrphanTransactions;\n+map<uint256, map<uint256, CTransaction*> > mapOrphanTransactionsByPrev;\n \n // Constant stuff for coinbase transactions we create:\n CScript COINBASE_FLAGS;\n@@ -162,15 +162,13 @@ void static ResendWalletTransactions()\n // mapOrphanTransactions\n //\n \n-bool AddOrphanTx(const CDataStream& vMsg)\n+bool AddOrphanTx(const CTransaction& tx)\n {\n-    CTransaction tx;\n-    CDataStream(vMsg) >> tx;\n     uint256 hash = tx.GetHash();\n     if (mapOrphanTransactions.count(hash))\n         return false;\n \n-    CDataStream* pvMsg = new CDataStream(vMsg);\n+    CTransaction* pTx = new CTransaction(tx);\n \n     // Ignore big transactions, to avoid a\n     // send-big-orphans memory exhaustion attack. If a peer has a legitimate\n@@ -179,16 +177,17 @@ bool AddOrphanTx(const CDataStream& vMsg)\n     // have been mined or received.\n     // 10,000 orphans, each of which is at most 5,000 bytes big is\n     // at most 500 megabytes of orphans:\n-    if (pvMsg->size() > 5000)\n+    unsigned int size = tx.GetSerializeSize(SER_NETWORK, PROTOCOL_VERSION);\n+    if (size > 5000)\n     {\n-        delete pvMsg;\n-        printf(\"ignoring large orphan tx (size: %u, hash: %s)\\n\", pvMsg->size(), hash.ToString().substr(0,10).c_str());\n+        delete pTx;\n+        printf(\"ignoring large orphan tx (size: %u, hash: %s)\\n\", size, hash.ToString().substr(0,10).c_str());\n         return false;\n     }\n \n-    mapOrphanTransactions[hash] = pvMsg;\n+    mapOrphanTransactions[hash] = pTx;\n     BOOST_FOREACH(const CTxIn& txin, tx.vin)\n-        mapOrphanTransactionsByPrev[txin.prevout.hash].insert(make_pair(hash, pvMsg));\n+        mapOrphanTransactionsByPrev[txin.prevout.hash].insert(make_pair(hash, pTx));\n \n     printf(\"stored orphan tx %s (mapsz %u)\\n\", hash.ToString().substr(0,10).c_str(),\n         mapOrphanTransactions.size());\n@@ -199,16 +198,14 @@ void static EraseOrphanTx(uint256 hash)\n {\n     if (!mapOrphanTransactions.count(hash))\n         return;\n-    const CDataStream* pvMsg = mapOrphanTransactions[hash];\n-    CTransaction tx;\n-    CDataStream(*pvMsg) >> tx;\n-    BOOST_FOREACH(const CTxIn& txin, tx.vin)\n+    const CTransaction* pTx = mapOrphanTransactions[hash];\n+    BOOST_FOREACH(const CTxIn& txin, pTx->vin)\n     {\n         mapOrphanTransactionsByPrev[txin.prevout.hash].erase(hash);\n         if (mapOrphanTransactionsByPrev[txin.prevout.hash].empty())\n             mapOrphanTransactionsByPrev.erase(txin.prevout.hash);\n     }\n-    delete pvMsg;\n+    delete pTx;\n     mapOrphanTransactions.erase(hash);\n }\n \n@@ -219,7 +216,7 @@ unsigned int LimitOrphanTxSize(unsigned int nMaxOrphans)\n     {\n         // Evict a random orphan:\n         uint256 randomhash = GetRandHash();\n-        map<uint256, CDataStream*>::iterator it = mapOrphanTransactions.lower_bound(randomhash);\n+        map<uint256, CTransaction*>::iterator it = mapOrphanTransactions.lower_bound(randomhash);\n         if (it == mapOrphanTransactions.end())\n             it = mapOrphanTransactions.begin();\n         EraseOrphanTx(it->first);\n@@ -2703,21 +2700,19 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n             for (unsigned int i = 0; i < vWorkQueue.size(); i++)\n             {\n                 uint256 hashPrev = vWorkQueue[i];\n-                for (map<uint256, CDataStream*>::iterator mi = mapOrphanTransactionsByPrev[hashPrev].begin();\n+                for (map<uint256, CTransaction*>::iterator mi = mapOrphanTransactionsByPrev[hashPrev].begin();\n                      mi != mapOrphanTransactionsByPrev[hashPrev].end();\n                      ++mi)\n                 {\n-                    const CDataStream& vMsg = *((*mi).second);\n-                    CTransaction tx;\n-                    CDataStream(vMsg) >> tx;\n+                    CTransaction& tx = *((*mi).second);\n                     CInv inv(MSG_TX, tx.GetHash());\n                     bool fMissingInputs2 = false;\n \n                     if (tx.AcceptToMemoryPool(txdb, true, &fMissingInputs2))\n                     {\n                         printf(\"   accepted orphan tx %s\\n\", inv.hash.ToString().substr(0,10).c_str());\n                         SyncWithWallets(tx, NULL, true);\n-                        RelayMessage(inv, vMsg);\n+                        RelayMessage(inv, tx);\n                         mapAlreadyAskedFor.erase(inv);\n                         vWorkQueue.push_back(inv.hash);\n                         vEraseQueue.push_back(inv.hash);\n@@ -2736,7 +2731,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n         }\n         else if (fMissingInputs)\n         {\n-            AddOrphanTx(vMsg);\n+            AddOrphanTx(tx);\n \n             // DoS prevention: do not allow mapOrphanTransactions to grow unbounded\n             unsigned int nEvicted = LimitOrphanTxSize(MAX_ORPHAN_TRANSACTIONS);"
+      },
+      {
+        "sha": "30437a5e1f0cd01c8960fa15a0008151f36f5fce",
+        "filename": "src/test/DoS_tests.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 20,
+        "changes": 29,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c6c30dca1a3918eac85d455308817fbd33ec7345/src/test/DoS_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c6c30dca1a3918eac85d455308817fbd33ec7345/src/test/DoS_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/DoS_tests.cpp?ref=c6c30dca1a3918eac85d455308817fbd33ec7345",
+        "patch": "@@ -16,10 +16,10 @@\n #include <stdint.h>\n \n // Tests this internal-to-main.cpp method:\n-extern bool AddOrphanTx(const CDataStream& vMsg);\n+extern bool AddOrphanTx(const CTransaction& vMsg);\n extern unsigned int LimitOrphanTxSize(unsigned int nMaxOrphans);\n-extern std::map<uint256, CDataStream*> mapOrphanTransactions;\n-extern std::map<uint256, std::map<uint256, CDataStream*> > mapOrphanTransactionsByPrev;\n+extern std::map<uint256, CTransaction*> mapOrphanTransactions;\n+extern std::map<uint256, std::map<uint256, CTransaction*> > mapOrphanTransactionsByPrev;\n \n CService ip(uint32_t i)\n {\n@@ -134,14 +134,11 @@ BOOST_AUTO_TEST_CASE(DoS_checknbits)\n \n CTransaction RandomOrphan()\n {\n-    std::map<uint256, CDataStream*>::iterator it;\n+    std::map<uint256, CTransaction*>::iterator it;\n     it = mapOrphanTransactions.lower_bound(GetRandHash());\n     if (it == mapOrphanTransactions.end())\n         it = mapOrphanTransactions.begin();\n-    const CDataStream* pvMsg = it->second;\n-    CTransaction tx;\n-    CDataStream(*pvMsg) >> tx;\n-    return tx;\n+    return *(it->second);\n }\n \n BOOST_AUTO_TEST_CASE(DoS_mapOrphans)\n@@ -163,9 +160,7 @@ BOOST_AUTO_TEST_CASE(DoS_mapOrphans)\n         tx.vout[0].nValue = 1*CENT;\n         tx.vout[0].scriptPubKey.SetDestination(key.GetPubKey().GetID());\n \n-        CDataStream ds(SER_DISK, CLIENT_VERSION);\n-        ds << tx;\n-        AddOrphanTx(ds);\n+        AddOrphanTx(tx);\n     }\n \n     // ... and 50 that depend on other orphans:\n@@ -182,9 +177,7 @@ BOOST_AUTO_TEST_CASE(DoS_mapOrphans)\n         tx.vout[0].scriptPubKey.SetDestination(key.GetPubKey().GetID());\n         SignSignature(keystore, txPrev, tx, 0);\n \n-        CDataStream ds(SER_DISK, CLIENT_VERSION);\n-        ds << tx;\n-        AddOrphanTx(ds);\n+        AddOrphanTx(tx);\n     }\n \n     // This really-big orphan should be ignored:\n@@ -208,9 +201,7 @@ BOOST_AUTO_TEST_CASE(DoS_mapOrphans)\n         for (unsigned int j = 1; j < tx.vin.size(); j++)\n             tx.vin[j].scriptSig = tx.vin[0].scriptSig;\n \n-        CDataStream ds(SER_DISK, CLIENT_VERSION);\n-        ds << tx;\n-        BOOST_CHECK(!AddOrphanTx(ds));\n+        BOOST_CHECK(!AddOrphanTx(tx));\n     }\n \n     // Test LimitOrphanTxSize() function:\n@@ -246,9 +237,7 @@ BOOST_AUTO_TEST_CASE(DoS_checkSig)\n         tx.vout[0].nValue = 1*CENT;\n         tx.vout[0].scriptPubKey.SetDestination(key.GetPubKey().GetID());\n \n-        CDataStream ds(SER_DISK, CLIENT_VERSION);\n-        ds << tx;\n-        AddOrphanTx(ds);\n+        AddOrphanTx(tx);\n     }\n \n     // Create a transaction that depends on orphans:"
+      }
+    ]
+  },
+  {
+    "sha": "9dc89066a8042e42ca04eda19593b4fb4e23fe31",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5ZGM4OTA2NmE4MDQyZTQyY2EwNGVkYTE5NTkzYjRmYjRlMjNmZTMx",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-01T22:42:10Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-10T20:32:30Z"
+      },
+      "message": "Add a cs around mapAlreadyAskedFor.",
+      "tree": {
+        "sha": "f8d080f263170faa60906c21150f23350d8733a2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f8d080f263170faa60906c21150f23350d8733a2"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/9dc89066a8042e42ca04eda19593b4fb4e23fe31",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9dc89066a8042e42ca04eda19593b4fb4e23fe31",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/9dc89066a8042e42ca04eda19593b4fb4e23fe31",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9dc89066a8042e42ca04eda19593b4fb4e23fe31/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "c6c30dca1a3918eac85d455308817fbd33ec7345",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c6c30dca1a3918eac85d455308817fbd33ec7345",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c6c30dca1a3918eac85d455308817fbd33ec7345"
+      }
+    ],
+    "stats": {
+      "total": 26,
+      "additions": 22,
+      "deletions": 4
+    },
+    "files": [
+      {
+        "sha": "b51617866bf3a58dc2c890770315ba6430cfa913",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 15,
+        "deletions": 3,
+        "changes": 18,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9dc89066a8042e42ca04eda19593b4fb4e23fe31/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9dc89066a8042e42ca04eda19593b4fb4e23fe31/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=9dc89066a8042e42ca04eda19593b4fb4e23fe31",
+        "patch": "@@ -2692,7 +2692,10 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n         {\n             SyncWithWallets(tx, NULL, true);\n             RelayMessage(inv, vMsg);\n-            mapAlreadyAskedFor.erase(inv);\n+            {\n+                LOCK(cs_mapAlreadyAskedFor);\n+                mapAlreadyAskedFor.erase(inv);\n+            }\n             vWorkQueue.push_back(inv.hash);\n             vEraseQueue.push_back(inv.hash);\n \n@@ -2713,7 +2716,10 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n                         printf(\"   accepted orphan tx %s\\n\", inv.hash.ToString().substr(0,10).c_str());\n                         SyncWithWallets(tx, NULL, true);\n                         RelayMessage(inv, tx);\n-                        mapAlreadyAskedFor.erase(inv);\n+                        {\n+                            LOCK(cs_mapAlreadyAskedFor);\n+                            mapAlreadyAskedFor.erase(inv);\n+                        }\n                         vWorkQueue.push_back(inv.hash);\n                         vEraseQueue.push_back(inv.hash);\n                     }\n@@ -2754,7 +2760,10 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n         pfrom->AddInventoryKnown(inv);\n \n         if (phub->EmitBlock(block))\n+        {\n+            LOCK(cs_mapAlreadyAskedFor);\n             mapAlreadyAskedFor.erase(inv);\n+        }\n         if (block.nDoS) pfrom->Misbehaving(block.nDoS);\n     }\n \n@@ -3136,7 +3145,10 @@ bool SendMessages(CNode* pto, bool fSendTrickle)\n                     vGetData.clear();\n                 }\n             }\n-            mapAlreadyAskedFor[inv] = nNow;\n+            {\n+                LOCK(cs_mapAlreadyAskedFor);\n+                mapAlreadyAskedFor[inv] = nNow;\n+            }\n             pto->mapAskFor.erase(pto->mapAskFor.begin());\n         }\n         if (!vGetData.empty())"
+      },
+      {
+        "sha": "4251850697292aacdcee99660eb70fc88d502295",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9dc89066a8042e42ca04eda19593b4fb4e23fe31/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9dc89066a8042e42ca04eda19593b4fb4e23fe31/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=9dc89066a8042e42ca04eda19593b4fb4e23fe31",
+        "patch": "@@ -68,6 +68,7 @@ map<CInv, CDataStream> mapRelay;\n deque<pair<int64, CInv> > vRelayExpiration;\n CCriticalSection cs_mapRelay;\n map<CInv, int64> mapAlreadyAskedFor;\n+CCriticalSection cs_mapAlreadyAskedFor;\n \n static deque<string> vOneShots;\n CCriticalSection cs_vOneShots;"
+      },
+      {
+        "sha": "0e8c40015340a99d00c7d1a62467460aa7a1f46f",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 1,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9dc89066a8042e42ca04eda19593b4fb4e23fe31/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9dc89066a8042e42ca04eda19593b4fb4e23fe31/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=9dc89066a8042e42ca04eda19593b4fb4e23fe31",
+        "patch": "@@ -123,6 +123,7 @@ extern std::map<CInv, CDataStream> mapRelay;\n extern std::deque<std::pair<int64, CInv> > vRelayExpiration;\n extern CCriticalSection cs_mapRelay;\n extern std::map<CInv, int64> mapAlreadyAskedFor;\n+extern CCriticalSection cs_mapAlreadyAskedFor;\n \n \n \n@@ -295,7 +296,11 @@ class CNode\n     {\n         // We're using mapAskFor as a priority queue,\n         // the key is the earliest time the request can be sent\n-        int64& nRequestTime = mapAlreadyAskedFor[inv];\n+        int64 nRequestTime;\n+        {\n+            LOCK(cs_mapAlreadyAskedFor);\n+            nRequestTime = mapAlreadyAskedFor[inv];\n+        }\n         printf(\"askfor %s   %\"PRI64d\"\\n\", inv.ToString().c_str(), nRequestTime);\n \n         // Make sure not to reuse time indexes to keep things in the same order"
+      }
+    ]
+  },
+  {
+    "sha": "ac33eeca2c38bb902423e99bd26bef509a990b58",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphYzMzZWVjYTJjMzhiYjkwMjQyM2U5OWJkMjZiZWY1MDlhOTkwYjU4",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-01T22:29:16Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-10T20:32:31Z"
+      },
+      "message": "Add basic EmitTransaction/CommitTransaction functionality to CHub.",
+      "tree": {
+        "sha": "642efb9af43dd459b8c98b9294b96a8838393c02",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/642efb9af43dd459b8c98b9294b96a8838393c02"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/ac33eeca2c38bb902423e99bd26bef509a990b58",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ac33eeca2c38bb902423e99bd26bef509a990b58",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/ac33eeca2c38bb902423e99bd26bef509a990b58",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ac33eeca2c38bb902423e99bd26bef509a990b58/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "9dc89066a8042e42ca04eda19593b4fb4e23fe31",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9dc89066a8042e42ca04eda19593b4fb4e23fe31",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/9dc89066a8042e42ca04eda19593b4fb4e23fe31"
+      }
+    ],
+    "stats": {
+      "total": 144,
+      "additions": 83,
+      "deletions": 61
+    },
+    "files": [
+      {
+        "sha": "b82e71599d98506f338967e6cf0fe73c3fff8dd1",
+        "filename": "src/hub.cpp",
+        "status": "modified",
+        "additions": 18,
+        "deletions": 0,
+        "changes": 18,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ac33eeca2c38bb902423e99bd26bef509a990b58/src/hub.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ac33eeca2c38bb902423e99bd26bef509a990b58/src/hub.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/hub.cpp?ref=ac33eeca2c38bb902423e99bd26bef509a990b58",
+        "patch": "@@ -39,6 +39,15 @@ class CHubCallbackAskForBlocks : public CHubCallback\n     void Signal(CHubSignalTable& sigtable) { LOCK(sigtable.cs_sigAskForBlocks); sigtable.sigAskForBlocks(hashEnd, hashOrig); }\n };\n \n+class CHubCallbackCommitTransactionToMemoryPool : public CHubCallback\n+{\n+private:\n+    CTransaction tx;\n+public:\n+    CHubCallbackCommitTransactionToMemoryPool(const CTransaction &txIn) : tx(txIn) {}\n+    void Signal(CHubSignalTable& sigtable) { LOCK(sigtable.cs_sigCommitTransactionToMemoryPool); sigtable.sigCommitTransactionToMemoryPool(tx); }\n+};\n+\n void CHub::SubmitCallbackCommitBlock(const CBlock &block)\n {\n     LOCK(cs_callbacks);\n@@ -67,6 +76,13 @@ void CHub::AskForBlocks(const uint256 hashEnd, const uint256 hashOriginator)\n     sem_callbacks.post();\n }\n \n+void CHub::SubmitCallbackCommitTransactionToMemoryPool(const CTransaction &tx)\n+{\n+    LOCK(cs_callbacks);\n+        queueCallbacks.push(new CHubCallbackCommitTransactionToMemoryPool(tx));\n+    sem_callbacks.post();\n+}\n+\n void CHub::ProcessCallbacks()\n {\n     {\n@@ -130,6 +146,8 @@ void CHubListener::RegisterWithHub(CHub* phub)\n {\n     phub->RegisterCommitBlock(boost::bind(&CHubListener::HandleCommitBlock, this, _1));\n \n+    phub->RegisterCommitTransactionToMemoryPool(boost::bind(&CHubListener::HandleCommitTransactionToMemoryPool, this, _1));\n+\n     phub->RegisterCommitAlert(boost::bind(&CHubListener::HandleCommitAlert, this, _1));\n     phub->RegisterRemoveAlert(boost::bind(&CHubListener::HandleRemoveAlert, this, _1));\n "
+      },
+      {
+        "sha": "734b0279b177bcd2808220e8a623ce1d412972d9",
+        "filename": "src/hub.h",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 0,
+        "changes": 13,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ac33eeca2c38bb902423e99bd26bef509a990b58/src/hub.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ac33eeca2c38bb902423e99bd26bef509a990b58/src/hub.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/hub.h?ref=ac33eeca2c38bb902423e99bd26bef509a990b58",
+        "patch": "@@ -13,6 +13,7 @@\n #include \"sync.h\"\n \n class CBlock;\n+class CTransaction;\n class CAlert;\n \n class CHubSignalTable\n@@ -21,6 +22,9 @@ class CHubSignalTable\n     CCriticalSection cs_sigCommitBlock;\n     boost::signals2::signal<void (const CBlock&)> sigCommitBlock;\n \n+    CCriticalSection cs_sigCommitTransactionToMemoryPool;\n+    boost::signals2::signal<void (const CTransaction&)> sigCommitTransactionToMemoryPool;\n+\n     CCriticalSection cs_sigCommitAlert;\n     boost::signals2::signal<void (const CAlert&)> sigCommitAlert;\n     CCriticalSection cs_sigRemoveAlert;\n@@ -51,6 +55,8 @@ class CHub\n \n     void SubmitCallbackCommitBlock(const CBlock &block);\n \n+    void SubmitCallbackCommitTransactionToMemoryPool(const CTransaction &tx);\n+\n     void SubmitCallbackCommitAlert(const CAlert &alert);\n     void SubmitCallbackRemoveAlert(const CAlert &alert);\n public:\n@@ -67,6 +73,9 @@ class CHub\n     // Register a handler (of the form void f(const CBlock& block)) to be called after every block commit\n     void RegisterCommitBlock(boost::function<void (const CBlock&)> func) { LOCK(sigtable.cs_sigCommitBlock); sigtable.sigCommitBlock.connect(func); }\n \n+    // Register a handler (of the form void f(const CTransaction& tx)) to be called after every transaction commit to memory pool\n+    void RegisterCommitTransactionToMemoryPool(boost::function<void (const CTransaction&)> func) { LOCK(sigtable.cs_sigCommitTransactionToMemoryPool); sigtable.sigCommitTransactionToMemoryPool.connect(func); }\n+\n     // Register a handler (of the form void f(const CAlert& alert)) to be called after every alert commit\n     void RegisterCommitAlert(boost::function<void (const CAlert&)> func) { LOCK(sigtable.cs_sigCommitAlert); sigtable.sigCommitAlert.connect(func); }\n     // Register a handler (of the form void f(const CAlert& alert)) to be called after every alert cancel or expire\n@@ -83,6 +92,8 @@ class CHub\n     //   be handled by listeners\n     bool EmitBlock(CBlock& block);\n     bool EmitAlert(CAlert& alert);\n+    // Do not call EmitTransaction except for loose transactions (ie transactions not in a block)\n+    bool EmitTransaction(CTransaction& tx);\n \n //Connected wallet/etc access methods\n \n@@ -108,6 +119,8 @@ class CHubListener\n protected:\n     virtual void HandleCommitBlock(const CBlock& block) {}\n \n+    virtual void HandleCommitTransactionToMemoryPool(const CTransaction& tx) {}\n+\n     virtual void HandleCommitAlert(const CAlert& alert) {}\n     virtual void HandleRemoveAlert(const CAlert& alert) {}\n "
+      },
+      {
+        "sha": "f52eab0f3acd44db431ef7f26ede77696897bc86",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 43,
+        "deletions": 61,
+        "changes": 104,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ac33eeca2c38bb902423e99bd26bef509a990b58/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ac33eeca2c38bb902423e99bd26bef509a990b58/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=ac33eeca2c38bb902423e99bd26bef509a990b58",
+        "patch": "@@ -617,6 +617,48 @@ bool CTransaction::AcceptToMemoryPool(CTxDB& txdb, bool fCheckInputs, bool* pfMi\n     return mempool.accept(txdb, *this, fCheckInputs, pfMissingInputs);\n }\n \n+bool CHub::EmitTransaction(CTransaction& tx)\n+{\n+    CTxDB txdb(\"r\");\n+    uint256 hash = tx.GetHash();\n+\n+    bool fMissingInputs = false;\n+    if (mempool.accept(txdb, tx, true, &fMissingInputs))\n+    {\n+        SyncWithWallets(tx, NULL, true);\n+\n+        // Recursively process any orphan transactions that depended on this one\n+        for (map<uint256, CTransaction*>::iterator mi = mapOrphanTransactionsByPrev[hash].begin();\n+             mi != mapOrphanTransactionsByPrev[hash].end();\n+             ++mi)\n+        {\n+            CTransaction& tx2 = *((*mi).second);\n+            CInv inv(MSG_TX, tx2.GetHash());\n+\n+            if (phub->EmitTransaction(tx2))\n+                printf(\"   accepted orphan tx %s\\n\", inv.hash.ToString().substr(0,10).c_str());\n+        }\n+\n+        SubmitCallbackCommitTransactionToMemoryPool(tx);\n+        return true;\n+    }\n+    else if (fMissingInputs)\n+    {\n+        AddOrphanTx(tx);\n+\n+        // DoS prevention: do not allow mapOrphanTransactions to grow unbounded\n+        unsigned int nEvicted = LimitOrphanTxSize(MAX_ORPHAN_TRANSACTIONS);\n+        if (nEvicted > 0)\n+            printf(\"mapOrphan overflow, removed %u tx\\n\", nEvicted);\n+\n+        return true;\n+    }\n+    else\n+        EraseOrphanTx(hash);\n+\n+    return false;\n+}\n+\n bool CTxMemPool::addUnchecked(CTransaction &tx)\n {\n     // Add to memory pool without checking anything.  Don't call this directly,\n@@ -2677,73 +2719,13 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n \n     else if (strCommand == \"tx\")\n     {\n-        vector<uint256> vWorkQueue;\n-        vector<uint256> vEraseQueue;\n-        CDataStream vMsg(vRecv);\n-        CTxDB txdb(\"r\");\n         CTransaction tx;\n         vRecv >> tx;\n \n         CInv inv(MSG_TX, tx.GetHash());\n         pfrom->AddInventoryKnown(inv);\n \n-        bool fMissingInputs = false;\n-        if (tx.AcceptToMemoryPool(txdb, true, &fMissingInputs))\n-        {\n-            SyncWithWallets(tx, NULL, true);\n-            RelayMessage(inv, vMsg);\n-            {\n-                LOCK(cs_mapAlreadyAskedFor);\n-                mapAlreadyAskedFor.erase(inv);\n-            }\n-            vWorkQueue.push_back(inv.hash);\n-            vEraseQueue.push_back(inv.hash);\n-\n-            // Recursively process any orphan transactions that depended on this one\n-            for (unsigned int i = 0; i < vWorkQueue.size(); i++)\n-            {\n-                uint256 hashPrev = vWorkQueue[i];\n-                for (map<uint256, CTransaction*>::iterator mi = mapOrphanTransactionsByPrev[hashPrev].begin();\n-                     mi != mapOrphanTransactionsByPrev[hashPrev].end();\n-                     ++mi)\n-                {\n-                    CTransaction& tx = *((*mi).second);\n-                    CInv inv(MSG_TX, tx.GetHash());\n-                    bool fMissingInputs2 = false;\n-\n-                    if (tx.AcceptToMemoryPool(txdb, true, &fMissingInputs2))\n-                    {\n-                        printf(\"   accepted orphan tx %s\\n\", inv.hash.ToString().substr(0,10).c_str());\n-                        SyncWithWallets(tx, NULL, true);\n-                        RelayMessage(inv, tx);\n-                        {\n-                            LOCK(cs_mapAlreadyAskedFor);\n-                            mapAlreadyAskedFor.erase(inv);\n-                        }\n-                        vWorkQueue.push_back(inv.hash);\n-                        vEraseQueue.push_back(inv.hash);\n-                    }\n-                    else if (!fMissingInputs2)\n-                    {\n-                        // invalid orphan\n-                        vEraseQueue.push_back(inv.hash);\n-                        printf(\"   removed invalid orphan tx %s\\n\", inv.hash.ToString().substr(0,10).c_str());\n-                    }\n-                }\n-            }\n-\n-            BOOST_FOREACH(uint256 hash, vEraseQueue)\n-                EraseOrphanTx(hash);\n-        }\n-        else if (fMissingInputs)\n-        {\n-            AddOrphanTx(tx);\n-\n-            // DoS prevention: do not allow mapOrphanTransactions to grow unbounded\n-            unsigned int nEvicted = LimitOrphanTxSize(MAX_ORPHAN_TRANSACTIONS);\n-            if (nEvicted > 0)\n-                printf(\"mapOrphan overflow, removed %u tx\\n\", nEvicted);\n-        }\n+        phub->EmitTransaction(tx);\n         if (tx.nDoS) pfrom->Misbehaving(tx.nDoS);\n     }\n "
+      },
+      {
+        "sha": "4b8b36be02256149f469ce20b66f2aafc1523318",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 0,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ac33eeca2c38bb902423e99bd26bef509a990b58/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ac33eeca2c38bb902423e99bd26bef509a990b58/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=ac33eeca2c38bb902423e99bd26bef509a990b58",
+        "patch": "@@ -105,6 +105,15 @@ void HandleCommitBlock(const CBlock& block)\n     }\n }\n \n+void HandleCommitTransactionToMemoryPool(const CTransaction& tx)\n+{\n+    CInv inv(MSG_TX, tx.GetHash());\n+    RelayMessage(inv, tx);\n+\n+    LOCK(cs_mapAlreadyAskedFor);\n+    mapAlreadyAskedFor.erase(inv);\n+}\n+\n \n \n "
+      }
+    ]
+  },
+  {
+    "sha": "3bfb60f64dc68d1ee558b15ea32f9e4690d4e28d",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozYmZiNjBmNjRkYzY4ZDFlZTU1OGIxNWVhMzJmOWU0NjkwZDRlMjhk",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-01T23:47:53Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-11T17:30:26Z"
+      },
+      "message": "Use EmitTransaction instead of AcceptToMemoryPool in sendrawtx.",
+      "tree": {
+        "sha": "6fbffaa7ac32254b8951c8ec3e2811747297ff26",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/6fbffaa7ac32254b8951c8ec3e2811747297ff26"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/3bfb60f64dc68d1ee558b15ea32f9e4690d4e28d",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3bfb60f64dc68d1ee558b15ea32f9e4690d4e28d",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/3bfb60f64dc68d1ee558b15ea32f9e4690d4e28d",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3bfb60f64dc68d1ee558b15ea32f9e4690d4e28d/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "ac33eeca2c38bb902423e99bd26bef509a990b58",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ac33eeca2c38bb902423e99bd26bef509a990b58",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/ac33eeca2c38bb902423e99bd26bef509a990b58"
+      }
+    ],
+    "stats": {
+      "total": 9,
+      "additions": 1,
+      "deletions": 8
+    },
+    "files": [
+      {
+        "sha": "740fa126e50b0f629bfd5663a9f1aa9177d2342e",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 8,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3bfb60f64dc68d1ee558b15ea32f9e4690d4e28d/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3bfb60f64dc68d1ee558b15ea32f9e4690d4e28d/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=3bfb60f64dc68d1ee558b15ea32f9e4690d4e28d",
+        "patch": "@@ -2255,16 +2255,9 @@ Value sendrawtx(const Array& params, bool fHelp)\n     }\n \n     // push to local node\n-    CTxDB txdb(\"r\");\n-    if (!tx.AcceptToMemoryPool(txdb))\n+    if (!phub->EmitTransaction(tx))\n         throw JSONRPCError(-22, \"TX rejected\");\n \n-    SyncWithWallets(tx, NULL, true);\n-\n-    // relay to network\n-    CInv inv(MSG_TX, tx.GetHash());\n-    RelayInventory(inv);\n-\n     return tx.GetHash().GetHex();\n }\n "
+      }
+    ]
+  },
+  {
+    "sha": "c277c93f2353abd71d25c2632877bed9d1bda1ef",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjMjc3YzkzZjIzNTNhYmQ3MWQyNWMyNjMyODc3YmVkOWQxYmRhMWVm",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-01T01:10:10Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-11T17:30:26Z"
+      },
+      "message": "Add CWallet support for registering with a CHub.",
+      "tree": {
+        "sha": "e0c9f603551548b39f27a88d3c85ef637dd85616",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/e0c9f603551548b39f27a88d3c85ef637dd85616"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/c277c93f2353abd71d25c2632877bed9d1bda1ef",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c277c93f2353abd71d25c2632877bed9d1bda1ef",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/c277c93f2353abd71d25c2632877bed9d1bda1ef",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c277c93f2353abd71d25c2632877bed9d1bda1ef/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "3bfb60f64dc68d1ee558b15ea32f9e4690d4e28d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3bfb60f64dc68d1ee558b15ea32f9e4690d4e28d",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/3bfb60f64dc68d1ee558b15ea32f9e4690d4e28d"
+      }
+    ],
+    "stats": {
+      "total": 4,
+      "additions": 3,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "24f4fad213459a4123fe4f7ae2140b1d3f2728b3",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c277c93f2353abd71d25c2632877bed9d1bda1ef/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c277c93f2353abd71d25c2632877bed9d1bda1ef/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=c277c93f2353abd71d25c2632877bed9d1bda1ef",
+        "patch": "@@ -637,6 +637,7 @@ bool AppInit2()\n     printf(\" wallet      %15\"PRI64d\"ms\\n\", GetTimeMillis() - nStart);\n \n     RegisterWallet(pwalletMain);\n+    pwalletMain->RegisterWithHub(phub);\n \n     CBlockIndex *pindexRescan = pindexBest;\n     if (GetBoolArg(\"-rescan\"))"
+      },
+      {
+        "sha": "e23b88291b6878e02b1d3762bb7fe48fa346c1d2",
+        "filename": "src/wallet.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 1,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c277c93f2353abd71d25c2632877bed9d1bda1ef/src/wallet.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c277c93f2353abd71d25c2632877bed9d1bda1ef/src/wallet.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.h?ref=c277c93f2353abd71d25c2632877bed9d1bda1ef",
+        "patch": "@@ -10,6 +10,7 @@\n #include \"keystore.h\"\n #include \"script.h\"\n #include \"ui_interface.h\"\n+#include \"hub.h\"\n \n class CWalletTx;\n class CReserveKey;\n@@ -57,7 +58,7 @@ class CKeyPool\n /** A CWallet is an extension of a keystore, which also maintains a set of transactions and balances,\n  * and provides the ability to create new transactions.\n  */\n-class CWallet : public CCryptoKeyStore\n+class CWallet : public CCryptoKeyStore, public CHubListener\n {\n private:\n     bool SelectCoinsMinConf(int64 nTargetValue, int nConfMine, int nConfTheirs, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, int64& nValueRet) const;"
+      }
+    ]
+  },
+  {
+    "sha": "916ffbfe9dbc11b9597762b928c55db3480cdbd9",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5MTZmZmJmZTlkYmMxMWI5NTk3NzYyYjkyOGM1NWRiMzQ4MGNkYmQ5",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-01T23:41:48Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-11T17:30:28Z"
+      },
+      "message": "Use HandleCommitTransactionToMemoryPool instead of SyncWithWallets.",
+      "tree": {
+        "sha": "4ab954173767aacc0e1e686d1d640d3916fb1a08",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/4ab954173767aacc0e1e686d1d640d3916fb1a08"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/916ffbfe9dbc11b9597762b928c55db3480cdbd9",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/916ffbfe9dbc11b9597762b928c55db3480cdbd9",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/916ffbfe9dbc11b9597762b928c55db3480cdbd9",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/916ffbfe9dbc11b9597762b928c55db3480cdbd9/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "c277c93f2353abd71d25c2632877bed9d1bda1ef",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c277c93f2353abd71d25c2632877bed9d1bda1ef",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c277c93f2353abd71d25c2632877bed9d1bda1ef"
+      }
+    ],
+    "stats": {
+      "total": 11,
+      "additions": 8,
+      "deletions": 3
+    },
+    "files": [
+      {
+        "sha": "c401efa3c7bb2b79146b23eb77092ce7cd27758b",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/916ffbfe9dbc11b9597762b928c55db3480cdbd9/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/916ffbfe9dbc11b9597762b928c55db3480cdbd9/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=916ffbfe9dbc11b9597762b928c55db3480cdbd9",
+        "patch": "@@ -622,11 +622,11 @@ bool CHub::EmitTransaction(CTransaction& tx)\n     CTxDB txdb(\"r\");\n     uint256 hash = tx.GetHash();\n \n+    LOCK(cs_main);\n+\n     bool fMissingInputs = false;\n     if (mempool.accept(txdb, tx, true, &fMissingInputs))\n     {\n-        SyncWithWallets(tx, NULL, true);\n-\n         // Recursively process any orphan transactions that depended on this one\n         for (map<uint256, CTransaction*>::iterator mi = mapOrphanTransactionsByPrev[hash].begin();\n              mi != mapOrphanTransactionsByPrev[hash].end();"
+      },
+      {
+        "sha": "5763d638a498f22f344395571ad8862a59958cf4",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 1,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/916ffbfe9dbc11b9597762b928c55db3480cdbd9/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/916ffbfe9dbc11b9597762b928c55db3480cdbd9/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=916ffbfe9dbc11b9597762b928c55db3480cdbd9",
+        "patch": "@@ -81,7 +81,6 @@ class CTxIndex;\n \n void RegisterWallet(CWallet* pwalletIn);\n void UnregisterWallet(CWallet* pwalletIn);\n-void SyncWithWallets(const CTransaction& tx, const CBlock* pblock = NULL, bool fUpdate = false);\n bool CheckDiskSpace(uint64 nAdditionalBytes=0);\n FILE* OpenBlockFile(unsigned int nFile, unsigned int nBlockPos, const char* pszMode=\"rb\");\n FILE* AppendBlockFile(unsigned int& nFileRet);"
+      },
+      {
+        "sha": "d6b55b0b03baf21ba11d83bf8c1f5277ac26a93b",
+        "filename": "src/wallet.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 0,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/916ffbfe9dbc11b9597762b928c55db3480cdbd9/src/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/916ffbfe9dbc11b9597762b928c55db3480cdbd9/src/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.cpp?ref=916ffbfe9dbc11b9597762b928c55db3480cdbd9",
+        "patch": "@@ -409,6 +409,11 @@ bool CWallet::AddToWalletIfInvolvingMe(const CTransaction& tx, const CBlock* pbl\n     return false;\n }\n \n+void CWallet::HandleCommitTransactionToMemoryPool(const CTransaction& tx)\n+{\n+    AddToWalletIfInvolvingMe(tx, NULL, true);\n+}\n+\n bool CWallet::EraseFromWallet(uint256 hash)\n {\n     if (!fFileBacked)"
+      },
+      {
+        "sha": "6c4d0ff9f88299197ec1e9419fe36bbc4a4f0249",
+        "filename": "src/wallet.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/916ffbfe9dbc11b9597762b928c55db3480cdbd9/src/wallet.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/916ffbfe9dbc11b9597762b928c55db3480cdbd9/src/wallet.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.h?ref=916ffbfe9dbc11b9597762b928c55db3480cdbd9",
+        "patch": "@@ -137,6 +137,7 @@ class CWallet : public CCryptoKeyStore, public CHubListener\n     void MarkDirty();\n     bool AddToWallet(const CWalletTx& wtxIn);\n     bool AddToWalletIfInvolvingMe(const CTransaction& tx, const CBlock* pblock, bool fUpdate = false, bool fFindBlock = false);\n+    void HandleCommitTransactionToMemoryPool(const CTransaction& tx);\n     bool EraseFromWallet(uint256 hash);\n     void WalletUpdateSpent(const CTransaction& prevout);\n     int ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate = false);"
+      }
+    ]
+  },
+  {
+    "sha": "e60084cae3add85c54878bd6f620b41f107dc691",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplNjAwODRjYWUzYWRkODVjNTQ4NzhiZDZmNjIwYjQxZjEwN2RjNjkx",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-02T01:16:48Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-11T17:30:28Z"
+      },
+      "message": "Remove AcceptToMemoryPool and replace with EmitTransaction.\n\n * This removes not only CTransaction::AcceptToMemoryPool, but\n    also CMerkleTx::AcceptToMemoryPool. It also moves\n    CWalletTx::AcceptWalletTransaction to wallet.cpp\n\n * This adds a fCheckInputs flag to EmitTransaction, which is\n    similar to the fCheckInputs flag to AcceptToMemoryPool,\n    however, it has stricter guidlines that it should only be set\n    \"when transaction is a supporting tx for one of our own.\"\n    Additionally, \"fCheckInputs is ignored (and set to true)\n    if !IsInitialBlockDownload() && !fClient\"\n\n    As a part of these guidelines,\n    CWalletTx::AcceptWalletTransaction calls EmitTransaction with\n    fCheckInputs set to true (the default) on the final\n    transaction, whereas it used to call with fCheckInputs set to\n    false. This has the important side-effect of allowing wallet-\n    generated transactions to end up getting AddOrphanTx'd.\n    However, if a supporting transaction to one of our own had\n    previously been AddOrphanTx'd, it would immediately be added\n    to memory pool as it is \"a supporting tx for one of our own\"\n    and thus is re-added with fCheckInputs=false.\n\n    Note that the possibility of a wallet transaction getting\n    AddOrphanTx'd is very low, and should only happen if\n    a) a transaction's input is a generate and we are missing that\n       block (note that no transactions should be generated with a\n       generation input if we don't have that block anyway).\n    b) We match the !IsInitialBlockDownload() && !fClient check,\n       are not caught up to the latest block, and an input is in a\n       block we do not yet have (possible after the last\n       checkpoint). This situation is temporary and should resolve\n       itself once we catch up (though AddOrphanTx'd transactions\n       may be permanently orphaned).\n\n    Largely, these guidelines are there because there is no reason\n    to add a transaction without checking its inputs, as we have\n    those inputs available, and checking them as any other\n    transaction would provides additional sanity-checks.\n\n * A second EmitTransaction was added with tx of type CMerkleTx.\n    This keeps behavior of CMerkleTx::AcceptToMemoryPool the same\n    in fClient mode. Note that new behavior was invented for\n    CHub::EmitTransaction(CTransaction&...) in fClient mode,\n    namely that ClientConnectInputs is only checked if\n    fCheckInputs is true. This was chosen to make emitting a\n    transaction possible in fClient mode even if its inputs are\n    not available, but could be changed if support for that is not\n    needed when fClient mode is actually implemented.",
+      "tree": {
+        "sha": "e6d11d62fab89e707fd2837a807baa1d7deee44b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/e6d11d62fab89e707fd2837a807baa1d7deee44b"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/e60084cae3add85c54878bd6f620b41f107dc691",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e60084cae3add85c54878bd6f620b41f107dc691",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/e60084cae3add85c54878bd6f620b41f107dc691",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e60084cae3add85c54878bd6f620b41f107dc691/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "916ffbfe9dbc11b9597762b928c55db3480cdbd9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/916ffbfe9dbc11b9597762b928c55db3480cdbd9",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/916ffbfe9dbc11b9597762b928c55db3480cdbd9"
+      }
+    ],
+    "stats": {
+      "total": 129,
+      "additions": 61,
+      "deletions": 68
+    },
+    "files": [
+      {
+        "sha": "112bfdb107d24a260a2606995d581fce8813f2ce",
+        "filename": "src/hub.h",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 2,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e60084cae3add85c54878bd6f620b41f107dc691/src/hub.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e60084cae3add85c54878bd6f620b41f107dc691/src/hub.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/hub.h?ref=e60084cae3add85c54878bd6f620b41f107dc691",
+        "patch": "@@ -13,6 +13,7 @@\n #include \"sync.h\"\n \n class CBlock;\n+class CMerkleTx;\n class CTransaction;\n class CAlert;\n \n@@ -55,6 +56,7 @@ class CHub\n \n     void SubmitCallbackCommitBlock(const CBlock &block);\n \n+    bool EmitTransactionInner(CTransaction& tx, bool fCheckInputs);\n     void SubmitCallbackCommitTransactionToMemoryPool(const CTransaction &tx);\n \n     void SubmitCallbackCommitAlert(const CAlert &alert);\n@@ -92,8 +94,12 @@ class CHub\n     //   be handled by listeners\n     bool EmitBlock(CBlock& block);\n     bool EmitAlert(CAlert& alert);\n-    // Do not call EmitTransaction except for loose transactions (ie transactions not in a block)\n-    bool EmitTransaction(CTransaction& tx);\n+    // Emitting transactions already in a block is acceptable only if it is a supporting\n+    //   transaction for one of our own\n+    // fCheckInputs is ignored (and set to true) if !IsInitialBlockDownload() && !fClient\n+    // Only set fCheckInputs when tx is a supporting transaction for one of our own\n+    bool EmitTransaction(CMerkleTx& tx, bool fCheckInputs=true);\n+    bool EmitTransaction(CTransaction& tx, bool fCheckInputs=true);\n \n //Connected wallet/etc access methods\n "
+      },
+      {
+        "sha": "c561d1ed26a1a7ab5803e7b1bef80f4e74d4d4c3",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 34,
+        "deletions": 57,
+        "changes": 91,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e60084cae3add85c54878bd6f620b41f107dc691/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e60084cae3add85c54878bd6f620b41f107dc691/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=e60084cae3add85c54878bd6f620b41f107dc691",
+        "patch": "@@ -612,20 +612,16 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,\n     return true;\n }\n \n-bool CTransaction::AcceptToMemoryPool(CTxDB& txdb, bool fCheckInputs, bool* pfMissingInputs)\n+bool CHub::EmitTransactionInner(CTransaction& tx, bool fCheckInputs)\n {\n-    return mempool.accept(txdb, *this, fCheckInputs, pfMissingInputs);\n-}\n-\n-bool CHub::EmitTransaction(CTransaction& tx)\n-{\n-    CTxDB txdb(\"r\");\n     uint256 hash = tx.GetHash();\n \n-    LOCK(cs_main);\n+    CTxDB* ptxdb = NULL;\n+    if (!fClient && fCheckInputs)\n+        ptxdb = new CTxDB(\"r\");\n \n     bool fMissingInputs = false;\n-    if (mempool.accept(txdb, tx, true, &fMissingInputs))\n+    if (mempool.accept(*ptxdb, tx, fCheckInputs, &fMissingInputs))\n     {\n         // Recursively process any orphan transactions that depended on this one\n         for (map<uint256, CTransaction*>::iterator mi = mapOrphanTransactionsByPrev[hash].begin();\n@@ -659,6 +655,34 @@ bool CHub::EmitTransaction(CTransaction& tx)\n     return false;\n }\n \n+bool CHub::EmitTransaction(CTransaction& tx, bool fCheckInputs)\n+{\n+    LOCK(cs_main);\n+\n+    if (!fClient && !IsInitialBlockDownload())\n+        fCheckInputs = true;\n+\n+    if (fClient && fCheckInputs)\n+        if (!tx.ClientConnectInputs())\n+            return false;\n+\n+    return EmitTransactionInner(tx, fCheckInputs);\n+}\n+\n+bool CHub::EmitTransaction(CMerkleTx& tx, bool fCheckInputs)\n+{\n+    LOCK(cs_main);\n+\n+    if (!fClient && !IsInitialBlockDownload())\n+        fCheckInputs = true;\n+\n+    if (fClient)\n+        if (!tx.IsInMainChain() && !tx.ClientConnectInputs())\n+            return false;\n+\n+    return EmitTransactionInner(tx, fCheckInputs);\n+}\n+\n bool CTxMemPool::addUnchecked(CTransaction &tx)\n {\n     // Add to memory pool without checking anything.  Don't call this directly,\n@@ -731,53 +755,6 @@ int CMerkleTx::GetBlocksToMaturity() const\n }\n \n \n-bool CMerkleTx::AcceptToMemoryPool(CTxDB& txdb, bool fCheckInputs)\n-{\n-    if (fClient)\n-    {\n-        if (!IsInMainChain() && !ClientConnectInputs())\n-            return false;\n-        return CTransaction::AcceptToMemoryPool(txdb, false);\n-    }\n-    else\n-    {\n-        return CTransaction::AcceptToMemoryPool(txdb, fCheckInputs);\n-    }\n-}\n-\n-bool CMerkleTx::AcceptToMemoryPool()\n-{\n-    CTxDB txdb(\"r\");\n-    return AcceptToMemoryPool(txdb);\n-}\n-\n-\n-\n-bool CWalletTx::AcceptWalletTransaction(CTxDB& txdb, bool fCheckInputs)\n-{\n-\n-    {\n-        LOCK(mempool.cs);\n-        // Add previous supporting transactions first\n-        BOOST_FOREACH(CMerkleTx& tx, vtxPrev)\n-        {\n-            if (!tx.IsCoinBase())\n-            {\n-                uint256 hash = tx.GetHash();\n-                if (!mempool.exists(hash) && !txdb.ContainsTx(hash))\n-                    tx.AcceptToMemoryPool(txdb, fCheckInputs);\n-            }\n-        }\n-        return AcceptToMemoryPool(txdb, fCheckInputs);\n-    }\n-    return false;\n-}\n-\n-bool CWalletTx::AcceptWalletTransaction()\n-{\n-    CTxDB txdb(\"r\");\n-    return AcceptWalletTransaction(txdb);\n-}\n \n int CTxIndex::GetDepthInMainChain() const\n {\n@@ -1528,7 +1505,7 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)\n \n     // Resurrect memory transactions that were in the disconnected branch\n     BOOST_FOREACH(CTransaction& tx, vResurrect)\n-        tx.AcceptToMemoryPool(txdb, false);\n+        mempool.accept(txdb, tx, false, NULL);\n \n     // Delete redundant memory transactions that are in the connected branch\n     BOOST_FOREACH(CTransaction& tx, vDelete)"
+      },
+      {
+        "sha": "9cff6c7b11e3a2adb0e471619c5d5190a32bdc75",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 3,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e60084cae3add85c54878bd6f620b41f107dc691/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e60084cae3add85c54878bd6f620b41f107dc691/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=e60084cae3add85c54878bd6f620b41f107dc691",
+        "patch": "@@ -681,7 +681,6 @@ class CTransaction\n                        const CBlockIndex* pindexBlock, bool fBlock, bool fMiner, bool fStrictPayToScriptHash=true);\n     bool ClientConnectInputs();\n     bool CheckTransaction() const;\n-    bool AcceptToMemoryPool(CTxDB& txdb, bool fCheckInputs=true, bool* pfMissingInputs=NULL);\n \n protected:\n     const CTxOut& GetOutputFor(const CTxIn& input, const MapPrevTx& inputs) const;\n@@ -736,8 +735,6 @@ class CMerkleTx : public CTransaction\n     int GetDepthInMainChain() const { CBlockIndex *pindexRet; return GetDepthInMainChain(pindexRet); }\n     bool IsInMainChain() const { return GetDepthInMainChain() > 0; }\n     int GetBlocksToMaturity() const;\n-    bool AcceptToMemoryPool(CTxDB& txdb, bool fCheckInputs=true);\n-    bool AcceptToMemoryPool();\n };\n \n "
+      },
+      {
+        "sha": "5cffd70b65db8dcb489ede59014b5b4dcc4f8b2e",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 2,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e60084cae3add85c54878bd6f620b41f107dc691/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e60084cae3add85c54878bd6f620b41f107dc691/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=e60084cae3add85c54878bd6f620b41f107dc691",
+        "patch": "@@ -107,8 +107,14 @@ void HandleCommitBlock(const CBlock& block)\n \n void HandleCommitTransactionToMemoryPool(const CTransaction& tx)\n {\n-    CInv inv(MSG_TX, tx.GetHash());\n-    RelayMessage(inv, tx);\n+    assert(!fClient);\n+    CTxDB txdb;\n+\n+    uint256 hash = tx.GetHash();\n+    CInv inv(MSG_TX, hash);\n+\n+    if (!tx.IsCoinBase() && !txdb.ContainsTx(hash))\n+        RelayMessage(inv, tx);\n \n     LOCK(cs_mapAlreadyAskedFor);\n     mapAlreadyAskedFor.erase(inv);"
+      },
+      {
+        "sha": "d1f8ac6a16ccdf6d2443494acf13ba15ea90526f",
+        "filename": "src/wallet.cpp",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 3,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e60084cae3add85c54878bd6f620b41f107dc691/src/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e60084cae3add85c54878bd6f620b41f107dc691/src/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.cpp?ref=e60084cae3add85c54878bd6f620b41f107dc691",
+        "patch": "@@ -709,6 +709,15 @@ int CWallet::ScanForWalletTransaction(const uint256& hashTx)\n     return 0;\n }\n \n+bool CWalletTx::AcceptWalletTransaction()\n+{\n+    // Add previous supporting transactions first\n+    BOOST_FOREACH(CMerkleTx& tx, vtxPrev)\n+        phub->EmitTransaction(tx, false);\n+    return phub->EmitTransaction(*this);\n+}\n+\n+\n void CWallet::ReacceptWalletTransactions()\n {\n     CTxDB txdb(\"r\");\n@@ -756,7 +765,7 @@ void CWallet::ReacceptWalletTransactions()\n             {\n                 // Reaccept any txes of ours that aren't already in a block\n                 if (!wtx.IsCoinBase())\n-                    wtx.AcceptWalletTransaction(txdb, false);\n+                    wtx.AcceptWalletTransaction();\n             }\n         }\n         if (!vMissingTx.empty())\n@@ -1211,13 +1220,12 @@ bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey)\n         mapRequestCount[wtxNew.GetHash()] = 0;\n \n         // Broadcast\n-        if (!wtxNew.AcceptToMemoryPool())\n+        if (!wtxNew.AcceptWalletTransaction())\n         {\n             // This must not fail. The transaction has already been signed and recorded.\n             printf(\"CommitTransaction() : Error: Transaction not valid\");\n             return false;\n         }\n-        wtxNew.RelayWalletTransaction();\n     }\n     return true;\n }"
+      },
+      {
+        "sha": "6b1c3648de4a2a4ac3a86fe80968dbe13ef50baf",
+        "filename": "src/wallet.h",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 1,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e60084cae3add85c54878bd6f620b41f107dc691/src/wallet.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e60084cae3add85c54878bd6f620b41f107dc691/src/wallet.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.h?ref=e60084cae3add85c54878bd6f620b41f107dc691",
+        "patch": "@@ -596,7 +596,6 @@ class CWalletTx : public CMerkleTx\n \n     void AddSupportingTransactions(CTxDB& txdb);\n \n-    bool AcceptWalletTransaction(CTxDB& txdb, bool fCheckInputs=true);\n     bool AcceptWalletTransaction();\n \n     void RelayWalletTransaction(CTxDB& txdb);"
+      }
+    ]
+  }
+]

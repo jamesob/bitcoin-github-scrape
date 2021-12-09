@@ -1,0 +1,146 @@
+[
+  {
+    "sha": "5cb3da04b8882ca975b4e3d6c089c64bbaf67d0d",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1Y2IzZGEwNGI4ODgyY2E5NzViNGUzZDZjMDg5YzY0YmJhZjY3ZDBk",
+    "commit": {
+      "author": {
+        "name": "Marko Bencun",
+        "email": "marko.bencun@monetas.net",
+        "date": "2017-07-23T21:32:57Z"
+      },
+      "committer": {
+        "name": "Marko Bencun",
+        "email": "marko.bencun@monetas.net",
+        "date": "2017-07-23T21:38:52Z"
+      },
+      "message": "keystore GetKeys(): return result instead of writing to reference\n\nIssue: #10905\n\nBy returning the result, a few useless lines can be removed.\n\nReturn-value-optimization means there should be no copy.",
+      "tree": {
+        "sha": "0f2c1118633a04ea7920cf6f0a523cb113a4b281",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/0f2c1118633a04ea7920cf6f0a523cb113a4b281"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/5cb3da04b8882ca975b4e3d6c089c64bbaf67d0d",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5cb3da04b8882ca975b4e3d6c089c64bbaf67d0d",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/5cb3da04b8882ca975b4e3d6c089c64bbaf67d0d",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5cb3da04b8882ca975b4e3d6c089c64bbaf67d0d/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "0c173a15ca1bf20999f74987988985508c9de463",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0c173a15ca1bf20999f74987988985508c9de463",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/0c173a15ca1bf20999f74987988985508c9de463"
+      }
+    ],
+    "stats": {
+      "total": 48,
+      "additions": 19,
+      "deletions": 29
+    },
+    "files": [
+      {
+        "sha": "059a657dc203982ca4601d0dbf9ca524f95cfd9c",
+        "filename": "src/keystore.h",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 11,
+        "changes": 18,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5cb3da04b8882ca975b4e3d6c089c64bbaf67d0d/src/keystore.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5cb3da04b8882ca975b4e3d6c089c64bbaf67d0d/src/keystore.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/keystore.h?ref=5cb3da04b8882ca975b4e3d6c089c64bbaf67d0d",
+        "patch": "@@ -30,7 +30,7 @@ class CKeyStore\n     //! Check whether a key corresponding to a given address is present in the store.\n     virtual bool HaveKey(const CKeyID &address) const =0;\n     virtual bool GetKey(const CKeyID &address, CKey& keyOut) const =0;\n-    virtual void GetKeys(std::set<CKeyID> &setAddress) const =0;\n+    virtual std::set<CKeyID> GetKeys() const =0;\n     virtual bool GetPubKey(const CKeyID &address, CPubKey& vchPubKeyOut) const =0;\n \n     //! Support for BIP 0013 : see https://github.com/bitcoin/bips/blob/master/bip-0013.mediawiki\n@@ -71,18 +71,14 @@ class CBasicKeyStore : public CKeyStore\n         }\n         return result;\n     }\n-    void GetKeys(std::set<CKeyID> &setAddress) const override\n+    std::set<CKeyID> GetKeys() const override\n     {\n-        setAddress.clear();\n-        {\n-            LOCK(cs_KeyStore);\n-            KeyMap::const_iterator mi = mapKeys.begin();\n-            while (mi != mapKeys.end())\n-            {\n-                setAddress.insert((*mi).first);\n-                mi++;\n-            }\n+        LOCK(cs_KeyStore);\n+        std::set<CKeyID> set_address;\n+        for (const auto& mi : mapKeys) {\n+            set_address.insert(mi.first);\n         }\n+        return set_address;\n     }\n     bool GetKey(const CKeyID &address, CKey &keyOut) const override\n     {"
+      },
+      {
+        "sha": "d6f3e27721c604ea78d3c992863f64d0eea53d84",
+        "filename": "src/wallet/crypter.h",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 14,
+        "changes": 25,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5cb3da04b8882ca975b4e3d6c089c64bbaf67d0d/src/wallet/crypter.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5cb3da04b8882ca975b4e3d6c089c64bbaf67d0d/src/wallet/crypter.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/crypter.h?ref=5cb3da04b8882ca975b4e3d6c089c64bbaf67d0d",
+        "patch": "@@ -16,13 +16,13 @@ const unsigned int WALLET_CRYPTO_IV_SIZE = 16;\n /**\n  * Private key encryption is done based on a CMasterKey,\n  * which holds a salt and random encryption key.\n- * \n+ *\n  * CMasterKeys are encrypted using AES-256-CBC using a key\n  * derived using derivation method nDerivationMethod\n  * (0 == EVP_sha512()) and derivation iterations nDeriveIterations.\n  * vchOtherDerivationParameters is provided for alternative algorithms\n  * which may require more parameters (such as scrypt).\n- * \n+ *\n  * Wallet Private Keys are then encrypted using AES-256-CBC\n  * with the double-sha256 of the public key as the IV, and the\n  * master key's key as the encryption key (see keystore.[ch]).\n@@ -162,28 +162,25 @@ class CCryptoKeyStore : public CBasicKeyStore\n     {\n         {\n             LOCK(cs_KeyStore);\n-            if (!IsCrypted())\n+            if (!IsCrypted()) {\n                 return CBasicKeyStore::HaveKey(address);\n+            }\n             return mapCryptedKeys.count(address) > 0;\n         }\n         return false;\n     }\n     bool GetKey(const CKeyID &address, CKey& keyOut) const override;\n     bool GetPubKey(const CKeyID &address, CPubKey& vchPubKeyOut) const override;\n-    void GetKeys(std::set<CKeyID> &setAddress) const override\n+    std::set<CKeyID> GetKeys() const override\n     {\n-        if (!IsCrypted())\n-        {\n-            CBasicKeyStore::GetKeys(setAddress);\n-            return;\n+        if (!IsCrypted()) {\n+            return CBasicKeyStore::GetKeys();\n         }\n-        setAddress.clear();\n-        CryptedKeyMap::const_iterator mi = mapCryptedKeys.begin();\n-        while (mi != mapCryptedKeys.end())\n-        {\n-            setAddress.insert((*mi).first);\n-            mi++;\n+        std::set<CKeyID> set_address;\n+        for (const auto& mi : mapCryptedKeys) {\n+            set_address.insert(mi.first);\n         }\n+        return set_address;\n     }\n \n     /**"
+      },
+      {
+        "sha": "fcb679e75446c710c474b7359b50609c60b2c1e1",
+        "filename": "src/wallet/wallet.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 4,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5cb3da04b8882ca975b4e3d6c089c64bbaf67d0d/src/wallet/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5cb3da04b8882ca975b4e3d6c089c64bbaf67d0d/src/wallet/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.cpp?ref=5cb3da04b8882ca975b4e3d6c089c64bbaf67d0d",
+        "patch": "@@ -3660,13 +3660,10 @@ void CWallet::GetKeyBirthTimes(std::map<CTxDestination, int64_t> &mapKeyBirth) c\n     // map in which we'll infer heights of other keys\n     CBlockIndex *pindexMax = chainActive[std::max(0, chainActive.Height() - 144)]; // the tip can be reorganized; use a 144-block safety margin\n     std::map<CKeyID, CBlockIndex*> mapKeyFirstBlock;\n-    std::set<CKeyID> setKeys;\n-    GetKeys(setKeys);\n-    for (const CKeyID &keyid : setKeys) {\n+    for (const CKeyID &keyid : GetKeys()) {\n         if (mapKeyBirth.count(keyid) == 0)\n             mapKeyFirstBlock[keyid] = pindexMax;\n     }\n-    setKeys.clear();\n \n     // if there are no such keys, we're done\n     if (mapKeyFirstBlock.empty())"
+      }
+    ]
+  },
+  {
+    "sha": "fe09b0197c20dc3c0a614c1a94dac708ef206743",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmZTA5YjAxOTdjMjBkYzNjMGE2MTRjMWE5NGRhYzcwOGVmMjA2NzQz",
+    "commit": {
+      "author": {
+        "name": "Marko Bencun",
+        "email": "marko.bencun@monetas.net",
+        "date": "2017-07-23T21:37:56Z"
+      },
+      "committer": {
+        "name": "Marko Bencun",
+        "email": "marko.bencun@monetas.net",
+        "date": "2017-07-23T21:38:55Z"
+      },
+      "message": "add missing lock to crypter GetKeys()\n\nIssue: #10905",
+      "tree": {
+        "sha": "faa9bd0c0566a9eff9f1bd684ae6763b1baf3f42",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/faa9bd0c0566a9eff9f1bd684ae6763b1baf3f42"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/fe09b0197c20dc3c0a614c1a94dac708ef206743",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fe09b0197c20dc3c0a614c1a94dac708ef206743",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/fe09b0197c20dc3c0a614c1a94dac708ef206743",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fe09b0197c20dc3c0a614c1a94dac708ef206743/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "5cb3da04b8882ca975b4e3d6c089c64bbaf67d0d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5cb3da04b8882ca975b4e3d6c089c64bbaf67d0d",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/5cb3da04b8882ca975b4e3d6c089c64bbaf67d0d"
+      }
+    ],
+    "stats": {
+      "total": 1,
+      "additions": 1,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "0295004cb382e104fbe1af422c3742081ae92a00",
+        "filename": "src/wallet/crypter.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fe09b0197c20dc3c0a614c1a94dac708ef206743/src/wallet/crypter.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fe09b0197c20dc3c0a614c1a94dac708ef206743/src/wallet/crypter.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/crypter.h?ref=fe09b0197c20dc3c0a614c1a94dac708ef206743",
+        "patch": "@@ -173,6 +173,7 @@ class CCryptoKeyStore : public CBasicKeyStore\n     bool GetPubKey(const CKeyID &address, CPubKey& vchPubKeyOut) const override;\n     std::set<CKeyID> GetKeys() const override\n     {\n+        LOCK(cs_KeyStore);\n         if (!IsCrypted()) {\n             return CBasicKeyStore::GetKeys();\n         }"
+      }
+    ]
+  }
+]

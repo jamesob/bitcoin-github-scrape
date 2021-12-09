@@ -1,0 +1,198 @@
+[
+  {
+    "sha": "dca8ef586c57075587e6cd44db88eaa5c4b707c7",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkY2E4ZWY1ODZjNTcwNzU1ODdlNmNkNDRkYjg4ZWFhNWM0YjcwN2M3",
+    "commit": {
+      "author": {
+        "name": "Sebastian Falbesoner",
+        "email": "sebastian.falbesoner@gmail.com",
+        "date": "2021-05-15T16:45:20Z"
+      },
+      "committer": {
+        "name": "Sebastian Falbesoner",
+        "email": "sebastian.falbesoner@gmail.com",
+        "date": "2021-05-17T15:22:31Z"
+      },
+      "message": "wallet: refactor: dedup sqlite PRAGMA integer reads",
+      "tree": {
+        "sha": "91256e38ca19a7b518568b39d1933945bb5fd902",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/91256e38ca19a7b518568b39d1933945bb5fd902"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/dca8ef586c57075587e6cd44db88eaa5c4b707c7",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/dca8ef586c57075587e6cd44db88eaa5c4b707c7",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/dca8ef586c57075587e6cd44db88eaa5c4b707c7",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/dca8ef586c57075587e6cd44db88eaa5c4b707c7/comments",
+    "author": {
+      "login": "theStack",
+      "id": 91535,
+      "node_id": "MDQ6VXNlcjkxNTM1",
+      "avatar_url": "https://avatars.githubusercontent.com/u/91535?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/theStack",
+      "html_url": "https://github.com/theStack",
+      "followers_url": "https://api.github.com/users/theStack/followers",
+      "following_url": "https://api.github.com/users/theStack/following{/other_user}",
+      "gists_url": "https://api.github.com/users/theStack/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/theStack/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/theStack/subscriptions",
+      "organizations_url": "https://api.github.com/users/theStack/orgs",
+      "repos_url": "https://api.github.com/users/theStack/repos",
+      "events_url": "https://api.github.com/users/theStack/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/theStack/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "theStack",
+      "id": 91535,
+      "node_id": "MDQ6VXNlcjkxNTM1",
+      "avatar_url": "https://avatars.githubusercontent.com/u/91535?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/theStack",
+      "html_url": "https://github.com/theStack",
+      "followers_url": "https://api.github.com/users/theStack/followers",
+      "following_url": "https://api.github.com/users/theStack/following{/other_user}",
+      "gists_url": "https://api.github.com/users/theStack/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/theStack/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/theStack/subscriptions",
+      "organizations_url": "https://api.github.com/users/theStack/orgs",
+      "repos_url": "https://api.github.com/users/theStack/repos",
+      "events_url": "https://api.github.com/users/theStack/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/theStack/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "1ef34ee25ed34b2b092f15bf3dca5c0508092829",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1ef34ee25ed34b2b092f15bf3dca5c0508092829",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/1ef34ee25ed34b2b092f15bf3dca5c0508092829"
+      }
+    ],
+    "stats": {
+      "total": 60,
+      "additions": 29,
+      "deletions": 31
+    },
+    "files": [
+      {
+        "sha": "f5c43fa93759f208a612c1532f6407b176b5ac04",
+        "filename": "src/wallet/sqlite.cpp",
+        "status": "modified",
+        "additions": 29,
+        "deletions": 31,
+        "changes": 60,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/dca8ef586c57075587e6cd44db88eaa5c4b707c7/src/wallet/sqlite.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/dca8ef586c57075587e6cd44db88eaa5c4b707c7/src/wallet/sqlite.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/sqlite.cpp?ref=dca8ef586c57075587e6cd44db88eaa5c4b707c7",
+        "patch": "@@ -16,6 +16,7 @@\n #include <sqlite3.h>\n #include <stdint.h>\n \n+#include <optional>\n #include <utility>\n #include <vector>\n \n@@ -35,6 +36,27 @@ static void ErrorLogCallback(void* arg, int code, const char* msg)\n     LogPrintf(\"SQLite Error. Code: %d. Message: %s\\n\", code, msg);\n }\n \n+static std::optional<int> ReadPragmaInteger(sqlite3* db, const std::string& key, const std::string& description, bilingual_str& error)\n+{\n+    std::string stmt_text = strprintf(\"PRAGMA %s\", key);\n+    sqlite3_stmt* pragma_read_stmt{nullptr};\n+    int ret = sqlite3_prepare_v2(db, stmt_text.c_str(), -1, &pragma_read_stmt, nullptr);\n+    if (ret != SQLITE_OK) {\n+        sqlite3_finalize(pragma_read_stmt);\n+        error = Untranslated(strprintf(\"SQLiteDatabase: Failed to prepare the statement to fetch %s: %s\", description, sqlite3_errstr(ret)));\n+        return std::nullopt;\n+    }\n+    ret = sqlite3_step(pragma_read_stmt);\n+    if (ret != SQLITE_ROW) {\n+        sqlite3_finalize(pragma_read_stmt);\n+        error = Untranslated(strprintf(\"SQLiteDatabase: Failed to fetch %s: %s\", description, sqlite3_errstr(ret)));\n+        return std::nullopt;\n+    }\n+    int result = sqlite3_column_int(pragma_read_stmt, 0);\n+    sqlite3_finalize(pragma_read_stmt);\n+    return result;\n+}\n+\n SQLiteDatabase::SQLiteDatabase(const fs::path& dir_path, const fs::path& file_path, bool mock)\n     : WalletDatabase(), m_mock(mock), m_dir_path(dir_path.string()), m_file_path(file_path.string())\n {\n@@ -114,50 +136,26 @@ bool SQLiteDatabase::Verify(bilingual_str& error)\n     assert(m_db);\n \n     // Check the application ID matches our network magic\n-    sqlite3_stmt* app_id_stmt{nullptr};\n-    int ret = sqlite3_prepare_v2(m_db, \"PRAGMA application_id\", -1, &app_id_stmt, nullptr);\n-    if (ret != SQLITE_OK) {\n-        sqlite3_finalize(app_id_stmt);\n-        error = strprintf(_(\"SQLiteDatabase: Failed to prepare the statement to fetch the application id: %s\"), sqlite3_errstr(ret));\n-        return false;\n-    }\n-    ret = sqlite3_step(app_id_stmt);\n-    if (ret != SQLITE_ROW) {\n-        sqlite3_finalize(app_id_stmt);\n-        error = strprintf(_(\"SQLiteDatabase: Failed to fetch the application id: %s\"), sqlite3_errstr(ret));\n-        return false;\n-    }\n-    uint32_t app_id = static_cast<uint32_t>(sqlite3_column_int(app_id_stmt, 0));\n-    sqlite3_finalize(app_id_stmt);\n+    auto read_result = ReadPragmaInteger(m_db, \"application_id\", \"the application id\", error);\n+    if (!read_result.has_value()) return false;\n+    uint32_t app_id = static_cast<uint32_t>(read_result.value());\n     uint32_t net_magic = ReadBE32(Params().MessageStart());\n     if (app_id != net_magic) {\n         error = strprintf(_(\"SQLiteDatabase: Unexpected application id. Expected %u, got %u\"), net_magic, app_id);\n         return false;\n     }\n \n     // Check our schema version\n-    sqlite3_stmt* user_ver_stmt{nullptr};\n-    ret = sqlite3_prepare_v2(m_db, \"PRAGMA user_version\", -1, &user_ver_stmt, nullptr);\n-    if (ret != SQLITE_OK) {\n-        sqlite3_finalize(user_ver_stmt);\n-        error = strprintf(_(\"SQLiteDatabase: Failed to prepare the statement to fetch sqlite wallet schema version: %s\"), sqlite3_errstr(ret));\n-        return false;\n-    }\n-    ret = sqlite3_step(user_ver_stmt);\n-    if (ret != SQLITE_ROW) {\n-        sqlite3_finalize(user_ver_stmt);\n-        error = strprintf(_(\"SQLiteDatabase: Failed to fetch sqlite wallet schema version: %s\"), sqlite3_errstr(ret));\n-        return false;\n-    }\n-    int32_t user_ver = sqlite3_column_int(user_ver_stmt, 0);\n-    sqlite3_finalize(user_ver_stmt);\n+    read_result = ReadPragmaInteger(m_db, \"user_version\", \"sqlite wallet schema version\", error);\n+    if (!read_result.has_value()) return false;\n+    int32_t user_ver = read_result.value();\n     if (user_ver != WALLET_SCHEMA_VERSION) {\n         error = strprintf(_(\"SQLiteDatabase: Unknown sqlite wallet schema version %d. Only version %d is supported\"), user_ver, WALLET_SCHEMA_VERSION);\n         return false;\n     }\n \n     sqlite3_stmt* stmt{nullptr};\n-    ret = sqlite3_prepare_v2(m_db, \"PRAGMA integrity_check\", -1, &stmt, nullptr);\n+    int ret = sqlite3_prepare_v2(m_db, \"PRAGMA integrity_check\", -1, &stmt, nullptr);\n     if (ret != SQLITE_OK) {\n         sqlite3_finalize(stmt);\n         error = strprintf(_(\"SQLiteDatabase: Failed to prepare statement to verify database: %s\"), sqlite3_errstr(ret));"
+      }
+    ]
+  },
+  {
+    "sha": "9938d610b043bf018e0b34d92e3daaffe1f17fcc",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5OTM4ZDYxMGIwNDNiZjAxOGUwYjM0ZDkyZTNkYWFmZmUxZjE3ZmNj",
+    "commit": {
+      "author": {
+        "name": "Sebastian Falbesoner",
+        "email": "sebastian.falbesoner@gmail.com",
+        "date": "2021-05-15T17:14:01Z"
+      },
+      "committer": {
+        "name": "Sebastian Falbesoner",
+        "email": "sebastian.falbesoner@gmail.com",
+        "date": "2021-05-17T15:22:36Z"
+      },
+      "message": "wallet: refactor: dedup sqlite PRAGMA assignments",
+      "tree": {
+        "sha": "1f443ef46f4ef0816981699198509412c26af34d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/1f443ef46f4ef0816981699198509412c26af34d"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/9938d610b043bf018e0b34d92e3daaffe1f17fcc",
+      "comment_count": 1,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9938d610b043bf018e0b34d92e3daaffe1f17fcc",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/9938d610b043bf018e0b34d92e3daaffe1f17fcc",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9938d610b043bf018e0b34d92e3daaffe1f17fcc/comments",
+    "author": {
+      "login": "theStack",
+      "id": 91535,
+      "node_id": "MDQ6VXNlcjkxNTM1",
+      "avatar_url": "https://avatars.githubusercontent.com/u/91535?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/theStack",
+      "html_url": "https://github.com/theStack",
+      "followers_url": "https://api.github.com/users/theStack/followers",
+      "following_url": "https://api.github.com/users/theStack/following{/other_user}",
+      "gists_url": "https://api.github.com/users/theStack/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/theStack/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/theStack/subscriptions",
+      "organizations_url": "https://api.github.com/users/theStack/orgs",
+      "repos_url": "https://api.github.com/users/theStack/repos",
+      "events_url": "https://api.github.com/users/theStack/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/theStack/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "theStack",
+      "id": 91535,
+      "node_id": "MDQ6VXNlcjkxNTM1",
+      "avatar_url": "https://avatars.githubusercontent.com/u/91535?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/theStack",
+      "html_url": "https://github.com/theStack",
+      "followers_url": "https://api.github.com/users/theStack/followers",
+      "following_url": "https://api.github.com/users/theStack/following{/other_user}",
+      "gists_url": "https://api.github.com/users/theStack/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/theStack/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/theStack/subscriptions",
+      "organizations_url": "https://api.github.com/users/theStack/orgs",
+      "repos_url": "https://api.github.com/users/theStack/repos",
+      "events_url": "https://api.github.com/users/theStack/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/theStack/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "dca8ef586c57075587e6cd44db88eaa5c4b707c7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/dca8ef586c57075587e6cd44db88eaa5c4b707c7",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/dca8ef586c57075587e6cd44db88eaa5c4b707c7"
+      }
+    ],
+    "stats": {
+      "total": 40,
+      "additions": 17,
+      "deletions": 23
+    },
+    "files": [
+      {
+        "sha": "2e60aca017be5fa67c2b86b1ee2e576238996784",
+        "filename": "src/wallet/sqlite.cpp",
+        "status": "modified",
+        "additions": 17,
+        "deletions": 23,
+        "changes": 40,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9938d610b043bf018e0b34d92e3daaffe1f17fcc/src/wallet/sqlite.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9938d610b043bf018e0b34d92e3daaffe1f17fcc/src/wallet/sqlite.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/sqlite.cpp?ref=9938d610b043bf018e0b34d92e3daaffe1f17fcc",
+        "patch": "@@ -57,6 +57,15 @@ static std::optional<int> ReadPragmaInteger(sqlite3* db, const std::string& key,\n     return result;\n }\n \n+static void SetPragma(sqlite3* db, const std::string& key, const std::string& value, const std::string& err_msg)\n+{\n+    std::string stmt_text = strprintf(\"PRAGMA %s = %s\", key, value);\n+    int ret = sqlite3_exec(db, stmt_text.c_str(), nullptr, nullptr, nullptr);\n+    if (ret != SQLITE_OK) {\n+        throw std::runtime_error(strprintf(\"SQLiteDatabase: %s: %s\\n\", err_msg, sqlite3_errstr(ret)));\n+    }\n+}\n+\n SQLiteDatabase::SQLiteDatabase(const fs::path& dir_path, const fs::path& file_path, bool mock)\n     : WalletDatabase(), m_mock(mock), m_dir_path(dir_path.string()), m_file_path(file_path.string())\n {\n@@ -211,12 +220,9 @@ void SQLiteDatabase::Open()\n \n     // Acquire an exclusive lock on the database\n     // First change the locking mode to exclusive\n-    int ret = sqlite3_exec(m_db, \"PRAGMA locking_mode = exclusive\", nullptr, nullptr, nullptr);\n-    if (ret != SQLITE_OK) {\n-        throw std::runtime_error(strprintf(\"SQLiteDatabase: Unable to change database locking mode to exclusive: %s\\n\", sqlite3_errstr(ret)));\n-    }\n+    SetPragma(m_db, \"locking_mode\", \"exclusive\", \"Unable to change database locking mode to exclusive\");\n     // Now begin a transaction to acquire the exclusive lock. This lock won't be released until we close because of the exclusive locking mode.\n-    ret = sqlite3_exec(m_db, \"BEGIN EXCLUSIVE TRANSACTION\", nullptr, nullptr, nullptr);\n+    int ret = sqlite3_exec(m_db, \"BEGIN EXCLUSIVE TRANSACTION\", nullptr, nullptr, nullptr);\n     if (ret != SQLITE_OK) {\n         throw std::runtime_error(\"SQLiteDatabase: Unable to obtain an exclusive lock on the database, is it being used by another bitcoind?\\n\");\n     }\n@@ -226,18 +232,12 @@ void SQLiteDatabase::Open()\n     }\n \n     // Enable fullfsync for the platforms that use it\n-    ret = sqlite3_exec(m_db, \"PRAGMA fullfsync = true\", nullptr, nullptr, nullptr);\n-    if (ret != SQLITE_OK) {\n-        throw std::runtime_error(strprintf(\"SQLiteDatabase: Failed to enable fullfsync: %s\\n\", sqlite3_errstr(ret)));\n-    }\n+    SetPragma(m_db, \"fullfsync\", \"true\", \"Failed to enable fullfsync\");\n \n     if (gArgs.GetBoolArg(\"-unsafesqlitesync\", false)) {\n         // Use normal synchronous mode for the journal\n         LogPrintf(\"WARNING SQLite is configured to not wait for data to be flushed to disk. Data loss and corruption may occur.\\n\");\n-        ret = sqlite3_exec(m_db, \"PRAGMA synchronous = OFF\", nullptr, nullptr, nullptr);\n-        if (ret != SQLITE_OK) {\n-            throw std::runtime_error(strprintf(\"SQLiteDatabase: Failed to set synchronous mode to OFF: %s\\n\", sqlite3_errstr(ret)));\n-        }\n+        SetPragma(m_db, \"synchronous\", \"OFF\", \"Failed to set synchronous mode to OFF\");\n     }\n \n     // Make the table for our key-value pairs\n@@ -269,18 +269,12 @@ void SQLiteDatabase::Open()\n \n         // Set the application id\n         uint32_t app_id = ReadBE32(Params().MessageStart());\n-        std::string set_app_id = strprintf(\"PRAGMA application_id = %d\", static_cast<int32_t>(app_id));\n-        ret = sqlite3_exec(m_db, set_app_id.c_str(), nullptr, nullptr, nullptr);\n-        if (ret != SQLITE_OK) {\n-            throw std::runtime_error(strprintf(\"SQLiteDatabase: Failed to set the application id: %s\\n\", sqlite3_errstr(ret)));\n-        }\n+        SetPragma(m_db, \"application_id\", strprintf(\"%d\", static_cast<int32_t>(app_id)),\n+                  \"Failed to set the application id\");\n \n         // Set the user version\n-        std::string set_user_ver = strprintf(\"PRAGMA user_version = %d\", WALLET_SCHEMA_VERSION);\n-        ret = sqlite3_exec(m_db, set_user_ver.c_str(), nullptr, nullptr, nullptr);\n-        if (ret != SQLITE_OK) {\n-            throw std::runtime_error(strprintf(\"SQLiteDatabase: Failed to set the wallet schema version: %s\\n\", sqlite3_errstr(ret)));\n-        }\n+        SetPragma(m_db, \"user_version\", strprintf(\"%d\", WALLET_SCHEMA_VERSION),\n+                  \"Failed to set the wallet schema version\");\n     }\n }\n "
+      }
+    ]
+  }
+]

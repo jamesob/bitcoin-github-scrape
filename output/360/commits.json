@@ -1,0 +1,760 @@
+[
+  {
+    "sha": "a5da9b978c3543802231656bca9adc46e599195e",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphNWRhOWI5NzhjMzU0MzgwMjIzMTY1NmJjYTlhZGM0NmU1OTkxOTVl",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2011-06-25T12:57:32Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-06-26T21:16:07Z"
+      },
+      "message": "Prepare CKeyStore for Encrypted Keys.",
+      "tree": {
+        "sha": "132a611e46845faeed7d5e701d623bd8afee7c67",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/132a611e46845faeed7d5e701d623bd8afee7c67"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a5da9b978c3543802231656bca9adc46e599195e",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a5da9b978c3543802231656bca9adc46e599195e",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a5da9b978c3543802231656bca9adc46e599195e",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a5da9b978c3543802231656bca9adc46e599195e/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": null,
+    "parents": [
+      {
+        "sha": "d0d80170a2ca73004e08fb85007fe055cbf4e411",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d0d80170a2ca73004e08fb85007fe055cbf4e411",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/d0d80170a2ca73004e08fb85007fe055cbf4e411"
+      }
+    ],
+    "stats": {
+      "total": 303,
+      "additions": 274,
+      "deletions": 29
+    },
+    "files": [
+      {
+        "sha": "c479a452cd51ce0f6741e3269d136d219f451d93",
+        "filename": "src/db.cpp",
+        "status": "modified",
+        "additions": 12,
+        "deletions": 6,
+        "changes": 18,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a5da9b978c3543802231656bca9adc46e599195e/src/db.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a5da9b978c3543802231656bca9adc46e599195e/src/db.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.cpp?ref=a5da9b978c3543802231656bca9adc46e599195e",
+        "patch": "@@ -685,7 +685,7 @@ bool CWalletDB::LoadWallet(CWallet* pwallet)\n \n     //// todo: shouldn't we catch exceptions and try to recover and continue?\n     CRITICAL_BLOCK(pwallet->cs_mapWallet)\n-    CRITICAL_BLOCK(pwallet->cs_mapKeys)\n+    CRITICAL_BLOCK(pwallet->cs_KeyStore)\n     {\n         // Get cursor\n         Dbc* pcursor = GetCursor();\n@@ -765,14 +765,20 @@ bool CWalletDB::LoadWallet(CWallet* pwallet)\n             {\n                 vector<unsigned char> vchPubKey;\n                 ssKey >> vchPubKey;\n-                CWalletKey wkey;\n+                CKey key;\n                 if (strType == \"key\")\n-                    ssValue >> wkey.vchPrivKey;\n+                {\n+                    CPrivKey pkey;\n+                    ssValue >> pkey;\n+                    key.SetPrivKey(pkey);\n+                }\n                 else\n+                {\n+                    CWalletKey wkey;\n                     ssValue >> wkey;\n-\n-                pwallet->mapKeys[vchPubKey] = wkey.vchPrivKey;\n-                mapPubKeys[Hash160(vchPubKey)] = vchPubKey;\n+                    key.SetPrivKey(wkey.vchPrivKey);\n+                }\n+                pwallet->LoadKey(key);\n             }\n             else if (strType == \"defaultkey\")\n             {"
+      },
+      {
+        "sha": "83e38b0f739ff3a9553a13deff7fd0b0c217906c",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 1,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a5da9b978c3543802231656bca9adc46e599195e/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a5da9b978c3543802231656bca9adc46e599195e/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=a5da9b978c3543802231656bca9adc46e599195e",
+        "patch": "@@ -416,7 +416,6 @@ bool AppInit2(int argc, char* argv[])\n         //// debug print\n         printf(\"mapBlockIndex.size() = %d\\n\",   mapBlockIndex.size());\n         printf(\"nBestHeight = %d\\n\",            nBestHeight);\n-        printf(\"mapKeys.size() = %d\\n\",         pwalletMain->mapKeys.size());\n         printf(\"setKeyPool.size() = %d\\n\",      pwalletMain->setKeyPool.size());\n         printf(\"mapPubKeys.size() = %d\\n\",      mapPubKeys.size());\n         printf(\"mapWallet.size() = %d\\n\",       pwalletMain->mapWallet.size());"
+      },
+      {
+        "sha": "c0fce18bf3c5e62a15b1554c701ae9ba4b1393e9",
+        "filename": "src/key.h",
+        "status": "modified",
+        "additions": 68,
+        "deletions": 2,
+        "changes": 70,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a5da9b978c3543802231656bca9adc46e599195e/src/key.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a5da9b978c3543802231656bca9adc46e599195e/src/key.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/key.h?ref=a5da9b978c3543802231656bca9adc46e599195e",
+        "patch": "@@ -31,6 +31,41 @@\n // see www.keylength.com\n // script supports up to 75 for single byte push\n \n+int static inline EC_KEY_regenerate_key(EC_KEY *eckey, BIGNUM *priv_key)\n+{\n+    int ok = 0;\n+    BN_CTX *ctx = NULL;\n+    EC_POINT *pub_key = NULL;\n+\n+    if (!eckey) return 0;\n+\n+    const EC_GROUP *group = EC_KEY_get0_group(eckey);\n+\n+    if ((ctx = BN_CTX_new()) == NULL)\n+        goto err;\n+\n+    pub_key = EC_POINT_new(group);\n+\n+    if (pub_key == NULL)\n+        goto err;\n+\n+    if (!EC_POINT_mul(group, pub_key, priv_key, NULL, NULL, ctx))\n+        goto err;\n+\n+    EC_KEY_set_private_key(eckey,priv_key);\n+    EC_KEY_set_public_key(eckey,pub_key);\n+\n+    ok = 1;\n+\n+err:\n+\n+    if (pub_key)\n+        EC_POINT_free(pub_key);\n+    if (ctx != NULL)\n+        BN_CTX_free(ctx);\n+\n+    return(ok);\n+}\n \n \n class key_error : public std::runtime_error\n@@ -42,8 +77,7 @@ class key_error : public std::runtime_error\n \n // secure_allocator is defined in serialize.h\n typedef std::vector<unsigned char, secure_allocator<unsigned char> > CPrivKey;\n-\n-\n+typedef std::vector<unsigned char, secure_allocator<unsigned char> > CSecret;\n \n class CKey\n {\n@@ -102,6 +136,38 @@ class CKey\n         return true;\n     }\n \n+    bool SetSecret(const CSecret& vchSecret)\n+    {\n+        EC_KEY_free(pkey);\n+        pkey = EC_KEY_new_by_curve_name(NID_secp256k1);\n+        if (pkey == NULL)\n+            throw key_error(\"CKey::SetSecret() : EC_KEY_new_by_curve_name failed\");\n+        if (vchSecret.size() != 32)\n+            throw key_error(\"CKey::SetSecret() : secret must be 32 bytes\");\n+        BIGNUM *bn = BN_bin2bn(&vchSecret[0],32,BN_new());\n+        if (bn == NULL) \n+            throw key_error(\"CKey::SetSecret() : BN_bin2bn failed\");\n+        if (!EC_KEY_regenerate_key(pkey,bn))\n+            throw key_error(\"CKey::SetSecret() : EC_KEY_regenerate_key failed\");\n+        BN_clear_free(bn);\n+        fSet = true;\n+        return true;\n+    }\n+\n+    CSecret GetSecret() const\n+    {\n+        CSecret vchRet;\n+        vchRet.resize(32);\n+        const BIGNUM *bn = EC_KEY_get0_private_key(pkey);\n+        int nBytes = BN_num_bytes(bn);\n+        if (bn == NULL)\n+            throw key_error(\"CKey::GetSecret() : EC_KEY_get0_private_key failed\");\n+        int n=BN_bn2bin(bn,&vchRet[32 - nBytes]);\n+        if (n != nBytes) \n+            throw key_error(\"CKey::GetSecret(): BN_bn2bin failed\");\n+        return vchRet;\n+    }\n+\n     CPrivKey GetPrivKey() const\n     {\n         unsigned int nSize = i2d_ECPrivateKey(pkey, NULL);"
+      },
+      {
+        "sha": "765144a9b76526588227104501cdb3900def0750",
+        "filename": "src/keystore.cpp",
+        "status": "modified",
+        "additions": 97,
+        "deletions": 10,
+        "changes": 107,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a5da9b978c3543802231656bca9adc46e599195e/src/keystore.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a5da9b978c3543802231656bca9adc46e599195e/src/keystore.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/keystore.cpp?ref=a5da9b978c3543802231656bca9adc46e599195e",
+        "patch": "@@ -5,29 +5,116 @@\n #include \"headers.h\"\n #include \"db.h\"\n \n-\n-\n-//////////////////////////////////////////////////////////////////////////////\n-//\n-// mapKeys\n-//\n-\n std::vector<unsigned char> CKeyStore::GenerateNewKey()\n {\n     RandAddSeedPerfmon();\n     CKey key;\n     key.MakeNewKey();\n     if (!AddKey(key))\n-        throw std::runtime_error(\"GenerateNewKey() : AddKey failed\");\n+        throw std::runtime_error(\"CKeyStore::GenerateNewKey() : AddKey failed\");\n     return key.GetPubKey();\n }\n \n-bool CKeyStore::AddKey(const CKey& key)\n+bool CBasicKeyStore::AddKey(const CKey& key)\n {\n-    CRITICAL_BLOCK(cs_mapKeys)\n+    CRITICAL_BLOCK(cs_KeyStore)\n     {\n         mapKeys[key.GetPubKey()] = key.GetPrivKey();\n         mapPubKeys[Hash160(key.GetPubKey())] = key.GetPubKey();\n     }\n+    return true;\n+}\n+\n+bool CCryptoKeyStore::Unlock(const CMasterKey& vMasterKeyIn)\n+{\n+    if (!SetCrypted())\n+        return false;\n+\n+    std::map<std::vector<unsigned char>, std::vector<unsigned char> >::const_iterator mi = mapCryptedKeys.begin();\n+    for (; mi != mapCryptedKeys.end(); ++mi)\n+    {\n+        const std::vector<unsigned char> &vchPubKey = (*mi).first;\n+        const std::vector<unsigned char> &vchCryptedSecret = (*mi).second;\n+        CSecret vchSecret;\n+        // decrypt vchCryptedSecret using vMasterKeyIn, into vchSecret\n+        CKey key;\n+        key.SetSecret(vchSecret);\n+        if (key.GetPubKey() == vchPubKey)\n+            break;\n+        return false;\n+    }\n+    vMasterKey = vMasterKeyIn;\n+    return true;\n+}\n+\n+bool CCryptoKeyStore::AddKey(const CKey& key)\n+{\n+    CRITICAL_BLOCK(cs_KeyStore)\n+    {\n+        if (!IsCrypted())\n+            return CBasicKeyStore::AddKey(key);\n+\n+        if (IsLocked())\n+            return false;\n+\n+        CSecret vchSecret = key.GetSecret();\n+\n+        std::vector<unsigned char> vchCryptedSecret;\n+        // encrypt vchSecret using vMasterKey, into vchCryptedSecret\n+\n+        AddCryptedKey(key.GetPubKey(), vchCryptedSecret);\n+    }\n+    return true;\n+}\n+\n+\n+bool CCryptoKeyStore::AddCryptedKey(const std::vector<unsigned char> &vchPubKey, const std::vector<unsigned char> &vchCryptedSecret)\n+{\n+    CRITICAL_BLOCK(cs_KeyStore)\n+    {\n+        if (!SetCrypted())\n+            return false;\n+\n+        mapCryptedKeys[vchPubKey] = vchCryptedSecret;\n+        mapPubKeys[Hash160(vchPubKey)] = vchPubKey;\n+    }\n+    return true;\n+}\n+\n+bool CCryptoKeyStore::GetPrivKey(const std::vector<unsigned char> &vchPubKey, CPrivKey& keyOut) const\n+{\n+    if (!IsCrypted())\n+        return CBasicKeyStore::GetPrivKey(vchPubKey, keyOut);\n+\n+    std::map<std::vector<unsigned char>, std::vector<unsigned char> >::const_iterator mi = mapCryptedKeys.find(vchPubKey);\n+    if (mi != mapCryptedKeys.end())\n+    {\n+        const std::vector<unsigned char> &vchCryptedSecret = (*mi).second;\n+        CSecret vchSecret;\n+        // decrypt vchCryptedSecret using vMasterKey into vchSecret;\n+        CKey key;\n+        key.SetSecret(vchSecret);\n+        keyOut = key.GetPrivKey();\n+        return true;\n+    }\n+    return false;\n }\n \n+bool CCryptoKeyStore::GenerateMasterKey()\n+{\n+    if (!mapCryptedKeys.empty())\n+        return false;\n+\n+    RandAddSeedPerfmon();\n+\n+    vMasterKey.resize(32);\n+    RAND_bytes(&vMasterKey[0], 32);\n+\n+    if (!IsCrypted())\n+    {\n+        // upgrade wallet\n+        fUseCrypto = true;\n+    }\n+\n+    return true;\n+}"
+      },
+      {
+        "sha": "4095535493545aedbd86bc196d084e03870e3e3e",
+        "filename": "src/keystore.h",
+        "status": "modified",
+        "additions": 86,
+        "deletions": 3,
+        "changes": 89,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a5da9b978c3543802231656bca9adc46e599195e/src/keystore.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a5da9b978c3543802231656bca9adc46e599195e/src/keystore.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/keystore.h?ref=a5da9b978c3543802231656bca9adc46e599195e",
+        "patch": "@@ -4,12 +4,26 @@\n #ifndef BITCOIN_KEYSTORE_H\n #define BITCOIN_KEYSTORE_H\n \n+typedef std::vector<unsigned char, secure_allocator<unsigned char> > CMasterKey;\n+\n class CKeyStore\n {\n public:\n+    mutable CCriticalSection cs_KeyStore;\n+\n+    virtual bool AddKey(const CKey& key) =0;\n+    virtual bool HaveKey(const std::vector<unsigned char> &vchPubKey) const =0;\n+    virtual bool GetPrivKey(const std::vector<unsigned char> &vchPubKey, CPrivKey& keyOut) const =0;\n+    virtual std::vector<unsigned char> GenerateNewKey();\n+};\n+\n+class CBasicKeyStore : public CKeyStore\n+{\n+protected:\n     std::map<std::vector<unsigned char>, CPrivKey> mapKeys;\n-    mutable CCriticalSection cs_mapKeys;\n-    virtual bool AddKey(const CKey& key);\n+\n+public:\n+    bool AddKey(const CKey& key);\n     bool HaveKey(const std::vector<unsigned char> &vchPubKey) const\n     {\n         return (mapKeys.count(vchPubKey) > 0);\n@@ -24,7 +38,76 @@ class CKeyStore\n         }\n         return false;\n     }\n-    std::vector<unsigned char> GenerateNewKey();\n+};\n+\n+class CCryptoKeyStore : public CBasicKeyStore\n+{\n+private:\n+    std::map<std::vector<unsigned char>, std::vector<unsigned char> > mapCryptedKeys;\n+\n+    CMasterKey vMasterKey;\n+\n+    // if fUseCrypto is true, mapKeys must be empty\n+    // if fUseCrypto is false, vMasterKey must be empty\n+    bool fUseCrypto;\n+\n+protected:\n+    bool IsCrypted() const\n+    {\n+        return fUseCrypto;\n+    }\n+\n+    bool SetCrypted()\n+    {\n+        if (fUseCrypto)\n+            return true;\n+        if (!mapKeys.empty())\n+            return false;\n+        fUseCrypto = true;\n+    }\n+\n+    // will encrypt previously unencrypted keys\n+    bool GenerateMasterKey();\n+\n+    bool GetMasterKey(CMasterKey &vMasterKeyOut) const\n+    {\n+        if (!IsCrypted())\n+            return false;\n+        if (IsLocked())\n+            return false;\n+        vMasterKeyOut = vMasterKey;\n+        return true;\n+    }\n+    bool Unlock(const CMasterKey& vMasterKeyIn);\n+\n+public:\n+    CCryptoKeyStore() : fUseCrypto(false)\n+    {\n+    }\n+\n+    bool IsLocked() const\n+    {\n+        if (!IsCrypted())\n+            return false;\n+        return vMasterKey.empty();\n+    }\n+\n+    bool Lock()\n+    {\n+        if (!SetCrypted())\n+            return false;\n+        vMasterKey.clear();\n+    }\n+\n+    virtual bool AddCryptedKey(const std::vector<unsigned char> &vchPubKey, const std::vector<unsigned char> &vchCryptedSecret);\n+    bool AddKey(const CKey& key);\n+    bool HaveKey(const std::vector<unsigned char> &vchPubKey) const\n+    {\n+        if (!IsCrypted())\n+            return CBasicKeyStore::HaveKey(vchPubKey);\n+        return mapCryptedKeys.count(vchPubKey) > 0;\n+    }\n+    bool GetPrivKey(const std::vector<unsigned char> &vchPubKey, CPrivKey& keyOut) const;\n };\n \n #endif"
+      },
+      {
+        "sha": "c17525034a18adb9bff0b60095347a28aeb70cd3",
+        "filename": "src/script.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a5da9b978c3543802231656bca9adc46e599195e/src/script.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a5da9b978c3543802231656bca9adc46e599195e/src/script.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script.cpp?ref=a5da9b978c3543802231656bca9adc46e599195e",
+        "patch": "@@ -1030,7 +1030,7 @@ bool Solver(const CKeyStore& keystore, const CScript& scriptPubKey, uint256 hash\n         return false;\n \n     // Compile solution\n-    CRITICAL_BLOCK(keystore.cs_mapKeys)\n+    CRITICAL_BLOCK(keystore.cs_KeyStore)\n     {\n         BOOST_FOREACH(PAIRTYPE(opcodetype, valtype)& item, vSolution)\n         {"
+      },
+      {
+        "sha": "e6f8f82f880d4306cfbf63d42b0010ba6e121357",
+        "filename": "src/ui.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a5da9b978c3543802231656bca9adc46e599195e/src/ui.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a5da9b978c3543802231656bca9adc46e599195e/src/ui.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/ui.cpp?ref=a5da9b978c3543802231656bca9adc46e599195e",
+        "patch": "@@ -2381,7 +2381,7 @@ CAddressBookDialog::CAddressBookDialog(wxWindow* parent, const wxString& strInit\n     m_listCtrlReceiving->SetFocus();\n \n     // Fill listctrl with address book data\n-    CRITICAL_BLOCK(pwalletMain->cs_mapKeys)\n+    CRITICAL_BLOCK(pwalletMain->cs_KeyStore)\n     CRITICAL_BLOCK(pwalletMain->cs_mapAddressBook)\n     {\n         string strDefaultReceiving = (string)pframeMain->m_textCtrlAddress->GetValue();"
+      },
+      {
+        "sha": "9452ebfa9b995b01b59f9930b91c80a0322bd21e",
+        "filename": "src/wallet.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 4,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a5da9b978c3543802231656bca9adc46e599195e/src/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a5da9b978c3543802231656bca9adc46e599195e/src/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.cpp?ref=a5da9b978c3543802231656bca9adc46e599195e",
+        "patch": "@@ -17,7 +17,8 @@ using namespace std;\n \n bool CWallet::AddKey(const CKey& key)\n {\n-    this->CKeyStore::AddKey(key);\n+    if (!CBasicKeyStore::AddKey(key))\n+        return false;\n     if (!fFileBacked)\n         return true;\n     return CWalletDB(strWalletFile).WriteKey(key.GetPubKey(), key.GetPrivKey());\n@@ -790,7 +791,7 @@ bool CWallet::CreateTransaction(const vector<pair<CScript, int64> >& vecSend, CW\n \n                     // Reserve a new key pair from key pool\n                     vector<unsigned char> vchPubKey = reservekey.GetReservedKey();\n-                    assert(mapKeys.count(vchPubKey));\n+                    // assert(mapKeys.count(vchPubKey));\n \n                     // Fill a vout to ourself, using same address type as the payment\n                     CScript scriptChange;\n@@ -964,7 +965,7 @@ bool CWallet::LoadWallet(bool& fFirstRunRet)\n \n     if (!mapKeys.count(vchDefaultKey))\n     {\n-        // Create new default key\n+        // Create new keyUser and set as default key\n         RandAddSeedPerfmon();\n \n         vchDefaultKey = GetKeyFromKeyPool();\n@@ -1041,7 +1042,7 @@ void CWallet::ReserveKeyFromKeyPool(int64& nIndex, CKeyPool& keypool)\n         setKeyPool.erase(setKeyPool.begin());\n         if (!walletdb.ReadPool(nIndex, keypool))\n             throw runtime_error(\"ReserveKeyFromKeyPool() : read failed\");\n-        if (!mapKeys.count(keypool.vchPubKey))\n+        if (!HaveKey(keypool.vchPubKey))\n             throw runtime_error(\"ReserveKeyFromKeyPool() : unknown key in key pool\");\n         assert(!keypool.vchPubKey.empty());\n         printf(\"keypool reserve %\"PRI64d\"\\n\", nIndex);"
+      },
+      {
+        "sha": "8f52482ea0f537005d67ff0a04fb33dd40a0e556",
+        "filename": "src/wallet.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 1,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a5da9b978c3543802231656bca9adc46e599195e/src/wallet.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a5da9b978c3543802231656bca9adc46e599195e/src/wallet.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.h?ref=a5da9b978c3543802231656bca9adc46e599195e",
+        "patch": "@@ -12,7 +12,7 @@ class CWalletTx;\n class CReserveKey;\n class CWalletDB;\n \n-class CWallet : public CKeyStore\n+class CWallet : public CCryptoKeyStore\n {\n private:\n     bool SelectCoinsMinConf(int64 nTargetValue, int nConfMine, int nConfTheirs, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, int64& nValueRet) const;\n@@ -48,7 +48,10 @@ class CWallet : public CKeyStore\n \n     std::vector<unsigned char> vchDefaultKey;\n \n+    // keystore implementation\n     bool AddKey(const CKey& key);\n+    bool LoadKey(const CKey& key) { return CCryptoKeyStore::AddKey(key); }\n+\n     bool AddToWallet(const CWalletTx& wtxIn);\n     bool AddToWalletIfInvolvingMe(const CTransaction& tx, const CBlock* pblock, bool fUpdate = false);\n     bool EraseFromWallet(uint256 hash);"
+      }
+    ]
+  },
+  {
+    "sha": "3ad5c11f737adfca39633af8aeb20ba735c3fcf3",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozYWQ1YzExZjczN2FkZmNhMzk2MzNhZjhhZWIyMGJhNzM1YzNmY2Yz",
+    "commit": {
+      "author": {
+        "name": "Dylan Noblesmith",
+        "email": "nobled@dreamwidth.org",
+        "date": "2011-06-24T03:03:17Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-06-28T20:32:17Z"
+      },
+      "message": "mlock() all private keys in memory\n\nInline comment and idea come from the encprivkeys branch\nby Matt Corallo <matt@bluematt.me>.",
+      "tree": {
+        "sha": "843868447c373dd896f59494135f9824f7034f5f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/843868447c373dd896f59494135f9824f7034f5f"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/3ad5c11f737adfca39633af8aeb20ba735c3fcf3",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3ad5c11f737adfca39633af8aeb20ba735c3fcf3",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/3ad5c11f737adfca39633af8aeb20ba735c3fcf3",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3ad5c11f737adfca39633af8aeb20ba735c3fcf3/comments",
+    "author": {
+      "login": "nobled",
+      "id": 29161,
+      "node_id": "MDQ6VXNlcjI5MTYx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/29161?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/nobled",
+      "html_url": "https://github.com/nobled",
+      "followers_url": "https://api.github.com/users/nobled/followers",
+      "following_url": "https://api.github.com/users/nobled/following{/other_user}",
+      "gists_url": "https://api.github.com/users/nobled/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/nobled/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/nobled/subscriptions",
+      "organizations_url": "https://api.github.com/users/nobled/orgs",
+      "repos_url": "https://api.github.com/users/nobled/repos",
+      "events_url": "https://api.github.com/users/nobled/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/nobled/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": null,
+    "parents": [
+      {
+        "sha": "a5da9b978c3543802231656bca9adc46e599195e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a5da9b978c3543802231656bca9adc46e599195e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/a5da9b978c3543802231656bca9adc46e599195e"
+      }
+    ],
+    "stats": {
+      "total": 26,
+      "additions": 25,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "871d3f6b74d4d954a116ba6283f19f275a979528",
+        "filename": "src/serialize.h",
+        "status": "modified",
+        "additions": 15,
+        "deletions": 1,
+        "changes": 16,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3ad5c11f737adfca39633af8aeb20ba735c3fcf3/src/serialize.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3ad5c11f737adfca39633af8aeb20ba735c3fcf3/src/serialize.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/serialize.h?ref=3ad5c11f737adfca39633af8aeb20ba735c3fcf3",
+        "patch": "@@ -28,6 +28,7 @@ typedef unsigned long long  uint64;\n #if defined(_MSC_VER) && _MSC_VER < 1300\n #define for  if (false) ; else for\n #endif\n+\n class CScript;\n class CDataStream;\n class CAutoFile;\n@@ -755,7 +756,8 @@ struct ser_streamplaceholder\n \n \n //\n-// Allocator that clears its contents before deletion\n+// Allocator that locks its contents from being paged\n+// out of memory and clears its contents before deletion.\n //\n template<typename T>\n struct secure_allocator : public std::allocator<T>\n@@ -777,10 +779,22 @@ struct secure_allocator : public std::allocator<T>\n     template<typename _Other> struct rebind\n     { typedef secure_allocator<_Other> other; };\n \n+    T* allocate(std::size_t n, const void *hint = 0)\n+    {\n+        T *p;\n+        p = std::allocator<T>::allocate(n, hint);\n+        if (p != NULL)\n+            mlock(p, sizeof(T) * n);\n+        return p;\n+    }\n+\n     void deallocate(T* p, std::size_t n)\n     {\n         if (p != NULL)\n+        {\n             memset(p, 0, sizeof(T) * n);\n+            munlock(p, sizeof(T) * n);\n+        }\n         std::allocator<T>::deallocate(p, n);\n     }\n };"
+      },
+      {
+        "sha": "88e57bc7a4c14d83276574e39d669b16ace8f450",
+        "filename": "src/util.h",
+        "status": "modified",
+        "additions": 10,
+        "deletions": 0,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3ad5c11f737adfca39633af8aeb20ba735c3fcf3/src/util.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3ad5c11f737adfca39633af8aeb20ba735c3fcf3/src/util.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/util.h?ref=3ad5c11f737adfca39633af8aeb20ba735c3fcf3",
+        "patch": "@@ -11,6 +11,7 @@\n #include <sys/time.h>\n #include <sys/resource.h>\n #endif\n+#include <sys/mman.h>\n #include <map>\n #include <vector>\n #include <string>\n@@ -46,6 +47,15 @@ typedef unsigned long long  uint64;\n #define ARRAYLEN(array)     (sizeof(array)/sizeof((array)[0]))\n #define printf              OutputDebugStringF\n \n+#ifdef __WXMSW__\n+// This is used to attempt to keep keying material out of swap\n+// Note that VirtualLock does not provide this as a guarantee on Windows,\n+// but, in practice, memory that has been VirtualLock'd almost never gets written to\n+// the pagefile except in rare circumstances where memory is extremely low.\n+#define mlock(p, n) VirtualLock((p), (n));\n+#define munlock(p, n) VirtualUnlock((p), (n));\n+#endif\n+\n #ifdef snprintf\n #undef snprintf\n #endif"
+      }
+    ]
+  },
+  {
+    "sha": "c5b9127f2c36d5dd388568b201d3539f02960610",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjNWI5MTI3ZjJjMzZkNWRkMzg4NTY4YjIwMWQzNTM5ZjAyOTYwNjEw",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-06-25T19:49:41Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-06-28T23:23:04Z"
+      },
+      "message": "Add wallet privkey encryption.\n\nThis commit adds support for ckeys, or enCrypted private keys, to the wallet.\nAll keys are stored in memory in their encrypted form and thus the passphrase\nis required from the user to spend coins, or to create new addresses.\n\nKeys are encrypted with AES-256-CBC through OpenSSL's EVP library. The key is\ncalculated via EVP_BytesToKey using SHA512 with (by default) 25000 rounds and\na random salt.\n\nBy default, the user's wallet remains unencrypted until they call the RPC\ncommand encryptwallet <password> or, from the GUI menu, Options->\nEncrypt Wallet.\n\nWhen the user is attempting to call RPC functions which require the password\nto unlock the wallet, an error will be returned unless they call\nwalletpassword <password> <time to keep key in memory> first.\n\nA keypoolrefill command has been added which tops up the users keypool\n(requiring the password via walletpassword first).\nkeypoolsize has been added to the output of getinfo to show the user the\nnumber of keys left before they need to specify their password and call\ntopupkeypool.\n\nWhen the keypool runs out (and wallet is locked) GetOrReuseKeyFromPool\nreturns vchDefaultKey, meaning miners may start to generate many blocks to\nvchDefaultKey instead of a new key each time.\n\nA walletpasswordchange <oldpassword> <newpassword> has been added to allow\nthe user to change their password via RPC.\n\nWhenever keying material (unencrypted private keys, the user's password, the\nwallet's AES key) is stored unencrypted in memory, any reasonable attempt is\nmade to mlock/VirtualLock that memory before storing the keying material.\nThis is not true in several (commented) cases where mlock/VirtualLocking the\nmemory is not possible.\n\nAlthough encryption of private keys in memory can be very useful on desktop\nsystems (as some small amount of protection against stupid viruses), on an\nRPC server, the password is entered fairly insecurely. Thus, the only main\nadvantage encryption has for RPC servers is for RPC servers that do not spend\ncoins, except in rare cases, eg. a webserver of a merchant which only receives\npayment except for cases of manual intervention.\n\nThanks to jgarzik for the original patch and sipa for all his input.",
+      "tree": {
+        "sha": "1d59551b7e1f23f704987bae2a879309a2a7f5d4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/1d59551b7e1f23f704987bae2a879309a2a7f5d4"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/c5b9127f2c36d5dd388568b201d3539f02960610",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c5b9127f2c36d5dd388568b201d3539f02960610",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/c5b9127f2c36d5dd388568b201d3539f02960610",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c5b9127f2c36d5dd388568b201d3539f02960610/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "3ad5c11f737adfca39633af8aeb20ba735c3fcf3",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3ad5c11f737adfca39633af8aeb20ba735c3fcf3",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/3ad5c11f737adfca39633af8aeb20ba735c3fcf3"
+      }
+    ],
+    "stats": {
+      "total": 1252,
+      "additions": 1101,
+      "deletions": 151
+    },
+    "files": [
+      {
+        "sha": "cc735c6d7888078e933c0463735bd633f0b9dd27",
+        "filename": "share/uiproject.fbp",
+        "status": "modified",
+        "additions": 30,
+        "deletions": 0,
+        "changes": 30,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c5b9127f2c36d5dd388568b201d3539f02960610/share/uiproject.fbp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c5b9127f2c36d5dd388568b201d3539f02960610/share/uiproject.fbp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/share/uiproject.fbp?ref=c5b9127f2c36d5dd388568b201d3539f02960610",
+        "patch": "@@ -162,6 +162,36 @@\n                         <event name=\"OnMenuSelection\">OnMenuOptionsChangeYourAddress</event>\r\n                         <event name=\"OnUpdateUI\"></event>\r\n                     </object>\r\n+                    <object class=\"wxMenuItem\" expanded=\"1\">\r\n+                        <property name=\"bitmap\"></property>\r\n+                        <property name=\"checked\">0</property>\r\n+                        <property name=\"enabled\">1</property>\r\n+                        <property name=\"help\"></property>\r\n+                        <property name=\"id\">wxID_ANY</property>\r\n+                        <property name=\"kind\">wxITEM_NORMAL</property>\r\n+                        <property name=\"label\">&amp;Encrypt Wallet...</property>\r\n+                        <property name=\"name\">m_menuOptionsEncryptWallet</property>\r\n+                        <property name=\"permission\">none</property>\r\n+                        <property name=\"shortcut\"></property>\r\n+                        <property name=\"unchecked_bitmap\"></property>\r\n+                        <event name=\"OnMenuSelection\">OnMenuOptionsEncryptWallet</event>\r\n+                        <event name=\"OnUpdateUI\"></event>\r\n+                    </object>\r\n+                    <object class=\"wxMenuItem\" expanded=\"1\">\r\n+                        <property name=\"bitmap\"></property>\r\n+                        <property name=\"checked\">0</property>\r\n+                        <property name=\"enabled\">1</property>\r\n+                        <property name=\"help\"></property>\r\n+                        <property name=\"id\">wxID_ANY</property>\r\n+                        <property name=\"kind\">wxITEM_NORMAL</property>\r\n+                        <property name=\"label\">&amp;Change Wallet Encryption Passphrase...</property>\r\n+                        <property name=\"name\">m_menuOptionsChangeWalletPassphrase</property>\r\n+                        <property name=\"permission\">none</property>\r\n+                        <property name=\"shortcut\"></property>\r\n+                        <property name=\"unchecked_bitmap\"></property>\r\n+                        <event name=\"OnMenuSelection\">OnMenuOptionsChangeWalletPassphrase</event>\r\n+                        <event name=\"OnUpdateUI\"></event>\r\n+                    </object>\r\n                     <object class=\"wxMenuItem\" expanded=\"1\">\r\n                         <property name=\"bitmap\"></property>\r\n                         <property name=\"checked\">0</property>\r"
+      },
+      {
+        "sha": "f23a1fbd9b3bf37172d7179efea09f7476f84cc9",
+        "filename": "src/crypter.cpp",
+        "status": "added",
+        "additions": 132,
+        "deletions": 0,
+        "changes": 132,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c5b9127f2c36d5dd388568b201d3539f02960610/src/crypter.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c5b9127f2c36d5dd388568b201d3539f02960610/src/crypter.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/crypter.cpp?ref=c5b9127f2c36d5dd388568b201d3539f02960610",
+        "patch": "@@ -0,0 +1,132 @@\n+// Copyright (c) 2011 The Bitcoin Developers\n+// Distributed under the MIT/X11 software license, see the accompanying\n+// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+#include <openssl/aes.h>\n+#include <openssl/evp.h>\n+#include <vector>\n+#include <string>\n+#ifdef __WXMSW__\n+#include <windows.h>\n+#endif\n+\n+#include \"headers.h\"\n+#include \"crypter.h\"\n+#include \"main.h\"\n+#include \"util.h\"\n+\n+bool CCrypter::SetKeyFromPassphrase(const std::string& strKeyData, const std::vector<unsigned char>& chSalt, const unsigned int nRounds, const unsigned int nDerivationMethod)\n+{\n+    if (nRounds < 1 || chSalt.size() != WALLET_CRYPTO_SALT_SIZE)\n+        return false;\n+\n+    // Try to keep the keydata out of swap (and be a bit over-careful to keep the IV that we don't even use out of swap)\n+    // Note that this does nothing about suspend-to-disk (which will put all our key data on disk)\n+    // Note as well that at no point in this program is any attempt made to prevent stealing of keys by reading the memory of the running process.  \n+    mlock(&chKey[0], sizeof chKey);\n+    mlock(&chIV[0], sizeof chIV);\n+\n+    int i = 0;\n+    if (nDerivationMethod == 0)\n+        i = EVP_BytesToKey(EVP_aes_256_cbc(), EVP_sha512(), &chSalt[0],\n+                          (unsigned char *)&strKeyData[0], strKeyData.size(), nRounds, chKey, chIV);\n+\n+    if (i != WALLET_CRYPTO_KEY_SIZE)\n+    {\n+        memset(&chKey, 0, sizeof chKey);\n+        memset(&chIV, 0, sizeof chIV);\n+        return false;\n+    }\n+\n+    fKeySet = true;\n+    return true;\n+}\n+\n+bool CCrypter::SetKey(const CKeyingMaterial& chNewKey, const std::vector<unsigned char>& chNewIV)\n+{\n+    if (chNewKey.size() != WALLET_CRYPTO_KEY_SIZE || chNewIV.size() != WALLET_CRYPTO_KEY_SIZE)\n+        return false;\n+\n+    // Try to keep the keydata out of swap\n+    // Note that this does nothing about suspend-to-disk (which will put all our key data on disk)\n+    // Note as well that at no point in this program is any attempt made to prevent stealing of keys by reading the memory of the running process.  \n+    mlock(&chKey[0], sizeof chKey);\n+    mlock(&chIV[0], sizeof chIV);\n+\n+    memcpy(&chKey[0], &chNewKey[0], sizeof chKey);\n+    memcpy(&chIV[0], &chNewIV[0], sizeof chIV);\n+\n+    fKeySet = true;\n+    return true;\n+}\n+\n+bool CCrypter::Encrypt(const CKeyingMaterial& vchPlaintext, std::vector<unsigned char> &vchCiphertext)\n+{\n+    if (!fKeySet)\n+        return false;\n+\n+    // max ciphertext len for a n bytes of plaintext is\n+    // n + AES_BLOCK_SIZE - 1 bytes\n+    int nLen = vchPlaintext.size();\n+    int nCLen = nLen + AES_BLOCK_SIZE, nFLen = 0;\n+    vchCiphertext = std::vector<unsigned char> (nCLen);\n+\n+    EVP_CIPHER_CTX ctx;\n+\n+    EVP_CIPHER_CTX_init(&ctx);\n+    EVP_EncryptInit_ex(&ctx, EVP_aes_256_cbc(), NULL, chKey, chIV);\n+\n+    EVP_EncryptUpdate(&ctx, &vchCiphertext[0], &nCLen, &vchPlaintext[0], nLen);\n+    EVP_EncryptFinal_ex(&ctx, (&vchCiphertext[0])+nCLen, &nFLen);\n+\n+    EVP_CIPHER_CTX_cleanup(&ctx);\n+\n+    vchCiphertext.resize(nCLen + nFLen);\n+    return true;\n+}\n+\n+bool CCrypter::Decrypt(const std::vector<unsigned char>& vchCiphertext, CKeyingMaterial& vchPlaintext)\n+{\n+    if (!fKeySet)\n+        return false;\n+\n+    // plaintext will always be equal to or lesser than length of ciphertext\n+    int nLen = vchCiphertext.size();\n+    int nPLen = nLen, nFLen = 0;\n+\n+    vchPlaintext = CKeyingMaterial(nPLen);\n+\n+    EVP_CIPHER_CTX ctx;\n+\n+    EVP_CIPHER_CTX_init(&ctx);\n+    EVP_DecryptInit_ex(&ctx, EVP_aes_256_cbc(), NULL, chKey, chIV);\n+\n+    EVP_DecryptUpdate(&ctx, &vchPlaintext[0], &nPLen, &vchCiphertext[0], nLen);\n+    EVP_DecryptFinal_ex(&ctx, (&vchPlaintext[0])+nPLen, &nFLen);\n+\n+    EVP_CIPHER_CTX_cleanup(&ctx);\n+\n+    vchPlaintext.resize(nPLen + nFLen);\n+    return true;\n+}\n+\n+\n+bool EncryptSecret(CKeyingMaterial& vMasterKey, const CSecret &vchPlaintext, const uint256& nIV, std::vector<unsigned char> &vchCiphertext)\n+{\n+    CCrypter cKeyCrypter;\n+    std::vector<unsigned char> chIV(WALLET_CRYPTO_KEY_SIZE);\n+    memcpy(&chIV[0], &nIV, WALLET_CRYPTO_KEY_SIZE);\n+    if(!cKeyCrypter.SetKey(vMasterKey, chIV))\n+        return false;\n+    return cKeyCrypter.Encrypt((CKeyingMaterial)vchPlaintext, vchCiphertext);\n+}\n+\n+bool DecryptSecret(const CKeyingMaterial& vMasterKey, const std::vector<unsigned char>& vchCiphertext, const uint256& nIV, CSecret& vchPlaintext)\n+{\n+    CCrypter cKeyCrypter;\n+    std::vector<unsigned char> chIV(WALLET_CRYPTO_KEY_SIZE);\n+    memcpy(&chIV[0], &nIV, WALLET_CRYPTO_KEY_SIZE);\n+    if(!cKeyCrypter.SetKey(vMasterKey, chIV))\n+        return false;\n+    return cKeyCrypter.Decrypt(vchCiphertext, *((CKeyingMaterial*)&vchPlaintext));\n+}"
+      },
+      {
+        "sha": "9332e346c472ed4b8ae128f09a9b031e469d3dd4",
+        "filename": "src/crypter.h",
+        "status": "added",
+        "additions": 75,
+        "deletions": 0,
+        "changes": 75,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c5b9127f2c36d5dd388568b201d3539f02960610/src/crypter.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c5b9127f2c36d5dd388568b201d3539f02960610/src/crypter.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/crypter.h?ref=c5b9127f2c36d5dd388568b201d3539f02960610",
+        "patch": "@@ -0,0 +1,75 @@\n+// Copyright (c) 2011 The Bitcoin Developers\n+// Distributed under the MIT/X11 software license, see the accompanying\n+// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+#ifndef __CRYPTER_H__\n+#define __CRYPTER_H__\n+\n+#include \"key.h\"\n+\n+const unsigned int WALLET_CRYPTO_KEY_SIZE = 32;\n+const unsigned int WALLET_CRYPTO_SALT_SIZE = 8;\n+\n+class CMasterKey\n+{\n+public:\n+    std::vector<unsigned char> vchCryptedKey;\n+    std::vector<unsigned char> vchSalt;\n+    unsigned int nDeriveIterations;\n+    // 0 = EVP_sha512()\n+    unsigned int nDerivationMethod;\n+\n+    IMPLEMENT_SERIALIZE\n+    (\n+        if (!(nType & SER_GETHASH))\n+            READWRITE(nVersion);\n+        READWRITE(vchCryptedKey);\n+        READWRITE(vchSalt);\n+        READWRITE(nDeriveIterations);\n+        READWRITE(nDerivationMethod);\n+    )\n+    CMasterKey()\n+    {\n+        // 25000 rounds is just under 0.1 seconds on a 1.86 GHz Pentium M\n+        // ie slightly lower than the lowest hardware we need bother supporting\n+        nDeriveIterations = 25000;\n+        nDerivationMethod = 0;\n+    }\n+};\n+\n+typedef std::vector<unsigned char, secure_allocator<unsigned char> > CKeyingMaterial;\n+\n+class CCrypter\n+{\n+private:\n+    unsigned char chKey[WALLET_CRYPTO_KEY_SIZE];\n+    unsigned char chIV[WALLET_CRYPTO_KEY_SIZE];\n+    bool fKeySet;\n+\n+public:\n+    bool SetKeyFromPassphrase(const std::string &strKeyData, const std::vector<unsigned char>& chSalt, const unsigned int nRounds, const unsigned int nDerivationMethod);\n+    bool Encrypt(const CKeyingMaterial& vchPlaintext, std::vector<unsigned char> &vchCiphertext);\n+    bool Decrypt(const std::vector<unsigned char>& vchCiphertext, CKeyingMaterial& vchPlaintext);\n+    bool SetKey(const CKeyingMaterial& chNewKey, const std::vector<unsigned char>& chNewIV);\n+\n+    void CleanKey()\n+    {\n+        memset(&chKey, 0, sizeof chKey);\n+        memset(&chIV, 0, sizeof chIV);\n+        fKeySet = false;\n+    }\n+\n+    CCrypter()\n+    {\n+        fKeySet = false;\n+    }\n+\n+    ~CCrypter()\n+    {\n+        CleanKey();\n+    }\n+};\n+\n+    bool EncryptSecret(CKeyingMaterial& vMasterKey, const CSecret &vchPlaintext, const uint256& nIV, std::vector<unsigned char> &vchCiphertext);\n+    bool DecryptSecret(const CKeyingMaterial& vMasterKey, const std::vector<unsigned char> &vchCiphertext, const uint256& nIV, CSecret &vchPlaintext);\n+\n+#endif"
+      },
+      {
+        "sha": "e639a347996384eeba7e64183a4cc450bdb9495f",
+        "filename": "src/db.cpp",
+        "status": "modified",
+        "additions": 23,
+        "deletions": 1,
+        "changes": 24,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c5b9127f2c36d5dd388568b201d3539f02960610/src/db.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c5b9127f2c36d5dd388568b201d3539f02960610/src/db.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.cpp?ref=c5b9127f2c36d5dd388568b201d3539f02960610",
+        "patch": "@@ -778,7 +778,29 @@ bool CWalletDB::LoadWallet(CWallet* pwallet)\n                     ssValue >> wkey;\n                     key.SetPrivKey(wkey.vchPrivKey);\n                 }\n-                pwallet->LoadKey(key);\n+                if (!pwallet->LoadKey(key))\n+                    return false;\n+            }\n+            else if (strType == \"mkey\")\n+            {\n+                unsigned int nID;\n+                ssKey >> nID;\n+                CMasterKey kMasterKey;\n+                ssValue >> kMasterKey;\n+                if(pwallet->mapMasterKeys.count(nID) != 0)\n+                    return false;\n+                pwallet->mapMasterKeys[nID] = kMasterKey;\n+                if (pwallet->nMasterKeyMaxID < nID)\n+                    pwallet->nMasterKeyMaxID = nID;\n+            }\n+            else if (strType == \"ckey\")\n+            {\n+                vector<unsigned char> vchPubKey;\n+                ssKey >> vchPubKey;\n+                vector<unsigned char> vchPrivKey;\n+                ssValue >> vchPrivKey;\n+                if (!pwallet->LoadCryptedKey(vchPubKey, vchPrivKey))\n+                    return false;\n             }\n             else if (strType == \"defaultkey\")\n             {"
+      },
+      {
+        "sha": "c8d46d8fe6fddcda0b99f2aca677ecfe3e1b6123",
+        "filename": "src/db.h",
+        "status": "modified",
+        "additions": 19,
+        "deletions": 0,
+        "changes": 19,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c5b9127f2c36d5dd388568b201d3539f02960610/src/db.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c5b9127f2c36d5dd388568b201d3539f02960610/src/db.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.h?ref=c5b9127f2c36d5dd388568b201d3539f02960610",
+        "patch": "@@ -391,6 +391,25 @@ class CWalletDB : public CDB\n         return Write(std::make_pair(std::string(\"key\"), vchPubKey), vchPrivKey, false);\n     }\n \n+    bool WriteCryptedKey(const std::vector<unsigned char>& vchPubKey, const std::vector<unsigned char>& vchCryptedSecret, bool fEraseUnencryptedKey = true)\n+    {\n+        nWalletDBUpdated++;\n+        if (!Write(std::make_pair(std::string(\"ckey\"), vchPubKey), vchCryptedSecret, false))\n+            return false;\n+        if (fEraseUnencryptedKey)\n+        {\n+            Erase(std::make_pair(std::string(\"key\"), vchPubKey));\n+            Erase(std::make_pair(std::string(\"wkey\"), vchPubKey));\n+        }\n+        return true;\n+    }\n+\n+    bool WriteMasterKey(unsigned int nID, const CMasterKey& kMasterKey)\n+    {\n+        nWalletDBUpdated++;\n+        return Write(std::make_pair(std::string(\"mkey\"), nID), kMasterKey, true);\n+    }\n+\n     bool WriteBestBlock(const CBlockLocator& locator)\n     {\n         nWalletDBUpdated++;"
+      },
+      {
+        "sha": "f659495a1a8093b0a4c7d245d6d00717749012f0",
+        "filename": "src/keystore.cpp",
+        "status": "modified",
+        "additions": 72,
+        "deletions": 43,
+        "changes": 115,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c5b9127f2c36d5dd388568b201d3539f02960610/src/keystore.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c5b9127f2c36d5dd388568b201d3539f02960610/src/keystore.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/keystore.cpp?ref=c5b9127f2c36d5dd388568b201d3539f02960610",
+        "patch": "@@ -4,6 +4,7 @@\n \n #include \"headers.h\"\n #include \"db.h\"\n+#include \"crypter.h\"\n \n std::vector<unsigned char> CKeyStore::GenerateNewKey()\n {\n@@ -17,6 +18,7 @@ std::vector<unsigned char> CKeyStore::GenerateNewKey()\n \n bool CBasicKeyStore::AddKey(const CKey& key)\n {\n+    CRITICAL_BLOCK(cs_mapPubKeys)\n     CRITICAL_BLOCK(cs_KeyStore)\n     {\n         mapKeys[key.GetPubKey()] = key.GetPrivKey();\n@@ -25,51 +27,68 @@ bool CBasicKeyStore::AddKey(const CKey& key)\n     return true;\n }\n \n-bool CCryptoKeyStore::Unlock(const CMasterKey& vMasterKeyIn)\n+std::vector<unsigned char> CCryptoKeyStore::GenerateNewKey()\n {\n-    if (!SetCrypted())\n-        return false;\n+    RandAddSeedPerfmon();\n+    CKey key;\n+    key.MakeNewKey();\n+    if (!AddKey(key))\n+        throw std::runtime_error(\"CCryptoKeyStore::GenerateNewKey() : AddKey failed\");\n+    return key.GetPubKey();\n+}\n \n-    std::map<std::vector<unsigned char>, std::vector<unsigned char> >::const_iterator mi = mapCryptedKeys.begin();\n-    for (; mi != mapCryptedKeys.end(); ++mi)\n+bool CCryptoKeyStore::Unlock(const CKeyingMaterial& vMasterKeyIn)\n+{\n+    CRITICAL_BLOCK(cs_vMasterKey)\n     {\n-        const std::vector<unsigned char> &vchPubKey = (*mi).first;\n-        const std::vector<unsigned char> &vchCryptedSecret = (*mi).second;\n-        CSecret vchSecret;\n-        // decrypt vchCryptedSecret using vMasterKeyIn, into vchSecret\n-        CKey key;\n-        key.SetSecret(vchSecret);\n-        if (key.GetPubKey() == vchPubKey)\n-            break;\n-        return false;\n+        if (!SetCrypted())\n+            return false;\n+\n+        std::map<std::vector<unsigned char>, std::vector<unsigned char> >::const_iterator mi = mapCryptedKeys.begin();\n+        for (; mi != mapCryptedKeys.end(); ++mi)\n+        {\n+            const std::vector<unsigned char> &vchPubKey = (*mi).first;\n+            const std::vector<unsigned char> &vchCryptedSecret = (*mi).second;\n+            CSecret vchSecret;\n+            if(!DecryptSecret(vMasterKeyIn, vchCryptedSecret, Hash(vchPubKey.begin(), vchPubKey.end()), vchSecret))\n+                return false;\n+            CKey key;\n+            key.SetSecret(vchSecret);\n+            if (key.GetPubKey() == vchPubKey)\n+                break;\n+            return false;\n+        }\n+        vMasterKey = vMasterKeyIn;\n     }\n-    vMasterKey = vMasterKeyIn;\n     return true;\n }\n \n bool CCryptoKeyStore::AddKey(const CKey& key)\n {\n     CRITICAL_BLOCK(cs_KeyStore)\n+    CRITICAL_BLOCK(cs_vMasterKey)\n     {\n         if (!IsCrypted())\n             return CBasicKeyStore::AddKey(key);\n \n         if (IsLocked())\n             return false;\n \n-        CSecret vchSecret = key.GetSecret();\n-\n         std::vector<unsigned char> vchCryptedSecret;\n-        // encrypt vchSecret using vMasterKey, into vchCryptedSecret\n+        std::vector<unsigned char> vchPubKey = key.GetPubKey();\n+        if (!EncryptSecret(vMasterKey, key.GetSecret(), Hash(vchPubKey.begin(), vchPubKey.end()), vchCryptedSecret))\n+            return false;\n \n-        AddCryptedKey(key.GetPubKey(), vchCryptedSecret);\n+        if (!AddCryptedKey(key.GetPubKey(), vchCryptedSecret))\n+            return false;\n     }\n     return true;\n }\n \n \n bool CCryptoKeyStore::AddCryptedKey(const std::vector<unsigned char> &vchPubKey, const std::vector<unsigned char> &vchCryptedSecret)\n {\n+    CRITICAL_BLOCK(cs_mapPubKeys)\n     CRITICAL_BLOCK(cs_KeyStore)\n     {\n         if (!SetCrypted())\n@@ -83,38 +102,48 @@ bool CCryptoKeyStore::AddCryptedKey(const std::vector<unsigned char> &vchPubKey,\n \n bool CCryptoKeyStore::GetPrivKey(const std::vector<unsigned char> &vchPubKey, CPrivKey& keyOut) const\n {\n-    if (!IsCrypted())\n-        return CBasicKeyStore::GetPrivKey(vchPubKey, keyOut);\n-\n-    std::map<std::vector<unsigned char>, std::vector<unsigned char> >::const_iterator mi = mapCryptedKeys.find(vchPubKey);\n-    if (mi != mapCryptedKeys.end())\n+    CRITICAL_BLOCK(cs_vMasterKey)\n     {\n-        const std::vector<unsigned char> &vchCryptedSecret = (*mi).second;\n-        CSecret vchSecret;\n-        // decrypt vchCryptedSecret using vMasterKey into vchSecret;\n-        CKey key;\n-        key.SetSecret(vchSecret);\n-        keyOut = key.GetPrivKey();\n-        return true;\n+        if (!IsCrypted())\n+            return CBasicKeyStore::GetPrivKey(vchPubKey, keyOut);\n+\n+        std::map<std::vector<unsigned char>, std::vector<unsigned char> >::const_iterator mi = mapCryptedKeys.find(vchPubKey);\n+        if (mi != mapCryptedKeys.end())\n+        {\n+            const std::vector<unsigned char> &vchCryptedSecret = (*mi).second;\n+            CSecret vchSecret;\n+            if (!DecryptSecret(vMasterKey, (*mi).second, Hash((*mi).first.begin(), (*mi).first.end()), vchSecret))\n+                return false;\n+            CKey key;\n+            key.SetSecret(vchSecret);\n+            keyOut = key.GetPrivKey();\n+            return true;\n+        }\n     }\n     return false;\n }\n \n-bool CCryptoKeyStore::GenerateMasterKey()\n+bool CCryptoKeyStore::EncryptKeys(CKeyingMaterial& vMasterKeyIn)\n {\n-    if (!mapCryptedKeys.empty())\n-        return false;\n-\n-    RandAddSeedPerfmon();\n-\n-    vMasterKey.resize(32);\n-    RAND_bytes(&vMasterKey[0], 32);\n-\n-    if (!IsCrypted())\n+    CRITICAL_BLOCK(cs_KeyStore)\n+    CRITICAL_BLOCK(cs_vMasterKey)\n     {\n-        // upgrade wallet\n+        if (!mapCryptedKeys.empty() || IsCrypted())\n+            return false;\n+\n         fUseCrypto = true;\n+        CKey key;\n+        BOOST_FOREACH(KeyMap::value_type& mKey, mapKeys)\n+        {\n+            if (!key.SetPrivKey(mKey.second))\n+                return false;\n+            std::vector<unsigned char> vchCryptedSecret;\n+            if (!EncryptSecret(vMasterKeyIn, key.GetSecret(), Hash(mKey.first.begin(), mKey.first.end()), vchCryptedSecret))\n+                return false;\n+            if (!AddCryptedKey(mKey.first, vchCryptedSecret))\n+                return false;\n+        }\n+        mapKeys.clear();\n     }\n-\n     return true;\n }"
+      },
+      {
+        "sha": "8d445befea3e76bea698d600ff6db2d8e41ee567",
+        "filename": "src/keystore.h",
+        "status": "modified",
+        "additions": 24,
+        "deletions": 22,
+        "changes": 46,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c5b9127f2c36d5dd388568b201d3539f02960610/src/keystore.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c5b9127f2c36d5dd388568b201d3539f02960610/src/keystore.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/keystore.h?ref=c5b9127f2c36d5dd388568b201d3539f02960610",
+        "patch": "@@ -4,7 +4,7 @@\n #ifndef BITCOIN_KEYSTORE_H\n #define BITCOIN_KEYSTORE_H\n \n-typedef std::vector<unsigned char, secure_allocator<unsigned char> > CMasterKey;\n+#include \"crypter.h\"\n \n class CKeyStore\n {\n@@ -17,10 +17,12 @@ class CKeyStore\n     virtual std::vector<unsigned char> GenerateNewKey();\n };\n \n+typedef std::map<std::vector<unsigned char>, CPrivKey> KeyMap;\n+\n class CBasicKeyStore : public CKeyStore\n {\n protected:\n-    std::map<std::vector<unsigned char>, CPrivKey> mapKeys;\n+    KeyMap mapKeys;\n \n public:\n     bool AddKey(const CKey& key);\n@@ -45,46 +47,40 @@ class CCryptoKeyStore : public CBasicKeyStore\n private:\n     std::map<std::vector<unsigned char>, std::vector<unsigned char> > mapCryptedKeys;\n \n-    CMasterKey vMasterKey;\n+    CKeyingMaterial vMasterKey;\n \n     // if fUseCrypto is true, mapKeys must be empty\n     // if fUseCrypto is false, vMasterKey must be empty\n     bool fUseCrypto;\n \n protected:\n-    bool IsCrypted() const\n-    {\n-        return fUseCrypto;\n-    }\n-\n     bool SetCrypted()\n     {\n         if (fUseCrypto)\n             return true;\n         if (!mapKeys.empty())\n             return false;\n         fUseCrypto = true;\n+        return true;\n     }\n \n     // will encrypt previously unencrypted keys\n-    bool GenerateMasterKey();\n+    bool EncryptKeys(CKeyingMaterial& vMasterKeyIn);\n \n-    bool GetMasterKey(CMasterKey &vMasterKeyOut) const\n-    {\n-        if (!IsCrypted())\n-            return false;\n-        if (IsLocked())\n-            return false;\n-        vMasterKeyOut = vMasterKey;\n-        return true;\n-    }\n-    bool Unlock(const CMasterKey& vMasterKeyIn);\n+    bool Unlock(const CKeyingMaterial& vMasterKeyIn);\n \n public:\n+    mutable CCriticalSection cs_vMasterKey; //No guarantees master key wont get locked before you can use it, so lock this first\n+\n     CCryptoKeyStore() : fUseCrypto(false)\n     {\n     }\n \n+    bool IsCrypted() const\n+    {\n+        return fUseCrypto;\n+    }\n+\n     bool IsLocked() const\n     {\n         if (!IsCrypted())\n@@ -94,12 +90,18 @@ class CCryptoKeyStore : public CBasicKeyStore\n \n     bool Lock()\n     {\n-        if (!SetCrypted())\n-            return false;\n-        vMasterKey.clear();\n+        CRITICAL_BLOCK(cs_vMasterKey)\n+        {\n+            if (!SetCrypted())\n+                return false;\n+\n+            vMasterKey.clear();\n+        }\n+        return true;\n     }\n \n     virtual bool AddCryptedKey(const std::vector<unsigned char> &vchPubKey, const std::vector<unsigned char> &vchCryptedSecret);\n+    std::vector<unsigned char> GenerateNewKey();\n     bool AddKey(const CKey& key);\n     bool HaveKey(const std::vector<unsigned char> &vchPubKey) const\n     {"
+      },
+      {
+        "sha": "d217dfa9bc2971d9afe4bbcb038a389d13db7818",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c5b9127f2c36d5dd388568b201d3539f02960610/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c5b9127f2c36d5dd388568b201d3539f02960610/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=c5b9127f2c36d5dd388568b201d3539f02960610",
+        "patch": "@@ -2208,7 +2208,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n \n         // Keep giving the same key to the same ip until they use it\n         if (!mapReuseKey.count(pfrom->addr.ip))\n-            mapReuseKey[pfrom->addr.ip] = pwalletMain->GetKeyFromKeyPool();\n+            mapReuseKey[pfrom->addr.ip] = pwalletMain->GetOrReuseKeyFromPool();\n \n         // Send back approval of order and pubkey to use\n         CScript scriptPubKey;"
+      },
+      {
+        "sha": "0eab738144c53626851793366a7b1439902aead4",
+        "filename": "src/makefile.mingw",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 1,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c5b9127f2c36d5dd388568b201d3539f02960610/src/makefile.mingw",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c5b9127f2c36d5dd388568b201d3539f02960610/src/makefile.mingw",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/makefile.mingw?ref=c5b9127f2c36d5dd388568b201d3539f02960610",
+        "patch": "@@ -33,7 +33,8 @@ DEFS=-DWIN32 -D__WXMSW__ -D_WINDOWS -DNOPCH -DUSE_SSL\n DEBUGFLAGS=-g -D__WXDEBUG__\n CFLAGS=-mthreads -O2 -w -Wno-invalid-offsetof -Wformat $(DEBUGFLAGS) $(DEFS) $(INCLUDEPATHS)\n HEADERS=headers.h strlcpy.h serialize.h uint256.h util.h key.h bignum.h base58.h \\\n-    script.h db.h net.h irc.h keystore.h main.h wallet.h rpc.h uibase.h ui.h noui.h init.h\n+    script.h db.h net.h irc.h keystore.h main.h wallet.h rpc.h uibase.h ui.h noui.h \\\n+    init.h crypter.h\n \n ifdef USE_UPNP\n  INCLUDEPATHS += -I\"C:\\upnpc-exe-win32-20110215\"\n@@ -55,6 +56,7 @@ OBJS= \\\n     obj/wallet.o \\\n     obj/rpc.o \\\n     obj/init.o \\\n+    obj/crypter.o \\\n     cryptopp/obj/sha.o \\\n     cryptopp/obj/cpu.o\n "
+      },
+      {
+        "sha": "7b702fab217159160d0ee9b33e0eb89aa1281eed",
+        "filename": "src/makefile.osx",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 1,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c5b9127f2c36d5dd388568b201d3539f02960610/src/makefile.osx",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c5b9127f2c36d5dd388568b201d3539f02960610/src/makefile.osx",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/makefile.osx?ref=c5b9127f2c36d5dd388568b201d3539f02960610",
+        "patch": "@@ -33,7 +33,8 @@ DEBUGFLAGS=-g -DwxDEBUG_LEVEL=0\n # ppc doesn't work because we don't support big-endian\n CFLAGS=-mmacosx-version-min=10.5 -arch i386 -arch x86_64 -O3 -Wno-invalid-offsetof -Wformat $(DEBUGFLAGS) $(DEFS) $(INCLUDEPATHS)\n HEADERS=headers.h strlcpy.h serialize.h uint256.h util.h key.h bignum.h base58.h \\\n-    script.h db.h net.h irc.h keystore.h main.h wallet.h rpc.h uibase.h ui.h noui.h init.h\n+    script.h db.h net.h irc.h keystore.h main.h wallet.h rpc.h uibase.h ui.h noui.h \\\n+    init.h crypter.h\n \n OBJS= \\\n     obj/util.o \\\n@@ -46,6 +47,7 @@ OBJS= \\\n     obj/wallet.o \\\n     obj/rpc.o \\\n     obj/init.o \\\n+    obj/crypter.o \\\n     cryptopp/obj/sha.o \\\n     cryptopp/obj/cpu.o\n "
+      },
+      {
+        "sha": "dda2c46aed6bc0cc91def58fb3d01b7bf993432a",
+        "filename": "src/makefile.unix",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 1,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c5b9127f2c36d5dd388568b201d3539f02960610/src/makefile.unix",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c5b9127f2c36d5dd388568b201d3539f02960610/src/makefile.unix",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/makefile.unix?ref=c5b9127f2c36d5dd388568b201d3539f02960610",
+        "patch": "@@ -39,7 +39,8 @@ LIBS+= \\\n DEBUGFLAGS=-g -D__WXDEBUG__\n CXXFLAGS=-O2 -Wno-invalid-offsetof -Wformat $(DEBUGFLAGS) $(DEFS)\n HEADERS=headers.h strlcpy.h serialize.h uint256.h util.h key.h bignum.h base58.h \\\n-    script.h db.h net.h irc.h keystore.h main.h wallet.h rpc.h uibase.h ui.h noui.h init.h\n+    script.h db.h net.h irc.h keystore.h main.h wallet.h rpc.h uibase.h ui.h noui.h \\\n+    init.h crypter.h\n \n OBJS= \\\n     obj/util.o \\\n@@ -52,6 +53,7 @@ OBJS= \\\n     obj/wallet.o \\\n     obj/rpc.o \\\n     obj/init.o \\\n+    obj/crypter.o \\\n     cryptopp/obj/sha.o \\\n     cryptopp/obj/cpu.o\n "
+      },
+      {
+        "sha": "4089611bc605ec278b5085d82da9b41ba4eb9a66",
+        "filename": "src/rpc.cpp",
+        "status": "modified",
+        "additions": 282,
+        "deletions": 48,
+        "changes": 330,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c5b9127f2c36d5dd388568b201d3539f02960610/src/rpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c5b9127f2c36d5dd388568b201d3539f02960610/src/rpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc.cpp?ref=c5b9127f2c36d5dd388568b201d3539f02960610",
+        "patch": "@@ -309,6 +309,7 @@ Value getinfo(const Array& params, bool fHelp)\n     obj.push_back(Pair(\"hashespersec\",  gethashespersec(params, false)));\n     obj.push_back(Pair(\"testnet\",       fTestNet));\n     obj.push_back(Pair(\"keypoololdest\", (boost::int64_t)pwalletMain->GetOldestKeyPoolTime()));\n+    obj.push_back(Pair(\"keypoolsize\",   pwalletMain->GetKeyPoolSize()));\n     obj.push_back(Pair(\"paytxfee\",      ValueFromAmount(nTransactionFee)));\n     obj.push_back(Pair(\"errors\",        GetWarnings(\"statusbar\")));\n     return obj;\n@@ -324,13 +325,16 @@ Value getnewaddress(const Array& params, bool fHelp)\n             \"If [account] is specified (recommended), it is added to the address book \"\n             \"so payments received with the address will be credited to [account].\");\n \n+    if (pwalletMain->GetKeyPoolSize() < 1)\n+        throw JSONRPCError(-12, \"Error: Keypool ran out, please call keypoolrefill first\");\n+\n     // Parse the account first so we don't generate a key if there's an error\n     string strAccount;\n     if (params.size() > 0)\n         strAccount = AccountFromValue(params[0]);\n \n     // Generate a new key that is added to wallet\n-    string strAddress = PubKeyToAddress(pwalletMain->GetKeyFromKeyPool());\n+    string strAddress = PubKeyToAddress(pwalletMain->GetOrReuseKeyFromPool());\n \n     pwalletMain->SetAddressBookName(strAddress, strAccount);\n     return strAddress;\n@@ -348,6 +352,8 @@ string GetAccountAddress(string strAccount, bool bForceNew=false)\n     CAccount account;\n     walletdb.ReadAccount(strAccount, account);\n \n+    bool bKeyUsed = false;\n+\n     // Check if the current key has been used\n     if (!account.vchPubKey.empty())\n     {\n@@ -360,17 +366,25 @@ string GetAccountAddress(string strAccount, bool bForceNew=false)\n             const CWalletTx& wtx = (*it).second;\n             BOOST_FOREACH(const CTxOut& txout, wtx.vout)\n                 if (txout.scriptPubKey == scriptPubKey)\n-                    account.vchPubKey.clear();\n+                    bKeyUsed = true;\n         }\n     }\n \n     // Generate a new key\n-    if (account.vchPubKey.empty() || bForceNew)\n+    if (account.vchPubKey.empty() || bForceNew || bKeyUsed)\n     {\n-        account.vchPubKey = pwalletMain->GetKeyFromKeyPool();\n-        string strAddress = PubKeyToAddress(account.vchPubKey);\n-        pwalletMain->SetAddressBookName(strAddress, strAccount);\n-        walletdb.WriteAccount(strAccount, account);\n+        if (pwalletMain->GetKeyPoolSize() < 1)\n+        {\n+            if (bKeyUsed || bForceNew)\n+                throw JSONRPCError(-12, \"Error: Keypool ran out, please call topupkeypool first\");\n+        }\n+        else\n+        {\n+            account.vchPubKey = pwalletMain->GetOrReuseKeyFromPool();\n+            string strAddress = PubKeyToAddress(account.vchPubKey);\n+            pwalletMain->SetAddressBookName(strAddress, strAccount);\n+            walletdb.WriteAccount(strAccount, account);\n+        }\n     }\n \n     walletdb.TxnCommit();\n@@ -505,7 +519,12 @@ Value settxfee(const Array& params, bool fHelp)\n \n Value sendtoaddress(const Array& params, bool fHelp)\n {\n-    if (fHelp || params.size() < 2 || params.size() > 4)\n+    if (pwalletMain->IsCrypted() && (fHelp || params.size() < 2 || params.size() > 4))\n+        throw runtime_error(\n+            \"sendtoaddress <bitcoinaddress> <amount> [comment] [comment-to]\\n\"\n+            \"<amount> is a real and is rounded to the nearest 0.00000001\\n\"\n+            \"requires wallet passphrase to be set with walletpassphrase first\");\n+    if (!pwalletMain->IsCrypted() && (fHelp || params.size() < 2 || params.size() > 4))\n         throw runtime_error(\n             \"sendtoaddress <bitcoinaddress> <amount> [comment] [comment-to]\\n\"\n             \"<amount> is a real and is rounded to the nearest 0.00000001\");\n@@ -523,7 +542,11 @@ Value sendtoaddress(const Array& params, bool fHelp)\n         wtx.mapValue[\"to\"]      = params[3].get_str();\n \n     CRITICAL_BLOCK(cs_main)\n+    CRITICAL_BLOCK(pwalletMain->cs_vMasterKey)\n     {\n+        if(pwalletMain->IsLocked())\n+            throw JSONRPCError(-14, \"Error: The wallet passphrase entered was incorrect.\");\n+\n         string strError = pwalletMain->SendMoneyToBitcoinAddress(strAddress, nAmount, wtx);\n         if (strError != \"\")\n             throw JSONRPCError(-4, strError);\n@@ -768,7 +791,12 @@ Value movecmd(const Array& params, bool fHelp)\n \n Value sendfrom(const Array& params, bool fHelp)\n {\n-    if (fHelp || params.size() < 3 || params.size() > 6)\n+    if (pwalletMain->IsCrypted() && (fHelp || params.size() < 3 || params.size() > 6))\n+        throw runtime_error(\n+            \"sendfrom <fromaccount> <tobitcoinaddress> <amount> [minconf=1] [comment] [comment-to]\\n\"\n+            \"<amount> is a real and is rounded to the nearest 0.00000001\\n\"\n+            \"requires wallet passphrase to be set with walletpassphrase first\");\n+    if (!pwalletMain->IsCrypted() && (fHelp || params.size() < 3 || params.size() > 6))\n         throw runtime_error(\n             \"sendfrom <fromaccount> <tobitcoinaddress> <amount> [minconf=1] [comment] [comment-to]\\n\"\n             \"<amount> is a real and is rounded to the nearest 0.00000001\");\n@@ -789,7 +817,11 @@ Value sendfrom(const Array& params, bool fHelp)\n \n     CRITICAL_BLOCK(cs_main)\n     CRITICAL_BLOCK(pwalletMain->cs_mapWallet)\n+    CRITICAL_BLOCK(pwalletMain->cs_vMasterKey)\n     {\n+        if(pwalletMain->IsLocked())\n+            throw JSONRPCError(-14, \"Error: The wallet passphrase entered was incorrect.\");\n+\n         // Check funds\n         int64 nBalance = GetAccountBalance(strAccount, nMinDepth);\n         if (nAmount > nBalance)\n@@ -804,9 +836,15 @@ Value sendfrom(const Array& params, bool fHelp)\n     return wtx.GetHash().GetHex();\n }\n \n+\n Value sendmany(const Array& params, bool fHelp)\n {\n-    if (fHelp || params.size() < 2 || params.size() > 4)\n+    if (pwalletMain->IsCrypted() && (fHelp || params.size() < 2 || params.size() > 4))\n+        throw runtime_error(\n+            \"sendmany <fromaccount> {address:amount,...} [minconf=1] [comment]\\n\"\n+            \"amounts are double-precision floating point numbers\\n\"\n+            \"requires wallet passphrase to be set with walletpassphrase first\");\n+    if (!pwalletMain->IsCrypted() && (fHelp || params.size() < 2 || params.size() > 4))\n         throw runtime_error(\n             \"sendmany <fromaccount> {address:amount,...} [minconf=1] [comment]\\n\"\n             \"amounts are double-precision floating point numbers\");\n@@ -846,7 +884,11 @@ Value sendmany(const Array& params, bool fHelp)\n \n     CRITICAL_BLOCK(cs_main)\n     CRITICAL_BLOCK(pwalletMain->cs_mapWallet)\n+    CRITICAL_BLOCK(pwalletMain->cs_vMasterKey)\n     {\n+        if(pwalletMain->IsLocked())\n+            throw JSONRPCError(-14, \"Error: The wallet passphrase entered was incorrect.\");\n+\n         // Check funds\n         int64 nBalance = GetAccountBalance(strAccount, nMinDepth);\n         if (totalAmount > nBalance)\n@@ -1276,6 +1318,191 @@ Value backupwallet(const Array& params, bool fHelp)\n }\n \n \n+Value keypoolrefill(const Array& params, bool fHelp)\n+{\n+    if (pwalletMain->IsCrypted() && (fHelp || params.size() > 0))\n+        throw runtime_error(\n+            \"keypoolrefill\\n\"\n+            \"Fills the keypool, requires wallet passphrase to be set.\");\n+    if (!pwalletMain->IsCrypted() && (fHelp || params.size() > 0))\n+        throw runtime_error(\n+            \"keypoolrefill\\n\"\n+            \"Fills the keypool.\");\n+\n+    CRITICAL_BLOCK(pwalletMain->cs_vMasterKey)\n+    {\n+        if (pwalletMain->IsLocked())\n+            throw JSONRPCError(-13, \"Error: Please enter the wallet passphrase with walletpassphrase first.\");\n+\n+        pwalletMain->TopUpKeyPool();\n+    }\n+\n+    if (pwalletMain->GetKeyPoolSize() < GetArg(\"-keypool\", 100))\n+        throw JSONRPCError(-4, \"Error refreshing keypool.\");\n+\n+    return Value::null;\n+}\n+\n+\n+void ThreadTopUpKeyPool(void* parg)\n+{\n+    static bool fOneKeyPoolThread;\n+    if (fOneKeyPoolThread)\n+        return;\n+    fOneKeyPoolThread = true;\n+\n+    pwalletMain->TopUpKeyPool();\n+}\n+\n+void ThreadCleanWalletPassphrase(void* parg)\n+{\n+    static int64 nWakeTime;\n+    int64 nMyWakeTime = GetTime() + *((int*)parg);\n+    static CCriticalSection cs_nWakeTime;\n+\n+    if (nWakeTime == 0)\n+    {\n+        CRITICAL_BLOCK(cs_nWakeTime)\n+        {\n+            nWakeTime = nMyWakeTime;\n+        }\n+\n+        while (GetTime() < nWakeTime)\n+            Sleep(GetTime() - nWakeTime);\n+\n+        CRITICAL_BLOCK(cs_nWakeTime)\n+        {\n+            nWakeTime = 0;\n+        }\n+    }\n+    else\n+    {\n+        CRITICAL_BLOCK(cs_nWakeTime)\n+        {\n+            if (nWakeTime < nMyWakeTime)\n+                nWakeTime = nMyWakeTime;\n+        }\n+        free(parg);\n+        return;\n+    }\n+\n+    pwalletMain->Lock();\n+\n+    free(parg);\n+}\n+\n+Value walletpassphrase(const Array& params, bool fHelp)\n+{\n+    if (pwalletMain->IsCrypted() && (fHelp || params.size() != 2))\n+        throw runtime_error(\n+            \"walletpassphrase <passphrase> <timeout>\\n\"\n+            \"Stores the wallet decryption key in memory for <timeout> seconds.\");\n+    if (fHelp)\n+        return true;\n+    if (!pwalletMain->IsCrypted())\n+        throw JSONRPCError(-15, \"Error: running with an unencrypted wallet, but walletpassphrase was called.\");\n+\n+    string strWalletPass;\n+    strWalletPass.reserve(100);\n+    mlock(&strWalletPass[0], strWalletPass.length());\n+    strWalletPass = params[0].get_str();\n+\n+    CRITICAL_BLOCK(pwalletMain->cs_vMasterKey)\n+    {\n+        if (strWalletPass.length() > 0)\n+        {\n+            if (!pwalletMain->Unlock(strWalletPass))\n+            {\n+                fill(strWalletPass.begin(), strWalletPass.end(), '\\0');\n+                throw JSONRPCError(-14, \"Error: The wallet passphrase entered was incorrect.\");\n+            }\n+            fill(strWalletPass.begin(), strWalletPass.end(), '\\0');\n+        }\n+        else\n+            throw runtime_error(\n+                \"walletpassphrase <passphrase> <timeout>\\n\"\n+                \"Stores the wallet decryption key in memory for <timeout> seconds.\");\n+    }\n+\n+    int* pnSleepTime = new int(params[1].get_int());\n+    CreateThread(ThreadCleanWalletPassphrase, pnSleepTime);\n+    CreateThread(ThreadTopUpKeyPool, NULL);\n+\n+    return Value::null;\n+}\n+\n+\n+Value walletpassphrasechange(const Array& params, bool fHelp)\n+{\n+    if (pwalletMain->IsCrypted() && (fHelp || params.size() != 2))\n+        throw runtime_error(\n+            \"walletpassphrasechange <oldpassphrase> <newpassphrase>\\n\"\n+            \"Changes the wallet passphrase from <oldpassphrase> to <newpassphrase>.\");\n+    if (fHelp)\n+        return true;\n+    if (!pwalletMain->IsCrypted())\n+        throw JSONRPCError(-15, \"Error: running with an unencrypted wallet, but walletpassphrasechange was called.\");\n+\n+    string strOldWalletPass;\n+    strOldWalletPass.reserve(100);\n+    mlock(&strOldWalletPass[0], strOldWalletPass.length());\n+    strOldWalletPass = params[0].get_str();\n+\n+    string strNewWalletPass;\n+    strNewWalletPass.reserve(100);\n+    mlock(&strNewWalletPass[0], strNewWalletPass.length());\n+    strNewWalletPass = params[1].get_str();\n+\n+    if (strOldWalletPass.length() < 1 || strNewWalletPass.length() < 1)\n+        throw runtime_error(\n+            \"walletpassphrasechange <oldpassphrase> <newpassphrase>\\n\"\n+            \"Changes the wallet passphrase from <oldpassphrase> to <newpassphrase>.\");\n+\n+    if (!pwalletMain->ChangeWalletPassphrase(strOldWalletPass, strNewWalletPass))\n+    {\n+        fill(strOldWalletPass.begin(), strOldWalletPass.end(), '\\0');\n+        fill(strNewWalletPass.begin(), strNewWalletPass.end(), '\\0');\n+        throw JSONRPCError(-14, \"Error: The wallet passphrase entered was incorrect.\");\n+    }\n+    fill(strNewWalletPass.begin(), strNewWalletPass.end(), '\\0');\n+    fill(strOldWalletPass.begin(), strOldWalletPass.end(), '\\0');\n+\n+    return Value::null;\n+}\n+\n+\n+Value encryptwallet(const Array& params, bool fHelp)\n+{\n+    if (!pwalletMain->IsCrypted() && (fHelp || params.size() != 1))\n+        throw runtime_error(\n+            \"encryptwallet <passphrase>\\n\"\n+            \"Encrypts the wallet with <passphrase>.\");\n+    if (fHelp)\n+        return true;\n+    if (pwalletMain->IsCrypted())\n+        throw JSONRPCError(-15, \"Error: running with an encrypted wallet, but encryptwallet was called.\");\n+\n+    string strWalletPass;\n+    strWalletPass.reserve(100);\n+    mlock(&strWalletPass[0], strWalletPass.length());\n+    strWalletPass = params[0].get_str();\n+\n+    if (strWalletPass.length() < 1)\n+        throw runtime_error(\n+            \"encryptwallet <passphrase>\\n\"\n+            \"Encrypts the wallet with <passphrase>.\");\n+\n+    if (!pwalletMain->EncryptWallet(strWalletPass))\n+    {\n+        fill(strWalletPass.begin(), strWalletPass.end(), '\\0');\n+        throw JSONRPCError(-16, \"Error: Failed to encrypt the wallet.\");\n+    }\n+    fill(strWalletPass.begin(), strWalletPass.end(), '\\0');\n+\n+    return Value::null;\n+}\n+\n+\n Value validateaddress(const Array& params, bool fHelp)\n {\n     if (fHelp || params.size() != 1)\n@@ -1427,44 +1654,48 @@ Value getwork(const Array& params, bool fHelp)\n \n pair<string, rpcfn_type> pCallTable[] =\n {\n-    make_pair(\"help\",                  &help),\n-    make_pair(\"stop\",                  &stop),\n-    make_pair(\"getblockcount\",         &getblockcount),\n-    make_pair(\"getblocknumber\",        &getblocknumber),\n-    make_pair(\"getconnectioncount\",    &getconnectioncount),\n-    make_pair(\"getdifficulty\",         &getdifficulty),\n-    make_pair(\"getgenerate\",           &getgenerate),\n-    make_pair(\"setgenerate\",           &setgenerate),\n-    make_pair(\"gethashespersec\",       &gethashespersec),\n-    make_pair(\"getinfo\",               &getinfo),\n-    make_pair(\"getnewaddress\",         &getnewaddress),\n-    make_pair(\"getaccountaddress\",     &getaccountaddress),\n-    make_pair(\"setaccount\",            &setaccount),\n-    make_pair(\"setlabel\",              &setaccount), // deprecated\n-    make_pair(\"getaccount\",            &getaccount),\n-    make_pair(\"getlabel\",              &getaccount), // deprecated\n-    make_pair(\"getaddressesbyaccount\", &getaddressesbyaccount),\n-    make_pair(\"getaddressesbylabel\",   &getaddressesbyaccount), // deprecated\n-    make_pair(\"sendtoaddress\",         &sendtoaddress),\n-    make_pair(\"getamountreceived\",     &getreceivedbyaddress), // deprecated, renamed to getreceivedbyaddress\n-    make_pair(\"getallreceived\",        &listreceivedbyaddress), // deprecated, renamed to listreceivedbyaddress\n-    make_pair(\"getreceivedbyaddress\",  &getreceivedbyaddress),\n-    make_pair(\"getreceivedbyaccount\",  &getreceivedbyaccount),\n-    make_pair(\"getreceivedbylabel\",    &getreceivedbyaccount), // deprecated\n-    make_pair(\"listreceivedbyaddress\", &listreceivedbyaddress),\n-    make_pair(\"listreceivedbyaccount\", &listreceivedbyaccount),\n-    make_pair(\"listreceivedbylabel\",   &listreceivedbyaccount), // deprecated\n-    make_pair(\"backupwallet\",          &backupwallet),\n-    make_pair(\"validateaddress\",       &validateaddress),\n-    make_pair(\"getbalance\",            &getbalance),\n-    make_pair(\"move\",                  &movecmd),\n-    make_pair(\"sendfrom\",              &sendfrom),\n-    make_pair(\"sendmany\",              &sendmany),\n-    make_pair(\"gettransaction\",        &gettransaction),\n-    make_pair(\"listtransactions\",      &listtransactions),\n-    make_pair(\"getwork\",               &getwork),\n-    make_pair(\"listaccounts\",          &listaccounts),\n-    make_pair(\"settxfee\",              &settxfee),\n+    make_pair(\"help\",                   &help),\n+    make_pair(\"stop\",                   &stop),\n+    make_pair(\"getblockcount\",          &getblockcount),\n+    make_pair(\"getblocknumber\",         &getblocknumber),\n+    make_pair(\"getconnectioncount\",     &getconnectioncount),\n+    make_pair(\"getdifficulty\",          &getdifficulty),\n+    make_pair(\"getgenerate\",            &getgenerate),\n+    make_pair(\"setgenerate\",            &setgenerate),\n+    make_pair(\"gethashespersec\",        &gethashespersec),\n+    make_pair(\"getinfo\",                &getinfo),\n+    make_pair(\"getnewaddress\",          &getnewaddress),\n+    make_pair(\"getaccountaddress\",      &getaccountaddress),\n+    make_pair(\"setaccount\",             &setaccount),\n+    make_pair(\"setlabel\",               &setaccount), // deprecated\n+    make_pair(\"getaccount\",             &getaccount),\n+    make_pair(\"getlabel\",               &getaccount), // deprecated\n+    make_pair(\"getaddressesbyaccount\",  &getaddressesbyaccount),\n+    make_pair(\"getaddressesbylabel\",    &getaddressesbyaccount), // deprecated\n+    make_pair(\"sendtoaddress\",          &sendtoaddress),\n+    make_pair(\"getamountreceived\",      &getreceivedbyaddress), // deprecated, renamed to getreceivedbyaddress\n+    make_pair(\"getallreceived\",         &listreceivedbyaddress), // deprecated, renamed to listreceivedbyaddress\n+    make_pair(\"getreceivedbyaddress\",   &getreceivedbyaddress),\n+    make_pair(\"getreceivedbyaccount\",   &getreceivedbyaccount),\n+    make_pair(\"getreceivedbylabel\",     &getreceivedbyaccount), // deprecated\n+    make_pair(\"listreceivedbyaddress\",  &listreceivedbyaddress),\n+    make_pair(\"listreceivedbyaccount\",  &listreceivedbyaccount),\n+    make_pair(\"listreceivedbylabel\",    &listreceivedbyaccount), // deprecated\n+    make_pair(\"backupwallet\",           &backupwallet),\n+    make_pair(\"keypoolrefill\",          &keypoolrefill),\n+    make_pair(\"walletpassphrase\",       &walletpassphrase),\n+    make_pair(\"walletpassphrasechange\", &walletpassphrasechange),\n+    make_pair(\"encryptwallet\",          &encryptwallet),\n+    make_pair(\"validateaddress\",        &validateaddress),\n+    make_pair(\"getbalance\",             &getbalance),\n+    make_pair(\"move\",                   &movecmd),\n+    make_pair(\"sendfrom\",               &sendfrom),\n+    make_pair(\"sendmany\",               &sendmany),\n+    make_pair(\"gettransaction\",         &gettransaction),\n+    make_pair(\"listtransactions\",       &listtransactions),\n+    make_pair(\"getwork\",                &getwork),\n+    make_pair(\"listaccounts\",           &listaccounts),\n+    make_pair(\"settxfee\",               &settxfee),\n };\n map<string, rpcfn_type> mapCallTable(pCallTable, pCallTable + sizeof(pCallTable)/sizeof(pCallTable[0]));\n \n@@ -1488,6 +1719,8 @@ string pAllowInSafeMode[] =\n     \"getaddressesbyaccount\",\n     \"getaddressesbylabel\", // deprecated\n     \"backupwallet\",\n+    \"keypoolrefill\",\n+    \"walletpassphrase\",\n     \"validateaddress\",\n     \"getwork\",\n };\n@@ -2119,6 +2352,7 @@ int CommandLineRPC(int argc, char *argv[])\n         if (strMethod == \"listtransactions\"       && n > 1) ConvertTo<boost::int64_t>(params[1]);\n         if (strMethod == \"listtransactions\"       && n > 2) ConvertTo<boost::int64_t>(params[2]);\n         if (strMethod == \"listaccounts\"           && n > 0) ConvertTo<boost::int64_t>(params[0]);\n+        if (strMethod == \"walletpassphrase\"       && n > 1) ConvertTo<boost::int64_t>(params[1]);\n         if (strMethod == \"sendmany\"               && n > 1)\n         {\n             string s = params[1].get_str();"
+      },
+      {
+        "sha": "13a53d6b9c4ab70b25fddad5bc56f950405f22b1",
+        "filename": "src/script.cpp",
+        "status": "modified",
+        "additions": 34,
+        "deletions": 2,
+        "changes": 36,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c5b9127f2c36d5dd388568b201d3539f02960610/src/script.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c5b9127f2c36d5dd388568b201d3539f02960610/src/script.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script.cpp?ref=c5b9127f2c36d5dd388568b201d3539f02960610",
+        "patch": "@@ -1089,8 +1089,40 @@ bool IsStandard(const CScript& scriptPubKey)\n \n bool IsMine(const CKeyStore &keystore, const CScript& scriptPubKey)\n {\n-    CScript scriptSig;\n-    return Solver(keystore, scriptPubKey, 0, 0, scriptSig);\n+    vector<pair<opcodetype, valtype> > vSolution;\n+    if (!Solver(scriptPubKey, vSolution))\n+        return false;\n+\n+    // Compile solution\n+    CRITICAL_BLOCK(keystore.cs_KeyStore)\n+    {\n+        BOOST_FOREACH(PAIRTYPE(opcodetype, valtype)& item, vSolution)\n+        {\n+            if (item.first == OP_PUBKEY)\n+            {\n+                // Sign\n+                const valtype& vchPubKey = item.second;\n+                if (!keystore.HaveKey(vchPubKey))\n+                    return false;\n+            }\n+            else if (item.first == OP_PUBKEYHASH)\n+            {\n+                // Sign and give pubkey\n+                map<uint160, valtype>::iterator mi = mapPubKeys.find(uint160(item.second));\n+                if (mi == mapPubKeys.end())\n+                    return false;\n+                const vector<unsigned char>& vchPubKey = (*mi).second;\n+                if (!keystore.HaveKey(vchPubKey))\n+                    return false;\n+            }\n+            else\n+            {\n+                return false;\n+            }\n+        }\n+    }\n+\n+    return true;\n }\n \n "
+      },
+      {
+        "sha": "668e2898d9a91d1cc85f38619d7fa6f3dd28d8ce",
+        "filename": "src/ui.cpp",
+        "status": "modified",
+        "additions": 208,
+        "deletions": 11,
+        "changes": 219,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c5b9127f2c36d5dd388568b201d3539f02960610/src/ui.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c5b9127f2c36d5dd388568b201d3539f02960610/src/ui.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/ui.cpp?ref=c5b9127f2c36d5dd388568b201d3539f02960610",
+        "patch": "@@ -245,6 +245,38 @@ void SetDefaultReceivingAddress(const string& strAddress)\n     }\n }\n \n+bool GetWalletPassphrase()\n+{\n+    if (pwalletMain->IsLocked())\n+    {\n+        string strWalletPass;\n+        strWalletPass.reserve(100);\n+        mlock(&strWalletPass[0], strWalletPass.capacity());\n+\n+        // obtain current wallet encrypt/decrypt key, from passphrase\n+        // Note that the passphrase is not mlock()d during this entry and could potentially\n+        // be obtained from disk long after bitcoin has run.\n+        strWalletPass = wxGetPasswordFromUser(_(\"Enter the current passphrase to the wallet.\"),\n+                                              _(\"Passphrase\")).ToStdString();\n+\n+        if (!strWalletPass.size())\n+        {\n+            wxMessageBox(_(\"Please supply the current wallet decryption passphrase.\"), \"Bitcoin\");\n+            return false;\n+        }\n+\n+        if (!pwalletMain->Unlock(strWalletPass))\n+        {\n+            wxMessageBox(_(\"The passphrase entered for the wallet decryption was incorrect.\"), \"Bitcoin\");\n+            fill(strWalletPass.begin(), strWalletPass.end(), '\\0');\n+            pwalletMain->Lock();\n+            return false;\n+        }\n+        fill(strWalletPass.begin(), strWalletPass.end(), '\\0');\n+    }\n+    return true;\n+}\n+\n \n \n \n@@ -1122,6 +1154,125 @@ void CMainFrame::OnMenuOptionsChangeYourAddress(wxCommandEvent& event)\n         return;\n }\n \n+void CMainFrame::OnMenuOptionsEncryptWallet(wxCommandEvent& event)\n+{\n+    // Options->Encrypt Wallet\n+    if (pwalletMain->IsCrypted())\n+    {\n+        wxMessageBox(_(\"Wallet already encrypted.\"), \"Bitcoin\", wxOK | wxICON_ERROR);\n+        return;\n+    }\n+\n+    string strWalletPass;\n+    strWalletPass.reserve(100);\n+    mlock(&strWalletPass[0], strWalletPass.capacity());\n+\n+    // obtain current wallet encrypt/decrypt key, from passphrase\n+    // Note that the passphrase is not mlock()d during this entry and could potentially\n+    // be obtained from disk long after bitcoin has run.\n+    strWalletPass = wxGetPasswordFromUser(_(\"Enter the new passphrase to the wallet.\\nPlease use a passphrase of 10 or more random characters, or eight or more words.\"),\n+                                          _(\"Passphrase\")).ToStdString();\n+\n+    if(wxMessageBox(_(\"WARNING: If you encrypt your wallet and lose your passphrase, you will LOSE ALL OF YOUR BITCOINS!\\nAre you sure you wish to encrypt your wallet?\"), \"Bitcoin\", wxYES_NO) != wxYES)\n+        return;\n+\n+    string strWalletPassTest;\n+    strWalletPassTest.reserve(100);\n+    mlock(&strWalletPassTest[0], strWalletPassTest.capacity());\n+    strWalletPassTest = wxGetPasswordFromUser(_(\"Please re-enter your new wallet passphrase.\"),\n+                                              _(\"Passphrase\")).ToStdString();\n+\n+    if (strWalletPassTest != strWalletPass)\n+    {\n+        wxMessageBox(_(\"Error: the supplied passphrases didn't match.\"), \"Bitcoin\", wxOK | wxICON_ERROR);\n+        return;\n+    }\n+\n+    if (!strWalletPass.size())\n+    {\n+        wxMessageBox(_(\"Error: The supplied passphrase was too short.\"), \"Bitcoin\", wxOK | wxICON_ERROR);\n+        return;\n+    }\n+\n+    if (!pwalletMain->EncryptWallet(strWalletPass))\n+    {\n+        fill(strWalletPass.begin(), strWalletPass.end(), '\\0');\n+        wxMessageBox(_(\"Wallet encryption failed.\"), \"Bitcoin\", wxOK | wxICON_ERROR);\n+        return;\n+    }\n+    fill(strWalletPass.begin(), strWalletPass.end(), '\\0');\n+    wxMessageBox(_(\"Wallet Encrypted.\\nRemember that encrypting your wallet cannot fully protect your bitcoins from being stolen by malware infecting your computer.\"), \"Bitcoin\");\n+}\n+\n+void CMainFrame::OnMenuOptionsChangeWalletPassphrase(wxCommandEvent& event)\n+{\n+    // Options->Change Wallet Encryption Passphrase\n+    if (!pwalletMain->IsCrypted())\n+    {\n+        wxMessageBox(_(\"Wallet is unencrypted, please encrypt it first.\"), \"Bitcoin\", wxOK | wxICON_ERROR);\n+        return;\n+    }\n+\n+    string strOldWalletPass;\n+    strOldWalletPass.reserve(100);\n+    mlock(&strOldWalletPass[0], strOldWalletPass.capacity());\n+\n+    // obtain current wallet encrypt/decrypt key, from passphrase\n+    // Note that the passphrase is not mlock()d during this entry and could potentially\n+    // be obtained from disk long after bitcoin has run.\n+    strOldWalletPass = wxGetPasswordFromUser(_(\"Enter the current passphrase to the wallet.\"),\n+                                             _(\"Passphrase\")).ToStdString();\n+\n+    if (!strOldWalletPass.size())\n+    {\n+        wxMessageBox(_(\"The passphrase entered for the wallet decryption was incorrect.\"), \"Bitcoin\", wxOK | wxICON_ERROR);\n+        return;\n+    }\n+\n+    string strNewWalletPass;\n+    strNewWalletPass.reserve(100);\n+    mlock(&strNewWalletPass[0], strNewWalletPass.capacity());\n+\n+    // obtain new wallet encrypt/decrypt key, from passphrase\n+    // Note that the passphrase is not mlock()d during this entry and could potentially\n+    // be obtained from disk long after bitcoin has run.\n+    strNewWalletPass = wxGetPasswordFromUser(_(\"Enter the new passphrase for the wallet.\"),\n+                                             _(\"Passphrase\")).ToStdString();\n+\n+    string strNewWalletPassTest;\n+    strNewWalletPassTest.reserve(100);\n+    mlock(&strNewWalletPassTest[0], strNewWalletPassTest.capacity());\n+\n+    // obtain new wallet encrypt/decrypt key, from passphrase\n+    // Note that the passphrase is not mlock()d during this entry and could potentially\n+    // be obtained from disk long after bitcoin has run.\n+    strNewWalletPassTest = wxGetPasswordFromUser(_(\"Re-enter the new passphrase for the wallet.\"),\n+                                                 _(\"Passphrase\")).ToStdString();\n+\n+    if (strNewWalletPassTest != strNewWalletPass)\n+    {\n+        wxMessageBox(_(\"Error: the supplied passphrases didn't match.\"), \"Bitcoin\", wxOK | wxICON_ERROR);\n+        return;\n+    }\n+\n+    if (!strNewWalletPass.size())\n+    {\n+        wxMessageBox(_(\"Error: The supplied passphrase was too short.\"), \"Bitcoin\", wxOK | wxICON_ERROR);\n+        return;\n+    }\n+\n+    if (!pwalletMain->ChangeWalletPassphrase(strOldWalletPass, strNewWalletPass))\n+    {\n+        fill(strOldWalletPass.begin(), strOldWalletPass.end(), '\\0');\n+        fill(strNewWalletPass.begin(), strNewWalletPass.end(), '\\0');\n+        wxMessageBox(_(\"The passphrase entered for the wallet decryption was incorrect.\"), \"Bitcoin\", wxOK | wxICON_ERROR);\n+        return;\n+    }\n+    fill(strOldWalletPass.begin(), strOldWalletPass.end(), '\\0');\n+    fill(strNewWalletPass.begin(), strNewWalletPass.end(), '\\0');\n+    wxMessageBox(_(\"Wallet Passphrase Changed.\"), \"Bitcoin\");\n+}\n+\n void CMainFrame::OnMenuOptionsOptions(wxCommandEvent& event)\n {\n     // Options->Options\n@@ -1182,8 +1333,19 @@ void CMainFrame::OnButtonNew(wxCommandEvent& event)\n         return;\n     string strName = dialog.GetValue();\n \n-    // Generate new key\n-    string strAddress = PubKeyToAddress(pwalletMain->GetKeyFromKeyPool());\n+    string strAddress;\n+    CRITICAL_BLOCK(pwalletMain->cs_vMasterKey)\n+    {\n+        bool fWasLocked = pwalletMain->IsLocked();\n+        if (!GetWalletPassphrase())\n+            return;\n+\n+        // Generate new key\n+        strAddress = PubKeyToAddress(pwalletMain->GetOrReuseKeyFromPool());\n+\n+        if (fWasLocked)\n+            pwalletMain->Lock();\n+    }\n \n     // Save\n     pwalletMain->SetAddressBookName(strAddress, strName);\n@@ -1946,7 +2108,12 @@ void CSendDialog::OnButtonSend(wxCommandEvent& event)\n         if (fBitcoinAddress)\n         {\n \t    CRITICAL_BLOCK(cs_main)\n+            CRITICAL_BLOCK(pwalletMain->cs_vMasterKey)\n \t    {\n+                bool fWasLocked = pwalletMain->IsLocked();\n+                if (!GetWalletPassphrase())\n+                    return;\n+\n                 // Send to bitcoin address\n                 CScript scriptPubKey;\n                 scriptPubKey << OP_DUP << OP_HASH160 << hash160 << OP_EQUALVERIFY << OP_CHECKSIG;\n@@ -1955,13 +2122,22 @@ void CSendDialog::OnButtonSend(wxCommandEvent& event)\n                 if (strError == \"\")\n                     wxMessageBox(_(\"Payment sent  \"), _(\"Sending...\"));\n                 else if (strError == \"ABORTED\")\n+                {\n+                    if (fWasLocked)\n+                        pwalletMain->Lock();\n                     return; // leave send dialog open\n+                }\n                 else\n                 {\n                     wxMessageBox(strError + \"  \", _(\"Sending...\"));\n                     EndModal(false);\n+                    if (fWasLocked)\n+                        pwalletMain->Lock();\n                     return;\n                 }\n+\n+                if (fWasLocked)\n+                    pwalletMain->Lock();\n \t    }\n         }\n         else\n@@ -2245,16 +2421,27 @@ void CSendingDialog::OnReply2(CDataStream& vRecv)\n             Error(_(\"Insufficient funds\"));\n             return;\n         }\n+\n         CReserveKey reservekey(pwalletMain);\n         int64 nFeeRequired;\n-        if (!pwalletMain->CreateTransaction(scriptPubKey, nPrice, wtx, reservekey, nFeeRequired))\n+        CRITICAL_BLOCK(pwalletMain->cs_vMasterKey)\n         {\n-            if (nPrice + nFeeRequired > pwalletMain->GetBalance())\n-                Error(strprintf(_(\"This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds\"), FormatMoney(nFeeRequired).c_str()));\n-            else\n-                Error(_(\"Transaction creation failed\"));\n-            return;\n-        }\n+            bool fWasLocked = pwalletMain->IsLocked();\n+            if (!GetWalletPassphrase())\n+                return;\n+\n+            if (!pwalletMain->CreateTransaction(scriptPubKey, nPrice, wtx, reservekey, nFeeRequired))\n+            {\n+                if (nPrice + nFeeRequired > pwalletMain->GetBalance())\n+                    Error(strprintf(_(\"This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds\"), FormatMoney(nFeeRequired).c_str()));\n+                else\n+                    Error(_(\"Transaction creation failed\"));\n+                return;\n+            }\n+\n+            if (fWasLocked)\n+                pwalletMain->Lock();\n+       }\n \n         // Transaction fee\n         if (!ThreadSafeAskFee(nFeeRequired, _(\"Sending...\"), this))\n@@ -2575,8 +2762,18 @@ void CAddressBookDialog::OnButtonNew(wxCommandEvent& event)\n             return;\n         strName = dialog.GetValue();\n \n-        // Generate new key\n-        strAddress = PubKeyToAddress(pwalletMain->GetKeyFromKeyPool());\n+        CRITICAL_BLOCK(pwalletMain->cs_vMasterKey)\n+        {\n+            bool fWasLocked = pwalletMain->IsLocked();\n+            if (!GetWalletPassphrase())\n+                return;\n+\n+            // Generate new key\n+            strAddress = PubKeyToAddress(pwalletMain->GetOrReuseKeyFromPool());\n+\n+            if (fWasLocked)\n+                pwalletMain->Lock();\n+        }\n     }\n \n     // Add to list and select it"
+      },
+      {
+        "sha": "3bf741534c871dcee584044bc5592196ad4f2e28",
+        "filename": "src/ui.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c5b9127f2c36d5dd388568b201d3539f02960610/src/ui.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c5b9127f2c36d5dd388568b201d3539f02960610/src/ui.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/ui.h?ref=c5b9127f2c36d5dd388568b201d3539f02960610",
+        "patch": "@@ -59,6 +59,8 @@ class CMainFrame : public CMainFrameBase\n     void OnMenuFileExit(wxCommandEvent& event);\n     void OnUpdateUIOptionsGenerate(wxUpdateUIEvent& event);\n     void OnMenuOptionsChangeYourAddress(wxCommandEvent& event);\n+    void OnMenuOptionsEncryptWallet(wxCommandEvent& event);\n+    void OnMenuOptionsChangeWalletPassphrase(wxCommandEvent& event);\n     void OnMenuOptionsOptions(wxCommandEvent& event);\n     void OnMenuHelpAbout(wxCommandEvent& event);\n     void OnButtonSend(wxCommandEvent& event);"
+      },
+      {
+        "sha": "9ac4ec8e65193a2e4ea8d698132215c9987eed40",
+        "filename": "src/uibase.cpp",
+        "status": "modified",
+        "additions": 12,
+        "deletions": 0,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c5b9127f2c36d5dd388568b201d3539f02960610/src/uibase.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c5b9127f2c36d5dd388568b201d3539f02960610/src/uibase.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/uibase.cpp?ref=c5b9127f2c36d5dd388568b201d3539f02960610",
+        "patch": "@@ -32,6 +32,14 @@ CMainFrameBase::CMainFrameBase( wxWindow* parent, wxWindowID id, const wxString&\n \tm_menuOptionsChangeYourAddress = new wxMenuItem( m_menuOptions, wxID_ANY, wxString( _(\"&Your Receiving Addresses...\") ) , wxEmptyString, wxITEM_NORMAL );\n \tm_menuOptions->Append( m_menuOptionsChangeYourAddress );\n \t\n+\twxMenuItem* m_menuOptionsEncryptWallet;\n+\tm_menuOptionsEncryptWallet = new wxMenuItem( m_menuOptions, wxID_ANY, wxString( _(\"&Encrypt Wallet...\") ) , wxEmptyString, wxITEM_NORMAL );\n+\tm_menuOptions->Append( m_menuOptionsEncryptWallet );\n+\t\n+\twxMenuItem* m_menuOptionsChangeWalletPassphrase;\n+\tm_menuOptionsChangeWalletPassphrase = new wxMenuItem( m_menuOptions, wxID_ANY, wxString( _(\"&Change Wallet Encryption Passphrase...\") ) , wxEmptyString, wxITEM_NORMAL );\n+\tm_menuOptions->Append( m_menuOptionsChangeWalletPassphrase );\n+\t\n \twxMenuItem* m_menuOptionsOptions;\n \tm_menuOptionsOptions = new wxMenuItem( m_menuOptions, wxID_PREFERENCES, wxString( _(\"&Options...\") ) , wxEmptyString, wxITEM_NORMAL );\n \tm_menuOptions->Append( m_menuOptionsOptions );\n@@ -187,6 +195,8 @@ CMainFrameBase::CMainFrameBase( wxWindow* parent, wxWindowID id, const wxString&\n \tthis->Connect( wxEVT_PAINT, wxPaintEventHandler( CMainFrameBase::OnPaint ) );\n \tthis->Connect( m_menuFileExit->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( CMainFrameBase::OnMenuFileExit ) );\n \tthis->Connect( m_menuOptionsChangeYourAddress->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( CMainFrameBase::OnMenuOptionsChangeYourAddress ) );\n+\tthis->Connect( m_menuOptionsEncryptWallet->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( CMainFrameBase::OnMenuOptionsEncryptWallet ) );\n+\tthis->Connect( m_menuOptionsChangeWalletPassphrase->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( CMainFrameBase::OnMenuOptionsChangeWalletPassphrase ) );\n \tthis->Connect( m_menuOptionsOptions->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( CMainFrameBase::OnMenuOptionsOptions ) );\n \tthis->Connect( m_menuHelpAbout->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( CMainFrameBase::OnMenuHelpAbout ) );\n \tthis->Connect( wxID_BUTTONSEND, wxEVT_COMMAND_TOOL_CLICKED, wxCommandEventHandler( CMainFrameBase::OnButtonSend ) );\n@@ -245,6 +255,8 @@ CMainFrameBase::~CMainFrameBase()\n \tthis->Disconnect( wxEVT_PAINT, wxPaintEventHandler( CMainFrameBase::OnPaint ) );\n \tthis->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( CMainFrameBase::OnMenuFileExit ) );\n \tthis->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( CMainFrameBase::OnMenuOptionsChangeYourAddress ) );\n+\tthis->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( CMainFrameBase::OnMenuOptionsEncryptWallet ) );\n+\tthis->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( CMainFrameBase::OnMenuOptionsChangeWalletPassphrase ) );\n \tthis->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( CMainFrameBase::OnMenuOptionsOptions ) );\n \tthis->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( CMainFrameBase::OnMenuHelpAbout ) );\n \tthis->Disconnect( wxID_BUTTONSEND, wxEVT_COMMAND_TOOL_CLICKED, wxCommandEventHandler( CMainFrameBase::OnButtonSend ) );"
+      },
+      {
+        "sha": "e2dbb0bd4d8aff82e5283c328b64a873f8436ad2",
+        "filename": "src/uibase.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c5b9127f2c36d5dd388568b201d3539f02960610/src/uibase.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c5b9127f2c36d5dd388568b201d3539f02960610/src/uibase.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/uibase.h?ref=c5b9127f2c36d5dd388568b201d3539f02960610",
+        "patch": "@@ -98,6 +98,8 @@ class CMainFrameBase : public wxFrame\n \t\tvirtual void OnPaint( wxPaintEvent& event ) { event.Skip(); }\n \t\tvirtual void OnMenuFileExit( wxCommandEvent& event ) { event.Skip(); }\n \t\tvirtual void OnMenuOptionsChangeYourAddress( wxCommandEvent& event ) { event.Skip(); }\n+\t\tvirtual void OnMenuOptionsEncryptWallet( wxCommandEvent& event ) { event.Skip(); }\n+\t\tvirtual void OnMenuOptionsChangeWalletPassphrase( wxCommandEvent& event ) { event.Skip(); }\n \t\tvirtual void OnMenuOptionsOptions( wxCommandEvent& event ) { event.Skip(); }\n \t\tvirtual void OnMenuHelpAbout( wxCommandEvent& event ) { event.Skip(); }\n \t\tvirtual void OnButtonSend( wxCommandEvent& event ) { event.Skip(); }"
+      },
+      {
+        "sha": "e765a111ff1fe1c0a5954160e6d8a3eb8a327213",
+        "filename": "src/wallet.cpp",
+        "status": "modified",
+        "additions": 159,
+        "deletions": 19,
+        "changes": 178,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c5b9127f2c36d5dd388568b201d3539f02960610/src/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c5b9127f2c36d5dd388568b201d3539f02960610/src/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.cpp?ref=c5b9127f2c36d5dd388568b201d3539f02960610",
+        "patch": "@@ -5,25 +5,132 @@\n #include \"headers.h\"\n #include \"db.h\"\n #include \"cryptopp/sha.h\"\n+#include \"crypter.h\"\n \n using namespace std;\n \n \n-\n //////////////////////////////////////////////////////////////////////////////\n //\n // mapWallet\n //\n \n bool CWallet::AddKey(const CKey& key)\n {\n-    if (!CBasicKeyStore::AddKey(key))\n+    if (!CCryptoKeyStore::AddKey(key))\n         return false;\n     if (!fFileBacked)\n         return true;\n     return CWalletDB(strWalletFile).WriteKey(key.GetPubKey(), key.GetPrivKey());\n }\n \n+bool CWallet::AddCryptedKey(const vector<unsigned char> &vchPubKey, const vector<unsigned char> &vchCryptedSecret)\n+{\n+    if (!CCryptoKeyStore::AddCryptedKey(vchPubKey, vchCryptedSecret))\n+        return false;\n+    if (!fFileBacked)\n+        return true;\n+    return CWalletDB(strWalletFile).WriteCryptedKey(vchPubKey, vchCryptedSecret);\n+}\n+\n+bool CWallet::Unlock(const string& strWalletPassphrase)\n+{\n+    CRITICAL_BLOCK(cs_vMasterKey)\n+    {\n+        if (!IsLocked())\n+            return false;\n+\n+        CCrypter crypter;\n+        CKeyingMaterial vMasterKey;\n+\n+        BOOST_FOREACH(const MasterKeyMap::value_type& pMasterKey, mapMasterKeys)\n+        {\n+            if(!crypter.SetKeyFromPassphrase(strWalletPassphrase, pMasterKey.second.vchSalt, pMasterKey.second.nDeriveIterations, pMasterKey.second.nDerivationMethod))\n+                return false;\n+            if (!crypter.Decrypt(pMasterKey.second.vchCryptedKey, vMasterKey))\n+                return false;\n+            if (CCryptoKeyStore::Unlock(vMasterKey))\n+                return true;\n+        }\n+    }\n+    return false;\n+}\n+\n+bool CWallet::ChangeWalletPassphrase(const string& strOldWalletPassphrase, const string& strNewWalletPassphrase)\n+{\n+    CRITICAL_BLOCK(cs_vMasterKey)\n+    {\n+        bool fWasLocked = IsLocked();\n+\n+        Lock();\n+\n+        CCrypter crypter;\n+        CKeyingMaterial vMasterKey;\n+        BOOST_FOREACH(MasterKeyMap::value_type& pMasterKey, mapMasterKeys)\n+        {\n+            if(!crypter.SetKeyFromPassphrase(strOldWalletPassphrase, pMasterKey.second.vchSalt, pMasterKey.second.nDeriveIterations, pMasterKey.second.nDerivationMethod))\n+                return false;\n+            if(!crypter.Decrypt(pMasterKey.second.vchCryptedKey, vMasterKey))\n+                return false;\n+            if (CCryptoKeyStore::Unlock(vMasterKey))\n+            {\n+                if (!crypter.SetKeyFromPassphrase(strNewWalletPassphrase, pMasterKey.second.vchSalt, pMasterKey.second.nDeriveIterations, pMasterKey.second.nDerivationMethod))\n+                    return false;\n+                if (!crypter.Encrypt(vMasterKey, pMasterKey.second.vchCryptedKey))\n+                    return false;\n+                CWalletDB(strWalletFile).WriteMasterKey(pMasterKey.first, pMasterKey.second);\n+                if (fWasLocked)\n+                    Lock();\n+                return true;\n+            }\n+        }\n+    }\n+    return false;\n+}\n+\n+bool CWallet::EncryptWallet(const string& strWalletPassphrase)\n+{\n+    //TODO: use db commits\n+    CRITICAL_BLOCK(cs_mapPubKeys)\n+    CRITICAL_BLOCK(cs_KeyStore)\n+    CRITICAL_BLOCK(cs_vMasterKey)\n+    {\n+        if (IsCrypted())\n+            return false;\n+\n+        CKeyingMaterial vMasterKey;\n+        RandAddSeedPerfmon();\n+\n+        vMasterKey.resize(WALLET_CRYPTO_KEY_SIZE);\n+        RAND_bytes(&vMasterKey[0], WALLET_CRYPTO_KEY_SIZE);\n+\n+        CMasterKey kMasterKey;\n+\n+        RandAddSeedPerfmon();\n+        kMasterKey.vchSalt.resize(WALLET_CRYPTO_SALT_SIZE);\n+        RAND_bytes(&kMasterKey.vchSalt[0], WALLET_CRYPTO_SALT_SIZE);\n+\n+        CCrypter crypter;\n+        if (!crypter.SetKeyFromPassphrase(strWalletPassphrase, kMasterKey.vchSalt, kMasterKey.nDeriveIterations, kMasterKey.nDerivationMethod))\n+            return false;\n+        if (!crypter.Encrypt(vMasterKey, kMasterKey.vchCryptedKey))\n+            return false;\n+\n+        mapMasterKeys[++nMasterKeyMaxID] = kMasterKey;\n+        if (fFileBacked)\n+        {\n+            CWalletDB(strWalletFile).WriteMasterKey(nMasterKeyMaxID, kMasterKey);\n+            DBFlush(false);\n+        }\n+\n+        if (!EncryptKeys(vMasterKey))\n+            exit(1); //We now probably have half of our keys encrypted, and half not...die and let the user ask someone with experience to recover their wallet.\n+\n+        Lock();\n+    }\n+    return true;\n+}\n+\n void CWallet::WalletUpdateSpent(const CTransaction &tx)\n {\n     // Anytime a signature is successfully verified, it's proof the outpoint is spent.\n@@ -98,12 +205,12 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn)\n         scriptDefaultKey.SetBitcoinAddress(vchDefaultKey);\n         BOOST_FOREACH(const CTxOut& txout, wtx.vout)\n         {\n-            if (txout.scriptPubKey == scriptDefaultKey)\n+            if (txout.scriptPubKey == scriptDefaultKey && GetKeyPoolSize() != 0)\n             {\n                 if (!fFileBacked)\n                     continue;\n                 CWalletDB walletdb(strWalletFile);\n-                vchDefaultKey = GetKeyFromKeyPool();\n+                vchDefaultKey = GetOrReuseKeyFromPool();\n                 walletdb.WriteDefaultKey(vchDefaultKey);\n                 walletdb.WriteName(PubKeyToAddress(vchDefaultKey), \"\");\n             }\n@@ -911,15 +1018,24 @@ string CWallet::SendMoney(CScript scriptPubKey, int64 nValue, CWalletTx& wtxNew,\n {\n     CReserveKey reservekey(this);\n     int64 nFeeRequired;\n-    if (!CreateTransaction(scriptPubKey, nValue, wtxNew, reservekey, nFeeRequired))\n+    CRITICAL_BLOCK(cs_vMasterKey)\n     {\n-        string strError;\n-        if (nValue + nFeeRequired > GetBalance())\n-            strError = strprintf(_(\"Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds  \"), FormatMoney(nFeeRequired).c_str());\n-        else\n-            strError = _(\"Error: Transaction creation failed  \");\n-        printf(\"SendMoney() : %s\", strError.c_str());\n-        return strError;\n+        if (IsLocked())\n+        {\n+            string strError = _(\"Error: Wallet locked, unable to create transaction  \");\n+            printf(\"SendMoney() : %s\", strError.c_str());\n+            return strError;\n+        }\n+        if (!CreateTransaction(scriptPubKey, nValue, wtxNew, reservekey, nFeeRequired))\n+        {\n+            string strError;\n+            if (nValue + nFeeRequired > GetBalance())\n+                strError = strprintf(_(\"Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds  \"), FormatMoney(nFeeRequired).c_str());\n+            else\n+                strError = _(\"Error: Transaction creation failed  \");\n+            printf(\"SendMoney() : %s\", strError.c_str());\n+            return strError;\n+        }\n     }\n \n     if (fAskFee && !ThreadSafeAskFee(nFeeRequired, _(\"Sending...\"), NULL))\n@@ -968,7 +1084,7 @@ bool CWallet::LoadWallet(bool& fFirstRunRet)\n         // Create new keyUser and set as default key\n         RandAddSeedPerfmon();\n \n-        vchDefaultKey = GetKeyFromKeyPool();\n+        vchDefaultKey = GetOrReuseKeyFromPool();\n         if (!SetAddressBookName(PubKeyToAddress(vchDefaultKey), \"\"))\n             return false;\n         CWalletDB(strWalletFile).WriteDefaultKey(vchDefaultKey);\n@@ -1013,14 +1129,16 @@ bool GetWalletFile(CWallet* pwallet, string &strWalletFileOut)\n     return true;\n }\n \n-void CWallet::ReserveKeyFromKeyPool(int64& nIndex, CKeyPool& keypool)\n+bool CWallet::TopUpKeyPool()\n {\n-    nIndex = -1;\n-    keypool.vchPubKey.clear();\n     CRITICAL_BLOCK(cs_main)\n     CRITICAL_BLOCK(cs_mapWallet)\n     CRITICAL_BLOCK(cs_setKeyPool)\n+    CRITICAL_BLOCK(cs_vMasterKey)\n     {\n+        if (IsLocked())\n+            return false;\n+\n         CWalletDB walletdb(strWalletFile);\n \n         // Top up key pool\n@@ -1031,13 +1149,31 @@ void CWallet::ReserveKeyFromKeyPool(int64& nIndex, CKeyPool& keypool)\n             if (!setKeyPool.empty())\n                 nEnd = *(--setKeyPool.end()) + 1;\n             if (!walletdb.WritePool(nEnd, CKeyPool(GenerateNewKey())))\n-                throw runtime_error(\"ReserveKeyFromKeyPool() : writing generated key failed\");\n+                throw runtime_error(\"TopUpKeyPool() : writing generated key failed\");\n             setKeyPool.insert(nEnd);\n             printf(\"keypool added key %\"PRI64d\", size=%d\\n\", nEnd, setKeyPool.size());\n         }\n+    }\n+    return true;\n+}\n+\n+void CWallet::ReserveKeyFromKeyPool(int64& nIndex, CKeyPool& keypool)\n+{\n+    nIndex = -1;\n+    keypool.vchPubKey.clear();\n+    CRITICAL_BLOCK(cs_main)\n+    CRITICAL_BLOCK(cs_mapWallet)\n+    CRITICAL_BLOCK(cs_setKeyPool)\n+    {\n+        if (!IsLocked())\n+            TopUpKeyPool();\n \n         // Get the oldest key\n-        assert(!setKeyPool.empty());\n+        if(setKeyPool.empty())\n+            return;\n+\n+        CWalletDB walletdb(strWalletFile);\n+\n         nIndex = *(setKeyPool.begin());\n         setKeyPool.erase(setKeyPool.begin());\n         if (!walletdb.ReadPool(nIndex, keypool))\n@@ -1071,11 +1207,13 @@ void CWallet::ReturnKey(int64 nIndex)\n     printf(\"keypool return %\"PRI64d\"\\n\", nIndex);\n }\n \n-vector<unsigned char> CWallet::GetKeyFromKeyPool()\n+vector<unsigned char> CWallet::GetOrReuseKeyFromPool()\n {\n     int64 nIndex = 0;\n     CKeyPool keypool;\n     ReserveKeyFromKeyPool(nIndex, keypool);\n+    if(nIndex == -1)\n+        return vchDefaultKey;\n     KeepKey(nIndex);\n     return keypool.vchPubKey;\n }\n@@ -1085,6 +1223,8 @@ int64 CWallet::GetOldestKeyPoolTime()\n     int64 nIndex = 0;\n     CKeyPool keypool;\n     ReserveKeyFromKeyPool(nIndex, keypool);\n+    if (nIndex == -1)\n+        return GetTime();\n     ReturnKey(nIndex);\n     return keypool.nTime;\n }"
+      },
+      {
+        "sha": "fd767701c2247b77db3e1020ac883dc105b338f0",
+        "filename": "src/wallet.h",
+        "status": "modified",
+        "additions": 17,
+        "deletions": 1,
+        "changes": 18,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c5b9127f2c36d5dd388568b201d3539f02960610/src/wallet.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c5b9127f2c36d5dd388568b201d3539f02960610/src/wallet.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.h?ref=c5b9127f2c36d5dd388568b201d3539f02960610",
+        "patch": "@@ -26,6 +26,10 @@ class CWallet : public CCryptoKeyStore\n     std::set<int64> setKeyPool;\n     CCriticalSection cs_setKeyPool;\n \n+    typedef std::map<unsigned int, CMasterKey> MasterKeyMap;\n+    MasterKeyMap mapMasterKeys;\n+    unsigned int nMasterKeyMaxID;\n+\n     CWallet()\n     {\n         fFileBacked = false;\n@@ -51,6 +55,12 @@ class CWallet : public CCryptoKeyStore\n     // keystore implementation\n     bool AddKey(const CKey& key);\n     bool LoadKey(const CKey& key) { return CCryptoKeyStore::AddKey(key); }\n+    bool AddCryptedKey(const std::vector<unsigned char> &vchPubKey, const std::vector<unsigned char> &vchCryptedSecret);\n+    bool LoadCryptedKey(const std::vector<unsigned char> &vchPubKey, const std::vector<unsigned char> &vchCryptedSecret) { return CCryptoKeyStore::AddCryptedKey(vchPubKey, vchCryptedSecret); }\n+\n+    bool Unlock(const std::string& strWalletPassphrase);\n+    bool ChangeWalletPassphrase(const std::string& strOldWalletPassphrase, const std::string& strNewWalletPassphrase);\n+    bool EncryptWallet(const std::string& strWalletPassphrase);\n \n     bool AddToWallet(const CWalletTx& wtxIn);\n     bool AddToWalletIfInvolvingMe(const CTransaction& tx, const CBlock* pblock, bool fUpdate = false);\n@@ -67,10 +77,11 @@ class CWallet : public CCryptoKeyStore\n     std::string SendMoney(CScript scriptPubKey, int64 nValue, CWalletTx& wtxNew, bool fAskFee=false);\n     std::string SendMoneyToBitcoinAddress(std::string strAddress, int64 nValue, CWalletTx& wtxNew, bool fAskFee=false);\n \n+    bool TopUpKeyPool();\n     void ReserveKeyFromKeyPool(int64& nIndex, CKeyPool& keypool);\n     void KeepKey(int64 nIndex);\n     void ReturnKey(int64 nIndex);\n-    std::vector<unsigned char> GetKeyFromKeyPool();\n+    std::vector<unsigned char> GetOrReuseKeyFromPool();\n     int64 GetOldestKeyPoolTime();\n \n     bool IsMine(const CTxIn& txin) const;\n@@ -178,6 +189,11 @@ class CWallet : public CCryptoKeyStore\n         }\n     }\n \n+    int GetKeyPoolSize()\n+    {\n+        return setKeyPool.size();\n+    }\n+\n     bool GetTransaction(const uint256 &hashTx, CWalletTx& wtx);\n \n };"
+      }
+    ]
+  },
+  {
+    "sha": "31e18587e01db71f22c743beec8b63202bbdf810",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozMWUxODU4N2UwMWRiNzFmMjJjNzQzYmVlYzhiNjMyMDJiYmRmODEw",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-06-28T13:31:09Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-06-28T23:23:36Z"
+      },
+      "message": "Set the number of SHA512 rounds based on the speed of the computer.",
+      "tree": {
+        "sha": "56288423362fa3c55985dc8870e4df5546630d66",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/56288423362fa3c55985dc8870e4df5546630d66"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/31e18587e01db71f22c743beec8b63202bbdf810",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/31e18587e01db71f22c743beec8b63202bbdf810",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/31e18587e01db71f22c743beec8b63202bbdf810",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/31e18587e01db71f22c743beec8b63202bbdf810/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "c5b9127f2c36d5dd388568b201d3539f02960610",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c5b9127f2c36d5dd388568b201d3539f02960610",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c5b9127f2c36d5dd388568b201d3539f02960610"
+      }
+    ],
+    "stats": {
+      "total": 26,
+      "additions": 26,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "bb2ef4401b74247d8959a91de614a5458cd7c473",
+        "filename": "src/wallet.cpp",
+        "status": "modified",
+        "additions": 26,
+        "deletions": 0,
+        "changes": 26,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/31e18587e01db71f22c743beec8b63202bbdf810/src/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/31e18587e01db71f22c743beec8b63202bbdf810/src/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.cpp?ref=31e18587e01db71f22c743beec8b63202bbdf810",
+        "patch": "@@ -74,6 +74,19 @@ bool CWallet::ChangeWalletPassphrase(const string& strOldWalletPassphrase, const\n                 return false;\n             if (CCryptoKeyStore::Unlock(vMasterKey))\n             {\n+                int64 nStartTime = GetTimeMillis();\n+                crypter.SetKeyFromPassphrase(strNewWalletPassphrase, pMasterKey.second.vchSalt, pMasterKey.second.nDeriveIterations, pMasterKey.second.nDerivationMethod);\n+                pMasterKey.second.nDeriveIterations = pMasterKey.second.nDeriveIterations * (100 / ((double)(GetTimeMillis() - nStartTime)));\n+\n+                nStartTime = GetTimeMillis();\n+                crypter.SetKeyFromPassphrase(strNewWalletPassphrase, pMasterKey.second.vchSalt, pMasterKey.second.nDeriveIterations, pMasterKey.second.nDerivationMethod);\n+                pMasterKey.second.nDeriveIterations = (pMasterKey.second.nDeriveIterations + pMasterKey.second.nDeriveIterations * 100 / ((double)(GetTimeMillis() - nStartTime))) / 2;\n+\n+                if (pMasterKey.second.nDeriveIterations < 25000)\n+                    pMasterKey.second.nDeriveIterations = 25000;\n+\n+                printf(\"Wallet passphrase changed to an nDeriveIterations of %i\\n\", pMasterKey.second.nDeriveIterations);\n+\n                 if (!crypter.SetKeyFromPassphrase(strNewWalletPassphrase, pMasterKey.second.vchSalt, pMasterKey.second.nDeriveIterations, pMasterKey.second.nDerivationMethod))\n                     return false;\n                 if (!crypter.Encrypt(vMasterKey, pMasterKey.second.vchCryptedKey))\n@@ -111,6 +124,19 @@ bool CWallet::EncryptWallet(const string& strWalletPassphrase)\n         RAND_bytes(&kMasterKey.vchSalt[0], WALLET_CRYPTO_SALT_SIZE);\n \n         CCrypter crypter;\n+        int64 nStartTime = GetTimeMillis();\n+        crypter.SetKeyFromPassphrase(strWalletPassphrase, kMasterKey.vchSalt, 25000, kMasterKey.nDerivationMethod);\n+        kMasterKey.nDeriveIterations = 2500000 / ((double)(GetTimeMillis() - nStartTime));\n+\n+        nStartTime = GetTimeMillis();\n+        crypter.SetKeyFromPassphrase(strWalletPassphrase, kMasterKey.vchSalt, kMasterKey.nDeriveIterations, kMasterKey.nDerivationMethod);\n+        kMasterKey.nDeriveIterations = (kMasterKey.nDeriveIterations + kMasterKey.nDeriveIterations * 100 / ((double)(GetTimeMillis() - nStartTime))) / 2;\n+\n+        if (kMasterKey.nDeriveIterations < 25000)\n+            kMasterKey.nDeriveIterations = 25000;\n+\n+        printf(\"Encrypting Wallet with an nDeriveIterations of %i\\n\", kMasterKey.nDeriveIterations);\n+\n         if (!crypter.SetKeyFromPassphrase(strWalletPassphrase, kMasterKey.vchSalt, kMasterKey.nDeriveIterations, kMasterKey.nDerivationMethod))\n             return false;\n         if (!crypter.Encrypt(vMasterKey, kMasterKey.vchCryptedKey))"
+      }
+    ]
+  },
+  {
+    "sha": "5522447412c95e1076ad1bfa8c580b66bc33a373",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1NTIyNDQ3NDEyYzk1ZTEwNzZhZDFiZmE4YzU4MGI2NmJjMzNhMzcz",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-06-28T22:47:41Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-06-28T23:23:36Z"
+      },
+      "message": "Push unlocked_until in getinfo.",
+      "tree": {
+        "sha": "96ece133f33b52fb8828ee1d74646dbf6a6f9f8a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/96ece133f33b52fb8828ee1d74646dbf6a6f9f8a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/5522447412c95e1076ad1bfa8c580b66bc33a373",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5522447412c95e1076ad1bfa8c580b66bc33a373",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/5522447412c95e1076ad1bfa8c580b66bc33a373",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5522447412c95e1076ad1bfa8c580b66bc33a373/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "31e18587e01db71f22c743beec8b63202bbdf810",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/31e18587e01db71f22c743beec8b63202bbdf810",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/31e18587e01db71f22c743beec8b63202bbdf810"
+      }
+    ],
+    "stats": {
+      "total": 29,
+      "additions": 17,
+      "deletions": 12
+    },
+    "files": [
+      {
+        "sha": "ae55d8f05218d2ca371b8bc3e76099ce5ec5b87d",
+        "filename": "src/rpc.cpp",
+        "status": "modified",
+        "additions": 17,
+        "deletions": 12,
+        "changes": 29,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5522447412c95e1076ad1bfa8c580b66bc33a373/src/rpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5522447412c95e1076ad1bfa8c580b66bc33a373/src/rpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc.cpp?ref=5522447412c95e1076ad1bfa8c580b66bc33a373",
+        "patch": "@@ -36,6 +36,9 @@ void ThreadRPCServer2(void* parg);\n typedef Value(*rpcfn_type)(const Array& params, bool fHelp);\n extern map<string, rpcfn_type> mapCallTable;\n \n+static int64 nWalletUnlockTime;\n+static CCriticalSection cs_nWalletUnlockTime;\n+\n \n Object JSONRPCError(int code, const string& message)\n {\n@@ -311,6 +314,10 @@ Value getinfo(const Array& params, bool fHelp)\n     obj.push_back(Pair(\"keypoololdest\", (boost::int64_t)pwalletMain->GetOldestKeyPoolTime()));\n     obj.push_back(Pair(\"keypoolsize\",   pwalletMain->GetKeyPoolSize()));\n     obj.push_back(Pair(\"paytxfee\",      ValueFromAmount(nTransactionFee)));\n+    CRITICAL_BLOCK(cs_nWalletUnlockTime)\n+    {\n+        obj.push_back(Pair(\"unlocked_until\", (boost::int64_t)nWalletUnlockTime));\n+    }\n     obj.push_back(Pair(\"errors\",        GetWarnings(\"statusbar\")));\n     return obj;\n }\n@@ -1356,31 +1363,29 @@ void ThreadTopUpKeyPool(void* parg)\n \n void ThreadCleanWalletPassphrase(void* parg)\n {\n-    static int64 nWakeTime;\n     int64 nMyWakeTime = GetTime() + *((int*)parg);\n-    static CCriticalSection cs_nWakeTime;\n \n-    if (nWakeTime == 0)\n+    if (nWalletUnlockTime == 0)\n     {\n-        CRITICAL_BLOCK(cs_nWakeTime)\n+        CRITICAL_BLOCK(cs_nWalletUnlockTime)\n         {\n-            nWakeTime = nMyWakeTime;\n+            nWalletUnlockTime = nMyWakeTime;\n         }\n \n-        while (GetTime() < nWakeTime)\n-            Sleep(GetTime() - nWakeTime);\n+        while (GetTime() < nWalletUnlockTime)\n+            Sleep(GetTime() - nWalletUnlockTime);\n \n-        CRITICAL_BLOCK(cs_nWakeTime)\n+        CRITICAL_BLOCK(cs_nWalletUnlockTime)\n         {\n-            nWakeTime = 0;\n+            nWalletUnlockTime = 0;\n         }\n     }\n     else\n     {\n-        CRITICAL_BLOCK(cs_nWakeTime)\n+        CRITICAL_BLOCK(cs_nWalletUnlockTime)\n         {\n-            if (nWakeTime < nMyWakeTime)\n-                nWakeTime = nMyWakeTime;\n+            if (nWalletUnlockTime < nMyWakeTime)\n+                nWalletUnlockTime = nMyWakeTime;\n         }\n         free(parg);\n         return;"
+      }
+    ]
+  },
+  {
+    "sha": "06b09e30670235410a317ae4d6db9bd067cd65f4",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowNmIwOWUzMDY3MDIzNTQxMGEzMTdhZTRkNmRiOWJkMDY3Y2Q2NWY0",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-06-28T23:08:48Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-06-28T23:23:36Z"
+      },
+      "message": "Dynamically remove/insert the Options for encryption in the menus.",
+      "tree": {
+        "sha": "6e22aab73853c05a8e5475a18f602d8e7b4f596a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/6e22aab73853c05a8e5475a18f602d8e7b4f596a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/06b09e30670235410a317ae4d6db9bd067cd65f4",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/06b09e30670235410a317ae4d6db9bd067cd65f4",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/06b09e30670235410a317ae4d6db9bd067cd65f4",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/06b09e30670235410a317ae4d6db9bd067cd65f4/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "5522447412c95e1076ad1bfa8c580b66bc33a373",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5522447412c95e1076ad1bfa8c580b66bc33a373",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/5522447412c95e1076ad1bfa8c580b66bc33a373"
+      }
+    ],
+    "stats": {
+      "total": 16,
+      "additions": 12,
+      "deletions": 4
+    },
+    "files": [
+      {
+        "sha": "d5e6b1e36be2cc6ff245fbba07395c918038493a",
+        "filename": "share/uiproject.fbp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/06b09e30670235410a317ae4d6db9bd067cd65f4/share/uiproject.fbp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/06b09e30670235410a317ae4d6db9bd067cd65f4/share/uiproject.fbp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/share/uiproject.fbp?ref=06b09e30670235410a317ae4d6db9bd067cd65f4",
+        "patch": "@@ -171,7 +171,7 @@\n                         <property name=\"kind\">wxITEM_NORMAL</property>\r\n                         <property name=\"label\">&amp;Encrypt Wallet...</property>\r\n                         <property name=\"name\">m_menuOptionsEncryptWallet</property>\r\n-                        <property name=\"permission\">none</property>\r\n+                        <property name=\"permission\">public</property>\r\n                         <property name=\"shortcut\"></property>\r\n                         <property name=\"unchecked_bitmap\"></property>\r\n                         <event name=\"OnMenuSelection\">OnMenuOptionsEncryptWallet</event>\r\n@@ -186,7 +186,7 @@\n                         <property name=\"kind\">wxITEM_NORMAL</property>\r\n                         <property name=\"label\">&amp;Change Wallet Encryption Passphrase...</property>\r\n                         <property name=\"name\">m_menuOptionsChangeWalletPassphrase</property>\r\n-                        <property name=\"permission\">none</property>\r\n+                        <property name=\"permission\">public</property>\r\n                         <property name=\"shortcut\"></property>\r\n                         <property name=\"unchecked_bitmap\"></property>\r\n                         <event name=\"OnMenuSelection\">OnMenuOptionsChangeWalletPassphrase</event>\r"
+      },
+      {
+        "sha": "f65b138ed82902bf117a0879fec2fa68b9da1561",
+        "filename": "src/ui.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 0,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/06b09e30670235410a317ae4d6db9bd067cd65f4/src/ui.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/06b09e30670235410a317ae4d6db9bd067cd65f4/src/ui.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/ui.cpp?ref=06b09e30670235410a317ae4d6db9bd067cd65f4",
+        "patch": "@@ -365,6 +365,11 @@ CMainFrame::CMainFrame(wxWindow* parent) : CMainFrameBase(parent)\n     if (CWalletDB(pwalletMain->strWalletFile,\"r\").ReadDefaultKey(vchPubKey))\n         m_textCtrlAddress->SetValue(PubKeyToAddress(vchPubKey));\n \n+    if (pwalletMain->IsCrypted())\n+        m_menuOptions->Remove(m_menuOptionsEncryptWallet);\n+    else\n+        m_menuOptions->Remove(m_menuOptionsChangeWalletPassphrase);\n+\n     // Fill listctrl with wallet transactions\n     RefreshListCtrl();\n }\n@@ -1202,6 +1207,9 @@ void CMainFrame::OnMenuOptionsEncryptWallet(wxCommandEvent& event)\n     }\n     fill(strWalletPass.begin(), strWalletPass.end(), '\\0');\n     wxMessageBox(_(\"Wallet Encrypted.\\nRemember that encrypting your wallet cannot fully protect your bitcoins from being stolen by malware infecting your computer.\"), \"Bitcoin\");\n+\n+    m_menuOptions->Remove(m_menuOptionsEncryptWallet);\n+    m_menuOptions->Insert(m_menuOptions->GetMenuItemCount() - 1, m_menuOptionsChangeWalletPassphrase);\n }\n \n void CMainFrame::OnMenuOptionsChangeWalletPassphrase(wxCommandEvent& event)"
+      },
+      {
+        "sha": "18eec441384473fd5834cf2c0f56591e18507e20",
+        "filename": "src/uibase.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 2,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/06b09e30670235410a317ae4d6db9bd067cd65f4/src/uibase.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/06b09e30670235410a317ae4d6db9bd067cd65f4/src/uibase.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/uibase.cpp?ref=06b09e30670235410a317ae4d6db9bd067cd65f4",
+        "patch": "@@ -32,11 +32,9 @@ CMainFrameBase::CMainFrameBase( wxWindow* parent, wxWindowID id, const wxString&\n \tm_menuOptionsChangeYourAddress = new wxMenuItem( m_menuOptions, wxID_ANY, wxString( _(\"&Your Receiving Addresses...\") ) , wxEmptyString, wxITEM_NORMAL );\n \tm_menuOptions->Append( m_menuOptionsChangeYourAddress );\n \t\n-\twxMenuItem* m_menuOptionsEncryptWallet;\n \tm_menuOptionsEncryptWallet = new wxMenuItem( m_menuOptions, wxID_ANY, wxString( _(\"&Encrypt Wallet...\") ) , wxEmptyString, wxITEM_NORMAL );\n \tm_menuOptions->Append( m_menuOptionsEncryptWallet );\n \t\n-\twxMenuItem* m_menuOptionsChangeWalletPassphrase;\n \tm_menuOptionsChangeWalletPassphrase = new wxMenuItem( m_menuOptions, wxID_ANY, wxString( _(\"&Change Wallet Encryption Passphrase...\") ) , wxEmptyString, wxITEM_NORMAL );\n \tm_menuOptions->Append( m_menuOptionsChangeWalletPassphrase );\n \t"
+      },
+      {
+        "sha": "ca0730b20e52f345b30644f9c8dbfc2de5732491",
+        "filename": "src/uibase.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/06b09e30670235410a317ae4d6db9bd067cd65f4/src/uibase.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/06b09e30670235410a317ae4d6db9bd067cd65f4/src/uibase.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/uibase.h?ref=06b09e30670235410a317ae4d6db9bd067cd65f4",
+        "patch": "@@ -117,6 +117,8 @@ class CMainFrameBase : public wxFrame\n \t\n \tpublic:\n \t\twxMenu* m_menuOptions;\n+\t\twxMenuItem* m_menuOptionsEncryptWallet;\n+\t\twxMenuItem* m_menuOptionsChangeWalletPassphrase;\n \t\twxStatusBar* m_statusBar;\n \t\twxTextCtrl* m_textCtrlAddress;\n \t\twxListCtrl* m_listCtrlAll;"
+      }
+    ]
+  }
+]

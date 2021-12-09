@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "00d1980b8fb8b834cb729b213834dfb38cb01bbf",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowMGQxOTgwYjhmYjhiODM0Y2I3MjliMjEzODM0ZGZiMzhjYjAxYmJm",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-06-27T12:41:11Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-07-09T07:22:36Z"
+      },
+      "message": "init.cpp: log fee estimates filename on error\n\n- small changes to Shutdown(), buffer __func__, which is now used in\n  all LogPrintf() calls and format for better readability\n- order using namespace alpabetically",
+      "tree": {
+        "sha": "98f15780a92e30e07c6b10cc0819a38340192839",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/98f15780a92e30e07c6b10cc0819a38340192839"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/00d1980b8fb8b834cb729b213834dfb38cb01bbf",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/00d1980b8fb8b834cb729b213834dfb38cb01bbf",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/00d1980b8fb8b834cb729b213834dfb38cb01bbf",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/00d1980b8fb8b834cb729b213834dfb38cb01bbf/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "2ee918d1214d0027285bb7558c237888d6ee175b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2ee918d1214d0027285bb7558c237888d6ee175b",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/2ee918d1214d0027285bb7558c237888d6ee175b"
+      }
+    ],
+    "stats": {
+      "total": 26,
+      "additions": 16,
+      "deletions": 10
+    },
+    "files": [
+      {
+        "sha": "a1d75c96741ce33a92e7366a80028aac33777d19",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 10,
+        "changes": 26,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/00d1980b8fb8b834cb729b213834dfb38cb01bbf/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/00d1980b8fb8b834cb729b213834dfb38cb01bbf/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=00d1980b8fb8b834cb729b213834dfb38cb01bbf",
+        "patch": "@@ -38,8 +38,8 @@\n #include <boost/interprocess/sync/file_lock.hpp>\n #include <openssl/crypto.h>\n \n-using namespace std;\n using namespace boost;\n+using namespace std;\n \n #ifdef ENABLE_WALLET\n CWallet* pwalletMain;\n@@ -109,10 +109,11 @@ static CCoinsViewDB *pcoinsdbview;\n \n void Shutdown()\n {\n-    LogPrintf(\"Shutdown : In progress...\\n\");\n+    LogPrintf(\"%s: In progress...\\n\", __func__);\n     static CCriticalSection cs_Shutdown;\n     TRY_LOCK(cs_Shutdown, lockShutdown);\n-    if (!lockShutdown) return;\n+    if (!lockShutdown)\n+        return;\n \n     RenameThread(\"bitcoin-shutoff\");\n     mempool.AddTransactionsUpdated(1);\n@@ -130,7 +131,7 @@ void Shutdown()\n     if (est_fileout)\n         mempool.WriteFeeEstimates(est_fileout);\n     else\n-        LogPrintf(\"failed to write fee estimates\");\n+        LogPrintf(\"%s: Failed to write fee estimates to %s\\n\", __func__, est_path.string());\n \n     {\n         LOCK(cs_main);\n@@ -142,9 +143,12 @@ void Shutdown()\n             pblocktree->Flush();\n         if (pcoinsTip)\n             pcoinsTip->Flush();\n-        delete pcoinsTip; pcoinsTip = NULL;\n-        delete pcoinsdbview; pcoinsdbview = NULL;\n-        delete pblocktree; pblocktree = NULL;\n+        delete pcoinsTip;\n+        pcoinsTip = NULL;\n+        delete pcoinsdbview;\n+        pcoinsdbview = NULL;\n+        delete pblocktree;\n+        pblocktree = NULL;\n     }\n #ifdef ENABLE_WALLET\n     if (pwalletMain)\n@@ -156,7 +160,7 @@ void Shutdown()\n     if (pwalletMain)\n         delete pwalletMain;\n #endif\n-    LogPrintf(\"Shutdown : done\\n\");\n+    LogPrintf(\"%s: done\\n\", __func__);\n }\n \n //\n@@ -315,6 +319,7 @@ std::string HelpMessage(HelpMessageMode mode)\n \n     strUsage += \"\\n\" + _(\"Node relay options:\") + \"\\n\";\n     strUsage += \"  -datacarrier           \" + _(\"Relay and mine data carrier transactions (default: 1)\") + \"\\n\";\n+\n     strUsage += \"\\n\" + _(\"Block creation options:\") + \"\\n\";\n     strUsage += \"  -blockminsize=<n>      \" + _(\"Set minimum block size in bytes (default: 0)\") + \"\\n\";\n     strUsage += \"  -blockmaxsize=<n>      \" + strprintf(_(\"Set maximum block size in bytes (default: %d)\"), DEFAULT_BLOCK_MAX_SIZE) + \"\\n\";\n@@ -564,9 +569,9 @@ bool AppInit2(boost::thread_group& threadGroup)\n     if (GetBoolArg(\"-nodebug\", false) || find(categories.begin(), categories.end(), string(\"0\")) != categories.end())\n         fDebug = false;\n \n-    // Check for -debugnet (deprecated)\n+    // Check for -debugnet\n     if (GetBoolArg(\"-debugnet\", false))\n-        InitWarning(_(\"Warning: Deprecated argument -debugnet ignored, use -debug=net\"));\n+        InitWarning(_(\"Warning: Unsupported argument -debugnet ignored, use -debug=net.\"));\n     // Check for -socks - as this is a privacy risk to continue, exit here\n     if (mapArgs.count(\"-socks\"))\n         return InitError(_(\"Error: Unsupported argument -socks found. Setting SOCKS version isn't possible anymore, only SOCKS5 proxies are supported.\"));\n@@ -994,6 +999,7 @@ bool AppInit2(boost::thread_group& threadGroup)\n \n     boost::filesystem::path est_path = GetDataDir() / FEE_ESTIMATES_FILENAME;\n     CAutoFile est_filein = CAutoFile(fopen(est_path.string().c_str(), \"rb\"), SER_DISK, CLIENT_VERSION);\n+    // Allowed to fail as this file IS missing on first startup.\n     if (est_filein)\n         mempool.ReadFeeEstimates(est_filein);\n "
+      }
+    ]
+  }
+]

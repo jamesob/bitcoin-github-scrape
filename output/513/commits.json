@@ -1,0 +1,74 @@
+[
+  {
+    "sha": "3f94dfa25fc1b0e838d368a9b2683a634cd3a60c",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozZjk0ZGZhMjVmYzFiMGU4MzhkMzY4YTliMjY4M2E2MzRjZDNhNjBj",
+    "commit": {
+      "author": {
+        "name": "cjdelisle",
+        "email": "calebdelisle@lavabit.com",
+        "date": "2011-09-08T16:50:54Z"
+      },
+      "committer": {
+        "name": "cjdelisle",
+        "email": "calebdelisle@lavabit.com",
+        "date": "2011-09-12T21:09:55Z"
+      },
+      "message": "Add some hardening to protect against unknown/future exploits.",
+      "tree": {
+        "sha": "3ee5af1b50f6fcd2418ca18595dffb6d6a048767",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/3ee5af1b50f6fcd2418ca18595dffb6d6a048767"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/3f94dfa25fc1b0e838d368a9b2683a634cd3a60c",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3f94dfa25fc1b0e838d368a9b2683a634cd3a60c",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/3f94dfa25fc1b0e838d368a9b2683a634cd3a60c",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3f94dfa25fc1b0e838d368a9b2683a634cd3a60c/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "f92f022edaa2f14951b9ce8304a304ff9693ae16",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f92f022edaa2f14951b9ce8304a304ff9693ae16",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/f92f022edaa2f14951b9ce8304a304ff9693ae16"
+      }
+    ],
+    "stats": {
+      "total": 72,
+      "additions": 71,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "62abb7b99a8613cf6ce888ff2f1499755191fbef",
+        "filename": "doc/build-unix.txt",
+        "status": "modified",
+        "additions": 42,
+        "deletions": 0,
+        "changes": 42,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3f94dfa25fc1b0e838d368a9b2683a634cd3a60c/doc/build-unix.txt",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3f94dfa25fc1b0e838d368a9b2683a634cd3a60c/doc/build-unix.txt",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/doc/build-unix.txt?ref=3f94dfa25fc1b0e838d368a9b2683a634cd3a60c",
+        "patch": "@@ -107,3 +107,45 @@ If you need to build Boost yourself:\n sudo su\n ./bootstrap.sh\n ./bjam install\n+\n+\n+Security\n+--------\n+To help make your bitcoin installation more secure by making certain attacks impossible to\n+exploit even if a vulnerability is found, you can take the following measures:\n+\n+* Position Independent Executable\n+    Build position independent code to take advantage of Address Space Layout Randomization\n+    offered by some kernels. An attacker who is able to cause execution of code at an arbitrary\n+    memory location is thwarted if he doesn't know where anything useful is located.\n+    The stack and heap are randomly located by default but this allows the code section to be\n+    randomly located as well.\n+\n+    On an Amd64 processor where a library was not compiled with -fPIC, this will cause an error\n+    such as: \"relocation R_X86_64_32 against `......' can not be used when making a shared object;\"\n+\n+    To build with PIE, use:\n+    make -f makefile.unix ... -e PIE=1\n+\n+    To test that you have built PIE executable, install scanelf, part of paxutils, and use:\n+    scanelf -e ./bitcoin\n+\n+    The output should contain:\n+     TYPE\n+    ET_DYN\n+\n+* Non-executable Stack\n+    If the stack is executable then trivial stack based buffer overflow exploits are possible if\n+    vulnerable buffers are found. By default, bitcoin should be built with a non-executable stack\n+    but if one of the libraries it uses asks for an executable stack or someone makes a mistake\n+    and uses a compiler extension which requires an executable stack, it will silently build an\n+    executable without the non-executable stack protection.\n+\n+    To verify that the stack is non-executable after compiling use:\n+    scanelf -e ./bitcoin\n+\n+    the output should contain:\n+    STK/REL/PTL\n+    RW- R-- RW-\n+\n+    The STK RW- means that the stack is readable and writeable but not executable."
+      },
+      {
+        "sha": "43c3ea7f500379da62eb8477bc129087c97fecfe",
+        "filename": "src/makefile.unix",
+        "status": "modified",
+        "additions": 29,
+        "deletions": 1,
+        "changes": 30,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3f94dfa25fc1b0e838d368a9b2683a634cd3a60c/src/makefile.unix",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3f94dfa25fc1b0e838d368a9b2683a634cd3a60c/src/makefile.unix",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/makefile.unix?ref=3f94dfa25fc1b0e838d368a9b2683a634cd3a60c",
+        "patch": "@@ -36,8 +36,36 @@ LIBS+= \\\n    -l pthread\n \n \n+# Hardening\n+# Make some classes of vulnerabilities unexploitable in case one is discovered.\n+#\n+    # Stack Canaries\n+    # Put numbers at the beginning of each stack frame and check that they are the same.\n+    # If a stack buffer if overflowed, it writes over the canary number and then on return\n+    # when that number is checked, it won't be the same and the program will exit with\n+    # a \"Stack smashing detected\" error instead of being exploited.\n+    HARDENING=-fstack-protector-all -Wstack-protector\n+\n+    # Make some important things such as the global offset table read only as soon as\n+    # the dynamic linker is finished building it. This will prevent overwriting of addresses\n+    # which would later be jumped to.\n+    HARDENING+=-Wl,-z,relro -Wl,-z,now\n+\n+    # Build position independent code to take advantage of Address Space Layout Randomization\n+    # offered by some kernels.\n+    # see doc/build-unix.txt for more information.\n+    ifdef PIE\n+        HARDENING+=-fPIE -pie\n+    endif\n+\n+    # -D_FORTIFY_SOURCE=2 does some checking for potentially exploitable code patterns in\n+    # the source such overflowing a statically defined buffer.\n+    HARDENING+=-D_FORTIFY_SOURCE=2\n+#\n+\n+\n DEBUGFLAGS=-g -D__WXDEBUG__\n-CXXFLAGS=-O2 -Wno-invalid-offsetof -Wformat $(DEBUGFLAGS) $(DEFS)\n+CXXFLAGS=-O2 -Wno-invalid-offsetof -Wformat $(DEBUGFLAGS) $(DEFS) $(HARDENING)\n HEADERS = \\\n     base58.h \\\n     bignum.h \\"
+      }
+    ]
+  }
+]

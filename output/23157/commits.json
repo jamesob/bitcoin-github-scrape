@@ -1,0 +1,870 @@
+[
+  {
+    "sha": "cb1407196fba648aa75504e3ab3d46aa0181563a",
+    "node_id": "C_kwDOABII59oAKGNiMTQwNzE5NmZiYTY0OGFhNzU1MDRlM2FiM2Q0NmFhMDE4MTU2M2E",
+    "commit": {
+      "author": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-09-30T08:25:11Z"
+      },
+      "committer": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-10-01T15:26:19Z"
+      },
+      "message": "[refactor/bench] make mempool_stress bench reusable and parameterizable",
+      "tree": {
+        "sha": "e03ee93f9057789f468a5d7d762994f045925ac5",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/e03ee93f9057789f468a5d7d762994f045925ac5"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/cb1407196fba648aa75504e3ab3d46aa0181563a",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/cb1407196fba648aa75504e3ab3d46aa0181563a",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/cb1407196fba648aa75504e3ab3d46aa0181563a",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/cb1407196fba648aa75504e3ab3d46aa0181563a/comments",
+    "author": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "35a31d5f7e9cd71a210c1ed10abc9d772ff36049",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/35a31d5f7e9cd71a210c1ed10abc9d772ff36049",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/35a31d5f7e9cd71a210c1ed10abc9d772ff36049"
+      }
+    ],
+    "stats": {
+      "total": 25,
+      "additions": 16,
+      "deletions": 9
+    },
+    "files": [
+      {
+        "sha": "21d7407fcaf2e75f4572477e4d050ba3d81c3ab6",
+        "filename": "src/bench/mempool_stress.cpp",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 9,
+        "changes": 25,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/cb1407196fba648aa75504e3ab3d46aa0181563a/src/bench/mempool_stress.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/cb1407196fba648aa75504e3ab3d46aa0181563a/src/bench/mempool_stress.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bench/mempool_stress.cpp?ref=cb1407196fba648aa75504e3ab3d46aa0181563a",
+        "patch": "@@ -26,14 +26,8 @@ struct Available {\n     Available(CTransactionRef& ref, size_t tx_count) : ref(ref), tx_count(tx_count){}\n };\n \n-static void ComplexMemPool(benchmark::Bench& bench)\n+static std::vector<CTransactionRef> CreateOrderedCoins(FastRandomContext& det_rand, int childTxs, int min_ancestors)\n {\n-    int childTxs = 800;\n-    if (bench.complexityN() > 1) {\n-        childTxs = static_cast<int>(bench.complexityN());\n-    }\n-\n-    FastRandomContext det_rand{true};\n     std::vector<Available> available_coins;\n     std::vector<CTransactionRef> ordered_coins;\n     // Create some base transactions\n@@ -58,8 +52,10 @@ static void ComplexMemPool(benchmark::Bench& bench)\n             size_t idx = det_rand.randrange(available_coins.size());\n             Available coin = available_coins[idx];\n             uint256 hash = coin.ref->GetHash();\n-            // biased towards taking just one ancestor, but maybe more\n-            size_t n_to_take = det_rand.randrange(2) == 0 ? 1 : 1+det_rand.randrange(coin.ref->vout.size() - coin.vin_left);\n+            // biased towards taking min_ancestors parents, but maybe more\n+            size_t n_to_take = det_rand.randrange(2) == 0 ?\n+                               min_ancestors :\n+                               min_ancestors + det_rand.randrange(coin.ref->vout.size() - coin.vin_left);\n             for (size_t i = 0; i < n_to_take; ++i) {\n                 tx.vin.emplace_back();\n                 tx.vin.back().prevout = COutPoint(hash, coin.vin_left++);\n@@ -79,6 +75,17 @@ static void ComplexMemPool(benchmark::Bench& bench)\n         ordered_coins.emplace_back(MakeTransactionRef(tx));\n         available_coins.emplace_back(ordered_coins.back(), tx_counter++);\n     }\n+    return ordered_coins;\n+}\n+\n+static void ComplexMemPool(benchmark::Bench& bench)\n+{\n+    FastRandomContext det_rand{true};\n+    int childTxs = 800;\n+    if (bench.complexityN() > 1) {\n+        childTxs = static_cast<int>(bench.complexityN());\n+    }\n+    std::vector<CTransactionRef> ordered_coins = CreateOrderedCoins(det_rand, childTxs, /* min_ancestors */ 1);\n     const auto testing_setup = MakeNoLogFileContext<const TestingSetup>(CBaseChainParams::MAIN);\n     CTxMemPool pool;\n     LOCK2(cs_main, pool.cs);"
+      }
+    ]
+  },
+  {
+    "sha": "30e240f65e69c6dffcd033afc63895345bd51f53",
+    "node_id": "C_kwDOABII59oAKDMwZTI0MGY2NWU2OWM2ZGZmY2QwMzNhZmM2Mzg5NTM0NWJkNTFmNTM",
+    "commit": {
+      "author": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-09-30T08:31:18Z"
+      },
+      "committer": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-10-04T14:00:28Z"
+      },
+      "message": "[bench] Benchmark CTxMemPool::check()",
+      "tree": {
+        "sha": "abbf90c2cf8baeefb7d85b7cad08e346df127ff9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/abbf90c2cf8baeefb7d85b7cad08e346df127ff9"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/30e240f65e69c6dffcd033afc63895345bd51f53",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/30e240f65e69c6dffcd033afc63895345bd51f53",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/30e240f65e69c6dffcd033afc63895345bd51f53",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/30e240f65e69c6dffcd033afc63895345bd51f53/comments",
+    "author": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "cb1407196fba648aa75504e3ab3d46aa0181563a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/cb1407196fba648aa75504e3ab3d46aa0181563a",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/cb1407196fba648aa75504e3ab3d46aa0181563a"
+      }
+    ],
+    "stats": {
+      "total": 17,
+      "additions": 17,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "16c57881d417d16d633c4271401b3ee4c8347698",
+        "filename": "src/bench/mempool_stress.cpp",
+        "status": "modified",
+        "additions": 17,
+        "deletions": 0,
+        "changes": 17,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/30e240f65e69c6dffcd033afc63895345bd51f53/src/bench/mempool_stress.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/30e240f65e69c6dffcd033afc63895345bd51f53/src/bench/mempool_stress.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bench/mempool_stress.cpp?ref=30e240f65e69c6dffcd033afc63895345bd51f53",
+        "patch": "@@ -6,6 +6,7 @@\n #include <policy/policy.h>\n #include <test/util/setup_common.h>\n #include <txmempool.h>\n+#include <validation.h>\n \n #include <vector>\n \n@@ -98,4 +99,20 @@ static void ComplexMemPool(benchmark::Bench& bench)\n     });\n }\n \n+static void MempoolCheck(benchmark::Bench& bench)\n+{\n+    FastRandomContext det_rand{true};\n+    const int childTxs = bench.complexityN() > 1 ? static_cast<int>(bench.complexityN()) : 2000;\n+    const std::vector<CTransactionRef> ordered_coins = CreateOrderedCoins(det_rand, childTxs, /* min_ancestors */ 5);\n+    const auto testing_setup = MakeNoLogFileContext<const TestingSetup>(CBaseChainParams::MAIN, {\"-checkmempool=1\"});\n+    CTxMemPool pool;\n+    LOCK2(cs_main, pool.cs);\n+    for (auto& tx : ordered_coins) AddTx(tx, pool);\n+\n+    bench.run([&]() NO_THREAD_SAFETY_ANALYSIS {\n+        pool.check(testing_setup.get()->m_node.chainman->ActiveChainstate());\n+    });\n+}\n+\n BENCHMARK(ComplexMemPool);\n+BENCHMARK(MempoolCheck);"
+      }
+    ]
+  },
+  {
+    "sha": "54c6f3c1da01090aee9691a2c2bee0984a054ce8",
+    "node_id": "C_kwDOABII59oAKDU0YzZmM2MxZGEwMTA5MGFlZTk2OTFhMmMyYmVlMDk4NGEwNTRjZTg",
+    "commit": {
+      "author": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-09-30T08:08:40Z"
+      },
+      "committer": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-10-04T14:00:28Z"
+      },
+      "message": "[mempool] speed up check() by using coins cache and iterating in topo order\n\nNo behavior changes.\n\nBefore, we're always adding transactions to the \"check later\" queue if\nthey have any parents in the mempool. But there's no reason to do this\nif all of its inputs are already available from mempoolDuplicate.\nInstead, check for inputs, and only mark fDependsWait=true if the\nparents haven't been processed yet.\n\nReduce the amount of \"check later\" transactions by looking at\nancestors before descendants. Do this by iterating through them in\nascending order by ancestor count. This works because a child will\nalways have more in-mempool ancestors than its parent.\n\nWe should never have any entries in the \"check later\" queue\nafter this commit.",
+      "tree": {
+        "sha": "2f0759ff420949138f3ddf882ef4fa4168ad4293",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/2f0759ff420949138f3ddf882ef4fa4168ad4293"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/54c6f3c1da01090aee9691a2c2bee0984a054ce8",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/54c6f3c1da01090aee9691a2c2bee0984a054ce8",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/54c6f3c1da01090aee9691a2c2bee0984a054ce8",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/54c6f3c1da01090aee9691a2c2bee0984a054ce8/comments",
+    "author": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "30e240f65e69c6dffcd033afc63895345bd51f53",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/30e240f65e69c6dffcd033afc63895345bd51f53",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/30e240f65e69c6dffcd033afc63895345bd51f53"
+      }
+    ],
+    "stats": {
+      "total": 8,
+      "additions": 6,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "10f7f66263f1f9287f1ad567261e0416233c88f8",
+        "filename": "src/txmempool.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 2,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/54c6f3c1da01090aee9691a2c2bee0984a054ce8/src/txmempool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/54c6f3c1da01090aee9691a2c2bee0984a054ce8/src/txmempool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.cpp?ref=54c6f3c1da01090aee9691a2c2bee0984a054ce8",
+        "patch": "@@ -693,13 +693,14 @@ void CTxMemPool::check(CChainState& active_chainstate) const\n     uint64_t checkTotal = 0;\n     CAmount check_total_fee{0};\n     uint64_t innerUsage = 0;\n+    uint64_t prev_ancestor_count{0};\n \n     CCoinsViewCache& active_coins_tip = active_chainstate.CoinsTip();\n     CCoinsViewCache mempoolDuplicate(const_cast<CCoinsViewCache*>(&active_coins_tip));\n     const int64_t spendheight = active_chainstate.m_chain.Height() + 1;\n \n     std::list<const CTxMemPoolEntry*> waitingOnDependants;\n-    for (indexed_transaction_set::const_iterator it = mapTx.begin(); it != mapTx.end(); it++) {\n+    for (const auto& it : GetSortedDepthAndScore()) {\n         unsigned int i = 0;\n         checkTotal += it->GetTxSize();\n         check_total_fee += it->GetFee();\n@@ -714,7 +715,7 @@ void CTxMemPool::check(CChainState& active_chainstate) const\n             if (it2 != mapTx.end()) {\n                 const CTransaction& tx2 = it2->GetTx();\n                 assert(tx2.vout.size() > txin.prevout.n && !tx2.vout[txin.prevout.n].IsNull());\n-                fDependsWait = true;\n+                if (!mempoolDuplicate.HaveCoin(txin.prevout)) fDependsWait = true;\n                 setParentCheck.insert(*it2);\n             } else {\n                 assert(active_coins_tip.HaveCoin(txin.prevout));\n@@ -751,6 +752,9 @@ void CTxMemPool::check(CChainState& active_chainstate) const\n         assert(it->GetSizeWithAncestors() == nSizeCheck);\n         assert(it->GetSigOpCostWithAncestors() == nSigOpCheck);\n         assert(it->GetModFeesWithAncestors() == nFeesCheck);\n+        // Sanity check: we are walking in ascending ancestor count order.\n+        assert(prev_ancestor_count <= it->GetCountWithAncestors());\n+        prev_ancestor_count = it->GetCountWithAncestors();\n \n         // Check children against mapNextTx\n         CTxMemPoolEntry::Children setChildrenCheck;"
+      }
+    ]
+  },
+  {
+    "sha": "e8639ec26aaf4de3fae280963434bf1cf2017b6f",
+    "node_id": "C_kwDOABII59oAKGU4NjM5ZWMyNmFhZjRkZTNmYWUyODA5NjM0MzRiZjFjZjIwMTdiNmY",
+    "commit": {
+      "author": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-09-29T17:38:24Z"
+      },
+      "committer": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-10-04T14:00:28Z"
+      },
+      "message": "[mempool] remove now-unnecessary code\n\nRemove variables used for keeping track of mempool transactions for\nwhich we haven't processed the parents yet. Since we're iterating in\ntopological order now, they're always unused.",
+      "tree": {
+        "sha": "8f61e84b99cf56e4bb386a6fba050c71542eb25c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/8f61e84b99cf56e4bb386a6fba050c71542eb25c"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/e8639ec26aaf4de3fae280963434bf1cf2017b6f",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e8639ec26aaf4de3fae280963434bf1cf2017b6f",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/e8639ec26aaf4de3fae280963434bf1cf2017b6f",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e8639ec26aaf4de3fae280963434bf1cf2017b6f/comments",
+    "author": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "54c6f3c1da01090aee9691a2c2bee0984a054ce8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/54c6f3c1da01090aee9691a2c2bee0984a054ce8",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/54c6f3c1da01090aee9691a2c2bee0984a054ce8"
+      }
+    ],
+    "stats": {
+      "total": 28,
+      "additions": 5,
+      "deletions": 23
+    },
+    "files": [
+      {
+        "sha": "2decc153f284115a35bb8c952205ef5b522a4509",
+        "filename": "src/txmempool.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 23,
+        "changes": 28,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e8639ec26aaf4de3fae280963434bf1cf2017b6f/src/txmempool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e8639ec26aaf4de3fae280963434bf1cf2017b6f/src/txmempool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.cpp?ref=e8639ec26aaf4de3fae280963434bf1cf2017b6f",
+        "patch": "@@ -699,23 +699,23 @@ void CTxMemPool::check(CChainState& active_chainstate) const\n     CCoinsViewCache mempoolDuplicate(const_cast<CCoinsViewCache*>(&active_coins_tip));\n     const int64_t spendheight = active_chainstate.m_chain.Height() + 1;\n \n-    std::list<const CTxMemPoolEntry*> waitingOnDependants;\n     for (const auto& it : GetSortedDepthAndScore()) {\n-        unsigned int i = 0;\n         checkTotal += it->GetTxSize();\n         check_total_fee += it->GetFee();\n         innerUsage += it->DynamicMemoryUsage();\n         const CTransaction& tx = it->GetTx();\n         innerUsage += memusage::DynamicUsage(it->GetMemPoolParentsConst()) + memusage::DynamicUsage(it->GetMemPoolChildrenConst());\n-        bool fDependsWait = false;\n         CTxMemPoolEntry::Parents setParentCheck;\n         for (const CTxIn &txin : tx.vin) {\n             // Check that every mempool transaction's inputs refer to available coins, or other mempool tx's.\n             indexed_transaction_set::const_iterator it2 = mapTx.find(txin.prevout.hash);\n             if (it2 != mapTx.end()) {\n                 const CTransaction& tx2 = it2->GetTx();\n                 assert(tx2.vout.size() > txin.prevout.n && !tx2.vout[txin.prevout.n].IsNull());\n-                if (!mempoolDuplicate.HaveCoin(txin.prevout)) fDependsWait = true;\n+                // We are iterating through the mempool entries sorted in order by ancestor count.\n+                // All parents must have been checked before their children and their coins added to\n+                // the mempoolDuplicate coins cache.\n+                assert(mempoolDuplicate.HaveCoin(txin.prevout));\n                 setParentCheck.insert(*it2);\n             } else {\n                 assert(active_coins_tip.HaveCoin(txin.prevout));\n@@ -725,7 +725,6 @@ void CTxMemPool::check(CChainState& active_chainstate) const\n             assert(it3 != mapNextTx.end());\n             assert(it3->first == &txin.prevout);\n             assert(it3->second == &tx);\n-            i++;\n         }\n         auto comp = [](const CTxMemPoolEntry& a, const CTxMemPoolEntry& b) -> bool {\n             return a.GetTx().GetHash() == b.GetTx().GetHash();\n@@ -773,24 +772,7 @@ void CTxMemPool::check(CChainState& active_chainstate) const\n         // just a sanity check, not definitive that this calc is correct...\n         assert(it->GetSizeWithDescendants() >= child_sizes + it->GetTxSize());\n \n-        if (fDependsWait)\n-            waitingOnDependants.push_back(&(*it));\n-        else {\n-            CheckInputsAndUpdateCoins(tx, mempoolDuplicate, spendheight);\n-        }\n-    }\n-    unsigned int stepsSinceLastRemove = 0;\n-    while (!waitingOnDependants.empty()) {\n-        const CTxMemPoolEntry* entry = waitingOnDependants.front();\n-        waitingOnDependants.pop_front();\n-        if (!mempoolDuplicate.HaveInputs(entry->GetTx())) {\n-            waitingOnDependants.push_back(entry);\n-            stepsSinceLastRemove++;\n-            assert(stepsSinceLastRemove < waitingOnDependants.size());\n-        } else {\n-            CheckInputsAndUpdateCoins(entry->GetTx(), mempoolDuplicate, spendheight);\n-            stepsSinceLastRemove = 0;\n-        }\n+        CheckInputsAndUpdateCoins(tx, mempoolDuplicate, spendheight);\n     }\n     for (auto it = mapNextTx.cbegin(); it != mapNextTx.cend(); it++) {\n         uint256 hash = it->second->GetHash();"
+      }
+    ]
+  },
+  {
+    "sha": "09d18916afb0ecae90700d4befd9d5dc52767970",
+    "node_id": "C_kwDOABII59oAKDA5ZDE4OTE2YWZiMGVjYWU5MDcwMGQ0YmVmZDlkNWRjNTI3Njc5NzA",
+    "commit": {
+      "author": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-09-29T18:10:44Z"
+      },
+      "committer": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-10-04T14:00:28Z"
+      },
+      "message": "MOVEONLY: remove single-use helper func CheckInputsAndUpdateCoins",
+      "tree": {
+        "sha": "7bd33a74e30d89d61cbda9949aa23acde70e2ac7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/7bd33a74e30d89d61cbda9949aa23acde70e2ac7"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/09d18916afb0ecae90700d4befd9d5dc52767970",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/09d18916afb0ecae90700d4befd9d5dc52767970",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/09d18916afb0ecae90700d4befd9d5dc52767970",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/09d18916afb0ecae90700d4befd9d5dc52767970/comments",
+    "author": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "e8639ec26aaf4de3fae280963434bf1cf2017b6f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e8639ec26aaf4de3fae280963434bf1cf2017b6f",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/e8639ec26aaf4de3fae280963434bf1cf2017b6f"
+      }
+    ],
+    "stats": {
+      "total": 15,
+      "additions": 5,
+      "deletions": 10
+    },
+    "files": [
+      {
+        "sha": "40e142dc477b690b2d8ab3bed39a2ca2e51e94e5",
+        "filename": "src/txmempool.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 10,
+        "changes": 15,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/09d18916afb0ecae90700d4befd9d5dc52767970/src/txmempool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/09d18916afb0ecae90700d4befd9d5dc52767970/src/txmempool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.cpp?ref=09d18916afb0ecae90700d4befd9d5dc52767970",
+        "patch": "@@ -671,15 +671,6 @@ void CTxMemPool::clear()\n     _clear();\n }\n \n-static void CheckInputsAndUpdateCoins(const CTransaction& tx, CCoinsViewCache& mempoolDuplicate, const int64_t spendheight)\n-{\n-    TxValidationState dummy_state; // Not used. CheckTxInputs() should always pass\n-    CAmount txfee = 0;\n-    bool fCheckResult = tx.IsCoinBase() || Consensus::CheckTxInputs(tx, dummy_state, mempoolDuplicate, spendheight, txfee);\n-    assert(fCheckResult);\n-    UpdateCoins(tx, mempoolDuplicate, std::numeric_limits<int>::max());\n-}\n-\n void CTxMemPool::check(CChainState& active_chainstate) const\n {\n     if (m_check_ratio == 0) return;\n@@ -772,7 +763,11 @@ void CTxMemPool::check(CChainState& active_chainstate) const\n         // just a sanity check, not definitive that this calc is correct...\n         assert(it->GetSizeWithDescendants() >= child_sizes + it->GetTxSize());\n \n-        CheckInputsAndUpdateCoins(tx, mempoolDuplicate, spendheight);\n+        TxValidationState dummy_state; // Not used. CheckTxInputs() should always pass\n+        CAmount txfee = 0;\n+        bool fCheckResult = tx.IsCoinBase() || Consensus::CheckTxInputs(tx, dummy_state, mempoolDuplicate, spendheight, txfee);\n+        assert(fCheckResult);\n+        UpdateCoins(tx, mempoolDuplicate, std::numeric_limits<int>::max());\n     }\n     for (auto it = mapNextTx.cbegin(); it != mapNextTx.cend(); it++) {\n         uint256 hash = it->second->GetHash();"
+      }
+    ]
+  },
+  {
+    "sha": "9e8d7ad5d9cc4b013826daead9cee09aad539401",
+    "node_id": "C_kwDOABII59oAKDllOGQ3YWQ1ZDljYzRiMDEzODI2ZGFlYWQ5Y2VlMDlhYWQ1Mzk0MDE",
+    "commit": {
+      "author": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-10-04T12:01:38Z"
+      },
+      "committer": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-10-04T14:00:28Z"
+      },
+      "message": "[validation/mempool] use Spend/AddCoin instead of UpdateCoins\n\nUpdateCoins is an unnecessary dependency on validation. All we need to\ndo is add and remove coins to check inputs. We don't need the extra\nlogic for checking coinbases and handling TxUndos.\n\nAlso remove the wrapper function in validation.h which constructs a\nthrowaway TxUndo object before calling UpdateCoins because it is now\nunused.",
+      "tree": {
+        "sha": "c10b2f86152cd8639f4c1af45b7e741c16cb0459",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/c10b2f86152cd8639f4c1af45b7e741c16cb0459"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/9e8d7ad5d9cc4b013826daead9cee09aad539401",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9e8d7ad5d9cc4b013826daead9cee09aad539401",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/9e8d7ad5d9cc4b013826daead9cee09aad539401",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9e8d7ad5d9cc4b013826daead9cee09aad539401/comments",
+    "author": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "09d18916afb0ecae90700d4befd9d5dc52767970",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/09d18916afb0ecae90700d4befd9d5dc52767970",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/09d18916afb0ecae90700d4befd9d5dc52767970"
+      }
+    ],
+    "stats": {
+      "total": 13,
+      "additions": 3,
+      "deletions": 10
+    },
+    "files": [
+      {
+        "sha": "c1abe24af7be5fb1cdb432281fd467de9b4addcd",
+        "filename": "src/txmempool.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 1,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9e8d7ad5d9cc4b013826daead9cee09aad539401/src/txmempool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9e8d7ad5d9cc4b013826daead9cee09aad539401/src/txmempool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.cpp?ref=9e8d7ad5d9cc4b013826daead9cee09aad539401",
+        "patch": "@@ -5,6 +5,7 @@\n \n #include <txmempool.h>\n \n+#include <coins.h>\n #include <consensus/consensus.h>\n #include <consensus/tx_verify.h>\n #include <consensus/validation.h>\n@@ -767,7 +768,8 @@ void CTxMemPool::check(CChainState& active_chainstate) const\n         CAmount txfee = 0;\n         bool fCheckResult = tx.IsCoinBase() || Consensus::CheckTxInputs(tx, dummy_state, mempoolDuplicate, spendheight, txfee);\n         assert(fCheckResult);\n-        UpdateCoins(tx, mempoolDuplicate, std::numeric_limits<int>::max());\n+        for (const auto& input: tx.vin) mempoolDuplicate.SpendCoin(input.prevout);\n+        AddCoins(mempoolDuplicate, tx, std::numeric_limits<int>::max());\n     }\n     for (auto it = mapNextTx.cbegin(); it != mapNextTx.cend(); it++) {\n         uint256 hash = it->second->GetHash();"
+      },
+      {
+        "sha": "863502e0d765184155180cc85a750230f2db56d9",
+        "filename": "src/validation.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 6,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9e8d7ad5d9cc4b013826daead9cee09aad539401/src/validation.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9e8d7ad5d9cc4b013826daead9cee09aad539401/src/validation.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.cpp?ref=9e8d7ad5d9cc4b013826daead9cee09aad539401",
+        "patch": "@@ -1240,12 +1240,6 @@ void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, CTxUndo &txund\n     AddCoins(inputs, tx, nHeight);\n }\n \n-void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight)\n-{\n-    CTxUndo txundo;\n-    UpdateCoins(tx, inputs, txundo, nHeight);\n-}\n-\n bool CScriptCheck::operator()() {\n     const CScript &scriptSig = ptxTo->vin[nIn].scriptSig;\n     const CScriptWitness *witness = &ptxTo->vin[nIn].scriptWitness;"
+      },
+      {
+        "sha": "caa0832dd3a475264499bb6dafc76b1b271d50c0",
+        "filename": "src/validation.h",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 3,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9e8d7ad5d9cc4b013826daead9cee09aad539401/src/validation.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9e8d7ad5d9cc4b013826daead9cee09aad539401/src/validation.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.h?ref=9e8d7ad5d9cc4b013826daead9cee09aad539401",
+        "patch": "@@ -229,9 +229,6 @@ PackageMempoolAcceptResult ProcessNewPackage(CChainState& active_chainstate, CTx\n                                                    const Package& txns, bool test_accept)\n                                                    EXCLUSIVE_LOCKS_REQUIRED(cs_main);\n \n-/** Apply the effects of this transaction on the UTXO set represented by view */\n-void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, int nHeight);\n-\n /** Transaction validation functions */\n \n /**"
+      }
+    ]
+  },
+  {
+    "sha": "ed6115f1eae0eb4669601106a9aaff078a2f3a74",
+    "node_id": "C_kwDOABII59oAKGVkNjExNWYxZWFlMGViNDY2OTYwMTEwNmE5YWFmZjA3OGEyZjNhNzQ",
+    "commit": {
+      "author": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-10-04T11:58:50Z"
+      },
+      "committer": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-10-04T14:00:28Z"
+      },
+      "message": "[mempool] simplify some check() logic\n\nNo transaction in the mempool should ever be a coinbase.\n\nSince mempoolDuplicate's backend is the chainstate coins view, it should\nalways contain the coins available.",
+      "tree": {
+        "sha": "9e59db60bd18cc5f8c6eb56ba44eab880a1b77f2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/9e59db60bd18cc5f8c6eb56ba44eab880a1b77f2"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/ed6115f1eae0eb4669601106a9aaff078a2f3a74",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ed6115f1eae0eb4669601106a9aaff078a2f3a74",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/ed6115f1eae0eb4669601106a9aaff078a2f3a74",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ed6115f1eae0eb4669601106a9aaff078a2f3a74/comments",
+    "author": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "9e8d7ad5d9cc4b013826daead9cee09aad539401",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9e8d7ad5d9cc4b013826daead9cee09aad539401",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/9e8d7ad5d9cc4b013826daead9cee09aad539401"
+      }
+    ],
+    "stats": {
+      "total": 14,
+      "additions": 6,
+      "deletions": 8
+    },
+    "files": [
+      {
+        "sha": "f65fb24f190ba5ab30850e044d73e4b83832a920",
+        "filename": "src/txmempool.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 8,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed6115f1eae0eb4669601106a9aaff078a2f3a74/src/txmempool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed6115f1eae0eb4669601106a9aaff078a2f3a74/src/txmempool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.cpp?ref=ed6115f1eae0eb4669601106a9aaff078a2f3a74",
+        "patch": "@@ -704,14 +704,12 @@ void CTxMemPool::check(CChainState& active_chainstate) const\n             if (it2 != mapTx.end()) {\n                 const CTransaction& tx2 = it2->GetTx();\n                 assert(tx2.vout.size() > txin.prevout.n && !tx2.vout[txin.prevout.n].IsNull());\n-                // We are iterating through the mempool entries sorted in order by ancestor count.\n-                // All parents must have been checked before their children and their coins added to\n-                // the mempoolDuplicate coins cache.\n-                assert(mempoolDuplicate.HaveCoin(txin.prevout));\n                 setParentCheck.insert(*it2);\n-            } else {\n-                assert(active_coins_tip.HaveCoin(txin.prevout));\n             }\n+            // We are iterating through the mempool entries sorted in order by ancestor count.\n+            // All parents must have been checked before their children and their coins added to\n+            // the mempoolDuplicate coins cache.\n+            assert(mempoolDuplicate.HaveCoin(txin.prevout));\n             // Check whether its inputs are marked in mapNextTx.\n             auto it3 = mapNextTx.find(txin.prevout);\n             assert(it3 != mapNextTx.end());\n@@ -766,8 +764,8 @@ void CTxMemPool::check(CChainState& active_chainstate) const\n \n         TxValidationState dummy_state; // Not used. CheckTxInputs() should always pass\n         CAmount txfee = 0;\n-        bool fCheckResult = tx.IsCoinBase() || Consensus::CheckTxInputs(tx, dummy_state, mempoolDuplicate, spendheight, txfee);\n-        assert(fCheckResult);\n+        assert(!tx.IsCoinBase());\n+        assert(Consensus::CheckTxInputs(tx, dummy_state, mempoolDuplicate, spendheight, txfee));\n         for (const auto& input: tx.vin) mempoolDuplicate.SpendCoin(input.prevout);\n         AddCoins(mempoolDuplicate, tx, std::numeric_limits<int>::max());\n     }"
+      }
+    ]
+  },
+  {
+    "sha": "082c5bf099c64e3d27abe9b68a71ce500b693e7e",
+    "node_id": "C_kwDOABII59oAKDA4MmM1YmYwOTljNjRlM2QyN2FiZTliNjhhNzFjZTUwMGI2OTNlN2U",
+    "commit": {
+      "author": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-09-29T18:36:01Z"
+      },
+      "committer": {
+        "name": "glozow",
+        "email": "gloriajzhao@gmail.com",
+        "date": "2021-10-04T14:00:28Z"
+      },
+      "message": "[refactor] pass coinsview and height to check()\n\nRemoves check's dependency on validation.h",
+      "tree": {
+        "sha": "de3cef3823de0046834bbf621ba3a32e2b09042d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/de3cef3823de0046834bbf621ba3a32e2b09042d"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/082c5bf099c64e3d27abe9b68a71ce500b693e7e",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/082c5bf099c64e3d27abe9b68a71ce500b693e7e",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/082c5bf099c64e3d27abe9b68a71ce500b693e7e",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/082c5bf099c64e3d27abe9b68a71ce500b693e7e/comments",
+    "author": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "glozow",
+      "id": 25183001,
+      "node_id": "MDQ6VXNlcjI1MTgzMDAx",
+      "avatar_url": "https://avatars.githubusercontent.com/u/25183001?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/glozow",
+      "html_url": "https://github.com/glozow",
+      "followers_url": "https://api.github.com/users/glozow/followers",
+      "following_url": "https://api.github.com/users/glozow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/glozow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/glozow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/glozow/subscriptions",
+      "organizations_url": "https://api.github.com/users/glozow/orgs",
+      "repos_url": "https://api.github.com/users/glozow/repos",
+      "events_url": "https://api.github.com/users/glozow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/glozow/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "ed6115f1eae0eb4669601106a9aaff078a2f3a74",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ed6115f1eae0eb4669601106a9aaff078a2f3a74",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/ed6115f1eae0eb4669601106a9aaff078a2f3a74"
+      }
+    ],
+    "stats": {
+      "total": 21,
+      "additions": 11,
+      "deletions": 10
+    },
+    "files": [
+      {
+        "sha": "a0a82ea359c572a5db546f92ce745325221007e1",
+        "filename": "src/bench/mempool_stress.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 1,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/082c5bf099c64e3d27abe9b68a71ce500b693e7e/src/bench/mempool_stress.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/082c5bf099c64e3d27abe9b68a71ce500b693e7e/src/bench/mempool_stress.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bench/mempool_stress.cpp?ref=082c5bf099c64e3d27abe9b68a71ce500b693e7e",
+        "patch": "@@ -107,10 +107,11 @@ static void MempoolCheck(benchmark::Bench& bench)\n     const auto testing_setup = MakeNoLogFileContext<const TestingSetup>(CBaseChainParams::MAIN, {\"-checkmempool=1\"});\n     CTxMemPool pool;\n     LOCK2(cs_main, pool.cs);\n+    const CCoinsViewCache& coins_tip = testing_setup.get()->m_node.chainman->ActiveChainstate().CoinsTip();\n     for (auto& tx : ordered_coins) AddTx(tx, pool);\n \n     bench.run([&]() NO_THREAD_SAFETY_ANALYSIS {\n-        pool.check(testing_setup.get()->m_node.chainman->ActiveChainstate());\n+        pool.check(coins_tip, /* spendheight */ 2);\n     });\n }\n "
+      },
+      {
+        "sha": "12c4eece56c31481199d2b416cacee7d85a132df",
+        "filename": "src/net_processing.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 2,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/082c5bf099c64e3d27abe9b68a71ce500b693e7e/src/net_processing.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/082c5bf099c64e3d27abe9b68a71ce500b693e7e/src/net_processing.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.cpp?ref=082c5bf099c64e3d27abe9b68a71ce500b693e7e",
+        "patch": "@@ -2298,7 +2298,8 @@ void PeerManagerImpl::ProcessOrphanTx(std::set<uint256>& orphan_work_set)\n             break;\n         }\n     }\n-    m_mempool.check(m_chainman.ActiveChainstate());\n+    CChainState& active_chainstate = m_chainman.ActiveChainstate();\n+    m_mempool.check(active_chainstate.CoinsTip(), active_chainstate.m_chain.Height() + 1);\n }\n \n bool PeerManagerImpl::PrepareBlockFilterRequest(CNode& peer,\n@@ -3260,7 +3261,8 @@ void PeerManagerImpl::ProcessMessage(CNode& pfrom, const std::string& msg_type,\n         const TxValidationState& state = result.m_state;\n \n         if (result.m_result_type == MempoolAcceptResult::ResultType::VALID) {\n-            m_mempool.check(m_chainman.ActiveChainstate());\n+            CChainState& active_chainstate = m_chainman.ActiveChainstate();\n+            m_mempool.check(active_chainstate.CoinsTip(), active_chainstate.m_chain.Height() + 1);\n             // As this version of the transaction was acceptable, we can forget about any\n             // requests for it.\n             m_txrequest.ForgetTxHash(tx.GetHash());"
+      },
+      {
+        "sha": "17b5ef88b924e55d3bda8d3bca78999028367baf",
+        "filename": "src/test/fuzz/tx_pool.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/082c5bf099c64e3d27abe9b68a71ce500b693e7e/src/test/fuzz/tx_pool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/082c5bf099c64e3d27abe9b68a71ce500b693e7e/src/test/fuzz/tx_pool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/fuzz/tx_pool.cpp?ref=082c5bf099c64e3d27abe9b68a71ce500b693e7e",
+        "patch": "@@ -81,7 +81,7 @@ void SetMempoolConstraints(ArgsManager& args, FuzzedDataProvider& fuzzed_data_pr\n \n void Finish(FuzzedDataProvider& fuzzed_data_provider, MockedTxPool& tx_pool, CChainState& chainstate)\n {\n-    WITH_LOCK(::cs_main, tx_pool.check(chainstate));\n+    WITH_LOCK(::cs_main, tx_pool.check(chainstate.CoinsTip(), chainstate.m_chain.Height() + 1));\n     {\n         BlockAssembler::Options options;\n         options.nBlockMaxWeight = fuzzed_data_provider.ConsumeIntegralInRange(0U, MAX_BLOCK_WEIGHT);\n@@ -97,7 +97,7 @@ void Finish(FuzzedDataProvider& fuzzed_data_provider, MockedTxPool& tx_pool, CCh\n         std::vector<uint256> all_txids;\n         tx_pool.queryHashes(all_txids);\n         assert(all_txids.size() < info_all.size());\n-        WITH_LOCK(::cs_main, tx_pool.check(chainstate));\n+        WITH_LOCK(::cs_main, tx_pool.check(chainstate.CoinsTip(), chainstate.m_chain.Height() + 1));\n     }\n     SyncWithValidationInterfaceQueue();\n }"
+      },
+      {
+        "sha": "a0d9e2a6bf1976737b0c974522e8b23cd2d41881",
+        "filename": "src/txmempool.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 3,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/082c5bf099c64e3d27abe9b68a71ce500b693e7e/src/txmempool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/082c5bf099c64e3d27abe9b68a71ce500b693e7e/src/txmempool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.cpp?ref=082c5bf099c64e3d27abe9b68a71ce500b693e7e",
+        "patch": "@@ -672,7 +672,7 @@ void CTxMemPool::clear()\n     _clear();\n }\n \n-void CTxMemPool::check(CChainState& active_chainstate) const\n+void CTxMemPool::check(const CCoinsViewCache& active_coins_tip, int64_t spendheight) const\n {\n     if (m_check_ratio == 0) return;\n \n@@ -687,9 +687,7 @@ void CTxMemPool::check(CChainState& active_chainstate) const\n     uint64_t innerUsage = 0;\n     uint64_t prev_ancestor_count{0};\n \n-    CCoinsViewCache& active_coins_tip = active_chainstate.CoinsTip();\n     CCoinsViewCache mempoolDuplicate(const_cast<CCoinsViewCache*>(&active_coins_tip));\n-    const int64_t spendheight = active_chainstate.m_chain.Height() + 1;\n \n     for (const auto& it : GetSortedDepthAndScore()) {\n         checkTotal += it->GetTxSize();"
+      },
+      {
+        "sha": "a3a11eb72b679cda654d4d8a00e2f2ce99241d3d",
+        "filename": "src/txmempool.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/082c5bf099c64e3d27abe9b68a71ce500b693e7e/src/txmempool.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/082c5bf099c64e3d27abe9b68a71ce500b693e7e/src/txmempool.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.h?ref=082c5bf099c64e3d27abe9b68a71ce500b693e7e",
+        "patch": "@@ -622,7 +622,7 @@ class CTxMemPool\n      * all inputs are in the mapNextTx array). If sanity-checking is turned off,\n      * check does nothing.\n      */\n-    void check(CChainState& active_chainstate) const EXCLUSIVE_LOCKS_REQUIRED(::cs_main);\n+    void check(const CCoinsViewCache& active_coins_tip, int64_t spendheight) const EXCLUSIVE_LOCKS_REQUIRED(::cs_main);\n \n     // addUnchecked must updated state for all ancestors of a given transaction,\n     // to track size/count of descendant transactions.  First version of"
+      },
+      {
+        "sha": "8f0ddd906406a986a37f7a3abd42c60f6b390a9e",
+        "filename": "src/validation.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/082c5bf099c64e3d27abe9b68a71ce500b693e7e/src/validation.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/082c5bf099c64e3d27abe9b68a71ce500b693e7e/src/validation.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.cpp?ref=082c5bf099c64e3d27abe9b68a71ce500b693e7e",
+        "patch": "@@ -2486,7 +2486,7 @@ bool CChainState::ActivateBestChainStep(BlockValidationState& state, CBlockIndex\n         // any disconnected transactions back to the mempool.\n         MaybeUpdateMempoolForReorg(disconnectpool, true);\n     }\n-    if (m_mempool) m_mempool->check(*this);\n+    if (m_mempool) m_mempool->check(this->CoinsTip(), this->m_chain.Height() + 1);\n \n     CheckForkWarningConditions();\n "
+      }
+    ]
+  }
+]

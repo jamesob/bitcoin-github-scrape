@@ -1,0 +1,86 @@
+[
+  {
+    "sha": "4315ec1a722a290ba2bb2b86080a787f6174e2a2",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0MzE1ZWMxYTcyMmEyOTBiYTJiYjJiODYwODBhNzg3ZjYxNzRlMmEy",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-10-23T14:19:49Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-10-24T07:03:02Z"
+      },
+      "message": "RPC: error code changes and prevent crash with walletpassphrase\n\n- fix crash with walletpassphrase by checking if RPC server is running and\n  give a friendly error message how to fix this (fixes #3100)\n- add 3 new RPCErrorCodes RPC_SERVER_NOT_STARTED, RPC_NODE_ALREADY_ADDED\n  and RCP_NODE_NOT_ADDED (I checked the source to not use a number already\n  in use for RPC_SERVER_NOT_STARTED)\n- use the new codes where needed / missing\n- add missing use of RPC_INVALID_PARAMETER",
+      "tree": {
+        "sha": "40c2f81550f66be5cbc74da2451c68390cf5ca9e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/40c2f81550f66be5cbc74da2451c68390cf5ca9e"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/4315ec1a722a290ba2bb2b86080a787f6174e2a2",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4315ec1a722a290ba2bb2b86080a787f6174e2a2",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/4315ec1a722a290ba2bb2b86080a787f6174e2a2",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4315ec1a722a290ba2bb2b86080a787f6174e2a2/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "38fd11010795078ea1a4745f58fdf89e95e236c1",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/38fd11010795078ea1a4745f58fdf89e95e236c1",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/38fd11010795078ea1a4745f58fdf89e95e236c1"
+      }
+    ],
+    "stats": {
+      "total": 15,
+      "additions": 10,
+      "deletions": 5
+    },
+    "files": [
+      {
+        "sha": "0c1c722b50f062c629c07bffe79bd5cc33553b37",
+        "filename": "src/bitcoinrpc.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4315ec1a722a290ba2bb2b86080a787f6174e2a2/src/bitcoinrpc.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4315ec1a722a290ba2bb2b86080a787f6174e2a2/src/bitcoinrpc.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.h?ref=4315ec1a722a290ba2bb2b86080a787f6174e2a2",
+        "patch": "@@ -49,10 +49,13 @@ enum RPCErrorCode\n     RPC_INVALID_PARAMETER           = -8,  // Invalid, missing or duplicate parameter\n     RPC_DATABASE_ERROR              = -20, // Database error\n     RPC_DESERIALIZATION_ERROR       = -22, // Error parsing or validating structure in raw format\n+    RPC_SERVER_NOT_STARTED          = -18, // RPC server was not started (StartRPCThreads() not called)\n \n     // P2P client errors\n     RPC_CLIENT_NOT_CONNECTED        = -9,  // Bitcoin is not connected\n     RPC_CLIENT_IN_INITIAL_DOWNLOAD  = -10, // Still downloading initial blocks\n+    RPC_CLIENT_NODE_ALREADY_ADDED   = -23, // Node is already added\n+    RPC_CLIENT_NODE_NOT_ADDED       = -24, // Node has not been added before\n \n     // Wallet errors\n     RPC_WALLET_ERROR                = -4,  // Unspecified problem with wallet (key not found etc.)"
+      },
+      {
+        "sha": "5d87a2449fc9dfd9d10d6c4af504d06fb9d464f1",
+        "filename": "src/rpcnet.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 4,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4315ec1a722a290ba2bb2b86080a787f6174e2a2/src/rpcnet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4315ec1a722a290ba2bb2b86080a787f6174e2a2/src/rpcnet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcnet.cpp?ref=4315ec1a722a290ba2bb2b86080a787f6174e2a2",
+        "patch": "@@ -27,7 +27,7 @@ Value ping(const Array& params, bool fHelp)\n             \"Requests that a ping be sent to all other nodes, to measure ping time.\\n\"\n             \"Results provided in getpeerinfo, pingtime and pingwait fields are decimal seconds.\\n\"\n             \"Ping command is handled in queue with all other commands, so it measures processing backlog, not just network ping.\");\n-    \n+\n     // Request that each node send a ping during next message processing pass\n     LOCK(cs_vNodes);\n     BOOST_FOREACH(CNode* pNode, vNodes) {\n@@ -120,13 +120,13 @@ Value addnode(const Array& params, bool fHelp)\n     if (strCommand == \"add\")\n     {\n         if (it != vAddedNodes.end())\n-            throw JSONRPCError(-23, \"Error: Node already added\");\n+            throw JSONRPCError(RPC_CLIENT_NODE_ALREADY_ADDED, \"Error: Node already added\");\n         vAddedNodes.push_back(strNode);\n     }\n     else if(strCommand == \"remove\")\n     {\n         if (it == vAddedNodes.end())\n-            throw JSONRPCError(-24, \"Error: Node has not been added.\");\n+            throw JSONRPCError(RPC_CLIENT_NODE_NOT_ADDED, \"Error: Node has not been added.\");\n         vAddedNodes.erase(it);\n     }\n \n@@ -163,7 +163,7 @@ Value getaddednodeinfo(const Array& params, bool fHelp)\n                 break;\n             }\n         if (laddedNodes.size() == 0)\n-            throw JSONRPCError(-24, \"Error: Node has not been added.\");\n+            throw JSONRPCError(RPC_CLIENT_NODE_NOT_ADDED, \"Error: Node has not been added.\");\n     }\n \n     if (!fDns)"
+      },
+      {
+        "sha": "fe22dfe54c5a6ceef8a6d400ffe205cc1c9ea560",
+        "filename": "src/rpcwallet.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 1,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4315ec1a722a290ba2bb2b86080a787f6174e2a2/src/rpcwallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4315ec1a722a290ba2bb2b86080a787f6174e2a2/src/rpcwallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcwallet.cpp?ref=4315ec1a722a290ba2bb2b86080a787f6174e2a2",
+        "patch": "@@ -1271,7 +1271,7 @@ Value keypoolrefill(const Array& params, bool fHelp)\n     unsigned int kpSize = max(GetArg(\"-keypool\", 100), 0LL);\n     if (params.size() > 0) {\n         if (params[0].get_int() < 0)\n-            throw JSONRPCError(-8, \"Invalid parameter, expected valid size\");\n+            throw JSONRPCError(RPC_INVALID_PARAMETER, \"Invalid parameter, expected valid size\");\n         kpSize = (unsigned int) params[0].get_int();\n     }\n \n@@ -1301,6 +1301,8 @@ Value walletpassphrase(const Array& params, bool fHelp)\n             \"Stores the wallet decryption key in memory for <timeout> seconds.\");\n     if (fHelp)\n         return true;\n+    if (!fServer)\n+        throw JSONRPCError(RPC_SERVER_NOT_STARTED, \"Error: RPC server was not started, use server=1 to change this.\");\n     if (!pwalletMain->IsCrypted())\n         throw JSONRPCError(RPC_WALLET_WRONG_ENC_STATE, \"Error: running with an unencrypted wallet, but walletpassphrase was called.\");\n "
+      }
+    ]
+  }
+]

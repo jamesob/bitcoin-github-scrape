@@ -1,0 +1,100 @@
+[
+  {
+    "sha": "fcb72616253ed22e364bc312992d77efc1c4a3c1",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmY2I3MjYxNjI1M2VkMjJlMzY0YmMzMTI5OTJkNzdlZmMxYzRhM2Mx",
+    "commit": {
+      "author": {
+        "name": "Russell Yanofsky",
+        "email": "russ@yanofsky.org",
+        "date": "2020-04-24T17:07:07Z"
+      },
+      "committer": {
+        "name": "Russell Yanofsky",
+        "email": "russ@yanofsky.org",
+        "date": "2020-04-27T00:23:05Z"
+      },
+      "message": "Prevent valgrind false positive in rest_blockhash_by_height\n\nA bad interaction between valgrind and clang 6.0.0-1ubuntu2 with -O2\noptimizations makes valgrind misleadingly imply C++ code is reading an\nuninitialized blockheight value in rest_blockhash_by_height just because that's\nwhat clang optimized code is doing. The C++ code looks like:\n\n    int32_t blockheight;\n    if (!ParseInt32(height_str, &blockheight) || blockheight < 0) {\n\nwhile the optimized code looks like:\n\n    0x00000000000f97ab <+123>:   callq  0x4f8860 <ParseInt32(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, int*)>\n    0x00000000000f97b0 <+128>:   mov    0xc(%rsp),%ebx\n    0x00000000000f97b4 <+132>:   test   %ebx,%ebx\n    0x00000000000f97b6 <+134>:   js     0xf98aa <rest_blockhash_by_height(util::Ref const&, HTTPRequest*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)+378>\n    0x00000000000f97bc <+140>:   xor    $0x1,%al\n    0x00000000000f97be <+142>:   jne    0xf98aa <rest_blockhash_by_height(util::Ref const&, HTTPRequest*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)+378>\n\nDuring the rest_interface.py test:\n\n   self.test_rest_request(\"/blockhashbyheight/\", ret_type=RetType.OBJ, status=400)\n\nwhen height_str is empty, ParseInt32 returns false and blockheight value is\nnever assigned. The optimized code reads the uninitialized blockheight value\nin 0xc(%rsp) before the checking the ParseInt32 return value in %al, which is\nharmless, but triggers the following error from valgrind:\n\n==30660== Thread 13 b-httpworker.2:\n==30660== Conditional jump or move depends on uninitialised value(s)\n==30660==    at 0x2017B6: rest_blockhash_by_height(util::Ref const&, HTTPRequest*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) (rest.cpp:614)\n==30660==    by 0x2041B9: operator() (rest.cpp:670)\n==30660==    by 0x2041B9: std::_Function_handler<bool (HTTPRequest*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&), StartREST(util::Ref const&)::$_1>::_M_invoke(std::_Any_data const&, HTTPRequest*&&, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) (std_function.h:301)\n==30660==    by 0x3EC994: operator() (std_function.h:706)\n==30660==    by 0x3EC994: HTTPWorkItem::operator()() (httpserver.cpp:55)\n==30660==    by 0x3ED16D: WorkQueue<HTTPClosure>::Run() (httpserver.cpp:114)\n==30660==    by 0x3E9168: HTTPWorkQueueRun(WorkQueue<HTTPClosure>*, int) (httpserver.cpp:342)\n==30660==    by 0x3EDAAA: __invoke_impl<void, void (*)(WorkQueue<HTTPClosure> *, int), WorkQueue<HTTPClosure> *, int> (invoke.h:60)\n==30660==    by 0x3EDAAA: __invoke<void (*)(WorkQueue<HTTPClosure> *, int), WorkQueue<HTTPClosure> *, int> (invoke.h:95)\n==30660==    by 0x3EDAAA: _M_invoke<0, 1, 2> (thread:234)\n==30660==    by 0x3EDAAA: operator() (thread:243)\n==30660==    by 0x3EDAAA: std::thread::_State_impl<std::thread::_Invoker<std::tuple<void (*)(WorkQueue<HTTPClosure>*, int), WorkQueue<HTTPClosure>*, int> > >::_M_run() (thread:186)\n==30660==    by 0x64256DE: ??? (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.25)\n==30660==    by 0x54876DA: start_thread (pthread_create.c:463)\n==30660==    by 0x6DC888E: clone (clone.S:95)\n==30660==  Uninitialised value was created by a stack allocation\n==30660==    at 0x20173A: rest_blockhash_by_height(util::Ref const&, HTTPRequest*, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&) (rest.cpp:608)\n==30660==\n{\n   <insert_a_suppression_name_here>\n   Memcheck:Cond\n   fun:_ZL24rest_blockhash_by_heightRKN4util3RefEP11HTTPRequestRKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE\n   fun:operator()\n   fun:_ZNSt17_Function_handlerIFbP11HTTPRequestRKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEEZ9StartRESTRKN4util3RefEE3$_1E9_M_invokeERKSt9_Any_dataOS1_S9_\n   fun:operator()\n   fun:_ZN12HTTPWorkItemclEv\n   fun:_ZN9WorkQueueI11HTTPClosureE3RunEv\n   fun:_ZL16HTTPWorkQueueRunP9WorkQueueI11HTTPClosureEi\n   fun:__invoke_impl<void, void (*)(WorkQueue<HTTPClosure> *, int), WorkQueue<HTTPClosure> *, int>\n   fun:__invoke<void (*)(WorkQueue<HTTPClosure> *, int), WorkQueue<HTTPClosure> *, int>\n   fun:_M_invoke<0, 1, 2>\n   fun:operator()\n   fun:_ZNSt6thread11_State_implINS_8_InvokerISt5tupleIJPFvP9WorkQueueI11HTTPClosureEiES6_iEEEEE6_M_runEv\n   obj:/usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.25\n   fun:start_thread\n   fun:clone\n}\n\nThis is a known bad interaction between clang and valgrind. The clang optimized\ncode is correct but valgrind has no way of knowing that accessing the\nuninitialized value isn't a problem. Issue has been reported previously:\n\n    https://bugs.llvm.org/show_bug.cgi?id=32604#c4\n    https://github.com/Z3Prover/z3/issues/972\n\nThis commit just sets blockheight to 0 as a workaround.",
+      "tree": {
+        "sha": "fd13667faab0b2dfe475866b2fc33f7ab579312e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/fd13667faab0b2dfe475866b2fc33f7ab579312e"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/fcb72616253ed22e364bc312992d77efc1c4a3c1",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fcb72616253ed22e364bc312992d77efc1c4a3c1",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/fcb72616253ed22e364bc312992d77efc1c4a3c1",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fcb72616253ed22e364bc312992d77efc1c4a3c1/comments",
+    "author": {
+      "login": "ryanofsky",
+      "id": 7133040,
+      "node_id": "MDQ6VXNlcjcxMzMwNDA=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7133040?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ryanofsky",
+      "html_url": "https://github.com/ryanofsky",
+      "followers_url": "https://api.github.com/users/ryanofsky/followers",
+      "following_url": "https://api.github.com/users/ryanofsky/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ryanofsky/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ryanofsky/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ryanofsky/subscriptions",
+      "organizations_url": "https://api.github.com/users/ryanofsky/orgs",
+      "repos_url": "https://api.github.com/users/ryanofsky/repos",
+      "events_url": "https://api.github.com/users/ryanofsky/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ryanofsky/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "ryanofsky",
+      "id": 7133040,
+      "node_id": "MDQ6VXNlcjcxMzMwNDA=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7133040?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ryanofsky",
+      "html_url": "https://github.com/ryanofsky",
+      "followers_url": "https://api.github.com/users/ryanofsky/followers",
+      "following_url": "https://api.github.com/users/ryanofsky/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ryanofsky/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ryanofsky/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ryanofsky/subscriptions",
+      "organizations_url": "https://api.github.com/users/ryanofsky/orgs",
+      "repos_url": "https://api.github.com/users/ryanofsky/repos",
+      "events_url": "https://api.github.com/users/ryanofsky/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ryanofsky/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "eef90c14ed0f559e3f6e187341009270b84f45cb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/eef90c14ed0f559e3f6e187341009270b84f45cb",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/eef90c14ed0f559e3f6e187341009270b84f45cb"
+      }
+    ],
+    "stats": {
+      "total": 2,
+      "additions": 1,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "aaaaba4cd04db8b4b57bcd900b47c66c88c5a274",
+        "filename": "src/rest.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fcb72616253ed22e364bc312992d77efc1c4a3c1/src/rest.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fcb72616253ed22e364bc312992d77efc1c4a3c1/src/rest.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rest.cpp?ref=fcb72616253ed22e364bc312992d77efc1c4a3c1",
+        "patch": "@@ -607,7 +607,7 @@ static bool rest_blockhash_by_height(HTTPRequest* req,\n     std::string height_str;\n     const RetFormat rf = ParseDataFormat(height_str, str_uri_part);\n \n-    int32_t blockheight;\n+    int32_t blockheight = -1; // Initialization done only to prevent valgrind false positive, see https://github.com/bitcoin/bitcoin/pull/18785\n     if (!ParseInt32(height_str, &blockheight) || blockheight < 0) {\n         return RESTERR(req, HTTP_BAD_REQUEST, \"Invalid height: \" + SanitizeString(height_str));\n     }"
+      }
+    ]
+  }
+]

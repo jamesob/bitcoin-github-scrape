@@ -1,0 +1,100 @@
+[
+  {
+    "sha": "fb08d92312312c6c896327d264a8e9915fdafae7",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmYjA4ZDkyMzEyMzEyYzZjODk2MzI3ZDI2NGE4ZTk5MTVmZGFmYWU3",
+    "commit": {
+      "author": {
+        "name": "Casey Rodarmor",
+        "email": "casey@rodarmor.com",
+        "date": "2015-08-17T21:30:46Z"
+      },
+      "committer": {
+        "name": "Casey Rodarmor",
+        "email": "casey@rodarmor.com",
+        "date": "2015-08-18T14:40:13Z"
+      },
+      "message": "Make sure we re-acquire lock if a task throws",
+      "tree": {
+        "sha": "3bf610d11f4966df598f0685aa2e9f04ff378fb0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/3bf610d11f4966df598f0685aa2e9f04ff378fb0"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/fb08d92312312c6c896327d264a8e9915fdafae7",
+      "comment_count": 1,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fb08d92312312c6c896327d264a8e9915fdafae7",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/fb08d92312312c6c896327d264a8e9915fdafae7",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fb08d92312312c6c896327d264a8e9915fdafae7/comments",
+    "author": {
+      "login": "casey",
+      "id": 1945,
+      "node_id": "MDQ6VXNlcjE5NDU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1945?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/casey",
+      "html_url": "https://github.com/casey",
+      "followers_url": "https://api.github.com/users/casey/followers",
+      "following_url": "https://api.github.com/users/casey/following{/other_user}",
+      "gists_url": "https://api.github.com/users/casey/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/casey/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/casey/subscriptions",
+      "organizations_url": "https://api.github.com/users/casey/orgs",
+      "repos_url": "https://api.github.com/users/casey/repos",
+      "events_url": "https://api.github.com/users/casey/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/casey/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "casey",
+      "id": 1945,
+      "node_id": "MDQ6VXNlcjE5NDU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1945?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/casey",
+      "html_url": "https://github.com/casey",
+      "followers_url": "https://api.github.com/users/casey/followers",
+      "following_url": "https://api.github.com/users/casey/following{/other_user}",
+      "gists_url": "https://api.github.com/users/casey/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/casey/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/casey/subscriptions",
+      "organizations_url": "https://api.github.com/users/casey/orgs",
+      "repos_url": "https://api.github.com/users/casey/repos",
+      "events_url": "https://api.github.com/users/casey/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/casey/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "1e92b275406e3fbc7ab59d2ada1c882ca15fb36f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1e92b275406e3fbc7ab59d2ada1c882ca15fb36f",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/1e92b275406e3fbc7ab59d2ada1c882ca15fb36f"
+      }
+    ],
+    "stats": {
+      "total": 12,
+      "additions": 7,
+      "deletions": 5
+    },
+    "files": [
+      {
+        "sha": "06115f5619753178f47f7e5a41f0208678f3f543",
+        "filename": "src/scheduler.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 5,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fb08d92312312c6c896327d264a8e9915fdafae7/src/scheduler.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fb08d92312312c6c896327d264a8e9915fdafae7/src/scheduler.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/scheduler.cpp?ref=fb08d92312312c6c896327d264a8e9915fdafae7",
+        "patch": "@@ -6,6 +6,7 @@\n \n #include <assert.h>\n #include <boost/bind.hpp>\n+#include <boost/thread/reverse_lock.hpp>\n #include <utility>\n \n CScheduler::CScheduler() : nThreadsServicingQueue(0), stopRequested(false), stopWhenEmpty(false)\n@@ -65,11 +66,12 @@ void CScheduler::serviceQueue()\n             Function f = taskQueue.begin()->second;\n             taskQueue.erase(taskQueue.begin());\n \n-            // Unlock before calling f, so it can reschedule itself or another task\n-            // without deadlocking:\n-            lock.unlock();\n-            f();\n-            lock.lock();\n+            {\n+                // Unlock before calling f, so it can reschedule itself or another task\n+                // without deadlocking:\n+                boost::reverse_lock<boost::unique_lock<boost::mutex> > rlock(lock);\n+                f();\n+            }\n         } catch (...) {\n             --nThreadsServicingQueue;\n             throw;"
+      }
+    ]
+  }
+]

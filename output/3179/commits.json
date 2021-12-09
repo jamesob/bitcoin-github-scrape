@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "928df2a96bdfa27c46fbace43f96f47d652c37e8",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5MjhkZjJhOTZiZGZhMjdjNDZmYmFjZTQzZjk2ZjQ3ZDY1MmMzN2U4",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-10-28T16:44:31Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-10-28T16:44:31Z"
+      },
+      "message": "paymentserver: click-to-pay-handler try both nets\n\n- it can happen, that PaymentServer::ipcSendCommandLine() is unable to\n  detect the correct network, for example when a bitcoin: URI contains an\n  invalid address or when a payment request can be read\n- in this case try to send the request to a mainnet local pr server, if this\n  fails use a testnet local pr server",
+      "tree": {
+        "sha": "dd74b14cb88660da0d61cc353b409306dcb873f5",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/dd74b14cb88660da0d61cc353b409306dcb873f5"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/928df2a96bdfa27c46fbace43f96f47d652c37e8",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/928df2a96bdfa27c46fbace43f96f47d652c37e8",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/928df2a96bdfa27c46fbace43f96f47d652c37e8",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/928df2a96bdfa27c46fbace43f96f47d652c37e8/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "377cd749308d43bc718cac806a3f8a1710652b0e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/377cd749308d43bc718cac806a3f8a1710652b0e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/377cd749308d43bc718cac806a3f8a1710652b0e"
+      }
+    ],
+    "stats": {
+      "total": 25,
+      "additions": 23,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "e3118e58f2d77092e003be5a427518c527cfebf4",
+        "filename": "src/qt/paymentserver.cpp",
+        "status": "modified",
+        "additions": 23,
+        "deletions": 2,
+        "changes": 25,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/928df2a96bdfa27c46fbace43f96f47d652c37e8/src/qt/paymentserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/928df2a96bdfa27c46fbace43f96f47d652c37e8/src/qt/paymentserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.cpp?ref=928df2a96bdfa27c46fbace43f96f47d652c37e8",
+        "patch": "@@ -182,6 +182,7 @@ void PaymentServer::LoadRootCAs(X509_STORE* _store)\n bool PaymentServer::ipcSendCommandLine(int argc, char* argv[])\n {\n     bool fResult = false;\n+    bool fNetworkDetected = false;\n \n     for (int i = 1; i < argc; i++)\n     {\n@@ -200,9 +201,9 @@ bool PaymentServer::ipcSendCommandLine(int argc, char* argv[])\n \n                 SelectParams(CChainParams::MAIN);\n                 if (!address.IsValid())\n-                {\n                     SelectParams(CChainParams::TESTNET);\n-                }\n+\n+                fNetworkDetected = true;\n             }\n         }\n         else if (QFile::exists(arg)) // Filename\n@@ -216,6 +217,8 @@ bool PaymentServer::ipcSendCommandLine(int argc, char* argv[])\n                     SelectParams(CChainParams::MAIN);\n                 else\n                     SelectParams(CChainParams::TESTNET);\n+\n+                fNetworkDetected = true;\n             }\n         }\n         else\n@@ -226,12 +229,30 @@ bool PaymentServer::ipcSendCommandLine(int argc, char* argv[])\n         }\n     }\n \n+    // Network detection can fail if URI parsing\n+    // fails or payment request couldn't be read.\n+    if (!fNetworkDetected && savedPaymentRequests.size() > 0)\n+        SelectParams(CChainParams::MAIN);\n+\n     foreach (const QString& r, savedPaymentRequests)\n     {\n         QLocalSocket* socket = new QLocalSocket();\n+\n         socket->connectToServer(ipcServerName(), QIODevice::WriteOnly);\n+        // If connect fails...\n         if (!socket->waitForConnected(BITCOIN_IPC_CONNECT_TIMEOUT))\n+        {\n+            // ...and we had no autodetected network...\n+            if (!fNetworkDetected)\n+            {\n+                // ...try testnet.\n+                SelectParams(CChainParams::TESTNET);\n+                socket->connectToServer(ipcServerName(), QIODevice::WriteOnly);\n+                if (!socket->waitForConnected(BITCOIN_IPC_CONNECT_TIMEOUT))\n+                    return false;\n+            }\n             return false;\n+        }\n \n         QByteArray block;\n         QDataStream out(&block, QIODevice::WriteOnly);"
+      }
+    ]
+  }
+]

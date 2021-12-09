@@ -1,0 +1,98 @@
+[
+  {
+    "sha": "d282c1fb64ae570caab951247e6ead4b9059043d",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkMjgyYzFmYjY0YWU1NzBjYWFiOTUxMjQ3ZTZlYWQ0YjkwNTkwNDNk",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-04-10T06:19:58Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-04-15T09:57:55Z"
+      },
+      "message": "[Qt] catch Windows shutdown events while client is running\n\n- prevents unsafe shutdowns on Windows, which is known to be\n  able to cause problems with wallet.dat\n- if a users ends a Windows session, this will initiate a client shutdown\n  and show a Windows dialog, that tells the user what is going on (for\n  Windows Vista and higher it will even show a reason for blocking the\n  Windows session end)",
+      "tree": {
+        "sha": "4e447f31035eeef8268a8c333e45cd2dcd01d092",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/4e447f31035eeef8268a8c333e45cd2dcd01d092"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/d282c1fb64ae570caab951247e6ead4b9059043d",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d282c1fb64ae570caab951247e6ead4b9059043d",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/d282c1fb64ae570caab951247e6ead4b9059043d",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d282c1fb64ae570caab951247e6ead4b9059043d/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "74dd52a9fc13851a6ec847da985388a6bfb70be7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/74dd52a9fc13851a6ec847da985388a6bfb70be7",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/74dd52a9fc13851a6ec847da985388a6bfb70be7"
+      }
+    ],
+    "stats": {
+      "total": 114,
+      "additions": 111,
+      "deletions": 3
+    },
+    "files": [
+      {
+        "sha": "44d29645012a6e61018bd159194e1364d7b2f3a2",
+        "filename": "src/qt/Makefile.am",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 2,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d282c1fb64ae570caab951247e6ead4b9059043d/src/qt/Makefile.am",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d282c1fb64ae570caab951247e6ead4b9059043d/src/qt/Makefile.am",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/Makefile.am?ref=d282c1fb64ae570caab951247e6ead4b9059043d",
+        "patch": "@@ -211,7 +211,8 @@ BITCOIN_QT_H = \\\n   walletframe.h \\\n   walletmodel.h \\\n   walletmodeltransaction.h \\\n-  walletview.h\n+  walletview.h \\\n+  winshutdownmonitor.h\n \n RES_ICONS = \\\n   res/icons/add.png \\\n@@ -277,7 +278,8 @@ BITCOIN_QT_CPP = \\\n   rpcconsole.cpp \\\n   splashscreen.cpp \\\n   trafficgraphwidget.cpp \\\n-  utilitydialog.cpp\n+  utilitydialog.cpp \\\n+  winshutdownmonitor.cpp\n \n if ENABLE_WALLET\n BITCOIN_QT_CPP += \\"
+      },
+      {
+        "sha": "c05692efa3248598e5fee74ea58f1d76f8283761",
+        "filename": "src/qt/bitcoin.cpp",
+        "status": "modified",
+        "additions": 21,
+        "deletions": 1,
+        "changes": 22,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d282c1fb64ae570caab951247e6ead4b9059043d/src/qt/bitcoin.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d282c1fb64ae570caab951247e6ead4b9059043d/src/qt/bitcoin.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoin.cpp?ref=d282c1fb64ae570caab951247e6ead4b9059043d",
+        "patch": "@@ -15,6 +15,7 @@\n #include \"optionsmodel.h\"\n #include \"splashscreen.h\"\n #include \"utilitydialog.h\"\n+#include \"winshutdownmonitor.h\"\n #ifdef ENABLE_WALLET\n #include \"paymentserver.h\"\n #include \"walletmodel.h\"\n@@ -189,6 +190,9 @@ class BitcoinApplication: public QApplication\n     /// Get process return value\n     int getReturnValue() { return returnValue; }\n \n+    /// Get window identifier of QMainWindow (BitcoinGUI)\n+    WId getMainWinId() const;\n+\n public slots:\n     void initializeResult(int retval);\n     void shutdownResult(int retval);\n@@ -444,6 +448,14 @@ void BitcoinApplication::handleRunawayException(const QString &message)\n     ::exit(1);\n }\n \n+WId BitcoinApplication::getMainWinId() const\n+{\n+    if (!window)\n+        return 0;\n+\n+    return window->winId();\n+}\n+\n #ifndef BITCOIN_QT_TEST\n int main(int argc, char *argv[])\n {\n@@ -558,10 +570,15 @@ int main(int argc, char *argv[])\n     /// 9. Main GUI initialization\n     // Install global event filter that makes sure that long tooltips can be word-wrapped\n     app.installEventFilter(new GUIUtil::ToolTipToRichTextFilter(TOOLTIP_WRAP_THRESHOLD, &app));\n-    // Install qDebug() message handler to route to debug.log\n #if QT_VERSION < 0x050000\n+    // Install qDebug() message handler to route to debug.log\n     qInstallMsgHandler(DebugMessageHandler);\n #else\n+#if defined(Q_OS_WIN)\n+    // Install global event filter for processing Windows session related Windows messages (WM_QUERYENDSESSION and WM_ENDSESSION)\n+    qApp->installNativeEventFilter(new WinShutdownMonitor());\n+#endif\n+    // Install qDebug() message handler to route to debug.log\n     qInstallMessageHandler(DebugMessageHandler);\n #endif\n     // Load GUI settings from QSettings\n@@ -577,6 +594,9 @@ int main(int argc, char *argv[])\n     {\n         app.createWindow(isaTestNet);\n         app.requestInitialize();\n+#if defined(Q_OS_WIN) && QT_VERSION >= 0x050000\n+        WinShutdownMonitor::registerShutdownBlockReason(QObject::tr(\"Bitcoin Core did't yet exit safely...\"), (HWND)app.getMainWinId());\n+#endif\n         app.exec();\n         app.requestShutdown();\n         app.exec();"
+      },
+      {
+        "sha": "b7526f0ae4ecd3cb789bf7ee2a88dddc012bba79",
+        "filename": "src/qt/winshutdownmonitor.cpp",
+        "status": "added",
+        "additions": 57,
+        "deletions": 0,
+        "changes": 57,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d282c1fb64ae570caab951247e6ead4b9059043d/src/qt/winshutdownmonitor.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d282c1fb64ae570caab951247e6ead4b9059043d/src/qt/winshutdownmonitor.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/winshutdownmonitor.cpp?ref=d282c1fb64ae570caab951247e6ead4b9059043d",
+        "patch": "@@ -0,0 +1,57 @@\n+// Copyright (c) 2014 The Bitcoin developers\n+// Distributed under the MIT/X11 software license, see the accompanying\n+// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+#include \"winshutdownmonitor.h\"\n+\n+#if defined(Q_OS_WIN) && QT_VERSION >= 0x050000\n+#include \"init.h\"\n+\n+#include <windows.h>\n+\n+#include <QDebug>\n+\n+// If we don't want a message to be processed by Qt, return true and set result to\n+// the value that the window procedure should return. Otherwise return false.\n+bool WinShutdownMonitor::nativeEventFilter(const QByteArray &eventType, void *pMessage, long *pnResult)\n+{\n+       Q_UNUSED(eventType);\n+\n+       MSG *pMsg = static_cast<MSG *>(pMessage);\n+\n+       switch(pMsg->message)\n+       {\n+           case WM_QUERYENDSESSION:\n+           {\n+               // Initiate a client shutdown after receiving a WM_QUERYENDSESSION and block\n+               // Windows session end until we have finished client shutdown.\n+               StartShutdown();\n+               *pnResult = FALSE;\n+               return true;\n+           }\n+\n+           case WM_ENDSESSION:\n+           {\n+               *pnResult = FALSE;\n+               return true;\n+           }\n+       }\n+\n+       return false;\n+}\n+\n+void WinShutdownMonitor::registerShutdownBlockReason(const QString& strReason, const HWND& mainWinId)\n+{\n+    typedef BOOL (WINAPI *PSHUTDOWNBRCREATE)(HWND, LPCWSTR);\n+    PSHUTDOWNBRCREATE shutdownBRCreate = (PSHUTDOWNBRCREATE)GetProcAddress(GetModuleHandleA(\"User32.dll\"), \"ShutdownBlockReasonCreate\");\n+    if (shutdownBRCreate == NULL) {\n+        qDebug() << \"registerShutdownBlockReason : GetProcAddress for ShutdownBlockReasonCreate failed\";\n+        return;\n+    }\n+\n+    if (shutdownBRCreate(mainWinId, strReason.toStdWString().c_str()))\n+        qDebug() << \"registerShutdownBlockReason : Successfully registered: \" + strReason;\n+    else\n+        qDebug() << \"registerShutdownBlockReason : Failed to register: \" + strReason;\n+}\n+#endif"
+      },
+      {
+        "sha": "4c76d2c816b685cf80cd2675f303f5b968810dbb",
+        "filename": "src/qt/winshutdownmonitor.h",
+        "status": "added",
+        "additions": 29,
+        "deletions": 0,
+        "changes": 29,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d282c1fb64ae570caab951247e6ead4b9059043d/src/qt/winshutdownmonitor.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d282c1fb64ae570caab951247e6ead4b9059043d/src/qt/winshutdownmonitor.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/winshutdownmonitor.h?ref=d282c1fb64ae570caab951247e6ead4b9059043d",
+        "patch": "@@ -0,0 +1,29 @@\n+// Copyright (c) 2014 The Bitcoin developers\n+// Distributed under the MIT/X11 software license, see the accompanying\n+// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+#ifndef WINSHUTDOWNMONITOR_H\n+#define WINSHUTDOWNMONITOR_H\n+\n+#ifdef WIN32\n+#include <QByteArray>\n+#include <QString>\n+\n+#if QT_VERSION >= 0x050000\n+#include <windef.h> // for HWND\n+\n+#include <QAbstractNativeEventFilter>\n+\n+class WinShutdownMonitor : public QAbstractNativeEventFilter\n+{\n+public:\n+    /** Implements QAbstractNativeEventFilter interface for processing Windows messages */\n+    bool nativeEventFilter(const QByteArray &eventType, void *pMessage, long *pnResult);\n+\n+    /** Register the reason for blocking shutdown on Windows to allow clean client exit */\n+    static void registerShutdownBlockReason(const QString& strReason, const HWND& mainWinId);\n+};\n+#endif\n+#endif\n+\n+#endif // WINSHUTDOWNMONITOR_H"
+      }
+    ]
+  }
+]

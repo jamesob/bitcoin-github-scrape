@@ -1,0 +1,564 @@
+[
+  {
+    "sha": "abfbeafe8461131cc7e123b9da69e951f81fd7a3",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphYmZiZWFmZTg0NjExMzFjYzdlMTIzYjlkYTY5ZTk1MWY4MWZkN2Ez",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2015-01-13T02:15:39Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2015-02-01T21:56:06Z"
+      },
+      "message": "Change IsDERSignature to BIP66 implementation",
+      "tree": {
+        "sha": "8b110e68eb6a0e7812c752518baf4e7e83756f01",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/8b110e68eb6a0e7812c752518baf4e7e83756f01"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/abfbeafe8461131cc7e123b9da69e951f81fd7a3",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/abfbeafe8461131cc7e123b9da69e951f81fd7a3",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/abfbeafe8461131cc7e123b9da69e951f81fd7a3",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/abfbeafe8461131cc7e123b9da69e951f81fd7a3/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "6a02ef8bdb07ef42bdac0511b7f897d49f69f7eb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6a02ef8bdb07ef42bdac0511b7f897d49f69f7eb",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/6a02ef8bdb07ef42bdac0511b7f897d49f69f7eb"
+      }
+    ],
+    "stats": {
+      "total": 126,
+      "additions": 63,
+      "deletions": 63
+    },
+    "files": [
+      {
+        "sha": "e049fed2e5692450c664b44861d1fca47201f51c",
+        "filename": "src/script/interpreter.cpp",
+        "status": "modified",
+        "additions": 63,
+        "deletions": 63,
+        "changes": 126,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/abfbeafe8461131cc7e123b9da69e951f81fd7a3/src/script/interpreter.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/abfbeafe8461131cc7e123b9da69e951f81fd7a3/src/script/interpreter.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/interpreter.cpp?ref=abfbeafe8461131cc7e123b9da69e951f81fd7a3",
+        "patch": "@@ -93,76 +93,76 @@ bool static IsCompressedOrUncompressedPubKey(const valtype &vchPubKey) {\n  * in which case a single 0 byte is necessary and even required).\n  * \n  * See https://bitcointalk.org/index.php?topic=8392.msg127623#msg127623\n+ *\n+ * This function is consensus-critical since BIP66.\n  */\n-bool static IsDERSignature(const valtype &vchSig) {\n+bool static IsValidSignatureEncoding(const std::vector<unsigned char> &sig) {\n+    // Format: 0x30 [total-length] 0x02 [R-length] [R] 0x02 [S-length] [S] [sighash]\n+    // * total-length: 1-byte length descriptor of everything that follows,\n+    //   excluding the sighash byte.\n+    // * R-length: 1-byte length descriptor of the R value that follows.\n+    // * R: arbitrary-length big-endian encoded R value. It must use the shortest\n+    //   possible encoding for a positive integers (which means no null bytes at\n+    //   the start, except a single one when the next byte has its highest bit set).\n+    // * S-length: 1-byte length descriptor of the S value that follows.\n+    // * S: arbitrary-length big-endian encoded S value. The same rules apply.\n+    // * sighash: 1-byte value indicating what data is hashed (not part of the DER\n+    //   signature)\n \n-    if (vchSig.size() < 9) {\n-        //  Non-canonical signature: too short\n-        return false;\n-    }\n-    if (vchSig.size() > 73) {\n-        // Non-canonical signature: too long\n-        return false;\n-    }\n-    if (vchSig[0] != 0x30) {\n-        //  Non-canonical signature: wrong type\n-        return false;\n-    }\n-    if (vchSig[1] != vchSig.size()-3) {\n-        //  Non-canonical signature: wrong length marker\n-        return false;\n-    }\n-    unsigned int nLenR = vchSig[3];\n-    if (5 + nLenR >= vchSig.size()) {\n-        //  Non-canonical signature: S length misplaced\n-        return false;\n-    }\n-    unsigned int nLenS = vchSig[5+nLenR];\n-    if ((unsigned long)(nLenR+nLenS+7) != vchSig.size()) {\n-        //  Non-canonical signature: R+S length mismatch\n-        return false;\n-    }\n+    // Minimum and maximum size constraints.\n+    if (sig.size() < 9) return false;\n+    if (sig.size() > 73) return false;\n \n-    const unsigned char *R = &vchSig[4];\n-    if (R[-2] != 0x02) {\n-        //  Non-canonical signature: R value type mismatch\n-        return false;\n-    }\n-    if (nLenR == 0) {\n-        //  Non-canonical signature: R length is zero\n-        return false;\n-    }\n-    if (R[0] & 0x80) {\n-        //  Non-canonical signature: R value negative\n-        return false;\n-    }\n-    if (nLenR > 1 && (R[0] == 0x00) && !(R[1] & 0x80)) {\n-        //  Non-canonical signature: R value excessively padded\n-        return false;\n-    }\n+    // A signature is of type 0x30 (compound).\n+    if (sig[0] != 0x30) return false;\n+\n+    // Make sure the length covers the entire signature.\n+    if (sig[1] != sig.size() - 3) return false;\n+\n+    // Extract the length of the R element.\n+    unsigned int lenR = sig[3];\n+\n+    // Make sure the length of the S element is still inside the signature.\n+    if (5 + lenR >= sig.size()) return false;\n+\n+    // Extract the length of the S element.\n+    unsigned int lenS = sig[5 + lenR];\n+\n+    // Verify that the length of the signature matches the sum of the length\n+    // of the elements.\n+    if ((size_t)(lenR + lenS + 7) != sig.size()) return false;\n+ \n+    // Check whether the R element is an integer.\n+    if (sig[2] != 0x02) return false;\n+\n+    // Zero-length integers are not allowed for R.\n+    if (lenR == 0) return false;\n+\n+    // Negative numbers are not allowed for R.\n+    if (sig[4] & 0x80) return false;\n+\n+    // Null bytes at the start of R are not allowed, unless R would\n+    // otherwise be interpreted as a negative number.\n+    if (lenR > 1 && (sig[4] == 0x00) && !(sig[5] & 0x80)) return false;\n+\n+    // Check whether the S element is an integer.\n+    if (sig[lenR + 4] != 0x02) return false;\n+\n+    // Zero-length integers are not allowed for S.\n+    if (lenS == 0) return false;\n+\n+    // Negative numbers are not allowed for S.\n+    if (sig[lenR + 6] & 0x80) return false;\n+\n+    // Null bytes at the start of S are not allowed, unless S would otherwise be\n+    // interpreted as a negative number.\n+    if (lenS > 1 && (sig[lenR + 6] == 0x00) && !(sig[lenR + 7] & 0x80)) return false;\n \n-    const unsigned char *S = &vchSig[6+nLenR];\n-    if (S[-2] != 0x02) {\n-        //  Non-canonical signature: S value type mismatch\n-        return false;\n-    }\n-    if (nLenS == 0) {\n-        //  Non-canonical signature: S length is zero\n-        return false;\n-    }\n-    if (S[0] & 0x80) {\n-        //  Non-canonical signature: S value negative\n-        return false;\n-    }\n-    if (nLenS > 1 && (S[0] == 0x00) && !(S[1] & 0x80)) {\n-        //  Non-canonical signature: S value excessively padded\n-        return false;\n-    }\n     return true;\n }\n \n bool static IsLowDERSignature(const valtype &vchSig, ScriptError* serror) {\n-    if (!IsDERSignature(vchSig)) {\n+    if (!IsValidSignatureEncoding(vchSig)) {\n         return set_error(serror, SCRIPT_ERR_SIG_DER);\n     }\n     unsigned int nLenR = vchSig[3];\n@@ -194,7 +194,7 @@ bool static CheckSignatureEncoding(const valtype &vchSig, unsigned int flags, Sc\n     if (vchSig.size() == 0) {\n         return true;\n     }\n-    if ((flags & (SCRIPT_VERIFY_DERSIG | SCRIPT_VERIFY_LOW_S | SCRIPT_VERIFY_STRICTENC)) != 0 && !IsDERSignature(vchSig)) {\n+    if ((flags & (SCRIPT_VERIFY_DERSIG | SCRIPT_VERIFY_LOW_S | SCRIPT_VERIFY_STRICTENC)) != 0 && !IsValidSignatureEncoding(vchSig)) {\n         return set_error(serror, SCRIPT_ERR_SIG_DER);\n     } else if ((flags & SCRIPT_VERIFY_LOW_S) != 0 && !IsLowDERSignature(vchSig, serror)) {\n         // serror is set"
+      }
+    ]
+  },
+  {
+    "sha": "18695f08ef1150851b3ff86cdf7bd5870f65e1dd",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxODY5NWYwOGVmMTE1MDg1MWIzZmY4NmNkZjdiZDU4NzBmNjVlMWRk",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2015-01-19T23:19:37Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2015-02-01T21:56:06Z"
+      },
+      "message": "Example unit tests from BIP66",
+      "tree": {
+        "sha": "d0c1ca5d4422455f3bf266136cbbdb3454c67f7c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/d0c1ca5d4422455f3bf266136cbbdb3454c67f7c"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/18695f08ef1150851b3ff86cdf7bd5870f65e1dd",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/18695f08ef1150851b3ff86cdf7bd5870f65e1dd",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/18695f08ef1150851b3ff86cdf7bd5870f65e1dd",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/18695f08ef1150851b3ff86cdf7bd5870f65e1dd/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "abfbeafe8461131cc7e123b9da69e951f81fd7a3",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/abfbeafe8461131cc7e123b9da69e951f81fd7a3",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/abfbeafe8461131cc7e123b9da69e951f81fd7a3"
+      }
+    ],
+    "stats": {
+      "total": 217,
+      "additions": 217,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "0477493e5967ec44f1e4d2c67f275fa54960edf8",
+        "filename": "src/test/data/script_invalid.json",
+        "status": "modified",
+        "additions": 96,
+        "deletions": 0,
+        "changes": 96,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/18695f08ef1150851b3ff86cdf7bd5870f65e1dd/src/test/data/script_invalid.json",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/18695f08ef1150851b3ff86cdf7bd5870f65e1dd/src/test/data/script_invalid.json",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/data/script_invalid.json?ref=18695f08ef1150851b3ff86cdf7bd5870f65e1dd",
+        "patch": "@@ -589,6 +589,102 @@\n     \"DERSIG\",\n     \"P2PK NOT with too much R padding\"\n ],\n+[\n+    \"0x47 0x30440220d7a0417c3f6d1a15094d1cf2a3378ca0503eb8a57630953a9e2987e21ddd0a6502207a6266d686c99090920249991d3d42065b6d43eb70187b219c0db82e4f94d1a201\",\n+    \"0x21 0x038282263212c609d9ea2a6e3e172de238d8c39cabd5ac1ca10646e23fd5f51508 CHECKSIG\",\n+    \"DERSIG\",\n+    \"BIP66 example 1, with DERSIG\"\n+],\n+[\n+    \"0x47 0x304402208e43c0b91f7c1e5bc58e41c8185f8a6086e111b0090187968a86f2822462d3c902200a58f4076b1133b18ff1dc83ee51676e44c60cc608d9534e0df5ace0424fc0be01\",\n+    \"0x21 0x038282263212c609d9ea2a6e3e172de238d8c39cabd5ac1ca10646e23fd5f51508 CHECKSIG NOT\",\n+    \"\",\n+    \"BIP66 example 2, without DERSIG\"\n+],\n+[\n+    \"0x47 0x304402208e43c0b91f7c1e5bc58e41c8185f8a6086e111b0090187968a86f2822462d3c902200a58f4076b1133b18ff1dc83ee51676e44c60cc608d9534e0df5ace0424fc0be01\",\n+    \"0x21 0x038282263212c609d9ea2a6e3e172de238d8c39cabd5ac1ca10646e23fd5f51508 CHECKSIG NOT\",\n+    \"DERSIG\",\n+    \"BIP66 example 2, with DERSIG\"\n+],\n+[\n+    \"0\",\n+    \"0x21 0x038282263212c609d9ea2a6e3e172de238d8c39cabd5ac1ca10646e23fd5f51508 CHECKSIG\",\n+    \"\",\n+    \"BIP66 example 3, without DERSIG\"\n+],\n+[\n+    \"0\",\n+    \"0x21 0x038282263212c609d9ea2a6e3e172de238d8c39cabd5ac1ca10646e23fd5f51508 CHECKSIG\",\n+    \"DERSIG\",\n+    \"BIP66 example 3, with DERSIG\"\n+],\n+[\n+    \"1\",\n+    \"0x21 0x038282263212c609d9ea2a6e3e172de238d8c39cabd5ac1ca10646e23fd5f51508 CHECKSIG\",\n+    \"\",\n+    \"BIP66 example 5, without DERSIG\"\n+],\n+[\n+    \"1\",\n+    \"0x21 0x038282263212c609d9ea2a6e3e172de238d8c39cabd5ac1ca10646e23fd5f51508 CHECKSIG\",\n+    \"DERSIG\",\n+    \"BIP66 example 5, with DERSIG\"\n+],\n+[\n+    \"1\",\n+    \"0x21 0x038282263212c609d9ea2a6e3e172de238d8c39cabd5ac1ca10646e23fd5f51508 CHECKSIG NOT\",\n+    \"DERSIG\",\n+    \"BIP66 example 6, with DERSIG\"\n+],\n+[\n+    \"0 0x47 0x30440220cae00b1444babfbf6071b0ba8707f6bd373da3df494d6e74119b0430c5db810502205d5231b8c5939c8ff0c82242656d6e06edb073d42af336c99fe8837c36ea39d501 0x47 0x304402200b3d0b0375bb15c14620afa4aa10ae90a0d6a046ce217bc20fe0bc1ced68c1b802204b550acab90ae6d3478057c9ad24f9df743815b799b6449dd7e7f6d3bc6e274c01\",\n+    \"2 0x21 0x038282263212c609d9ea2a6e3e172de238d8c39cabd5ac1ca10646e23fd5f51508 0x21 0x03363d90d447b00c9c99ceac05b6262ee053441c7e55552ffe526bad8f83ff4640 2 CHECKMULTISIG\",\n+    \"DERSIG\",\n+    \"BIP66 example 7, with DERSIG\"\n+],\n+[\n+    \"0 0x47 0x30440220f00a77260d34ec2f0c59621dc710f58169d0ca06df1a88cd4b1f1b97bd46991b02201ee220c7e04f26aed03f94aa97fb09ca5627163bf4ba07e6979972ec737db22601 0x47 0x3044022079ea80afd538d9ada421b5101febeb6bc874e01dde5bca108c1d0479aec339a4022004576db8f66130d1df686ccf00935703689d69cf539438da1edab208b0d63c4801\",\n+    \"2 0x21 0x038282263212c609d9ea2a6e3e172de238d8c39cabd5ac1ca10646e23fd5f51508 0x21 0x03363d90d447b00c9c99ceac05b6262ee053441c7e55552ffe526bad8f83ff4640 2 CHECKMULTISIG NOT\",\n+    \"\",\n+    \"BIP66 example 8, without DERSIG\"\n+],\n+[\n+    \"0 0x47 0x30440220f00a77260d34ec2f0c59621dc710f58169d0ca06df1a88cd4b1f1b97bd46991b02201ee220c7e04f26aed03f94aa97fb09ca5627163bf4ba07e6979972ec737db22601 0x47 0x3044022079ea80afd538d9ada421b5101febeb6bc874e01dde5bca108c1d0479aec339a4022004576db8f66130d1df686ccf00935703689d69cf539438da1edab208b0d63c4801\",\n+    \"2 0x21 0x038282263212c609d9ea2a6e3e172de238d8c39cabd5ac1ca10646e23fd5f51508 0x21 0x03363d90d447b00c9c99ceac05b6262ee053441c7e55552ffe526bad8f83ff4640 2 CHECKMULTISIG NOT\",\n+    \"DERSIG\",\n+    \"BIP66 example 8, with DERSIG\"\n+],\n+[\n+    \"0 0 0x47 0x3044022081aa9d436f2154e8b6d600516db03d78de71df685b585a9807ead4210bd883490220534bb6bdf318a419ac0749660b60e78d17d515558ef369bf872eff405b676b2e01\",\n+    \"2 0x21 0x038282263212c609d9ea2a6e3e172de238d8c39cabd5ac1ca10646e23fd5f51508 0x21 0x03363d90d447b00c9c99ceac05b6262ee053441c7e55552ffe526bad8f83ff4640 2 CHECKMULTISIG\",\n+    \"\",\n+    \"BIP66 example 9, without DERSIG\"\n+],\n+[\n+    \"0 0 0x47 0x3044022081aa9d436f2154e8b6d600516db03d78de71df685b585a9807ead4210bd883490220534bb6bdf318a419ac0749660b60e78d17d515558ef369bf872eff405b676b2e01\",\n+    \"2 0x21 0x038282263212c609d9ea2a6e3e172de238d8c39cabd5ac1ca10646e23fd5f51508 0x21 0x03363d90d447b00c9c99ceac05b6262ee053441c7e55552ffe526bad8f83ff4640 2 CHECKMULTISIG\",\n+    \"DERSIG\",\n+    \"BIP66 example 9, with DERSIG\"\n+],\n+[\n+    \"0 0 0x47 0x30440220afa76a8f60622f813b05711f051c6c3407e32d1b1b70b0576c1f01b54e4c05c702200d58e9df044fd1845cabfbeef6e624ba0401daf7d7e084736f9ff601c3783bf501\",\n+    \"2 0x21 0x038282263212c609d9ea2a6e3e172de238d8c39cabd5ac1ca10646e23fd5f51508 0x21 0x03363d90d447b00c9c99ceac05b6262ee053441c7e55552ffe526bad8f83ff4640 2 CHECKMULTISIG NOT\",\n+    \"DERSIG\",\n+    \"BIP66 example 10, with DERSIG\"\n+],\n+[\n+    \"0 0x47 0x30440220cae00b1444babfbf6071b0ba8707f6bd373da3df494d6e74119b0430c5db810502205d5231b8c5939c8ff0c82242656d6e06edb073d42af336c99fe8837c36ea39d501 0\",\n+    \"2 0x21 0x038282263212c609d9ea2a6e3e172de238d8c39cabd5ac1ca10646e23fd5f51508 0x21 0x03363d90d447b00c9c99ceac05b6262ee053441c7e55552ffe526bad8f83ff4640 2 CHECKMULTISIG\",\n+    \"\",\n+    \"BIP66 example 11, without DERSIG\"\n+],\n+[\n+    \"0 0x47 0x30440220cae00b1444babfbf6071b0ba8707f6bd373da3df494d6e74119b0430c5db810502205d5231b8c5939c8ff0c82242656d6e06edb073d42af336c99fe8837c36ea39d501 0\",\n+    \"2 0x21 0x038282263212c609d9ea2a6e3e172de238d8c39cabd5ac1ca10646e23fd5f51508 0x21 0x03363d90d447b00c9c99ceac05b6262ee053441c7e55552ffe526bad8f83ff4640 2 CHECKMULTISIG\",\n+    \"DERSIG\",\n+    \"BIP66 example 11, with DERSIG\"\n+],\n [\n     \"0x49 0x304502203e4516da7253cf068effec6b95c41221c0cf3a8e6ccb8cbf1725b562e9afde2c022100ab1e3da73d67e32045a20e0b999e049978ea8d6ee5480d485fcf2ce0d03b2ef05101\",\n     \"0x21 0x03363d90d447b00c9c99ceac05b6262ee053441c7e55552ffe526bad8f83ff4640 CHECKSIG\","
+      },
+      {
+        "sha": "3dde7ee0006d6bea003eeb3cefc5122aee2f7d4f",
+        "filename": "src/test/data/script_valid.json",
+        "status": "modified",
+        "additions": 48,
+        "deletions": 0,
+        "changes": 48,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/18695f08ef1150851b3ff86cdf7bd5870f65e1dd/src/test/data/script_valid.json",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/18695f08ef1150851b3ff86cdf7bd5870f65e1dd/src/test/data/script_valid.json",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/data/script_valid.json?ref=18695f08ef1150851b3ff86cdf7bd5870f65e1dd",
+        "patch": "@@ -755,6 +755,54 @@\n     \"\",\n     \"P2PK NOT with bad sig with too much R padding but no DERSIG\"\n ],\n+[\n+    \"0x47 0x30440220d7a0417c3f6d1a15094d1cf2a3378ca0503eb8a57630953a9e2987e21ddd0a6502207a6266d686c99090920249991d3d42065b6d43eb70187b219c0db82e4f94d1a201\",\n+    \"0x21 0x038282263212c609d9ea2a6e3e172de238d8c39cabd5ac1ca10646e23fd5f51508 CHECKSIG\",\n+    \"\",\n+    \"BIP66 example 1, without DERSIG\"\n+],\n+[\n+    \"0\",\n+    \"0x21 0x038282263212c609d9ea2a6e3e172de238d8c39cabd5ac1ca10646e23fd5f51508 CHECKSIG NOT\",\n+    \"\",\n+    \"BIP66 example 4, without DERSIG\"\n+],\n+[\n+    \"0\",\n+    \"0x21 0x038282263212c609d9ea2a6e3e172de238d8c39cabd5ac1ca10646e23fd5f51508 CHECKSIG NOT\",\n+    \"DERSIG\",\n+    \"BIP66 example 4, with DERSIG\"\n+],\n+[\n+    \"1\",\n+    \"0x21 0x038282263212c609d9ea2a6e3e172de238d8c39cabd5ac1ca10646e23fd5f51508 CHECKSIG NOT\",\n+    \"\",\n+    \"BIP66 example 6, without DERSIG\"\n+],\n+[\n+    \"0 0x47 0x30440220cae00b1444babfbf6071b0ba8707f6bd373da3df494d6e74119b0430c5db810502205d5231b8c5939c8ff0c82242656d6e06edb073d42af336c99fe8837c36ea39d501 0x47 0x304402200b3d0b0375bb15c14620afa4aa10ae90a0d6a046ce217bc20fe0bc1ced68c1b802204b550acab90ae6d3478057c9ad24f9df743815b799b6449dd7e7f6d3bc6e274c01\",\n+    \"2 0x21 0x038282263212c609d9ea2a6e3e172de238d8c39cabd5ac1ca10646e23fd5f51508 0x21 0x03363d90d447b00c9c99ceac05b6262ee053441c7e55552ffe526bad8f83ff4640 2 CHECKMULTISIG\",\n+    \"\",\n+    \"BIP66 example 7, without DERSIG\"\n+],\n+[\n+    \"0 0 0x47 0x30440220afa76a8f60622f813b05711f051c6c3407e32d1b1b70b0576c1f01b54e4c05c702200d58e9df044fd1845cabfbeef6e624ba0401daf7d7e084736f9ff601c3783bf501\",\n+    \"2 0x21 0x038282263212c609d9ea2a6e3e172de238d8c39cabd5ac1ca10646e23fd5f51508 0x21 0x03363d90d447b00c9c99ceac05b6262ee053441c7e55552ffe526bad8f83ff4640 2 CHECKMULTISIG NOT\",\n+    \"\",\n+    \"BIP66 example 10, without DERSIG\"\n+],\n+[\n+    \"0 0x47 0x30440220f00a77260d34ec2f0c59621dc710f58169d0ca06df1a88cd4b1f1b97bd46991b02201ee220c7e04f26aed03f94aa97fb09ca5627163bf4ba07e6979972ec737db22601 0\",\n+    \"2 0x21 0x038282263212c609d9ea2a6e3e172de238d8c39cabd5ac1ca10646e23fd5f51508 0x21 0x03363d90d447b00c9c99ceac05b6262ee053441c7e55552ffe526bad8f83ff4640 2 CHECKMULTISIG NOT\",\n+    \"\",\n+    \"BIP66 example 12, without DERSIG\"\n+],\n+[\n+    \"0 0x47 0x30440220f00a77260d34ec2f0c59621dc710f58169d0ca06df1a88cd4b1f1b97bd46991b02201ee220c7e04f26aed03f94aa97fb09ca5627163bf4ba07e6979972ec737db22601 0\",\n+    \"2 0x21 0x038282263212c609d9ea2a6e3e172de238d8c39cabd5ac1ca10646e23fd5f51508 0x21 0x03363d90d447b00c9c99ceac05b6262ee053441c7e55552ffe526bad8f83ff4640 2 CHECKMULTISIG NOT\",\n+    \"DERSIG\",\n+    \"BIP66 example 12, with DERSIG\"\n+],\n [\n     \"0x49 0x304502203e4516da7253cf068effec6b95c41221c0cf3a8e6ccb8cbf1725b562e9afde2c022100ab1e3da73d67e32045a20e0b999e049978ea8d6ee5480d485fcf2ce0d03b2ef05101\",\n     \"0x21 0x03363d90d447b00c9c99ceac05b6262ee053441c7e55552ffe526bad8f83ff4640 CHECKSIG\","
+      },
+      {
+        "sha": "c70158f0e959ba6f97a1c4cdccc2459f0b3297d7",
+        "filename": "src/test/script_tests.cpp",
+        "status": "modified",
+        "additions": 73,
+        "deletions": 0,
+        "changes": 73,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/18695f08ef1150851b3ff86cdf7bd5870f65e1dd/src/test/script_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/18695f08ef1150851b3ff86cdf7bd5870f65e1dd/src/test/script_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/script_tests.cpp?ref=18695f08ef1150851b3ff86cdf7bd5870f65e1dd",
+        "patch": "@@ -413,6 +413,79 @@ BOOST_AUTO_TEST_CASE(script_build)\n                               \"P2PK NOT with too much R padding\", SCRIPT_VERIFY_DERSIG\n                              ).PushSig(keys.key2, SIGHASH_ALL, 31, 32).EditPush(1, \"43021F\", \"44022000\"));\n \n+    good.push_back(TestBuilder(CScript() << ToByteVector(keys.pubkey1C) << OP_CHECKSIG,\n+                               \"BIP66 example 1, without DERSIG\", 0\n+                              ).PushSig(keys.key1, SIGHASH_ALL, 33, 32).EditPush(1, \"45022100\", \"440220\"));\n+    bad.push_back(TestBuilder(CScript() << ToByteVector(keys.pubkey1C) << OP_CHECKSIG,\n+                              \"BIP66 example 1, with DERSIG\", SCRIPT_VERIFY_DERSIG\n+                             ).PushSig(keys.key1, SIGHASH_ALL, 33, 32).EditPush(1, \"45022100\", \"440220\"));\n+    bad.push_back(TestBuilder(CScript() << ToByteVector(keys.pubkey1C) << OP_CHECKSIG << OP_NOT,\n+                              \"BIP66 example 2, without DERSIG\", 0\n+                             ).PushSig(keys.key1, SIGHASH_ALL, 33, 32).EditPush(1, \"45022100\", \"440220\"));\n+    bad.push_back(TestBuilder(CScript() << ToByteVector(keys.pubkey1C) << OP_CHECKSIG << OP_NOT,\n+                              \"BIP66 example 2, with DERSIG\", SCRIPT_VERIFY_DERSIG\n+                             ).PushSig(keys.key1, SIGHASH_ALL, 33, 32).EditPush(1, \"45022100\", \"440220\"));\n+    bad.push_back(TestBuilder(CScript() << ToByteVector(keys.pubkey1C) << OP_CHECKSIG,\n+                              \"BIP66 example 3, without DERSIG\", 0\n+                             ).Num(0));\n+    bad.push_back(TestBuilder(CScript() << ToByteVector(keys.pubkey1C) << OP_CHECKSIG,\n+                              \"BIP66 example 3, with DERSIG\", SCRIPT_VERIFY_DERSIG\n+                             ).Num(0));\n+    good.push_back(TestBuilder(CScript() << ToByteVector(keys.pubkey1C) << OP_CHECKSIG << OP_NOT,\n+                               \"BIP66 example 4, without DERSIG\", 0\n+                              ).Num(0));\n+    good.push_back(TestBuilder(CScript() << ToByteVector(keys.pubkey1C) << OP_CHECKSIG << OP_NOT,\n+                               \"BIP66 example 4, with DERSIG\", SCRIPT_VERIFY_DERSIG\n+                              ).Num(0));\n+    bad.push_back(TestBuilder(CScript() << ToByteVector(keys.pubkey1C) << OP_CHECKSIG,\n+                              \"BIP66 example 5, without DERSIG\", 0\n+                             ).Num(1));\n+    bad.push_back(TestBuilder(CScript() << ToByteVector(keys.pubkey1C) << OP_CHECKSIG,\n+                              \"BIP66 example 5, with DERSIG\", SCRIPT_VERIFY_DERSIG\n+                             ).Num(1));\n+    good.push_back(TestBuilder(CScript() << ToByteVector(keys.pubkey1C) << OP_CHECKSIG << OP_NOT,\n+                               \"BIP66 example 6, without DERSIG\", 0\n+                              ).Num(1));\n+    bad.push_back(TestBuilder(CScript() << ToByteVector(keys.pubkey1C) << OP_CHECKSIG << OP_NOT,\n+                              \"BIP66 example 6, with DERSIG\", SCRIPT_VERIFY_DERSIG\n+                             ).Num(1));\n+    good.push_back(TestBuilder(CScript() << OP_2 << ToByteVector(keys.pubkey1C) << ToByteVector(keys.pubkey2C) << OP_2 << OP_CHECKMULTISIG,\n+                               \"BIP66 example 7, without DERSIG\", 0\n+                              ).Num(0).PushSig(keys.key1, SIGHASH_ALL, 33, 32).EditPush(1, \"45022100\", \"440220\").PushSig(keys.key2));\n+    bad.push_back(TestBuilder(CScript() << OP_2 << ToByteVector(keys.pubkey1C) << ToByteVector(keys.pubkey2C) << OP_2 << OP_CHECKMULTISIG,\n+                              \"BIP66 example 7, with DERSIG\", SCRIPT_VERIFY_DERSIG\n+                             ).Num(0).PushSig(keys.key1, SIGHASH_ALL, 33, 32).EditPush(1, \"45022100\", \"440220\").PushSig(keys.key2));\n+    bad.push_back(TestBuilder(CScript() << OP_2 << ToByteVector(keys.pubkey1C) << ToByteVector(keys.pubkey2C) << OP_2 << OP_CHECKMULTISIG << OP_NOT,\n+                              \"BIP66 example 8, without DERSIG\", 0\n+                             ).Num(0).PushSig(keys.key1, SIGHASH_ALL, 33, 32).EditPush(1, \"45022100\", \"440220\").PushSig(keys.key2));\n+    bad.push_back(TestBuilder(CScript() << OP_2 << ToByteVector(keys.pubkey1C) << ToByteVector(keys.pubkey2C) << OP_2 << OP_CHECKMULTISIG << OP_NOT,\n+                              \"BIP66 example 8, with DERSIG\", SCRIPT_VERIFY_DERSIG\n+                             ).Num(0).PushSig(keys.key1, SIGHASH_ALL, 33, 32).EditPush(1, \"45022100\", \"440220\").PushSig(keys.key2));\n+    bad.push_back(TestBuilder(CScript() << OP_2 << ToByteVector(keys.pubkey1C) << ToByteVector(keys.pubkey2C) << OP_2 << OP_CHECKMULTISIG,\n+                              \"BIP66 example 9, without DERSIG\", 0\n+                             ).Num(0).Num(0).PushSig(keys.key2, SIGHASH_ALL, 33, 32).EditPush(1, \"45022100\", \"440220\"));\n+    bad.push_back(TestBuilder(CScript() << OP_2 << ToByteVector(keys.pubkey1C) << ToByteVector(keys.pubkey2C) << OP_2 << OP_CHECKMULTISIG,\n+                              \"BIP66 example 9, with DERSIG\", SCRIPT_VERIFY_DERSIG\n+                             ).Num(0).Num(0).PushSig(keys.key2, SIGHASH_ALL, 33, 32).EditPush(1, \"45022100\", \"440220\"));\n+    good.push_back(TestBuilder(CScript() << OP_2 << ToByteVector(keys.pubkey1C) << ToByteVector(keys.pubkey2C) << OP_2 << OP_CHECKMULTISIG << OP_NOT,\n+                               \"BIP66 example 10, without DERSIG\", 0\n+                              ).Num(0).Num(0).PushSig(keys.key2, SIGHASH_ALL, 33, 32).EditPush(1, \"45022100\", \"440220\"));\n+    bad.push_back(TestBuilder(CScript() << OP_2 << ToByteVector(keys.pubkey1C) << ToByteVector(keys.pubkey2C) << OP_2 << OP_CHECKMULTISIG << OP_NOT,\n+                              \"BIP66 example 10, with DERSIG\", SCRIPT_VERIFY_DERSIG\n+                             ).Num(0).Num(0).PushSig(keys.key2, SIGHASH_ALL, 33, 32).EditPush(1, \"45022100\", \"440220\"));\n+    bad.push_back(TestBuilder(CScript() << OP_2 << ToByteVector(keys.pubkey1C) << ToByteVector(keys.pubkey2C) << OP_2 << OP_CHECKMULTISIG,\n+                              \"BIP66 example 11, without DERSIG\", 0\n+                             ).Num(0).PushSig(keys.key1, SIGHASH_ALL, 33, 32).EditPush(1, \"45022100\", \"440220\").Num(0));\n+    bad.push_back(TestBuilder(CScript() << OP_2 << ToByteVector(keys.pubkey1C) << ToByteVector(keys.pubkey2C) << OP_2 << OP_CHECKMULTISIG,\n+                              \"BIP66 example 11, with DERSIG\", SCRIPT_VERIFY_DERSIG\n+                             ).Num(0).PushSig(keys.key1, SIGHASH_ALL, 33, 32).EditPush(1, \"45022100\", \"440220\").Num(0));\n+    good.push_back(TestBuilder(CScript() << OP_2 << ToByteVector(keys.pubkey1C) << ToByteVector(keys.pubkey2C) << OP_2 << OP_CHECKMULTISIG << OP_NOT,\n+                               \"BIP66 example 12, without DERSIG\", 0\n+                              ).Num(0).PushSig(keys.key1, SIGHASH_ALL, 33, 32).EditPush(1, \"45022100\", \"440220\").Num(0));\n+    good.push_back(TestBuilder(CScript() << OP_2 << ToByteVector(keys.pubkey1C) << ToByteVector(keys.pubkey2C) << OP_2 << OP_CHECKMULTISIG << OP_NOT,\n+                               \"BIP66 example 12, with DERSIG\", SCRIPT_VERIFY_DERSIG\n+                              ).Num(0).PushSig(keys.key1, SIGHASH_ALL, 33, 32).EditPush(1, \"45022100\", \"440220\").Num(0));\n+\n     good.push_back(TestBuilder(CScript() << ToByteVector(keys.pubkey2C) << OP_CHECKSIG,\n                                \"P2PK with high S but no LOW_S\", 0\n                               ).PushSig(keys.key2, SIGHASH_ALL, 32, 33));"
+      }
+    ]
+  },
+  {
+    "sha": "773c30d7564882d347ec80c77992a61935f6675a",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3NzNjMzBkNzU2NDg4MmQzNDdlYzgwYzc3OTkyYTYxOTM1ZjY2NzVh",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2015-01-19T23:37:21Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2015-02-01T21:57:38Z"
+      },
+      "message": "BIP66 changeover logic",
+      "tree": {
+        "sha": "eac9f501a25520de08e216b43fe693813873f6f6",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/eac9f501a25520de08e216b43fe693813873f6f6"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/773c30d7564882d347ec80c77992a61935f6675a",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/773c30d7564882d347ec80c77992a61935f6675a",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/773c30d7564882d347ec80c77992a61935f6675a",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/773c30d7564882d347ec80c77992a61935f6675a/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "18695f08ef1150851b3ff86cdf7bd5870f65e1dd",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/18695f08ef1150851b3ff86cdf7bd5870f65e1dd",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/18695f08ef1150851b3ff86cdf7bd5870f65e1dd"
+      }
+    ],
+    "stats": {
+      "total": 16,
+      "additions": 15,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "47138aefe53ad9e0d153c922055eafedb9d46118",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 12,
+        "deletions": 0,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/773c30d7564882d347ec80c77992a61935f6675a/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/773c30d7564882d347ec80c77992a61935f6675a/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=773c30d7564882d347ec80c77992a61935f6675a",
+        "patch": "@@ -1685,6 +1685,11 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin\n \n     unsigned int flags = fStrictPayToScriptHash ? SCRIPT_VERIFY_P2SH : SCRIPT_VERIFY_NONE;\n \n+    // Start enforcing the DERSIG (BIP66) rules, for block.nVersion=3 blocks, when 75% of the network has upgraded:\n+    if (block.nVersion >= 3 && CBlockIndex::IsSuperMajority(3, pindex->pprev, Params().EnforceBlockUpgradeMajority())) {\n+        flags |= SCRIPT_VERIFY_DERSIG;\n+    }\n+\n     CBlockUndo blockundo;\n \n     CCheckQueueControl<CScriptCheck> control(fScriptChecks && nScriptCheckThreads ? &scriptcheckqueue : NULL);\n@@ -2524,6 +2529,13 @@ bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& sta\n                              REJECT_OBSOLETE, \"bad-version\");\n     }\n \n+    // Reject block.nVersion=2 blocks when 95% (75% on testnet) of the network has upgraded:\n+    if (block.nVersion < 3 && CBlockIndex::IsSuperMajority(3, pindexPrev, Params().RejectBlockOutdatedMajority()))\n+    {\n+        return state.Invalid(error(\"%s : rejected nVersion=2 block\", __func__),\n+                             REJECT_OBSOLETE, \"bad-version\");\n+    }\n+\n     return true;\n }\n "
+      },
+      {
+        "sha": "9c17902e15ed59ce00f7b93b0d64f8bc57df82f6",
+        "filename": "src/primitives/block.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/773c30d7564882d347ec80c77992a61935f6675a/src/primitives/block.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/773c30d7564882d347ec80c77992a61935f6675a/src/primitives/block.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/primitives/block.h?ref=773c30d7564882d347ec80c77992a61935f6675a",
+        "patch": "@@ -24,7 +24,7 @@ class CBlockHeader\n {\n public:\n     // header\n-    static const int32_t CURRENT_VERSION=2;\n+    static const int32_t CURRENT_VERSION=3;\n     int32_t nVersion;\n     uint256 hashPrevBlock;\n     uint256 hashMerkleRoot;"
+      },
+      {
+        "sha": "c57d8b3cc597e56f5baed34acdd2bd03ca058787",
+        "filename": "src/script/bitcoinconsensus.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/773c30d7564882d347ec80c77992a61935f6675a/src/script/bitcoinconsensus.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/773c30d7564882d347ec80c77992a61935f6675a/src/script/bitcoinconsensus.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/bitcoinconsensus.h?ref=773c30d7564882d347ec80c77992a61935f6675a",
+        "patch": "@@ -46,6 +46,7 @@ enum\n {\n     bitcoinconsensus_SCRIPT_FLAGS_VERIFY_NONE      = 0,\n     bitcoinconsensus_SCRIPT_FLAGS_VERIFY_P2SH      = (1U << 0), // evaluate P2SH (BIP16) subscripts\n+    bitcoinconsensus_SCRIPT_FLAGS_VERIFY_DERSIG    = (1U << 2), // enforce strict DER (BIP66) compliance\n };\n \n /// Returns 1 if the input nIn of the serialized transaction pointed to by"
+      },
+      {
+        "sha": "3fea6b9ab9dbda23e382692b087ef61df8c3a354",
+        "filename": "src/script/standard.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/773c30d7564882d347ec80c77992a61935f6675a/src/script/standard.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/773c30d7564882d347ec80c77992a61935f6675a/src/script/standard.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/standard.h?ref=773c30d7564882d347ec80c77992a61935f6675a",
+        "patch": "@@ -45,6 +45,7 @@ static const unsigned int MANDATORY_SCRIPT_VERIFY_FLAGS = SCRIPT_VERIFY_P2SH;\n  * blocks and we must accept those blocks.\n  */\n static const unsigned int STANDARD_SCRIPT_VERIFY_FLAGS = MANDATORY_SCRIPT_VERIFY_FLAGS |\n+                                                         SCRIPT_VERIFY_DERSIG |\n                                                          SCRIPT_VERIFY_STRICTENC |\n                                                          SCRIPT_VERIFY_MINIMALDATA |\n                                                          SCRIPT_VERIFY_NULLDUMMY |"
+      }
+    ]
+  },
+  {
+    "sha": "6da2028b55f3ab71c9b21ec37a11f89bd3749667",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2ZGEyMDI4YjU1ZjNhYjcxYzliMjFlYzM3YTExZjg5YmQzNzQ5NjY3",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2015-01-20T21:39:19Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2015-02-01T21:57:44Z"
+      },
+      "message": "Add RPC test for DERSIG BIP switchover logic",
+      "tree": {
+        "sha": "ea534e435dcf73941f16c8e4010a79a365e7d24a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/ea534e435dcf73941f16c8e4010a79a365e7d24a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/6da2028b55f3ab71c9b21ec37a11f89bd3749667",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6da2028b55f3ab71c9b21ec37a11f89bd3749667",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/6da2028b55f3ab71c9b21ec37a11f89bd3749667",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6da2028b55f3ab71c9b21ec37a11f89bd3749667/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "773c30d7564882d347ec80c77992a61935f6675a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/773c30d7564882d347ec80c77992a61935f6675a",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/773c30d7564882d347ec80c77992a61935f6675a"
+      }
+    ],
+    "stats": {
+      "total": 90,
+      "additions": 90,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "9f2cc84601545796b87c6e181acb10e88e829e4f",
+        "filename": "qa/rpc-tests/bipdersig.py",
+        "status": "added",
+        "additions": 90,
+        "deletions": 0,
+        "changes": 90,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6da2028b55f3ab71c9b21ec37a11f89bd3749667/qa/rpc-tests/bipdersig.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6da2028b55f3ab71c9b21ec37a11f89bd3749667/qa/rpc-tests/bipdersig.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/qa/rpc-tests/bipdersig.py?ref=6da2028b55f3ab71c9b21ec37a11f89bd3749667",
+        "patch": "@@ -0,0 +1,90 @@\n+#!/usr/bin/env python2\n+# Copyright (c) 2014 The Bitcoin Core developers\n+# Distributed under the MIT software license, see the accompanying\n+# file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+#\n+# Test the BIP66 changeover logic\n+#\n+\n+from test_framework import BitcoinTestFramework\n+from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException\n+from util import *\n+import os\n+import shutil\n+\n+class BIP66Test(BitcoinTestFramework):\n+\n+    def setup_network(self):\n+        self.nodes = []\n+        self.nodes.append(start_node(0, self.options.tmpdir, []))\n+        self.nodes.append(start_node(1, self.options.tmpdir, [\"-blockversion=2\"]))\n+        self.nodes.append(start_node(2, self.options.tmpdir, [\"-blockversion=3\"]))\n+        connect_nodes(self.nodes[1], 0)\n+        connect_nodes(self.nodes[2], 0)\n+        self.is_network_split = False\n+        self.sync_all()\n+\n+    def run_test(self):\n+        cnt = self.nodes[0].getblockcount()\n+\n+        # Mine some old-version blocks\n+        self.nodes[1].setgenerate(True, 100)\n+        self.sync_all()\n+        if (self.nodes[0].getblockcount() != cnt + 100):\n+            raise AssertionError(\"Failed to mine 100 version=2 blocks\")\n+\n+        # Mine 750 new-version blocks\n+        for i in xrange(15):\n+            self.nodes[2].setgenerate(True, 50)\n+        self.sync_all()\n+        if (self.nodes[0].getblockcount() != cnt + 850):\n+            raise AssertionError(\"Failed to mine 750 version=3 blocks\")\n+\n+        # TODO: check that new DERSIG rules are not enforced\n+\n+        # Mine 1 new-version block\n+        self.nodes[2].setgenerate(True, 1)\n+        self.sync_all()\n+        if (self.nodes[0].getblockcount() != cnt + 851):\n+            raise AssertionFailure(\"Failed to mine a version=3 blocks\")\n+\n+        # TODO: check that new DERSIG rules are enforced\n+\n+        # Mine 198 new-version blocks\n+        for i in xrange(2):\n+            self.nodes[2].setgenerate(True, 99)\n+        self.sync_all()\n+        if (self.nodes[0].getblockcount() != cnt + 1049):\n+            raise AssertionError(\"Failed to mine 198 version=3 blocks\")\n+\n+        # Mine 1 old-version block\n+        self.nodes[1].setgenerate(True, 1)\n+        self.sync_all()\n+        if (self.nodes[0].getblockcount() != cnt + 1050):\n+            raise AssertionError(\"Failed to mine a version=2 block after 949 version=3 blocks\")\n+\n+        # Mine 1 new-version blocks\n+        self.nodes[2].setgenerate(True, 1)\n+        self.sync_all()\n+        if (self.nodes[0].getblockcount() != cnt + 1051):\n+            raise AssertionError(\"Failed to mine a version=3 block\")\n+\n+        # Mine 1 old-version blocks\n+        try:\n+            self.nodes[1].setgenerate(True, 1)\n+            raise AssertionError(\"Succeeded to mine a version=2 block after 950 version=3 blocks\")\n+        except JSONRPCException:\n+            pass\n+        self.sync_all()\n+        if (self.nodes[0].getblockcount() != cnt + 1051):\n+            raise AssertionError(\"Accepted a version=2 block after 950 version=3 blocks\")\n+\n+        # Mine 1 new-version blocks\n+        self.nodes[2].setgenerate(True, 1)\n+        self.sync_all()\n+        if (self.nodes[0].getblockcount() != cnt + 1052):\n+            raise AssertionError(\"Failed to mine a version=3 block\")\n+\n+if __name__ == '__main__':\n+    BIP66Test().main()"
+      }
+    ]
+  },
+  {
+    "sha": "3916a81a27b4be880361269d634dffbbbcad00a3",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozOTE2YTgxYTI3YjRiZTg4MDM2MTI2OWQ2MzRkZmZiYmJjYWQwMGEz",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2015-01-25T16:46:31Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2015-02-01T21:57:44Z"
+      },
+      "message": "Increase coverage of DERSIG edge cases",
+      "tree": {
+        "sha": "aab2ce44891115ddb2edee1c766ee7e48d450626",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/aab2ce44891115ddb2edee1c766ee7e48d450626"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/3916a81a27b4be880361269d634dffbbbcad00a3",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3916a81a27b4be880361269d634dffbbbcad00a3",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/3916a81a27b4be880361269d634dffbbbcad00a3",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3916a81a27b4be880361269d634dffbbbcad00a3/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "6da2028b55f3ab71c9b21ec37a11f89bd3749667",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6da2028b55f3ab71c9b21ec37a11f89bd3749667",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/6da2028b55f3ab71c9b21ec37a11f89bd3749667"
+      }
+    ],
+    "stats": {
+      "total": 20,
+      "additions": 20,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "e63018051dd299589e299022088a37833373ea89",
+        "filename": "src/test/data/script_invalid.json",
+        "status": "modified",
+        "additions": 10,
+        "deletions": 0,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3916a81a27b4be880361269d634dffbbbcad00a3/src/test/data/script_invalid.json",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3916a81a27b4be880361269d634dffbbbcad00a3/src/test/data/script_invalid.json",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/data/script_invalid.json?ref=3916a81a27b4be880361269d634dffbbbcad00a3",
+        "patch": "@@ -510,6 +510,16 @@\n     \"2-of-2 CHECKMULTISIG NOT with both pubkeys valid, but first signature invalid.\"\n ],\n \n+[\"Increase DERSIG test coverage\"],\n+[\"0x4a 0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\", \"0 CHECKSIG NOT\", \"DERSIG\", \"Overly long signature is incorrectly encoded for DERSIG\"],\n+[\"0x25 0x30220220000000000000000000000000000000000000000000000000000000000000000000\", \"0 CHECKSIG NOT\", \"DERSIG\", \"Missing S is incorrectly encoded for DERSIG\"],\n+[\"0x27 0x3024021077777777777777777777777777777777020a7777777777777777777777777777777701\", \"0 CHECKSIG NOT\", \"DERSIG\", \"S with invalid S length is incorrectly encoded for DERSIG\"],\n+[\"0x27 0x302403107777777777777777777777777777777702107777777777777777777777777777777701\", \"0 CHECKSIG NOT\", \"DERSIG\", \"Non-integer R is incorrectly encoded for DERSIG\"],\n+[\"0x27 0x302402107777777777777777777777777777777703107777777777777777777777777777777701\", \"0 CHECKSIG NOT\", \"DERSIG\", \"Non-integer S is incorrectly encoded for DERSIG\"],\n+[\"0x17 0x3014020002107777777777777777777777777777777701\", \"0 CHECKSIG NOT\", \"DERSIG\", \"Zero-length R is incorrectly encoded for DERSIG\"],\n+[\"0x17 0x3014021077777777777777777777777777777777020001\", \"0 CHECKSIG NOT\", \"DERSIG\", \"Zero-length S is incorrectly encoded for DERSIG\"],\n+[\"0x27 0x302402107777777777777777777777777777777702108777777777777777777777777777777701\", \"0 CHECKSIG NOT\", \"DERSIG\", \"Negative S is incorrectly encoded for DERSIG\"],\n+\n [\"Automatically generated test cases\"],\n [\n     \"0x47 0x3044022053205076a7bb12d2db3162a2d97d8197631f829b065948b7019b15482af819a902204328dcc02c994ca086b1226d0d5f1674d23cfae0d846143df812b81cab3391e801\","
+      },
+      {
+        "sha": "42e9edbd3730d690f6c6ddf747b7a320fb1142e2",
+        "filename": "src/test/data/script_valid.json",
+        "status": "modified",
+        "additions": 10,
+        "deletions": 0,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3916a81a27b4be880361269d634dffbbbcad00a3/src/test/data/script_valid.json",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3916a81a27b4be880361269d634dffbbbcad00a3/src/test/data/script_valid.json",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/data/script_valid.json?ref=3916a81a27b4be880361269d634dffbbbcad00a3",
+        "patch": "@@ -688,6 +688,16 @@\n     \"2-of-2 CHECKMULTISIG NOT with both pubkeys valid, but second signature invalid. Valid pubkey fails, and CHECKMULTISIG exits early, prior to evaluation of second invalid signature.\"\n ],\n \n+[\"Increase test coverage for DERSIG\"],\n+[\"0x4a 0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\", \"0 CHECKSIG NOT\", \"\", \"Overly long signature is correctly encoded\"],\n+[\"0x25 0x30220220000000000000000000000000000000000000000000000000000000000000000000\", \"0 CHECKSIG NOT\", \"\", \"Missing S is correctly encoded\"],\n+[\"0x27 0x3024021077777777777777777777777777777777020a7777777777777777777777777777777701\", \"0 CHECKSIG NOT\", \"\", \"S with invalid S length is correctly encoded\"],\n+[\"0x27 0x302403107777777777777777777777777777777702107777777777777777777777777777777701\", \"0 CHECKSIG NOT\", \"\", \"Non-integer R is correctly encoded\"],\n+[\"0x27 0x302402107777777777777777777777777777777703107777777777777777777777777777777701\", \"0 CHECKSIG NOT\", \"\", \"Non-integer S is correctly encoded\"],\n+[\"0x17 0x3014020002107777777777777777777777777777777701\", \"0 CHECKSIG NOT\", \"\", \"Zero-length R is correctly encoded\"],\n+[\"0x17 0x3014021077777777777777777777777777777777020001\", \"0 CHECKSIG NOT\", \"\", \"Zero-length S is correctly encoded for DERSIG\"],\n+[\"0x27 0x302402107777777777777777777777777777777702108777777777777777777777777777777701\", \"0 CHECKSIG NOT\", \"\", \"Negative S is correctly encoded\"],\n+\n [\"Automatically generated test cases\"],\n [\n     \"0x47 0x3044022053205076a7bb13d2db3162a2d97d8197631f829b065948b7019b15482af819a902204328dcc02c994ca086b1226d0d5f1674d23cfae0d846143df812b81cab3391e801\","
+      }
+    ]
+  }
+]

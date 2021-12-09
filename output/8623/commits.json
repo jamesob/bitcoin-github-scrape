@@ -1,0 +1,110 @@
+[
+  {
+    "sha": "37584b2191d1d7bc8cc39822b488abd989780994",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozNzU4NGIyMTkxZDFkN2JjOGNjMzk4MjJiNDg4YWJkOTg5NzgwOTk0",
+    "commit": {
+      "author": {
+        "name": "Davide Di Carlo",
+        "email": "davide@conio.com",
+        "date": "2016-08-26T15:19:59Z"
+      },
+      "committer": {
+        "name": "Davide Di Carlo",
+        "email": "davide@conio.com",
+        "date": "2016-08-26T15:19:59Z"
+      },
+      "message": "Make halving interval paramteric using configuration\n\n    In order to test all the possible scenarios that can be faced before or after an halving it can be useful to set in regtest mode the halving interval.\n    So I've just added a parameter (-halvinginterval) that can be passed to bitcoind daemon in regtest mode in order to override the default halving interval.",
+      "tree": {
+        "sha": "2b4bc24b56240842c8eddaa62214e3d393b8b5ed",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/2b4bc24b56240842c8eddaa62214e3d393b8b5ed"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/37584b2191d1d7bc8cc39822b488abd989780994",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/37584b2191d1d7bc8cc39822b488abd989780994",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/37584b2191d1d7bc8cc39822b488abd989780994",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/37584b2191d1d7bc8cc39822b488abd989780994/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "bb566761fbe1631b5a7205ec1e93d9484c9c7ee8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/bb566761fbe1631b5a7205ec1e93d9484c9c7ee8",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/bb566761fbe1631b5a7205ec1e93d9484c9c7ee8"
+      }
+    ],
+    "stats": {
+      "total": 119,
+      "additions": 117,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "32eba178cfe59bed1fd5e0155af46e63fe2c32d2",
+        "filename": "qa/pull-tester/rpc-tests.py",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/37584b2191d1d7bc8cc39822b488abd989780994/qa/pull-tester/rpc-tests.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/37584b2191d1d7bc8cc39822b488abd989780994/qa/pull-tester/rpc-tests.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/qa/pull-tester/rpc-tests.py?ref=37584b2191d1d7bc8cc39822b488abd989780994",
+        "patch": "@@ -168,6 +168,7 @@\n     'maxuploadtarget.py',\n     'replace-by-fee.py',\n     'p2p-feefilter.py',\n+    'rewardhalving.py',\n     'pruning.py', # leave pruning last as it takes a REALLY long time\n ]\n "
+      },
+      {
+        "sha": "bbf801888f2a8bf1c3331d37a764f81f7a96352f",
+        "filename": "qa/rpc-tests/rewardhalving.py",
+        "status": "added",
+        "additions": 94,
+        "deletions": 0,
+        "changes": 94,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/37584b2191d1d7bc8cc39822b488abd989780994/qa/rpc-tests/rewardhalving.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/37584b2191d1d7bc8cc39822b488abd989780994/qa/rpc-tests/rewardhalving.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/qa/rpc-tests/rewardhalving.py?ref=37584b2191d1d7bc8cc39822b488abd989780994",
+        "patch": "@@ -0,0 +1,94 @@\n+#!/usr/bin/env python3\n+# Copyright (c) 2014-2016 The Bitcoin Core developers\n+# Distributed under the MIT software license, see the accompanying\n+# file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+# Test for -halvinginterval\n+\n+from test_framework.test_framework import BitcoinTestFramework\n+from test_framework.util import *\n+\n+\n+class RewardHalvingTest(BitcoinTestFramework):\n+    def __init__(self):\n+        super().__init__()\n+        self.nodes = list()\n+        self.setup_clean_chain = True\n+        self.is_network_split = False\n+\n+    def setup_network(self):\n+        self.nodes.append(start_node(0, self.options.tmpdir))\n+        self.nodes.append(start_node(1, self.options.tmpdir, ['-halvinginterval=1']))\n+        self.nodes.append(start_node(2, self.options.tmpdir, ['-halvinginterval=50']))\n+        self.nodes.append(start_node(3, self.options.tmpdir, ['-halvinginterval=100']))\n+        self.sync_all()\n+\n+    def _default_halving_interval(self):\n+        node = self.nodes[0]\n+        assert_equal(node.getbalance(), 0)\n+        node.generate(100)\n+        assert_equal(node.getbalance(), 0)\n+        node.generate(1)\n+        assert_equal(node.getbalance(), 50)\n+        node.generate(1)\n+        assert_equal(node.getbalance(), 100)\n+        node.generate(198)\n+        assert_equal(node.getbalance(), 8725)\n+        node.generate(1)\n+        assert_equal(node.getbalance(), 8750)\n+        node.generate(1)\n+        assert_equal(node.getbalance(), 8775)\n+\n+    def _one_halving_interval(self):\n+        node = self.nodes[1]\n+        assert_equal(node.getbalance(), 0)\n+        node.generate(100)\n+        assert_equal(node.getbalance(), 0)\n+        node.generate(1)\n+        assert_equal(node.getbalance(), 25)\n+        node.generate(1)\n+        assert_equal(node.getbalance(), 37.5)\n+        node.generate(1)\n+        assert_equal(node.getbalance(), 43.75)\n+\n+    def _fifty_halving_interval(self):\n+        node = self.nodes[2]\n+        assert_equal(node.getbalance(), 0)\n+        node.generate(100)\n+        assert_equal(node.getbalance(), 0)\n+        node.generate(1)\n+        assert_equal(node.getbalance(), 50)\n+        node.generate(1)\n+        assert_equal(node.getbalance(), 100)\n+        node.generate(48)\n+        assert_equal(node.getbalance(), 2475)\n+        node.generate(1)\n+        assert_equal(node.getbalance(), 2500)\n+        node.generate(1)\n+        assert_equal(node.getbalance(), 2525)\n+\n+    def _onehundred_halving_interval(self):\n+        node = self.nodes[3]\n+        assert_equal(node.getbalance(), 0)\n+        node.generate(100)\n+        assert_equal(node.getbalance(), 0)\n+        node.generate(1)\n+        assert_equal(node.getbalance(), 50)\n+        node.generate(1)\n+        assert_equal(node.getbalance(), 100)\n+        node.generate(98)\n+        assert_equal(node.getbalance(), 4975)\n+        node.generate(1)\n+        assert_equal(node.getbalance(), 5000)\n+        node.generate(1)\n+        assert_equal(node.getbalance(), 5025)\n+\n+    def run_test(self):\n+        self._default_halving_interval()\n+        self._one_halving_interval()\n+        self._fifty_halving_interval()\n+        self._onehundred_halving_interval()\n+        \n+\n+if __name__ == '__main__':\n+    RewardHalvingTest().main()"
+      },
+      {
+        "sha": "d3a9ae9acfe62217790da4f81fbfefa98afa440d",
+        "filename": "src/chainparams.cpp",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 2,
+        "changes": 15,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/37584b2191d1d7bc8cc39822b488abd989780994/src/chainparams.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/37584b2191d1d7bc8cc39822b488abd989780994/src/chainparams.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/chainparams.cpp?ref=37584b2191d1d7bc8cc39822b488abd989780994",
+        "patch": "@@ -240,11 +240,13 @@ static CTestNetParams testNetParams;\n /**\n  * Regression test\n  */\n+const int DEFAULT_REGTEST_HALVING_INTERVAL = 150;\n+\n class CRegTestParams : public CChainParams {\n public:\n     CRegTestParams() {\n         strNetworkID = \"regtest\";\n-        consensus.nSubsidyHalvingInterval = 150;\n+        consensus.nSubsidyHalvingInterval = DEFAULT_REGTEST_HALVING_INTERVAL;\n         consensus.BIP34Height = 100000000; // BIP34 has not activated on regtest (far in the future so block v1 are not rejected in tests)\n         consensus.BIP34Hash = uint256();\n         consensus.BIP65Height = 1351; // BIP65 activated on regtest (Used in rpc activation tests)\n@@ -306,6 +308,11 @@ class CRegTestParams : public CChainParams {\n         consensus.vDeployments[d].nStartTime = nStartTime;\n         consensus.vDeployments[d].nTimeout = nTimeout;\n     }\n+\n+    void UpdateSubsidyHalvingIntervalParameter(int interval)\n+    {\n+        consensus.nSubsidyHalvingInterval = interval;\n+    }\n };\n static CRegTestParams regTestParams;\n \n@@ -338,4 +345,8 @@ void UpdateRegtestBIP9Parameters(Consensus::DeploymentPos d, int64_t nStartTime,\n {\n     regTestParams.UpdateBIP9Parameters(d, nStartTime, nTimeout);\n }\n- \n+\n+void UpdateRegtestSubsidyHalvingIntervalParameter()\n+{\n+    regTestParams.UpdateSubsidyHalvingIntervalParameter((int)GetArg(\"-halvinginterval\", DEFAULT_REGTEST_HALVING_INTERVAL));\n+}"
+      },
+      {
+        "sha": "d2fe9c376b3648659243d5cbf47a4018cf9fa45d",
+        "filename": "src/chainparams.h",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 0,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/37584b2191d1d7bc8cc39822b488abd989780994/src/chainparams.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/37584b2191d1d7bc8cc39822b488abd989780994/src/chainparams.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/chainparams.h?ref=37584b2191d1d7bc8cc39822b488abd989780994",
+        "patch": "@@ -117,4 +117,9 @@ void SelectParams(const std::string& chain);\n  */\n void UpdateRegtestBIP9Parameters(Consensus::DeploymentPos d, int64_t nStartTime, int64_t nTimeout);\n \n+/**\n+ * Allows modifying the subsidy halving interval parameter based on configuration.\n+ */\n+void UpdateRegtestSubsidyHalvingIntervalParameter();\n+\n #endif // BITCOIN_CHAINPARAMS_H"
+      },
+      {
+        "sha": "35811979631b1d622cfdf8d35d5df3b655124db6",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 0,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/37584b2191d1d7bc8cc39822b488abd989780994/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/37584b2191d1d7bc8cc39822b488abd989780994/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=37584b2191d1d7bc8cc39822b488abd989780994",
+        "patch": "@@ -412,6 +412,7 @@ std::string HelpMessage(HelpMessageMode mode)\n         strUsage += HelpMessageOpt(\"-limitdescendantcount=<n>\", strprintf(\"Do not accept transactions if any ancestor would have <n> or more in-mempool descendants (default: %u)\", DEFAULT_DESCENDANT_LIMIT));\n         strUsage += HelpMessageOpt(\"-limitdescendantsize=<n>\", strprintf(\"Do not accept transactions if any ancestor would have more than <n> kilobytes of in-mempool descendants (default: %u).\", DEFAULT_DESCENDANT_SIZE_LIMIT));\n         strUsage += HelpMessageOpt(\"-bip9params=deployment:start:end\", \"Use given start/end times for specified BIP9 deployment (regtest-only)\");\n+        strUsage += HelpMessageOpt(\"-halvinginterval=<n>\", \"Set halving interval to <n> blocks (regtest-only)\");\n     }\n     string debugCategories = \"addrman, alert, bench, coindb, db, http, libevent, lock, mempool, mempoolrej, net, proxy, prune, rand, reindex, rpc, selectcoins, tor, zmq\"; // Don't translate these and qt below\n     if (mode == HMM_BITCOIN_QT)\n@@ -992,6 +993,9 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)\n         fEnableReplacement = (std::find(vstrReplacementModes.begin(), vstrReplacementModes.end(), \"fee\") != vstrReplacementModes.end());\n     }\n \n+    // Allow overriding halving interval parameters for testing\n+    UpdateRegtestSubsidyHalvingIntervalParameter();\n+\n     if (!mapMultiArgs[\"-bip9params\"].empty()) {\n         // Allow overriding BIP9 parameters for testing\n         if (!Params().MineBlocksOnDemand()) {"
+      }
+    ]
+  }
+]

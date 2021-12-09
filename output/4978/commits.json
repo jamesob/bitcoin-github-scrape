@@ -1,0 +1,194 @@
+[
+  {
+    "sha": "c9fb27da0a72135417956dca8dafa959ebb67c10",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjOWZiMjdkYTBhNzIxMzU0MTc5NTZkY2E4ZGFmYTk1OWViYjY3YzEw",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-09-25T06:53:43Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-10-02T08:46:31Z"
+      },
+      "message": "CBufferedFile: convert into a non-refcounted RAII wrapper\n\n- it now takes over the passed file descriptor and closes it in the\n  destructor\n- this fixes a leak in LoadExternalBlockFile(), where an exception could\n  cause the file to not getting closed\n\n- disallow copies (like recently added for CAutoFile)\n- make nType and nVersion private",
+      "tree": {
+        "sha": "7676f91bda9f87762ff5cdd2cbee18eba50dd854",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/7676f91bda9f87762ff5cdd2cbee18eba50dd854"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/c9fb27da0a72135417956dca8dafa959ebb67c10",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c9fb27da0a72135417956dca8dafa959ebb67c10",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/c9fb27da0a72135417956dca8dafa959ebb67c10",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c9fb27da0a72135417956dca8dafa959ebb67c10/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "00eef5d6e9b08b173492599ec41c7feb445e2139",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/00eef5d6e9b08b173492599ec41c7feb445e2139",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/00eef5d6e9b08b173492599ec41c7feb445e2139"
+      }
+    ],
+    "stats": {
+      "total": 32,
+      "additions": 22,
+      "deletions": 10
+    },
+    "files": [
+      {
+        "sha": "033373888798f549256d80d0c4a3c5f6ed226f20",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c9fb27da0a72135417956dca8dafa959ebb67c10/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c9fb27da0a72135417956dca8dafa959ebb67c10/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=c9fb27da0a72135417956dca8dafa959ebb67c10",
+        "patch": "@@ -3084,6 +3084,7 @@ bool LoadExternalBlockFile(FILE* fileIn, CDiskBlockPos *dbp)\n \n     int nLoaded = 0;\n     try {\n+        // This takes over fileIn and calls fclose() on it in the CBufferedFile destructor\n         CBufferedFile blkdat(fileIn, 2*MAX_BLOCK_SIZE, MAX_BLOCK_SIZE+8, SER_DISK, CLIENT_VERSION);\n         uint64_t nStartByte = 0;\n         if (dbp) {\n@@ -3140,7 +3141,6 @@ bool LoadExternalBlockFile(FILE* fileIn, CDiskBlockPos *dbp)\n                 LogPrintf(\"%s : Deserialize or I/O error - %s\", __func__, e.what());\n             }\n         }\n-        fclose(fileIn);\n     } catch(std::runtime_error &e) {\n         AbortNode(_(\"Error: system error: \") + e.what());\n     }"
+      },
+      {
+        "sha": "f56dce1481e7ee449a560a7450e97672097e1f7b",
+        "filename": "src/serialize.h",
+        "status": "modified",
+        "additions": 21,
+        "deletions": 9,
+        "changes": 30,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c9fb27da0a72135417956dca8dafa959ebb67c10/src/serialize.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c9fb27da0a72135417956dca8dafa959ebb67c10/src/serialize.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/serialize.h?ref=c9fb27da0a72135417956dca8dafa959ebb67c10",
+        "patch": "@@ -1256,13 +1256,19 @@ class CAutoFile\n     }\n };\n \n-/** Wrapper around a FILE* that implements a ring buffer to\n- *  deserialize from. It guarantees the ability to rewind\n- *  a given number of bytes. */\n+/** Non-refcounted RAII wrapper around a FILE* that implements a ring buffer to\n+ *  deserialize from. It guarantees the ability to rewind a given number of bytes. */\n class CBufferedFile\n {\n private:\n-    FILE *src;          // source file\n+    // Disallow copies\n+    CBufferedFile(const CBufferedFile&);\n+    CBufferedFile& operator=(const CBufferedFile&);\n+\n+    int nType;\n+    int nVersion;\n+\n+    FILE *src;            // source file\n     uint64_t nSrcPos;     // how many bytes have been read from source\n     uint64_t nReadPos;    // how many bytes have been read from this\n     uint64_t nReadLimit;  // up to which position we're allowed to read\n@@ -1289,12 +1295,18 @@ class CBufferedFile\n     }\n \n public:\n-    int nType;\n-    int nVersion;\n-\n     CBufferedFile(FILE *fileIn, uint64_t nBufSize, uint64_t nRewindIn, int nTypeIn, int nVersionIn) :\n-        src(fileIn), nSrcPos(0), nReadPos(0), nReadLimit((uint64_t)(-1)), nRewind(nRewindIn), vchBuf(nBufSize, 0),\n-        nType(nTypeIn), nVersion(nVersionIn) {\n+        nSrcPos(0), nReadPos(0), nReadLimit((uint64_t)(-1)), nRewind(nRewindIn), vchBuf(nBufSize, 0)\n+    {\n+        src = fileIn;\n+        nType = nTypeIn;\n+        nVersion = nVersionIn;\n+    }\n+\n+    ~CBufferedFile()\n+    {\n+        if (src)\n+            fclose(src);\n     }\n \n     // check whether we're at the end of the source file"
+      }
+    ]
+  },
+  {
+    "sha": "0c35486dc97909cea67b24e8758bd0f40ac33a9a",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowYzM1NDg2ZGM5NzkwOWNlYTY3YjI0ZTg3NThiZDBmNDBhYzMzYTlh",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-09-29T14:10:29Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-10-02T08:56:10Z"
+      },
+      "message": "CBufferedFile: add explicit close function\n\n- also use identical close function for CAutoFile (avoids setting file to\n  NULL under wrong conditions)",
+      "tree": {
+        "sha": "779e3ec48784f959197a230d0bd6c198f79acdfb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/779e3ec48784f959197a230d0bd6c198f79acdfb"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/0c35486dc97909cea67b24e8758bd0f40ac33a9a",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0c35486dc97909cea67b24e8758bd0f40ac33a9a",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/0c35486dc97909cea67b24e8758bd0f40ac33a9a",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0c35486dc97909cea67b24e8758bd0f40ac33a9a/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "c9fb27da0a72135417956dca8dafa959ebb67c10",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c9fb27da0a72135417956dca8dafa959ebb67c10",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c9fb27da0a72135417956dca8dafa959ebb67c10"
+      }
+    ],
+    "stats": {
+      "total": 24,
+      "additions": 18,
+      "deletions": 6
+    },
+    "files": [
+      {
+        "sha": "63c72cb8e86f26dc8c0a740d7c5e7b82987a4f12",
+        "filename": "src/serialize.h",
+        "status": "modified",
+        "additions": 18,
+        "deletions": 6,
+        "changes": 24,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0c35486dc97909cea67b24e8758bd0f40ac33a9a/src/serialize.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0c35486dc97909cea67b24e8758bd0f40ac33a9a/src/serialize.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/serialize.h?ref=0c35486dc97909cea67b24e8758bd0f40ac33a9a",
+        "patch": "@@ -1154,7 +1154,7 @@ class CDataStream\n \n \n \n-/** Non-refcounted RAII wrapper for FILE*.\n+/** Non-refcounted RAII wrapper for FILE*\n  *\n  * Will automatically close the file when it goes out of scope if not null.\n  * If you're returning the file pointer, return file.release().\n@@ -1186,9 +1186,10 @@ class CAutoFile\n \n     void fclose()\n     {\n-        if (file != NULL && file != stdin && file != stdout && file != stderr)\n+        if (file) {\n             ::fclose(file);\n-        file = NULL;\n+            file = NULL;\n+        }\n     }\n \n     FILE* release()             { FILE* ret = file; file = NULL; return ret; }\n@@ -1257,7 +1258,11 @@ class CAutoFile\n };\n \n /** Non-refcounted RAII wrapper around a FILE* that implements a ring buffer to\n- *  deserialize from. It guarantees the ability to rewind a given number of bytes. */\n+ *  deserialize from. It guarantees the ability to rewind a given number of bytes.\n+ *\n+ *  Will automatically close the file when it goes out of scope if not null.\n+ *  If you need to close the file early, use file.fclose() instead of fclose(file).\n+ */\n class CBufferedFile\n {\n private:\n@@ -1305,8 +1310,15 @@ class CBufferedFile\n \n     ~CBufferedFile()\n     {\n-        if (src)\n-            fclose(src);\n+        fclose();\n+    }\n+\n+    void fclose()\n+    {\n+        if (src) {\n+            ::fclose(src);\n+            src = NULL;\n+        }\n     }\n \n     // check whether we're at the end of the source file"
+      }
+    ]
+  },
+  {
+    "sha": "938bccebf1cb3ed6c7b8bfb8236a5172433bf890",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5MzhiY2NlYmYxY2IzZWQ2YzdiOGJmYjgyMzZhNTE3MjQzM2JmODkw",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-10-02T08:59:28Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-10-02T08:59:28Z"
+      },
+      "message": "CAutoFile: make file private",
+      "tree": {
+        "sha": "dbdc27b328cd7806ce7b07adc4dda2a3c8872869",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/dbdc27b328cd7806ce7b07adc4dda2a3c8872869"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/938bccebf1cb3ed6c7b8bfb8236a5172433bf890",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/938bccebf1cb3ed6c7b8bfb8236a5172433bf890",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/938bccebf1cb3ed6c7b8bfb8236a5172433bf890",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/938bccebf1cb3ed6c7b8bfb8236a5172433bf890/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "0c35486dc97909cea67b24e8758bd0f40ac33a9a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0c35486dc97909cea67b24e8758bd0f40ac33a9a",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/0c35486dc97909cea67b24e8758bd0f40ac33a9a"
+      }
+    ],
+    "stats": {
+      "total": 7,
+      "additions": 4,
+      "deletions": 3
+    },
+    "files": [
+      {
+        "sha": "ff11edc06c761492b8d83e54ca2d8730cda26e37",
+        "filename": "src/serialize.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 3,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/938bccebf1cb3ed6c7b8bfb8236a5172433bf890/src/serialize.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/938bccebf1cb3ed6c7b8bfb8236a5172433bf890/src/serialize.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/serialize.h?ref=938bccebf1cb3ed6c7b8bfb8236a5172433bf890",
+        "patch": "@@ -1166,12 +1166,13 @@ class CAutoFile\n     // Disallow copies\n     CAutoFile(const CAutoFile&);\n     CAutoFile& operator=(const CAutoFile&);\n-protected:\n-    FILE* file;\n-public:\n+\n     int nType;\n     int nVersion;\n+\t\n+    FILE* file;\t\n \n+public:\n     CAutoFile(FILE* filenew, int nTypeIn, int nVersionIn)\n     {\n         file = filenew;"
+      }
+    ]
+  }
+]

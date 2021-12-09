@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "cca48f69b04462c5c9bfefd34443e0b8401dbd6c",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjY2E0OGY2OWIwNDQ2MmM1YzliZmVmZDM0NDQzZTBiODQwMWRiZDZj",
+    "commit": {
+      "author": {
+        "name": "21E14",
+        "email": "21xe14@gmail.com",
+        "date": "2014-11-01T21:42:12Z"
+      },
+      "committer": {
+        "name": "21E14",
+        "email": "21xe14@gmail.com",
+        "date": "2014-11-12T05:35:24Z"
+      },
+      "message": "Reset setBlockIndexCandidates once block index db loaded",
+      "tree": {
+        "sha": "20392f598e85eae39ff1726c772b9a14fae06b66",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/20392f598e85eae39ff1726c772b9a14fae06b66"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/cca48f69b04462c5c9bfefd34443e0b8401dbd6c",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/cca48f69b04462c5c9bfefd34443e0b8401dbd6c",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/cca48f69b04462c5c9bfefd34443e0b8401dbd6c",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/cca48f69b04462c5c9bfefd34443e0b8401dbd6c/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "04e988c6ce1e7255a9575ff2fd130219f03c64f2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/04e988c6ce1e7255a9575ff2fd130219f03c64f2",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/04e988c6ce1e7255a9575ff2fd130219f03c64f2"
+      }
+    ],
+    "stats": {
+      "total": 21,
+      "additions": 14,
+      "deletions": 7
+    },
+    "files": [
+      {
+        "sha": "1ba17614df19e341f77d9bd6d9ad33f1d93fa6c9",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 14,
+        "deletions": 7,
+        "changes": 21,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/cca48f69b04462c5c9bfefd34443e0b8401dbd6c/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/cca48f69b04462c5c9bfefd34443e0b8401dbd6c/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=cca48f69b04462c5c9bfefd34443e0b8401dbd6c",
+        "patch": "@@ -1949,6 +1949,16 @@ static CBlockIndex* FindMostWorkChain() {\n     } while(true);\n }\n \n+// Delete all entries in setBlockIndexCandidates that are worse than the current tip.\n+static void PruneBlockIndexCandidates() {\n+    // Note that we can't delete the current block itself, as we may need to return to it later in case a\n+    // reorganization to a better block fails.\n+    std::set<CBlockIndex*, CBlockIndexWorkComparator>::iterator it = setBlockIndexCandidates.begin();\n+    while (setBlockIndexCandidates.value_comp()(*it, chainActive.Tip())) {\n+        setBlockIndexCandidates.erase(it++);\n+    }\n+}\n+\n // Try to make some progress towards making pindexMostWork the active block.\n // pblock is either NULL or a pointer to a CBlock corresponding to pindexMostWork.\n static bool ActivateBestChainStep(CValidationState &state, CBlockIndex *pindexMostWork, CBlock *pblock) {\n@@ -1996,13 +2006,7 @@ static bool ActivateBestChainStep(CValidationState &state, CBlockIndex *pindexMo\n                 return false;\n             }\n         } else {\n-            // Delete all entries in setBlockIndexCandidates that are worse than our new current block.\n-            // Note that we can't delete the current block itself, as we may need to return to it later in case a\n-            // reorganization to a better block fails.\n-            std::set<CBlockIndex*, CBlockIndexWorkComparator>::iterator it = setBlockIndexCandidates.begin();\n-            while (setBlockIndexCandidates.value_comp()(*it, chainActive.Tip())) {\n-                setBlockIndexCandidates.erase(it++);\n-            }\n+            PruneBlockIndexCandidates();\n             // Either the current tip or a successor of it we're working towards is left in setBlockIndexCandidates.\n             assert(!setBlockIndexCandidates.empty());\n             if (!pindexOldTip || chainActive.Tip()->nChainWork > pindexOldTip->nChainWork) {\n@@ -2860,6 +2864,9 @@ bool static LoadBlockIndexDB()\n     if (it == mapBlockIndex.end())\n         return true;\n     chainActive.SetTip(it->second);\n+\n+    PruneBlockIndexCandidates();\n+\n     LogPrintf(\"LoadBlockIndexDB(): hashBestChain=%s height=%d date=%s progress=%f\\n\",\n         chainActive.Tip()->GetBlockHash().ToString(), chainActive.Height(),\n         DateTimeStrFormat(\"%Y-%m-%d %H:%M:%S\", chainActive.Tip()->GetBlockTime()),"
+      }
+    ]
+  }
+]

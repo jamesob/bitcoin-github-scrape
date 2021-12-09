@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "bd39b48f19aff6cb6ebad76abc31a95b84243462",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiZDM5YjQ4ZjE5YWZmNmNiNmViYWQ3NmFiYzMxYTk1Yjg0MjQzNDYy",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-05-26T23:25:28Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-05-27T00:20:11Z"
+      },
+      "message": "Handle high DPI a bit more gracefully on Win32. #243\n\nNot ideal, icons for send and address book don't show, just the\nstandard bitcoin icon, and balance is still cut off, but the\nnumber is readable.",
+      "tree": {
+        "sha": "5cfbc17d3a4175a05e3d3d8cbf4275508072f1aa",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/5cfbc17d3a4175a05e3d3d8cbf4275508072f1aa"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/bd39b48f19aff6cb6ebad76abc31a95b84243462",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/bd39b48f19aff6cb6ebad76abc31a95b84243462",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/bd39b48f19aff6cb6ebad76abc31a95b84243462",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/bd39b48f19aff6cb6ebad76abc31a95b84243462/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "a757ed886a98d839337d437be762d26376b11f75",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a757ed886a98d839337d437be762d26376b11f75",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/a757ed886a98d839337d437be762d26376b11f75"
+      }
+    ],
+    "stats": {
+      "total": 57,
+      "additions": 50,
+      "deletions": 7
+    },
+    "files": [
+      {
+        "sha": "ccb8cef8c2e2f75cf0b4c863e5eb388667ea3f24",
+        "filename": "src/ui.cpp",
+        "status": "modified",
+        "additions": 50,
+        "deletions": 7,
+        "changes": 57,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/bd39b48f19aff6cb6ebad76abc31a95b84243462/src/ui.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/bd39b48f19aff6cb6ebad76abc31a95b84243462/src/ui.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/ui.cpp?ref=bd39b48f19aff6cb6ebad76abc31a95b84243462",
+        "patch": "@@ -18,6 +18,13 @@ CMyTaskBarIcon* ptaskbaricon = NULL;\n bool fClosedToTray = false;\n wxLocale g_locale;\n \n+#ifdef __WXMSW__\n+double nScaleX = 1.0;\n+double nScaleY = 1.0;\n+#else\n+static const double nScaleX = 1.0;\n+static const double nScaleY = 1.0;\n+#endif\n \n \n \n@@ -263,9 +270,10 @@ CMainFrame::CMainFrame(wxWindow* parent) : CMainFrameBase(parent)\n     fOnSetFocusAddress = false;\n     fRefresh = false;\n     m_choiceFilter->SetSelection(0);\n-    double dResize = 1.0;\n+    double dResize = nScaleX;\n #ifdef __WXMSW__\n     SetIcon(wxICON(bitcoin));\n+    SetSize(dResize * GetSize().GetWidth(), nScaleY * GetSize().GetHeight());\n #else\n     SetIcon(bitcoin80_xpm);\n     SetBackgroundColour(m_toolBar->GetBackgroundColour());\n@@ -1219,6 +1227,9 @@ void CMainFrame::OnListItemActivated(wxListEvent& event)\n \n CTxDetailsDialog::CTxDetailsDialog(wxWindow* parent, CWalletTx wtx) : CTxDetailsDialogBase(parent)\n {\n+#ifdef __WXMSW__\n+    SetSize(nScaleX * GetSize().GetWidth(), nScaleY * GetSize().GetHeight());\n+#endif\n     CRITICAL_BLOCK(cs_mapAddressBook)\n     {\n         string strHTML;\n@@ -1633,6 +1644,8 @@ COptionsDialog::COptionsDialog(wxWindow* parent) : COptionsDialogBase(parent)\n     SelectPage(0);\n #ifndef __WXMSW__\n     SetSize(1.0 * GetSize().GetWidth(), 1.2 * GetSize().GetHeight());\n+#else\n+    SetSize(nScaleX * GetSize().GetWidth(), nScaleY * GetSize().GetHeight());\n #endif\n #if defined(__WXGTK__) || defined(__WXMAC_OSX__)\n     m_checkBoxStartOnSystemStartup->SetLabel(_(\"&Start Bitcoin on window system startup\"));\n@@ -1803,6 +1816,8 @@ CAboutDialog::CAboutDialog(wxWindow* parent) : CAboutDialogBase(parent)\n         fontTmp.SetPointSize(8);\n     m_staticTextMain->SetFont(fontTmp);\n     SetSize(GetSize().GetWidth() + 44, GetSize().GetHeight() + 10);\n+#else\n+    SetSize(nScaleX * GetSize().GetWidth(), nScaleY * GetSize().GetHeight());\n #endif\n }\n \n@@ -1837,12 +1852,19 @@ CSendDialog::CSendDialog(wxWindow* parent, const wxString& strAddress) : CSendDi\n         fontTmp.SetPointSize(9);\n     m_staticTextInstructions->SetFont(fontTmp);\n     SetSize(725, 180);\n+#else\n+    SetSize(nScaleX * GetSize().GetWidth(), nScaleY * GetSize().GetHeight());\n #endif\n     \n     // Set Icon\n-    wxIcon iconSend;\n-    iconSend.CopyFromBitmap(wxBitmap(send16noshadow_xpm));\n-    SetIcon(iconSend);\n+    if (nScaleX == 1.0 && nScaleY == 1.0) // We don't have icons of the proper size otherwise\n+    {\n+        wxIcon iconSend;\n+        iconSend.CopyFromBitmap(wxBitmap(send16noshadow_xpm));\n+        SetIcon(iconSend);\n+    }\n+    else\n+        SetIcon(wxICON(bitcoin));\n \n     // Fixup the tab order\n     m_buttonPaste->MoveAfterInTabOrder(m_buttonCancel);\n@@ -1992,6 +2014,8 @@ CSendingDialog::CSendingDialog(wxWindow* parent, const CAddress& addrIn, int64 n\n     fWorkDone = false;\n #ifndef __WXMSW__\n     SetSize(1.2 * GetSize().GetWidth(), 1.08 * GetSize().GetHeight());\n+#else\n+    SetSize(nScaleX * GetSize().GetWidth(), nScaleY * GetSize().GetHeight());\n #endif\n \n     SetTitle(strprintf(_(\"Sending %s to %s\"), FormatMoney(nPrice).c_str(), wtx.mapValue[\"to\"].c_str()));\n@@ -2315,6 +2339,10 @@ void CSendingDialog::OnReply3(CDataStream& vRecv)\n \n CAddressBookDialog::CAddressBookDialog(wxWindow* parent, const wxString& strInitSelected, int nPageIn, bool fDuringSendIn) : CAddressBookDialogBase(parent)\n {\n+#ifdef __WXMSW__\n+    SetSize(nScaleX * GetSize().GetWidth(), nScaleY * GetSize().GetHeight());\n+#endif\n+\n     // Set initially selected page\n     wxNotebookEvent event;\n     event.SetSelection(nPageIn);\n@@ -2326,9 +2354,14 @@ CAddressBookDialog::CAddressBookDialog(wxWindow* parent, const wxString& strInit\n         m_buttonCancel->Show(false);\n \n     // Set Icon\n-    wxIcon iconAddressBook;\n-    iconAddressBook.CopyFromBitmap(wxBitmap(addressbook16_xpm));\n-    SetIcon(iconAddressBook);\n+    if (nScaleX == 1.0 && nScaleY == 1.0) // We don't have icons of the proper size otherwise\n+    {\n+        wxIcon iconAddressBook;\n+        iconAddressBook.CopyFromBitmap(wxBitmap(addressbook16_xpm));\n+        SetIcon(iconAddressBook);\n+    }\n+    else\n+        SetIcon(wxICON(bitcoin));\n \n     // Init column headers\n     m_listCtrlSending->InsertColumn(0, _(\"Name\"), wxLIST_FORMAT_LEFT, 200);\n@@ -2844,6 +2877,16 @@ bool CMyApp::OnInit()\n     g_locale.AddCatalog(\"wxstd\"); // wxWidgets standard translations, if any\n     g_locale.AddCatalog(\"bitcoin\");\n \n+#ifdef __WXMSW__\n+    HDC hdc = GetDC(NULL);\n+    if (hdc)\n+    {\n+        nScaleX = GetDeviceCaps(hdc, LOGPIXELSX) / 96.0;\n+        nScaleY = GetDeviceCaps(hdc, LOGPIXELSY) / 96.0;\n+        ReleaseDC(NULL, hdc);\n+    }\n+#endif\n+\n     return AppInit(argc, argv);\n }\n "
+      }
+    ]
+  }
+]

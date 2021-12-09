@@ -1,0 +1,518 @@
+[
+  {
+    "sha": "b82695b89ff59ed053f7133ef9c192ffae66ab84",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiODI2OTViODlmZjU5ZWQwNTNmNzEzM2VmOWMxOTJmZmFlNjZhYjg0",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-11-05T10:42:51Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-12-08T15:08:57Z"
+      },
+      "message": "[Qt] make PaymentServer::ipcParseCommandLine void\n\n- the function only returned true, so make it void\n- add a comment about payment request network detection",
+      "tree": {
+        "sha": "1e3c7c0bd76e1e0f89dc9fe9ca8c0d570274747d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/1e3c7c0bd76e1e0f89dc9fe9ca8c0d570274747d"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/b82695b89ff59ed053f7133ef9c192ffae66ab84",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b82695b89ff59ed053f7133ef9c192ffae66ab84",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/b82695b89ff59ed053f7133ef9c192ffae66ab84",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b82695b89ff59ed053f7133ef9c192ffae66ab84/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "4b5b263ac0ee44fe432a713b444df9880cfce4a2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4b5b263ac0ee44fe432a713b444df9880cfce4a2",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/4b5b263ac0ee44fe432a713b444df9880cfce4a2"
+      }
+    ],
+    "stats": {
+      "total": 13,
+      "additions": 8,
+      "deletions": 5
+    },
+    "files": [
+      {
+        "sha": "123777a71bcd340c0e9cd8a7abfb48a6fa348e59",
+        "filename": "src/qt/bitcoin.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b82695b89ff59ed053f7133ef9c192ffae66ab84/src/qt/bitcoin.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b82695b89ff59ed053f7133ef9c192ffae66ab84/src/qt/bitcoin.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoin.cpp?ref=b82695b89ff59ed053f7133ef9c192ffae66ab84",
+        "patch": "@@ -570,9 +570,9 @@ int main(int argc, char *argv[])\n     }\n #ifdef ENABLE_WALLET\n     // Parse URIs on command line -- this can affect Params()\n-    if (!PaymentServer::ipcParseCommandLine(argc, argv))\n-        exit(0);\n+    PaymentServer::ipcParseCommandLine(argc, argv);\n #endif\n+\n     QScopedPointer<const NetworkStyle> networkStyle(NetworkStyle::instantiate(QString::fromStdString(Params().NetworkIDString())));\n     assert(!networkStyle.isNull());\n     // Allow for separate UI settings for testnets"
+      },
+      {
+        "sha": "fbf5877f2aff637128168b5082d968f6dc47828c",
+        "filename": "src/qt/paymentserver.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 2,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b82695b89ff59ed053f7133ef9c192ffae66ab84/src/qt/paymentserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b82695b89ff59ed053f7133ef9c192ffae66ab84/src/qt/paymentserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.cpp?ref=b82695b89ff59ed053f7133ef9c192ffae66ab84",
+        "patch": "@@ -184,14 +184,18 @@ void PaymentServer::LoadRootCAs(X509_STORE* _store)\n // Warning: ipcSendCommandLine() is called early in init,\n // so don't use \"emit message()\", but \"QMessageBox::\"!\n //\n-bool PaymentServer::ipcParseCommandLine(int argc, char* argv[])\n+void PaymentServer::ipcParseCommandLine(int argc, char* argv[])\n {\n     for (int i = 1; i < argc; i++)\n     {\n         QString arg(argv[i]);\n         if (arg.startsWith(\"-\"))\n             continue;\n \n+        // If the bitcoin: URI contains a payment request, we are not able to detect the\n+        // network as that would require fetching and parsing the payment request.\n+        // That means clicking such an URI which contains a testnet payment request\n+        // will start a mainnet instance and throw a \"wrong network\" error.\n         if (arg.startsWith(BITCOIN_IPC_PREFIX, Qt::CaseInsensitive)) // bitcoin: URI\n         {\n             savedPaymentRequests.append(arg);\n@@ -235,7 +239,6 @@ bool PaymentServer::ipcParseCommandLine(int argc, char* argv[])\n             qWarning() << \"PaymentServer::ipcSendCommandLine : Payment request file does not exist: \" << arg;\n         }\n     }\n-    return true;\n }\n \n //"
+      },
+      {
+        "sha": "0103cbdd0d5e406c072b02a967f96cc475a06538",
+        "filename": "src/qt/paymentserver.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b82695b89ff59ed053f7133ef9c192ffae66ab84/src/qt/paymentserver.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b82695b89ff59ed053f7133ef9c192ffae66ab84/src/qt/paymentserver.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.h?ref=b82695b89ff59ed053f7133ef9c192ffae66ab84",
+        "patch": "@@ -59,7 +59,7 @@ class PaymentServer : public QObject\n public:\n     // Parse URIs on command line\n     // Returns false on error\n-    static bool ipcParseCommandLine(int argc, char *argv[]);\n+    static void ipcParseCommandLine(int argc, char *argv[]);\n \n     // Returns true if there were URIs on the command line\n     // which were successfully sent to an already-running"
+      }
+    ]
+  },
+  {
+    "sha": "814429dc722837dbe57965c6a37f4ea57206d270",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4MTQ0MjlkYzcyMjgzN2RiZTU3OTY1YzZhMzdmNGVhNTcyMDZkMjcw",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-11-05T10:47:57Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-12-08T15:08:58Z"
+      },
+      "message": "[Qt] add BIP70/BIP71 constants for all messages and mime types\n\n- also rename current ones to match the new ones\n- remove constant from guiconstant.h and add it to paymentserver.cpp",
+      "tree": {
+        "sha": "05979f9f96a4c301a375d2e974e76e9957f3c45f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/05979f9f96a4c301a375d2e974e76e9957f3c45f"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/814429dc722837dbe57965c6a37f4ea57206d270",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/814429dc722837dbe57965c6a37f4ea57206d270",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/814429dc722837dbe57965c6a37f4ea57206d270",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/814429dc722837dbe57965c6a37f4ea57206d270/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "b82695b89ff59ed053f7133ef9c192ffae66ab84",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b82695b89ff59ed053f7133ef9c192ffae66ab84",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b82695b89ff59ed053f7133ef9c192ffae66ab84"
+      }
+    ],
+    "stats": {
+      "total": 33,
+      "additions": 18,
+      "deletions": 15
+    },
+    "files": [
+      {
+        "sha": "8f3e476fd9aefb04c511bb715a4e5b6906141d65",
+        "filename": "src/qt/guiconstants.h",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 3,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/814429dc722837dbe57965c6a37f4ea57206d270/src/qt/guiconstants.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/814429dc722837dbe57965c6a37f4ea57206d270/src/qt/guiconstants.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/guiconstants.h?ref=814429dc722837dbe57965c6a37f4ea57206d270",
+        "patch": "@@ -38,9 +38,6 @@ static const int TOOLTIP_WRAP_THRESHOLD = 80;\n /* Maximum allowed URI length */\n static const int MAX_URI_LENGTH = 255;\n \n-/* Maximum somewhat-sane size of a payment request file */\n-static const int MAX_PAYMENT_REQUEST_SIZE = 50000; // bytes\n-\n /* QRCodeDialog -- size of exported QR Code image */\n #define EXPORT_IMAGE_SIZE 256\n "
+      },
+      {
+        "sha": "417945bbf88f2e0b2025e72a4b65fb93523e8f78",
+        "filename": "src/qt/paymentserver.cpp",
+        "status": "modified",
+        "additions": 18,
+        "deletions": 12,
+        "changes": 30,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/814429dc722837dbe57965c6a37f4ea57206d270/src/qt/paymentserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/814429dc722837dbe57965c6a37f4ea57206d270/src/qt/paymentserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.cpp?ref=814429dc722837dbe57965c6a37f4ea57206d270",
+        "patch": "@@ -5,7 +5,6 @@\n #include \"paymentserver.h\"\n \n #include \"bitcoinunits.h\"\n-#include \"guiconstants.h\"\n #include \"guiutil.h\"\n #include \"optionsmodel.h\"\n \n@@ -19,6 +18,7 @@\n \n #include <openssl/x509.h>\n #include <openssl/x509_vfy.h>\n+\n #include <QApplication>\n #include <QByteArray>\n #include <QDataStream>\n@@ -51,9 +51,15 @@ using namespace boost;\n \n const int BITCOIN_IPC_CONNECT_TIMEOUT = 1000; // milliseconds\n const QString BITCOIN_IPC_PREFIX(\"bitcoin:\");\n-const char* BITCOIN_REQUEST_MIMETYPE = \"application/bitcoin-paymentrequest\";\n-const char* BITCOIN_PAYMENTACK_MIMETYPE = \"application/bitcoin-paymentack\";\n-const char* BITCOIN_PAYMENTACK_CONTENTTYPE = \"application/bitcoin-payment\";\n+// BIP70 payment protocol messages\n+const char* BIP70_MESSAGE_PAYMENTACK = \"PaymentACK\";\n+const char* BIP70_MESSAGE_PAYMENTREQUEST = \"PaymentRequest\";\n+// BIP71 payment protocol media types\n+const char* BIP71_MIMETYPE_PAYMENT = \"application/bitcoin-payment\";\n+const char* BIP71_MIMETYPE_PAYMENTACK = \"application/bitcoin-paymentack\";\n+const char* BIP71_MIMETYPE_PAYMENTREQUEST = \"application/bitcoin-paymentrequest\";\n+// BIP70 max payment request size in bytes (DoS protection)\n+const qint64 BIP70_MAX_PAYMENTREQUEST_SIZE = 50000;\n \n X509_STORE* PaymentServer::certStore = NULL;\n void PaymentServer::freeCertStore()\n@@ -486,7 +492,7 @@ bool PaymentServer::readPaymentRequest(const QString& filename, PaymentRequestPl\n         return false;\n     }\n \n-    if (f.size() > MAX_PAYMENT_REQUEST_SIZE)\n+    if (f.size() > BIP70_MAX_PAYMENTREQUEST_SIZE)\n     {\n         qWarning() << \"PaymentServer::readPaymentRequest : \" << filename << \" too large\";\n         return false;\n@@ -583,10 +589,10 @@ bool PaymentServer::processPaymentRequest(PaymentRequestPlus& request, SendCoins\n void PaymentServer::fetchRequest(const QUrl& url)\n {\n     QNetworkRequest netRequest;\n-    netRequest.setAttribute(QNetworkRequest::User, \"PaymentRequest\");\n+    netRequest.setAttribute(QNetworkRequest::User, BIP70_MESSAGE_PAYMENTREQUEST);\n     netRequest.setUrl(url);\n     netRequest.setRawHeader(\"User-Agent\", CLIENT_NAME.c_str());\n-    netRequest.setRawHeader(\"Accept\", BITCOIN_REQUEST_MIMETYPE);\n+    netRequest.setRawHeader(\"Accept\", BIP71_MIMETYPE_PAYMENTREQUEST);\n     netManager->get(netRequest);\n }\n \n@@ -597,11 +603,11 @@ void PaymentServer::fetchPaymentACK(CWallet* wallet, SendCoinsRecipient recipien\n         return;\n \n     QNetworkRequest netRequest;\n-    netRequest.setAttribute(QNetworkRequest::User, \"PaymentACK\");\n+    netRequest.setAttribute(QNetworkRequest::User, BIP70_MESSAGE_PAYMENTACK);\n     netRequest.setUrl(QString::fromStdString(details.payment_url()));\n-    netRequest.setHeader(QNetworkRequest::ContentTypeHeader, BITCOIN_PAYMENTACK_CONTENTTYPE);\n+    netRequest.setHeader(QNetworkRequest::ContentTypeHeader, BIP71_MIMETYPE_PAYMENT);\n     netRequest.setRawHeader(\"User-Agent\", CLIENT_NAME.c_str());\n-    netRequest.setRawHeader(\"Accept\", BITCOIN_PAYMENTACK_MIMETYPE);\n+    netRequest.setRawHeader(\"Accept\", BIP71_MIMETYPE_PAYMENTACK);\n \n     payments::Payment payment;\n     payment.set_merchant_data(details.merchant_data());\n@@ -663,7 +669,7 @@ void PaymentServer::netRequestFinished(QNetworkReply* reply)\n     QByteArray data = reply->readAll();\n \n     QString requestType = reply->request().attribute(QNetworkRequest::User).toString();\n-    if (requestType == \"PaymentRequest\")\n+    if (requestType == BIP70_MESSAGE_PAYMENTREQUEST)\n     {\n         PaymentRequestPlus request;\n         SendCoinsRecipient recipient;\n@@ -679,7 +685,7 @@ void PaymentServer::netRequestFinished(QNetworkReply* reply)\n \n         return;\n     }\n-    else if (requestType == \"PaymentACK\")\n+    else if (requestType == BIP70_MESSAGE_PAYMENTACK)\n     {\n         payments::PaymentACK paymentACK;\n         if (!paymentACK.ParseFromArray(data.data(), data.size()))"
+      }
+    ]
+  },
+  {
+    "sha": "1ec753f7340677ac4fbef53fbdc73feff344719d",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxZWM3NTNmNzM0MDY3N2FjNGZiZWY1M2ZiZGM3M2ZlZmYzNDQ3MTlk",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-11-05T11:05:29Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-12-08T15:08:58Z"
+      },
+      "message": "[Qt] ensure socket is set to NULL in PaymentServer::ipcSendCommandLine",
+      "tree": {
+        "sha": "46e7a77de8b70476ecff3f708515c1963871c454",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/46e7a77de8b70476ecff3f708515c1963871c454"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/1ec753f7340677ac4fbef53fbdc73feff344719d",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1ec753f7340677ac4fbef53fbdc73feff344719d",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/1ec753f7340677ac4fbef53fbdc73feff344719d",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1ec753f7340677ac4fbef53fbdc73feff344719d/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "814429dc722837dbe57965c6a37f4ea57206d270",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/814429dc722837dbe57965c6a37f4ea57206d270",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/814429dc722837dbe57965c6a37f4ea57206d270"
+      }
+    ],
+    "stats": {
+      "total": 5,
+      "additions": 4,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "c65c9807052774411e97dbe7a537086ab41f7f9c",
+        "filename": "src/qt/paymentserver.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 1,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1ec753f7340677ac4fbef53fbdc73feff344719d/src/qt/paymentserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1ec753f7340677ac4fbef53fbdc73feff344719d/src/qt/paymentserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.cpp?ref=1ec753f7340677ac4fbef53fbdc73feff344719d",
+        "patch": "@@ -263,6 +263,7 @@ bool PaymentServer::ipcSendCommandLine()\n         if (!socket->waitForConnected(BITCOIN_IPC_CONNECT_TIMEOUT))\n         {\n             delete socket;\n+            socket = NULL;\n             return false;\n         }\n \n@@ -271,12 +272,14 @@ bool PaymentServer::ipcSendCommandLine()\n         out.setVersion(QDataStream::Qt_4_0);\n         out << r;\n         out.device()->seek(0);\n+\n         socket->write(block);\n         socket->flush();\n-\n         socket->waitForBytesWritten(BITCOIN_IPC_CONNECT_TIMEOUT);\n         socket->disconnectFromServer();\n+\n         delete socket;\n+        socket = NULL;\n         fResult = true;\n     }\n "
+      }
+    ]
+  },
+  {
+    "sha": "2284ccbd13f145e913e2a77ba5ddd04d995bce14",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyMjg0Y2NiZDEzZjE0NWU5MTNlMmE3N2JhNWRkZDA0ZDk5NWJjZTE0",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-11-18T07:46:03Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-12-08T15:08:59Z"
+      },
+      "message": "[Qt] remove dup lock that is done in SetAddressBook()",
+      "tree": {
+        "sha": "3c7a60f8b99d7e3f5e19ef8f5db6d4e102af2e93",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/3c7a60f8b99d7e3f5e19ef8f5db6d4e102af2e93"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/2284ccbd13f145e913e2a77ba5ddd04d995bce14",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2284ccbd13f145e913e2a77ba5ddd04d995bce14",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/2284ccbd13f145e913e2a77ba5ddd04d995bce14",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2284ccbd13f145e913e2a77ba5ddd04d995bce14/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "1ec753f7340677ac4fbef53fbdc73feff344719d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1ec753f7340677ac4fbef53fbdc73feff344719d",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/1ec753f7340677ac4fbef53fbdc73feff344719d"
+      }
+    ],
+    "stats": {
+      "total": 1,
+      "additions": 0,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "95f79375523d831ed70aa5b6ac020518e784db33",
+        "filename": "src/qt/paymentserver.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 1,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/2284ccbd13f145e913e2a77ba5ddd04d995bce14/src/qt/paymentserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/2284ccbd13f145e913e2a77ba5ddd04d995bce14/src/qt/paymentserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.cpp?ref=2284ccbd13f145e913e2a77ba5ddd04d995bce14",
+        "patch": "@@ -628,7 +628,6 @@ void PaymentServer::fetchPaymentACK(CWallet* wallet, SendCoinsRecipient recipien\n     else {\n         CPubKey newKey;\n         if (wallet->GetKeyFromPool(newKey)) {\n-            LOCK(wallet->cs_wallet); // SetAddressBook\n             CKeyID keyID = newKey.GetID();\n             wallet->SetAddressBook(keyID, strAccount, \"refund\");\n "
+      }
+    ]
+  },
+  {
+    "sha": "31f84944a5f6f1aa07e36e7700e9ab16be88aa42",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozMWY4NDk0NGE1ZjZmMWFhMDdlMzZlNzcwMGU5YWIxNmJlODhhYTQy",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-11-19T11:53:57Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-12-08T15:08:59Z"
+      },
+      "message": "[Qt] add BIP70 payment request size DoS protection for URIs\n\n- current code only does this for payment request files, which are\n  used on Mac\n- also rename readPaymentRequest to readPaymentRequestFromFile, so it's\n  obvious that function only handles payment request files and not URIs\n- small logging changes in readPaymentRequestFromFile",
+      "tree": {
+        "sha": "ff034e37cefcb11bfabf34d3a2bb354efee0ca3c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/ff034e37cefcb11bfabf34d3a2bb354efee0ca3c"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/31f84944a5f6f1aa07e36e7700e9ab16be88aa42",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/31f84944a5f6f1aa07e36e7700e9ab16be88aa42",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/31f84944a5f6f1aa07e36e7700e9ab16be88aa42",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/31f84944a5f6f1aa07e36e7700e9ab16be88aa42/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "2284ccbd13f145e913e2a77ba5ddd04d995bce14",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2284ccbd13f145e913e2a77ba5ddd04d995bce14",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/2284ccbd13f145e913e2a77ba5ddd04d995bce14"
+      }
+    ],
+    "stats": {
+      "total": 46,
+      "additions": 33,
+      "deletions": 13
+    },
+    "files": [
+      {
+        "sha": "d6e396b2111a8688d9cf15d6d4e8de5e999db27f",
+        "filename": "src/qt/paymentserver.cpp",
+        "status": "modified",
+        "additions": 32,
+        "deletions": 12,
+        "changes": 44,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/31f84944a5f6f1aa07e36e7700e9ab16be88aa42/src/qt/paymentserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/31f84944a5f6f1aa07e36e7700e9ab16be88aa42/src/qt/paymentserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.cpp?ref=31f84944a5f6f1aa07e36e7700e9ab16be88aa42",
+        "patch": "@@ -226,7 +226,7 @@ void PaymentServer::ipcParseCommandLine(int argc, char* argv[])\n             savedPaymentRequests.append(arg);\n \n             PaymentRequestPlus request;\n-            if (readPaymentRequest(arg, request))\n+            if (readPaymentRequestFromFile(arg, request))\n             {\n                 if (request.getDetails().network() == \"main\")\n                 {\n@@ -452,7 +452,7 @@ void PaymentServer::handleURIOrFile(const QString& s)\n     {\n         PaymentRequestPlus request;\n         SendCoinsRecipient recipient;\n-        if (!readPaymentRequest(s, request))\n+        if (!readPaymentRequestFromFile(s, request))\n         {\n             emit message(tr(\"Payment request file handling\"),\n                 tr(\"Payment request file cannot be read! This can be caused by an invalid payment request file.\"),\n@@ -486,18 +486,25 @@ void PaymentServer::handleURIConnection()\n     handleURIOrFile(msg);\n }\n \n-bool PaymentServer::readPaymentRequest(const QString& filename, PaymentRequestPlus& request)\n+//\n+// Warning: readPaymentRequestFromFile() is used in ipcSendCommandLine()\n+// so don't use \"emit message()\", but \"QMessageBox::\"!\n+//\n+bool PaymentServer::readPaymentRequestFromFile(const QString& filename, PaymentRequestPlus& request)\n {\n     QFile f(filename);\n-    if (!f.open(QIODevice::ReadOnly))\n-    {\n-        qWarning() << \"PaymentServer::readPaymentRequest : Failed to open \" << filename;\n+    if (!f.open(QIODevice::ReadOnly)) {\n+        qWarning() << QString(\"PaymentServer::%1: Failed to open %2\").arg(__func__).arg(filename);\n         return false;\n     }\n \n-    if (f.size() > BIP70_MAX_PAYMENTREQUEST_SIZE)\n-    {\n-        qWarning() << \"PaymentServer::readPaymentRequest : \" << filename << \" too large\";\n+    // BIP70 DoS protection\n+    if (f.size() > BIP70_MAX_PAYMENTREQUEST_SIZE) {\n+        qWarning() << QString(\"PaymentServer::%1: Payment request %2 is too large (%3 bytes, allowed %4 bytes).\")\n+            .arg(__func__)\n+            .arg(filename)\n+            .arg(f.size())\n+            .arg(BIP70_MAX_PAYMENTREQUEST_SIZE);\n         return false;\n     }\n \n@@ -657,13 +664,26 @@ void PaymentServer::fetchPaymentACK(CWallet* wallet, SendCoinsRecipient recipien\n void PaymentServer::netRequestFinished(QNetworkReply* reply)\n {\n     reply->deleteLater();\n-    if (reply->error() != QNetworkReply::NoError)\n-    {\n+\n+    // BIP70 DoS protection\n+    if (reply->size() > BIP70_MAX_PAYMENTREQUEST_SIZE) {\n+        QString msg = tr(\"Payment request %2 is too large (%3 bytes, allowed %4 bytes).\")\n+            .arg(__func__)\n+            .arg(reply->request().url().toString())\n+            .arg(reply->size())\n+            .arg(BIP70_MAX_PAYMENTREQUEST_SIZE);\n+\n+        qWarning() << QString(\"PaymentServer::%1:\").arg(__func__) << msg;\n+        emit message(tr(\"Payment request DoS protection\"), msg, CClientUIInterface::MSG_ERROR);\n+        return;\n+    }\n+\n+    if (reply->error() != QNetworkReply::NoError) {\n         QString msg = tr(\"Error communicating with %1: %2\")\n             .arg(reply->request().url().toString())\n             .arg(reply->errorString());\n \n-        qWarning() << \"PaymentServer::netRequestFinished : \" << msg;\n+        qWarning() << \"PaymentServer::netRequestFinished: \" << msg;\n         emit message(tr(\"Payment request error\"), msg, CClientUIInterface::MSG_ERROR);\n         return;\n     }"
+      },
+      {
+        "sha": "9acd99723cbcc4e25d34595ce0aa07ea623539b1",
+        "filename": "src/qt/paymentserver.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/31f84944a5f6f1aa07e36e7700e9ab16be88aa42/src/qt/paymentserver.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/31f84944a5f6f1aa07e36e7700e9ab16be88aa42/src/qt/paymentserver.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.h?ref=31f84944a5f6f1aa07e36e7700e9ab16be88aa42",
+        "patch": "@@ -118,7 +118,7 @@ private slots:\n     bool eventFilter(QObject *object, QEvent *event);\n \n private:\n-    static bool readPaymentRequest(const QString& filename, PaymentRequestPlus& request);\n+    static bool readPaymentRequestFromFile(const QString& filename, PaymentRequestPlus& request);\n     bool processPaymentRequest(PaymentRequestPlus& request, SendCoinsRecipient& recipient);\n     void fetchRequest(const QUrl& url);\n "
+      }
+    ]
+  },
+  {
+    "sha": "4333e26c8e89e3d02cfb4d3464108b1a15175e2b",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0MzMzZTI2YzhlODllM2QwMmNmYjRkMzQ2NDEwOGIxYTE1MTc1ZTJi",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-12-05T08:39:23Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-12-08T15:09:01Z"
+      },
+      "message": "[Qt] add BIP70 DoS protection test\n\n- this test required to make readPaymentRequestFromFile() public in order\n  to be able to is it in paymentservertests.cpp",
+      "tree": {
+        "sha": "276eb63f3dfbf3b865f38be5a376ed5bb6fd6031",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/276eb63f3dfbf3b865f38be5a376ed5bb6fd6031"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/4333e26c8e89e3d02cfb4d3464108b1a15175e2b",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4333e26c8e89e3d02cfb4d3464108b1a15175e2b",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/4333e26c8e89e3d02cfb4d3464108b1a15175e2b",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4333e26c8e89e3d02cfb4d3464108b1a15175e2b/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "31f84944a5f6f1aa07e36e7700e9ab16be88aa42",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/31f84944a5f6f1aa07e36e7700e9ab16be88aa42",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/31f84944a5f6f1aa07e36e7700e9ab16be88aa42"
+      }
+    ],
+    "stats": {
+      "total": 19,
+      "additions": 18,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "42940664ec5e1554d4f33cd7416d9bb2c042946c",
+        "filename": "src/qt/paymentserver.h",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 1,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4333e26c8e89e3d02cfb4d3464108b1a15175e2b/src/qt/paymentserver.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4333e26c8e89e3d02cfb4d3464108b1a15175e2b/src/qt/paymentserver.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.h?ref=4333e26c8e89e3d02cfb4d3464108b1a15175e2b",
+        "patch": "@@ -52,6 +52,9 @@ QT_END_NAMESPACE\n \n class CWallet;\n \n+// BIP70 max payment request size in bytes (DoS protection)\n+extern const qint64 BIP70_MAX_PAYMENTREQUEST_SIZE;\n+\n class PaymentServer : public QObject\n {\n     Q_OBJECT\n@@ -85,6 +88,9 @@ class PaymentServer : public QObject\n     // OptionsModel is used for getting proxy settings and display unit\n     void setOptionsModel(OptionsModel *optionsModel);\n \n+    // This is now public, because we use it in paymentservertests.cpp\n+    static bool readPaymentRequestFromFile(const QString& filename, PaymentRequestPlus& request);\n+\n signals:\n     // Fired when a valid payment request is received\n     void receivedPaymentRequest(SendCoinsRecipient);\n@@ -118,7 +124,6 @@ private slots:\n     bool eventFilter(QObject *object, QEvent *event);\n \n private:\n-    static bool readPaymentRequestFromFile(const QString& filename, PaymentRequestPlus& request);\n     bool processPaymentRequest(PaymentRequestPlus& request, SendCoinsRecipient& recipient);\n     void fetchRequest(const QUrl& url);\n "
+      },
+      {
+        "sha": "8f49cb94642d2b927381f336afea4b95de892419",
+        "filename": "src/qt/test/paymentservertests.cpp",
+        "status": "modified",
+        "additions": 12,
+        "deletions": 0,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4333e26c8e89e3d02cfb4d3464108b1a15175e2b/src/qt/test/paymentservertests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4333e26c8e89e3d02cfb4d3464108b1a15175e2b/src/qt/test/paymentservertests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/test/paymentservertests.cpp?ref=4333e26c8e89e3d02cfb4d3464108b1a15175e2b",
+        "patch": "@@ -7,6 +7,7 @@\n #include \"optionsmodel.h\"\n #include \"paymentrequestdata.h\"\n \n+#include \"random.h\"\n #include \"util.h\"\n #include \"utilstrencodings.h\"\n \n@@ -108,6 +109,17 @@ void PaymentServerTests::paymentServerTests()\n     r.paymentRequest.getMerchant(caStore, merchant);\n     QCOMPARE(merchant, QString(\"\"));\n \n+    // Just get some random data big enough to trigger BIP70 DoS protection\n+    unsigned char randData[BIP70_MAX_PAYMENTREQUEST_SIZE + 1];\n+    GetRandBytes(randData, sizeof(randData));\n+    // Write data to a temp file:\n+    QTemporaryFile tempFile;\n+    tempFile.open();\n+    tempFile.write((const char*)randData, sizeof(randData));\n+    tempFile.close();\n+    // Trigger BIP70 DoS protection\n+    QCOMPARE(PaymentServer::readPaymentRequestFromFile(tempFile.fileName(), r.paymentRequest), false);\n+\n     delete server;\n }\n "
+      }
+    ]
+  },
+  {
+    "sha": "5ec654b8ceb4c5f9aafda2b62a0aa6639d738654",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1ZWM2NTRiOGNlYjRjNWY5YWFmZGEyYjYyYTBhYTY2MzlkNzM4NjU0",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-12-05T08:40:58Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-12-08T15:09:02Z"
+      },
+      "message": "[Qt] update paymentserver license and cleanup ordering",
+      "tree": {
+        "sha": "8c94b0ab83539e548787dd9016def51de921f4d7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/8c94b0ab83539e548787dd9016def51de921f4d7"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/5ec654b8ceb4c5f9aafda2b62a0aa6639d738654",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5ec654b8ceb4c5f9aafda2b62a0aa6639d738654",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/5ec654b8ceb4c5f9aafda2b62a0aa6639d738654",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5ec654b8ceb4c5f9aafda2b62a0aa6639d738654/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "4333e26c8e89e3d02cfb4d3464108b1a15175e2b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4333e26c8e89e3d02cfb4d3464108b1a15175e2b",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/4333e26c8e89e3d02cfb4d3464108b1a15175e2b"
+      }
+    ],
+    "stats": {
+      "total": 20,
+      "additions": 10,
+      "deletions": 10
+    },
+    "files": [
+      {
+        "sha": "a40b5bbcd8406d481fa05f4caa98ef1b473caf47",
+        "filename": "src/qt/paymentrequestplus.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5ec654b8ceb4c5f9aafda2b62a0aa6639d738654/src/qt/paymentrequestplus.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5ec654b8ceb4c5f9aafda2b62a0aa6639d738654/src/qt/paymentrequestplus.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentrequestplus.cpp?ref=5ec654b8ceb4c5f9aafda2b62a0aa6639d738654",
+        "patch": "@@ -1,5 +1,5 @@\n-// Copyright (c) 2011-2013 The Bitcoin developers\n-// Distributed under the MIT/X11 software license, see the accompanying\n+// Copyright (c) 2011-2014 The Bitcoin developers\n+// Distributed under the MIT software license, see the accompanying\n // file COPYING or http://www.opensource.org/licenses/mit-license.php.\n \n //"
+      },
+      {
+        "sha": "fbc3a09265d84c4a6597670c892515fa7aa3e8cf",
+        "filename": "src/qt/paymentrequestplus.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5ec654b8ceb4c5f9aafda2b62a0aa6639d738654/src/qt/paymentrequestplus.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5ec654b8ceb4c5f9aafda2b62a0aa6639d738654/src/qt/paymentrequestplus.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentrequestplus.h?ref=5ec654b8ceb4c5f9aafda2b62a0aa6639d738654",
+        "patch": "@@ -1,5 +1,5 @@\n-// Copyright (c) 2011-2013 The Bitcoin developers\n-// Distributed under the MIT/X11 software license, see the accompanying\n+// Copyright (c) 2011-2014 The Bitcoin developers\n+// Distributed under the MIT software license, see the accompanying\n // file COPYING or http://www.opensource.org/licenses/mit-license.php.\n \n #ifndef BITCOIN_QT_PAYMENTREQUESTPLUS_H"
+      },
+      {
+        "sha": "bd3dab41a8f2d39d13c7337a5dd02fbfbcc4dc04",
+        "filename": "src/qt/paymentserver.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 3,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5ec654b8ceb4c5f9aafda2b62a0aa6639d738654/src/qt/paymentserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5ec654b8ceb4c5f9aafda2b62a0aa6639d738654/src/qt/paymentserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.cpp?ref=5ec654b8ceb4c5f9aafda2b62a0aa6639d738654",
+        "patch": "@@ -1,5 +1,5 @@\n-// Copyright (c) 2011-2013 The Bitcoin developers\n-// Distributed under the MIT/X11 software license, see the accompanying\n+// Copyright (c) 2011-2014 The Bitcoin developers\n+// Distributed under the MIT software license, see the accompanying\n // file COPYING or http://www.opensource.org/licenses/mit-license.php.\n \n #include \"paymentserver.h\"\n@@ -46,8 +46,8 @@\n #include <QUrlQuery>\n #endif\n \n-using namespace std;\n using namespace boost;\n+using namespace std;\n \n const int BITCOIN_IPC_CONNECT_TIMEOUT = 1000; // milliseconds\n const QString BITCOIN_IPC_PREFIX(\"bitcoin:\");"
+      },
+      {
+        "sha": "e1305b943764f7c902e7998332d67933ab2883b6",
+        "filename": "src/qt/paymentserver.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 3,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5ec654b8ceb4c5f9aafda2b62a0aa6639d738654/src/qt/paymentserver.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5ec654b8ceb4c5f9aafda2b62a0aa6639d738654/src/qt/paymentserver.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.h?ref=5ec654b8ceb4c5f9aafda2b62a0aa6639d738654",
+        "patch": "@@ -1,5 +1,5 @@\n // Copyright (c) 2011-2014 The Bitcoin developers\n-// Distributed under the MIT/X11 software license, see the accompanying\n+// Distributed under the MIT software license, see the accompanying\n // file COPYING or http://www.opensource.org/licenses/mit-license.php.\n \n #ifndef BITCOIN_QT_PAYMENTSERVER_H\n@@ -40,6 +40,8 @@\n \n class OptionsModel;\n \n+class CWallet;\n+\n QT_BEGIN_NAMESPACE\n class QApplication;\n class QByteArray;\n@@ -50,8 +52,6 @@ class QSslError;\n class QUrl;\n QT_END_NAMESPACE\n \n-class CWallet;\n-\n // BIP70 max payment request size in bytes (DoS protection)\n extern const qint64 BIP70_MAX_PAYMENTREQUEST_SIZE;\n "
+      }
+    ]
+  }
+]

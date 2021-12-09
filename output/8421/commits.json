@@ -1,0 +1,308 @@
+[
+  {
+    "sha": "755aa05174e06effd758eeb78c5af9fb465e9611",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3NTVhYTA1MTc0ZTA2ZWZmZDc1OGVlYjc4YzVhZjlmYjQ2NWU5NjEx",
+    "commit": {
+      "author": {
+        "name": "Cory Fields",
+        "email": "cory-nospam-@coryfields.com",
+        "date": "2016-07-28T21:52:51Z"
+      },
+      "committer": {
+        "name": "Cory Fields",
+        "email": "cory-nospam-@coryfields.com",
+        "date": "2016-07-28T23:07:15Z"
+      },
+      "message": "httpserver: use a future rather than relying on boost's try_join_for",
+      "tree": {
+        "sha": "e2bdc8e900293547a436f6c3b476f451f79afbfc",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/e2bdc8e900293547a436f6c3b476f451f79afbfc"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/755aa05174e06effd758eeb78c5af9fb465e9611",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/755aa05174e06effd758eeb78c5af9fb465e9611",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/755aa05174e06effd758eeb78c5af9fb465e9611",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/755aa05174e06effd758eeb78c5af9fb465e9611/comments",
+    "author": {
+      "login": "theuni",
+      "id": 417043,
+      "node_id": "MDQ6VXNlcjQxNzA0Mw==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/417043?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/theuni",
+      "html_url": "https://github.com/theuni",
+      "followers_url": "https://api.github.com/users/theuni/followers",
+      "following_url": "https://api.github.com/users/theuni/following{/other_user}",
+      "gists_url": "https://api.github.com/users/theuni/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/theuni/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/theuni/subscriptions",
+      "organizations_url": "https://api.github.com/users/theuni/orgs",
+      "repos_url": "https://api.github.com/users/theuni/repos",
+      "events_url": "https://api.github.com/users/theuni/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/theuni/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "theuni",
+      "id": 417043,
+      "node_id": "MDQ6VXNlcjQxNzA0Mw==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/417043?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/theuni",
+      "html_url": "https://github.com/theuni",
+      "followers_url": "https://api.github.com/users/theuni/followers",
+      "following_url": "https://api.github.com/users/theuni/following{/other_user}",
+      "gists_url": "https://api.github.com/users/theuni/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/theuni/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/theuni/subscriptions",
+      "organizations_url": "https://api.github.com/users/theuni/orgs",
+      "repos_url": "https://api.github.com/users/theuni/repos",
+      "events_url": "https://api.github.com/users/theuni/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/theuni/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "133c727cc4f7036b79b72d93ac5f5de4f86d71e1",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/133c727cc4f7036b79b72d93ac5f5de4f86d71e1",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/133c727cc4f7036b79b72d93ac5f5de4f86d71e1"
+      }
+    ],
+    "stats": {
+      "total": 17,
+      "additions": 9,
+      "deletions": 8
+    },
+    "files": [
+      {
+        "sha": "7150f96ed7f4679cae6e4915cfd0526a51bb7468",
+        "filename": "src/httpserver.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 8,
+        "changes": 17,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/755aa05174e06effd758eeb78c5af9fb465e9611/src/httpserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/755aa05174e06effd758eeb78c5af9fb465e9611/src/httpserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/httpserver.cpp?ref=755aa05174e06effd758eeb78c5af9fb465e9611",
+        "patch": "@@ -19,6 +19,7 @@\n #include <sys/types.h>\n #include <sys/stat.h>\n #include <signal.h>\n+#include <future>\n \n #include <event2/event.h>\n #include <event2/http.h>\n@@ -302,13 +303,14 @@ static void http_reject_request_cb(struct evhttp_request* req, void*)\n }\n \n /** Event dispatcher thread */\n-static void ThreadHTTP(struct event_base* base, struct evhttp* http)\n+static bool ThreadHTTP(struct event_base* base, struct evhttp* http)\n {\n     RenameThread(\"bitcoin-http\");\n     LogPrint(\"http\", \"Entering http event loop\\n\");\n     event_base_dispatch(base);\n     // Event loop will be interrupted by InterruptHTTPServer()\n     LogPrint(\"http\", \"Exited http event loop\\n\");\n+    return event_base_got_break(base) == 0;\n }\n \n /** Bind HTTP server to specified addresses */\n@@ -438,13 +440,16 @@ bool InitHTTPServer()\n }\n \n boost::thread threadHTTP;\n+std::future<bool> threadResult;\n \n bool StartHTTPServer()\n {\n     LogPrint(\"http\", \"Starting HTTP server\\n\");\n     int rpcThreads = std::max((long)GetArg(\"-rpcthreads\", DEFAULT_HTTP_THREADS), 1L);\n     LogPrintf(\"HTTP: starting %d worker threads\\n\", rpcThreads);\n-    threadHTTP = boost::thread(boost::bind(&ThreadHTTP, eventBase, eventHTTP));\n+    std::packaged_task<bool(event_base*, evhttp*)> task(ThreadHTTP);\n+    threadResult = task.get_future();\n+    threadHTTP = boost::thread(std::bind(std::move(task), eventBase, eventHTTP));\n \n     for (int i = 0; i < rpcThreads; i++)\n         boost::thread(boost::bind(&HTTPWorkQueueRun, workQueue));\n@@ -482,15 +487,11 @@ void StopHTTPServer()\n         // master that appears to be solved, so in the future that solution\n         // could be used again (if desirable).\n         // (see discussion in https://github.com/bitcoin/bitcoin/pull/6990)\n-#if BOOST_VERSION >= 105000\n-        if (!threadHTTP.try_join_for(boost::chrono::milliseconds(2000))) {\n-#else\n-        if (!threadHTTP.timed_join(boost::posix_time::milliseconds(2000))) {\n-#endif\n+        if (threadResult.valid() && threadResult.wait_for(std::chrono::milliseconds(2000)) == std::future_status::timeout) {\n             LogPrintf(\"HTTP event loop did not exit within allotted time, sending loopbreak\\n\");\n             event_base_loopbreak(eventBase);\n-            threadHTTP.join();\n         }\n+        threadHTTP.join();\n     }\n     if (eventHTTP) {\n         evhttp_free(eventHTTP);"
+      }
+    ]
+  },
+  {
+    "sha": "d3773ca9aeb0d2f12dc0c5a0726778050c8cb455",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkMzc3M2NhOWFlYjBkMmYxMmRjMGM1YTA3MjY3NzgwNTBjOGNiNDU1",
+    "commit": {
+      "author": {
+        "name": "Cory Fields",
+        "email": "cory-nospam-@coryfields.com",
+        "date": "2016-07-28T22:21:00Z"
+      },
+      "committer": {
+        "name": "Cory Fields",
+        "email": "cory-nospam-@coryfields.com",
+        "date": "2016-07-28T23:07:23Z"
+      },
+      "message": "httpserver: explicitly detach worker threads\n\nWhen using std::thread in place of boost::thread, letting the threads destruct\nresults in a std::terminate. According to the docs, the same thing should be\nbe happening in later boost versions:\nhttp://www.boost.org/doc/libs/1_55_0/doc/html/thread/thread_management.html#thread.thread_management.thread.destructor\n\nI'm unsure why this hasn't blown up already, but explicitly detaching can't\nhurt.",
+      "tree": {
+        "sha": "1e084ffa62450d8beea7d9c3aab1aa437f542483",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/1e084ffa62450d8beea7d9c3aab1aa437f542483"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/d3773ca9aeb0d2f12dc0c5a0726778050c8cb455",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d3773ca9aeb0d2f12dc0c5a0726778050c8cb455",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/d3773ca9aeb0d2f12dc0c5a0726778050c8cb455",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d3773ca9aeb0d2f12dc0c5a0726778050c8cb455/comments",
+    "author": {
+      "login": "theuni",
+      "id": 417043,
+      "node_id": "MDQ6VXNlcjQxNzA0Mw==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/417043?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/theuni",
+      "html_url": "https://github.com/theuni",
+      "followers_url": "https://api.github.com/users/theuni/followers",
+      "following_url": "https://api.github.com/users/theuni/following{/other_user}",
+      "gists_url": "https://api.github.com/users/theuni/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/theuni/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/theuni/subscriptions",
+      "organizations_url": "https://api.github.com/users/theuni/orgs",
+      "repos_url": "https://api.github.com/users/theuni/repos",
+      "events_url": "https://api.github.com/users/theuni/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/theuni/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "theuni",
+      "id": 417043,
+      "node_id": "MDQ6VXNlcjQxNzA0Mw==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/417043?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/theuni",
+      "html_url": "https://github.com/theuni",
+      "followers_url": "https://api.github.com/users/theuni/followers",
+      "following_url": "https://api.github.com/users/theuni/following{/other_user}",
+      "gists_url": "https://api.github.com/users/theuni/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/theuni/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/theuni/subscriptions",
+      "organizations_url": "https://api.github.com/users/theuni/orgs",
+      "repos_url": "https://api.github.com/users/theuni/repos",
+      "events_url": "https://api.github.com/users/theuni/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/theuni/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "755aa05174e06effd758eeb78c5af9fb465e9611",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/755aa05174e06effd758eeb78c5af9fb465e9611",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/755aa05174e06effd758eeb78c5af9fb465e9611"
+      }
+    ],
+    "stats": {
+      "total": 6,
+      "additions": 4,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "8d0d3c15846629d9fe7edc965e12ca84b086bb75",
+        "filename": "src/httpserver.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 2,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d3773ca9aeb0d2f12dc0c5a0726778050c8cb455/src/httpserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d3773ca9aeb0d2f12dc0c5a0726778050c8cb455/src/httpserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/httpserver.cpp?ref=d3773ca9aeb0d2f12dc0c5a0726778050c8cb455",
+        "patch": "@@ -451,8 +451,10 @@ bool StartHTTPServer()\n     threadResult = task.get_future();\n     threadHTTP = boost::thread(std::bind(std::move(task), eventBase, eventHTTP));\n \n-    for (int i = 0; i < rpcThreads; i++)\n-        boost::thread(boost::bind(&HTTPWorkQueueRun, workQueue));\n+    for (int i = 0; i < rpcThreads; i++) {\n+        boost::thread rpc_worker(HTTPWorkQueueRun, workQueue);\n+        rpc_worker.detach();\n+    }\n     return true;\n }\n "
+      }
+    ]
+  },
+  {
+    "sha": "7e87033447149e54d9b5ab2f90ad3a7ed094d784",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3ZTg3MDMzNDQ3MTQ5ZTU0ZDliNWFiMmY5MGFkM2E3ZWQwOTRkNzg0",
+    "commit": {
+      "author": {
+        "name": "Cory Fields",
+        "email": "cory-nospam-@coryfields.com",
+        "date": "2016-07-28T22:31:25Z"
+      },
+      "committer": {
+        "name": "Cory Fields",
+        "email": "cory-nospam-@coryfields.com",
+        "date": "2016-07-28T23:08:04Z"
+      },
+      "message": "httpserver: replace boost threads with std\n\nalong with mutex/condvar/bind/etc.\n\nhttpserver handles its own interruption, so there's no reason not to use std\nthreading.\n\nWhile we're at it, may as well kill the BOOST_FOREACH's as well.",
+      "tree": {
+        "sha": "40da082665712446b5048551cc5a019b11c2bf35",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/40da082665712446b5048551cc5a019b11c2bf35"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/7e87033447149e54d9b5ab2f90ad3a7ed094d784",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7e87033447149e54d9b5ab2f90ad3a7ed094d784",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/7e87033447149e54d9b5ab2f90ad3a7ed094d784",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7e87033447149e54d9b5ab2f90ad3a7ed094d784/comments",
+    "author": {
+      "login": "theuni",
+      "id": 417043,
+      "node_id": "MDQ6VXNlcjQxNzA0Mw==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/417043?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/theuni",
+      "html_url": "https://github.com/theuni",
+      "followers_url": "https://api.github.com/users/theuni/followers",
+      "following_url": "https://api.github.com/users/theuni/following{/other_user}",
+      "gists_url": "https://api.github.com/users/theuni/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/theuni/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/theuni/subscriptions",
+      "organizations_url": "https://api.github.com/users/theuni/orgs",
+      "repos_url": "https://api.github.com/users/theuni/repos",
+      "events_url": "https://api.github.com/users/theuni/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/theuni/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "theuni",
+      "id": 417043,
+      "node_id": "MDQ6VXNlcjQxNzA0Mw==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/417043?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/theuni",
+      "html_url": "https://github.com/theuni",
+      "followers_url": "https://api.github.com/users/theuni/followers",
+      "following_url": "https://api.github.com/users/theuni/following{/other_user}",
+      "gists_url": "https://api.github.com/users/theuni/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/theuni/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/theuni/subscriptions",
+      "organizations_url": "https://api.github.com/users/theuni/orgs",
+      "repos_url": "https://api.github.com/users/theuni/repos",
+      "events_url": "https://api.github.com/users/theuni/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/theuni/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "d3773ca9aeb0d2f12dc0c5a0726778050c8cb455",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d3773ca9aeb0d2f12dc0c5a0726778050c8cb455",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/d3773ca9aeb0d2f12dc0c5a0726778050c8cb455"
+      }
+    ],
+    "stats": {
+      "total": 49,
+      "additions": 22,
+      "deletions": 27
+    },
+    "files": [
+      {
+        "sha": "be7a6a1ddee86c1025554991a077b6fc938b7151",
+        "filename": "src/httpserver.cpp",
+        "status": "modified",
+        "additions": 18,
+        "deletions": 21,
+        "changes": 39,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7e87033447149e54d9b5ab2f90ad3a7ed094d784/src/httpserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7e87033447149e54d9b5ab2f90ad3a7ed094d784/src/httpserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/httpserver.cpp?ref=7e87033447149e54d9b5ab2f90ad3a7ed094d784",
+        "patch": "@@ -35,9 +35,6 @@\n #endif\n #endif\n \n-#include <boost/algorithm/string/case_conv.hpp> // for to_lower()\n-#include <boost/foreach.hpp>\n-\n /** Maximum size of http request (request line + headers) */\n static const size_t MAX_HEADERS_SIZE = 8192;\n \n@@ -69,8 +66,8 @@ class WorkQueue\n {\n private:\n     /** Mutex protects entire object */\n-    CWaitableCriticalSection cs;\n-    CConditionVariable cond;\n+    std::mutex cs;\n+    std::condition_variable cond;\n     std::deque<std::unique_ptr<WorkItem>> queue;\n     bool running;\n     size_t maxDepth;\n@@ -83,12 +80,12 @@ class WorkQueue\n         WorkQueue &wq;\n         ThreadCounter(WorkQueue &w): wq(w)\n         {\n-            boost::lock_guard<boost::mutex> lock(wq.cs);\n+            std::lock_guard<std::mutex> lock(wq.cs);\n             wq.numThreads += 1;\n         }\n         ~ThreadCounter()\n         {\n-            boost::lock_guard<boost::mutex> lock(wq.cs);\n+            std::lock_guard<std::mutex> lock(wq.cs);\n             wq.numThreads -= 1;\n             wq.cond.notify_all();\n         }\n@@ -109,7 +106,7 @@ class WorkQueue\n     /** Enqueue a work item */\n     bool Enqueue(WorkItem* item)\n     {\n-        boost::unique_lock<boost::mutex> lock(cs);\n+        std::unique_lock<std::mutex> lock(cs);\n         if (queue.size() >= maxDepth) {\n             return false;\n         }\n@@ -124,7 +121,7 @@ class WorkQueue\n         while (running) {\n             std::unique_ptr<WorkItem> i;\n             {\n-                boost::unique_lock<boost::mutex> lock(cs);\n+                std::unique_lock<std::mutex> lock(cs);\n                 while (running && queue.empty())\n                     cond.wait(lock);\n                 if (!running)\n@@ -138,22 +135,22 @@ class WorkQueue\n     /** Interrupt and exit loops */\n     void Interrupt()\n     {\n-        boost::unique_lock<boost::mutex> lock(cs);\n+        std::unique_lock<std::mutex> lock(cs);\n         running = false;\n         cond.notify_all();\n     }\n     /** Wait for worker threads to exit */\n     void WaitExit()\n     {\n-        boost::unique_lock<boost::mutex> lock(cs);\n+        std::unique_lock<std::mutex> lock(cs);\n         while (numThreads > 0)\n             cond.wait(lock);\n     }\n \n     /** Return current depth of queue */\n     size_t Depth()\n     {\n-        boost::unique_lock<boost::mutex> lock(cs);\n+        std::unique_lock<std::mutex> lock(cs);\n         return queue.size();\n     }\n };\n@@ -190,7 +187,7 @@ static bool ClientAllowed(const CNetAddr& netaddr)\n {\n     if (!netaddr.IsValid())\n         return false;\n-    BOOST_FOREACH (const CSubNet& subnet, rpc_allow_subnets)\n+    for(const CSubNet& subnet : rpc_allow_subnets)\n         if (subnet.Match(netaddr))\n             return true;\n     return false;\n@@ -204,7 +201,7 @@ static bool InitHTTPAllowList()\n     rpc_allow_subnets.push_back(CSubNet(\"::1\"));         // always allow IPv6 localhost\n     if (mapMultiArgs.count(\"-rpcallowip\")) {\n         const std::vector<std::string>& vAllow = mapMultiArgs[\"-rpcallowip\"];\n-        BOOST_FOREACH (std::string strAllow, vAllow) {\n+        for (std::string strAllow : vAllow) {\n             CSubNet subnet(strAllow);\n             if (!subnet.IsValid()) {\n                 uiInterface.ThreadSafeMessageBox(\n@@ -216,7 +213,7 @@ static bool InitHTTPAllowList()\n         }\n     }\n     std::string strAllowed;\n-    BOOST_FOREACH (const CSubNet& subnet, rpc_allow_subnets)\n+    for (const CSubNet& subnet : rpc_allow_subnets)\n         strAllowed += subnet.ToString() + \" \";\n     LogPrint(\"http\", \"Allowing HTTP connections from: %s\\n\", strAllowed);\n     return true;\n@@ -439,7 +436,7 @@ bool InitHTTPServer()\n     return true;\n }\n \n-boost::thread threadHTTP;\n+std::thread threadHTTP;\n std::future<bool> threadResult;\n \n bool StartHTTPServer()\n@@ -449,10 +446,10 @@ bool StartHTTPServer()\n     LogPrintf(\"HTTP: starting %d worker threads\\n\", rpcThreads);\n     std::packaged_task<bool(event_base*, evhttp*)> task(ThreadHTTP);\n     threadResult = task.get_future();\n-    threadHTTP = boost::thread(std::bind(std::move(task), eventBase, eventHTTP));\n+    threadHTTP = std::thread(std::move(task), eventBase, eventHTTP);\n \n     for (int i = 0; i < rpcThreads; i++) {\n-        boost::thread rpc_worker(HTTPWorkQueueRun, workQueue);\n+        std::thread rpc_worker(HTTPWorkQueueRun, workQueue);\n         rpc_worker.detach();\n     }\n     return true;\n@@ -463,7 +460,7 @@ void InterruptHTTPServer()\n     LogPrint(\"http\", \"Interrupting HTTP server\\n\");\n     if (eventHTTP) {\n         // Unlisten sockets\n-        BOOST_FOREACH (evhttp_bound_socket *socket, boundSockets) {\n+        for (evhttp_bound_socket *socket : boundSockets) {\n             evhttp_del_accept_socket(eventHTTP, socket);\n         }\n         // Reject requests on current connections\n@@ -520,7 +517,7 @@ static void httpevent_callback_fn(evutil_socket_t, short, void* data)\n         delete self;\n }\n \n-HTTPEvent::HTTPEvent(struct event_base* base, bool deleteWhenTriggered, const boost::function<void(void)>& handler):\n+HTTPEvent::HTTPEvent(struct event_base* base, bool deleteWhenTriggered, const std::function<void(void)>& handler):\n     deleteWhenTriggered(deleteWhenTriggered), handler(handler)\n {\n     ev = event_new(base, -1, 0, httpevent_callback_fn, this);\n@@ -602,7 +599,7 @@ void HTTPRequest::WriteReply(int nStatus, const std::string& strReply)\n     assert(evb);\n     evbuffer_add(evb, strReply.data(), strReply.size());\n     HTTPEvent* ev = new HTTPEvent(eventBase, true,\n-        boost::bind(evhttp_send_reply, req, nStatus, (const char*)NULL, (struct evbuffer *)NULL));\n+        std::bind(evhttp_send_reply, req, nStatus, (const char*)NULL, (struct evbuffer *)NULL));\n     ev->trigger(0);\n     replySent = true;\n     req = 0; // transferred back to main thread"
+      },
+      {
+        "sha": "0e30e666a6b428e2826bd3a6a09405c67875fc44",
+        "filename": "src/httpserver.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 6,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7e87033447149e54d9b5ab2f90ad3a7ed094d784/src/httpserver.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7e87033447149e54d9b5ab2f90ad3a7ed094d784/src/httpserver.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/httpserver.h?ref=7e87033447149e54d9b5ab2f90ad3a7ed094d784",
+        "patch": "@@ -7,9 +7,7 @@\n \n #include <string>\n #include <stdint.h>\n-#include <boost/thread.hpp>\n-#include <boost/scoped_ptr.hpp>\n-#include <boost/function.hpp>\n+#include <functional>\n \n static const int DEFAULT_HTTP_THREADS=4;\n static const int DEFAULT_HTTP_WORKQUEUE=16;\n@@ -35,7 +33,7 @@ void InterruptHTTPServer();\n void StopHTTPServer();\n \n /** Handler for requests to a certain HTTP path */\n-typedef boost::function<void(HTTPRequest* req, const std::string &)> HTTPRequestHandler;\n+typedef std::function<void(HTTPRequest* req, const std::string &)> HTTPRequestHandler;\n /** Register handler for prefix.\n  * If multiple handlers match a prefix, the first-registered one will\n  * be invoked.\n@@ -132,7 +130,7 @@ class HTTPEvent\n      * deleteWhenTriggered deletes this event object after the event is triggered (and the handler called)\n      * handler is the handler to call when the event is triggered.\n      */\n-    HTTPEvent(struct event_base* base, bool deleteWhenTriggered, const boost::function<void(void)>& handler);\n+    HTTPEvent(struct event_base* base, bool deleteWhenTriggered, const std::function<void(void)>& handler);\n     ~HTTPEvent();\n \n     /** Trigger the event. If tv is 0, trigger it immediately. Otherwise trigger it after\n@@ -141,7 +139,7 @@ class HTTPEvent\n     void trigger(struct timeval* tv);\n \n     bool deleteWhenTriggered;\n-    boost::function<void(void)> handler;\n+    std::function<void(void)> handler;\n private:\n     struct event* ev;\n };"
+      }
+    ]
+  }
+]

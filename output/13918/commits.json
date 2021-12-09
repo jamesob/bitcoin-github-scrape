@@ -1,0 +1,129 @@
+[
+  {
+    "sha": "4b7091a842c2c3a76f4136cb0fdcf1c5904fd237",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0YjcwOTFhODQyYzJjM2E3NmY0MTM2Y2IwZmRjZjFjNTkwNGZkMjM3",
+    "commit": {
+      "author": {
+        "name": "Marcin Jachymiak",
+        "email": "marcin@bitcoinops.org",
+        "date": "2018-08-08T18:40:56Z"
+      },
+      "committer": {
+        "name": "Marcin Jachymiak",
+        "email": "marcinja@mit.edu",
+        "date": "2018-08-11T19:00:17Z"
+      },
+      "message": "Replace median fee rate with feerate percentiles\n\nRemoves medianfeerate result from getblockstats.\nAdds feerate_percentiles which give the feerate of the 10th, 25th, 50th,\n75th, and 90th percentile weight unit in the block.",
+      "tree": {
+        "sha": "1a0b0c33f182cddd27b9e230647a93064a88351e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/1a0b0c33f182cddd27b9e230647a93064a88351e"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/4b7091a842c2c3a76f4136cb0fdcf1c5904fd237",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4b7091a842c2c3a76f4136cb0fdcf1c5904fd237",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/4b7091a842c2c3a76f4136cb0fdcf1c5904fd237",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4b7091a842c2c3a76f4136cb0fdcf1c5904fd237/comments",
+    "author": null,
+    "committer": {
+      "login": "marcinja",
+      "id": 12243734,
+      "node_id": "MDQ6VXNlcjEyMjQzNzM0",
+      "avatar_url": "https://avatars.githubusercontent.com/u/12243734?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/marcinja",
+      "html_url": "https://github.com/marcinja",
+      "followers_url": "https://api.github.com/users/marcinja/followers",
+      "following_url": "https://api.github.com/users/marcinja/following{/other_user}",
+      "gists_url": "https://api.github.com/users/marcinja/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/marcinja/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/marcinja/subscriptions",
+      "organizations_url": "https://api.github.com/users/marcinja/orgs",
+      "repos_url": "https://api.github.com/users/marcinja/repos",
+      "events_url": "https://api.github.com/users/marcinja/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/marcinja/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "df9f71274645a917e2578c52a1c59745bce8112d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/df9f71274645a917e2578c52a1c59745bce8112d",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/df9f71274645a917e2578c52a1c59745bce8112d"
+      }
+    ],
+    "stats": {
+      "total": 174,
+      "additions": 162,
+      "deletions": 12
+    },
+    "files": [
+      {
+        "sha": "51bc218d390cb62344db43f924897289885766ee",
+        "filename": "src/rpc/blockchain.cpp",
+        "status": "modified",
+        "additions": 51,
+        "deletions": 8,
+        "changes": 59,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4b7091a842c2c3a76f4136cb0fdcf1c5904fd237/src/rpc/blockchain.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4b7091a842c2c3a76f4136cb0fdcf1c5904fd237/src/rpc/blockchain.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/blockchain.cpp?ref=4b7091a842c2c3a76f4136cb0fdcf1c5904fd237",
+        "patch": "@@ -1640,6 +1640,35 @@ static T CalculateTruncatedMedian(std::vector<T>& scores)\n     }\n }\n \n+void CalculatePercentilesByWeight(CAmount result[NUM_GETBLOCKSTATS_PERCENTILES], std::vector<std::pair<CAmount, int64_t>>& scores, int64_t total_weight)\n+{\n+    if (scores.empty()) {\n+        return;\n+    }\n+\n+    std::sort(scores.begin(), scores.end());\n+\n+    // 10th, 25th, 50th, 75th, and 90th percentile weight units.\n+    const double weights[NUM_GETBLOCKSTATS_PERCENTILES] = {\n+        total_weight / 10.0, total_weight / 4.0, total_weight / 2.0, (total_weight * 3.0) / 4.0, (total_weight * 9.0) / 10.0\n+    };\n+\n+    int64_t next_percentile_index = 0;\n+    int64_t cumulative_weight = 0;\n+    for (const auto& element : scores) {\n+        cumulative_weight += element.second;\n+        while (next_percentile_index < NUM_GETBLOCKSTATS_PERCENTILES && cumulative_weight >= weights[next_percentile_index]) {\n+            result[next_percentile_index] = element.first;\n+            ++next_percentile_index;\n+        }\n+    }\n+\n+    // Fill any remaining percentiles with the last value.\n+    for (int64_t i = next_percentile_index; i < NUM_GETBLOCKSTATS_PERCENTILES; i++) {\n+        result[i] = scores.back().first;\n+    }\n+}\n+\n template<typename T>\n static inline bool SetHasKeys(const std::set<T>& set) {return false;}\n template<typename T, typename Tk, typename... Args>\n@@ -1673,13 +1702,19 @@ static UniValue getblockstats(const JSONRPCRequest& request)\n             \"  \\\"avgfeerate\\\": xxxxx,      (numeric) Average feerate (in satoshis per virtual byte)\\n\"\n             \"  \\\"avgtxsize\\\": xxxxx,       (numeric) Average transaction size\\n\"\n             \"  \\\"blockhash\\\": xxxxx,       (string) The block hash (to check for potential reorgs)\\n\"\n+            \"  \\\"feerate_percentiles\\\": [  (array of numeric) Feerates at the 10th, 25th, 50th, 75th, and 90th percentile weight unit (in satoshis per virtual byte)\\n\"\n+            \"      \\\"10th_percentile_feerate\\\",      (numeric) The 10th percentile feerate\\n\"\n+            \"      \\\"25th_percentile_feerate\\\",      (numeric) The 25th percentile feerate\\n\"\n+            \"      \\\"50th_percentile_feerate\\\",      (numeric) The 50th percentile feerate\\n\"\n+            \"      \\\"75th_percentile_feerate\\\",      (numeric) The 75th percentile feerate\\n\"\n+            \"      \\\"90th_percentile_feerate\\\",      (numeric) The 90th percentile feerate\\n\"\n+            \"  ],\\n\"\n             \"  \\\"height\\\": xxxxx,          (numeric) The height of the block\\n\"\n             \"  \\\"ins\\\": xxxxx,             (numeric) The number of inputs (excluding coinbase)\\n\"\n             \"  \\\"maxfee\\\": xxxxx,          (numeric) Maximum fee in the block\\n\"\n             \"  \\\"maxfeerate\\\": xxxxx,      (numeric) Maximum feerate (in satoshis per virtual byte)\\n\"\n             \"  \\\"maxtxsize\\\": xxxxx,       (numeric) Maximum transaction size\\n\"\n             \"  \\\"medianfee\\\": xxxxx,       (numeric) Truncated median fee in the block\\n\"\n-            \"  \\\"medianfeerate\\\": xxxxx,   (numeric) Truncated median feerate (in satoshis per virtual byte)\\n\"\n             \"  \\\"mediantime\\\": xxxxx,      (numeric) The block median time past\\n\"\n             \"  \\\"mediantxsize\\\": xxxxx,    (numeric) Truncated median transaction size\\n\"\n             \"  \\\"minfee\\\": xxxxx,          (numeric) Minimum fee in the block\\n\"\n@@ -1747,13 +1782,13 @@ static UniValue getblockstats(const JSONRPCRequest& request)\n     const bool do_all = stats.size() == 0; // Calculate everything if nothing selected (default)\n     const bool do_mediantxsize = do_all || stats.count(\"mediantxsize\") != 0;\n     const bool do_medianfee = do_all || stats.count(\"medianfee\") != 0;\n-    const bool do_medianfeerate = do_all || stats.count(\"medianfeerate\") != 0;\n-    const bool loop_inputs = do_all || do_medianfee || do_medianfeerate ||\n+    const bool do_feerate_percentiles = do_all || stats.count(\"feerate_percentiles\") != 0;\n+    const bool loop_inputs = do_all || do_medianfee || do_feerate_percentiles ||\n         SetHasKeys(stats, \"utxo_size_inc\", \"totalfee\", \"avgfee\", \"avgfeerate\", \"minfee\", \"maxfee\", \"minfeerate\", \"maxfeerate\");\n     const bool loop_outputs = do_all || loop_inputs || stats.count(\"total_out\");\n     const bool do_calculate_size = do_mediantxsize ||\n         SetHasKeys(stats, \"total_size\", \"avgtxsize\", \"mintxsize\", \"maxtxsize\", \"swtotal_size\");\n-    const bool do_calculate_weight = do_all || SetHasKeys(stats, \"total_weight\", \"avgfeerate\", \"swtotal_weight\", \"avgfeerate\", \"medianfeerate\", \"minfeerate\", \"maxfeerate\");\n+    const bool do_calculate_weight = do_all || SetHasKeys(stats, \"total_weight\", \"avgfeerate\", \"swtotal_weight\", \"avgfeerate\", \"feerate_percentiles\", \"minfeerate\", \"maxfeerate\");\n     const bool do_calculate_sw = do_all || SetHasKeys(stats, \"swtxs\", \"swtotal_size\", \"swtotal_weight\");\n \n     CAmount maxfee = 0;\n@@ -1773,7 +1808,7 @@ static UniValue getblockstats(const JSONRPCRequest& request)\n     int64_t total_weight = 0;\n     int64_t utxo_size_inc = 0;\n     std::vector<CAmount> fee_array;\n-    std::vector<CAmount> feerate_array;\n+    std::vector<std::pair<CAmount, int64_t>> feerate_array;\n     std::vector<int64_t> txsize_array;\n \n     for (const auto& tx : block.vtx) {\n@@ -1848,26 +1883,34 @@ static UniValue getblockstats(const JSONRPCRequest& request)\n \n             // New feerate uses satoshis per virtual byte instead of per serialized byte\n             CAmount feerate = weight ? (txfee * WITNESS_SCALE_FACTOR) / weight : 0;\n-            if (do_medianfeerate) {\n-                feerate_array.push_back(feerate);\n+            if (do_feerate_percentiles) {\n+                feerate_array.emplace_back(std::make_pair(feerate, weight));\n             }\n             maxfeerate = std::max(maxfeerate, feerate);\n             minfeerate = std::min(minfeerate, feerate);\n         }\n     }\n \n+    CAmount feerate_percentiles[NUM_GETBLOCKSTATS_PERCENTILES] = { 0 };\n+    CalculatePercentilesByWeight(feerate_percentiles, feerate_array, total_weight);\n+\n+    UniValue feerates_res(UniValue::VARR);\n+    for (int64_t i = 0; i < NUM_GETBLOCKSTATS_PERCENTILES; i++) {\n+        feerates_res.push_back(feerate_percentiles[i]);\n+    }\n+\n     UniValue ret_all(UniValue::VOBJ);\n     ret_all.pushKV(\"avgfee\", (block.vtx.size() > 1) ? totalfee / (block.vtx.size() - 1) : 0);\n     ret_all.pushKV(\"avgfeerate\", total_weight ? (totalfee * WITNESS_SCALE_FACTOR) / total_weight : 0); // Unit: sat/vbyte\n     ret_all.pushKV(\"avgtxsize\", (block.vtx.size() > 1) ? total_size / (block.vtx.size() - 1) : 0);\n     ret_all.pushKV(\"blockhash\", pindex->GetBlockHash().GetHex());\n+    ret_all.pushKV(\"feerate_percentiles\", feerates_res);\n     ret_all.pushKV(\"height\", (int64_t)pindex->nHeight);\n     ret_all.pushKV(\"ins\", inputs);\n     ret_all.pushKV(\"maxfee\", maxfee);\n     ret_all.pushKV(\"maxfeerate\", maxfeerate);\n     ret_all.pushKV(\"maxtxsize\", maxtxsize);\n     ret_all.pushKV(\"medianfee\", CalculateTruncatedMedian(fee_array));\n-    ret_all.pushKV(\"medianfeerate\", CalculateTruncatedMedian(feerate_array));\n     ret_all.pushKV(\"mediantime\", pindex->GetMedianTimePast());\n     ret_all.pushKV(\"mediantxsize\", CalculateTruncatedMedian(txsize_array));\n     ret_all.pushKV(\"minfee\", (minfee == MAX_MONEY) ? 0 : minfee);"
+      },
+      {
+        "sha": "544bc62c360a91929a667419ff321d20650480fb",
+        "filename": "src/rpc/blockchain.h",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 0,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4b7091a842c2c3a76f4136cb0fdcf1c5904fd237/src/rpc/blockchain.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4b7091a842c2c3a76f4136cb0fdcf1c5904fd237/src/rpc/blockchain.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/blockchain.h?ref=4b7091a842c2c3a76f4136cb0fdcf1c5904fd237",
+        "patch": "@@ -5,10 +5,16 @@\n #ifndef BITCOIN_RPC_BLOCKCHAIN_H\n #define BITCOIN_RPC_BLOCKCHAIN_H\n \n+#include <vector>\n+#include <stdint.h>\n+#include <amount.h>\n+\n class CBlock;\n class CBlockIndex;\n class UniValue;\n \n+static constexpr int NUM_GETBLOCKSTATS_PERCENTILES = 5;\n+\n /**\n  * Get the difficulty of the net wrt to the given block index, or the chain tip if\n  * not provided.\n@@ -33,4 +39,7 @@ UniValue mempoolToJSON(bool fVerbose = false);\n /** Block header to JSON */\n UniValue blockheaderToJSON(const CBlockIndex* blockindex);\n \n+/** Used by getblockstats to get feerates at different percentiles by weight  */\n+void CalculatePercentilesByWeight(CAmount result[NUM_GETBLOCKSTATS_PERCENTILES], std::vector<std::pair<CAmount, int64_t>>& scores, int64_t total_weight);\n+\n #endif"
+      },
+      {
+        "sha": "a49796d6f485e9c63048faae443d288b3f0518a3",
+        "filename": "src/test/rpc_tests.cpp",
+        "status": "modified",
+        "additions": 80,
+        "deletions": 0,
+        "changes": 80,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4b7091a842c2c3a76f4136cb0fdcf1c5904fd237/src/test/rpc_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4b7091a842c2c3a76f4136cb0fdcf1c5904fd237/src/test/rpc_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/rpc_tests.cpp?ref=4b7091a842c2c3a76f4136cb0fdcf1c5904fd237",
+        "patch": "@@ -16,6 +16,8 @@\n \n #include <univalue.h>\n \n+#include <rpc/blockchain.h>\n+\n UniValue CallRPC(std::string args)\n {\n     std::vector<std::string> vArgs;\n@@ -336,4 +338,82 @@ BOOST_AUTO_TEST_CASE(rpc_convert_values_generatetoaddress)\n     BOOST_CHECK_EQUAL(result[2].get_int(), 9);\n }\n \n+BOOST_AUTO_TEST_CASE(rpc_getblockstats_calculate_percentiles_by_weight)\n+{\n+    int64_t total_weight = 200;\n+    std::vector<std::pair<CAmount, int64_t>> feerates;\n+    CAmount result[NUM_GETBLOCKSTATS_PERCENTILES] = { 0 };\n+\n+    for (int64_t i = 0; i < 100; i++) {\n+        feerates.emplace_back(std::make_pair(1 ,1));\n+    }\n+\n+    for (int64_t i = 0; i < 100; i++) {\n+        feerates.emplace_back(std::make_pair(2 ,1));\n+    }\n+\n+    CalculatePercentilesByWeight(result, feerates, total_weight);\n+    BOOST_CHECK_EQUAL(result[0], 1);\n+    BOOST_CHECK_EQUAL(result[1], 1);\n+    BOOST_CHECK_EQUAL(result[2], 1);\n+    BOOST_CHECK_EQUAL(result[3], 2);\n+    BOOST_CHECK_EQUAL(result[4], 2);\n+\n+    // Test with more pairs, and two pairs overlapping 2 percentiles.\n+    total_weight = 100;\n+    CAmount result2[NUM_GETBLOCKSTATS_PERCENTILES] = { 0 };\n+    feerates.clear();\n+\n+    feerates.emplace_back(std::make_pair(1, 9));\n+    feerates.emplace_back(std::make_pair(2 , 16)); //10th + 25th percentile\n+    feerates.emplace_back(std::make_pair(4 ,50)); //50th + 75th percentile\n+    feerates.emplace_back(std::make_pair(5 ,10));\n+    feerates.emplace_back(std::make_pair(9 ,15));  // 90th percentile\n+\n+    CalculatePercentilesByWeight(result2, feerates, total_weight);\n+\n+    BOOST_CHECK_EQUAL(result2[0], 2);\n+    BOOST_CHECK_EQUAL(result2[1], 2);\n+    BOOST_CHECK_EQUAL(result2[2], 4);\n+    BOOST_CHECK_EQUAL(result2[3], 4);\n+    BOOST_CHECK_EQUAL(result2[4], 9);\n+\n+    // Same test as above, but one of the percentile-overlapping pairs is split in 2.\n+    total_weight = 100;\n+    CAmount result3[NUM_GETBLOCKSTATS_PERCENTILES] = { 0 };\n+    feerates.clear();\n+\n+    feerates.emplace_back(std::make_pair(1, 9));\n+    feerates.emplace_back(std::make_pair(2 , 11)); // 10th percentile\n+    feerates.emplace_back(std::make_pair(2 , 5)); // 25th percentile\n+    feerates.emplace_back(std::make_pair(4 ,50)); //50th + 75th percentile\n+    feerates.emplace_back(std::make_pair(5 ,10));\n+    feerates.emplace_back(std::make_pair(9 ,15)); // 90th percentile\n+\n+    CalculatePercentilesByWeight(result3, feerates, total_weight);\n+\n+    BOOST_CHECK_EQUAL(result3[0], 2);\n+    BOOST_CHECK_EQUAL(result3[1], 2);\n+    BOOST_CHECK_EQUAL(result3[2], 4);\n+    BOOST_CHECK_EQUAL(result3[3], 4);\n+    BOOST_CHECK_EQUAL(result3[4], 9);\n+\n+    // Test with one transaction spanning all percentiles.\n+    total_weight = 104;\n+    CAmount result4[NUM_GETBLOCKSTATS_PERCENTILES] = { 0 };\n+    feerates.clear();\n+\n+    feerates.emplace_back(std::make_pair(1, 100));\n+    feerates.emplace_back(std::make_pair(2, 1));\n+    feerates.emplace_back(std::make_pair(3, 1));\n+    feerates.emplace_back(std::make_pair(3, 1));\n+    feerates.emplace_back(std::make_pair(999999, 1));\n+\n+    CalculatePercentilesByWeight(result4, feerates, total_weight);\n+\n+    for (int64_t i = 0; i < NUM_GETBLOCKSTATS_PERCENTILES; i++) {\n+        BOOST_CHECK_EQUAL(result4[i], 1);\n+    }\n+}\n+\n BOOST_AUTO_TEST_SUITE_END()"
+      },
+      {
+        "sha": "b8cabe1e5e58961aa8ca42ded59b5532979fcf62",
+        "filename": "test/functional/data/rpc_getblockstats.json",
+        "status": "modified",
+        "additions": 21,
+        "deletions": 3,
+        "changes": 24,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4b7091a842c2c3a76f4136cb0fdcf1c5904fd237/test/functional/data/rpc_getblockstats.json",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4b7091a842c2c3a76f4136cb0fdcf1c5904fd237/test/functional/data/rpc_getblockstats.json",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/data/rpc_getblockstats.json?ref=4b7091a842c2c3a76f4136cb0fdcf1c5904fd237",
+        "patch": "@@ -112,13 +112,19 @@\n       \"avgfeerate\": 0,\n       \"avgtxsize\": 0,\n       \"blockhash\": \"1d7fe80f19d28b8e712af0399ac84006db753441f3033111b3a8d610afab364f\",\n+      \"feerate_percentiles\": [\n+        0,\n+        0,\n+        0,\n+        0,\n+        0\n+      ],\n       \"height\": 101,\n       \"ins\": 0,\n       \"maxfee\": 0,\n       \"maxfeerate\": 0,\n       \"maxtxsize\": 0,\n       \"medianfee\": 0,\n-      \"medianfeerate\": 0,\n       \"mediantime\": 1525107242,\n       \"mediantxsize\": 0,\n       \"minfee\": 0,\n@@ -144,12 +150,18 @@\n       \"avgtxsize\": 187,\n       \"blockhash\": \"4e21a43675d7a41cb6b944e068c5bcd0a677baf658d9ebe021ae2d2f99397ccc\",\n       \"height\": 102,\n+      \"feerate_percentiles\": [\n+        20,\n+        20,\n+        20,\n+        20,\n+        20\n+      ],\n       \"ins\": 1,\n       \"maxfee\": 3760,\n       \"maxfeerate\": 20,\n       \"maxtxsize\": 187,\n       \"medianfee\": 3760,\n-      \"medianfeerate\": 20,\n       \"mediantime\": 1525107242,\n       \"mediantxsize\": 187,\n       \"minfee\": 3760,\n@@ -174,13 +186,19 @@\n       \"avgfeerate\": 109,\n       \"avgtxsize\": 228,\n       \"blockhash\": \"22d9b8b9c2a37c81515f3fc84f7241f6c07dbcea85ef16b00bcc33ae400a030f\",\n+      \"feerate_percentiles\": [\n+        20,\n+        20,\n+        20,\n+        300,\n+        300\n+      ],\n       \"height\": 103,\n       \"ins\": 3,\n       \"maxfee\": 49800,\n       \"maxfeerate\": 300,\n       \"maxtxsize\": 248,\n       \"medianfee\": 3760,\n-      \"medianfeerate\": 20,\n       \"mediantime\": 1525107243,\n       \"mediantxsize\": 248,\n       \"minfee\": 3320,"
+      },
+      {
+        "sha": "5ad6a57d661e45c91d6087a6a5a2156f19221ca0",
+        "filename": "test/functional/rpc_getblockstats.py",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4b7091a842c2c3a76f4136cb0fdcf1c5904fd237/test/functional/rpc_getblockstats.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4b7091a842c2c3a76f4136cb0fdcf1c5904fd237/test/functional/rpc_getblockstats.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/rpc_getblockstats.py?ref=4b7091a842c2c3a76f4136cb0fdcf1c5904fd237",
+        "patch": "@@ -27,7 +27,7 @@ class GetblockstatsTest(BitcoinTestFramework):\n         'maxfee',\n         'maxfeerate',\n         'medianfee',\n-        'medianfeerate',\n+        'feerate_percentiles',\n         'minfee',\n         'minfeerate',\n         'totalfee',"
+      }
+    ]
+  }
+]

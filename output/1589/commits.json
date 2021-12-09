@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "3336f6db947a4f7b7eff71ccc419c93f0fc45154",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozMzM2ZjZkYjk0N2E0ZjdiN2VmZjcxY2NjNDE5YzkzZjBmYzQ1MTU0",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-07-12T13:36:19Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-07-12T14:25:46Z"
+      },
+      "message": "add a LOCK in optionsmodel to ApplyProxySettings()\n\n- fixes #1560",
+      "tree": {
+        "sha": "419e0c346c978d125668cbb9b2bcc29888681d9a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/419e0c346c978d125668cbb9b2bcc29888681d9a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/3336f6db947a4f7b7eff71ccc419c93f0fc45154",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3336f6db947a4f7b7eff71ccc419c93f0fc45154",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/3336f6db947a4f7b7eff71ccc419c93f0fc45154",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3336f6db947a4f7b7eff71ccc419c93f0fc45154/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "144bfd9c538528c95c9f7d4f0074690cfacec326",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/144bfd9c538528c95c9f7d4f0074690cfacec326",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/144bfd9c538528c95c9f7d4f0074690cfacec326"
+      }
+    ],
+    "stats": {
+      "total": 22,
+      "additions": 16,
+      "deletions": 6
+    },
+    "files": [
+      {
+        "sha": "8f0fd594f917f31946baa8fabe0da9dabeb954fe",
+        "filename": "src/qt/optionsmodel.cpp",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 6,
+        "changes": 22,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3336f6db947a4f7b7eff71ccc419c93f0fc45154/src/qt/optionsmodel.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3336f6db947a4f7b7eff71ccc419c93f0fc45154/src/qt/optionsmodel.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/optionsmodel.cpp?ref=3336f6db947a4f7b7eff71ccc419c93f0fc45154",
+        "patch": "@@ -5,6 +5,7 @@\n #include \"init.h\"\n #include \"walletdb.h\"\n #include \"guiutil.h\"\n+#include \"sync.h\"\n \n OptionsModel::OptionsModel(QObject *parent) :\n     QAbstractListModel(parent)\n@@ -17,22 +18,31 @@ bool static ApplyProxySettings()\n     QSettings settings;\n     CService addrProxy(settings.value(\"addrProxy\", \"127.0.0.1:9050\").toString().toStdString());\n     int nSocksVersion(settings.value(\"nSocksVersion\", 5).toInt());\n+\n+    CCriticalSection cs_proxysettings;\n+\n     if (!settings.value(\"fUseProxy\", false).toBool()) {\n         addrProxy = CService();\n         nSocksVersion = 0;\n         return false;\n     }\n     if (nSocksVersion && !addrProxy.IsValid())\n         return false;\n-    if (!IsLimited(NET_IPV4))\n-        SetProxy(NET_IPV4, addrProxy, nSocksVersion);\n-    if (nSocksVersion > 4) {\n+\n+    {\n+        LOCK(cs_proxysettings);\n+\n+        if (!IsLimited(NET_IPV4))\n+            SetProxy(NET_IPV4, addrProxy, nSocksVersion);\n+        if (nSocksVersion > 4) {\n #ifdef USE_IPV6\n-        if (!IsLimited(NET_IPV6))\n-            SetProxy(NET_IPV6, addrProxy, nSocksVersion);\n+            if (!IsLimited(NET_IPV6))\n+                SetProxy(NET_IPV6, addrProxy, nSocksVersion);\n #endif\n-        SetNameProxy(addrProxy, nSocksVersion);\n+            SetNameProxy(addrProxy, nSocksVersion);\n+        }\n     }\n+\n     return true;\n }\n "
+      }
+    ]
+  }
+]

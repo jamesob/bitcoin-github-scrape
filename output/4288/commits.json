@@ -1,0 +1,230 @@
+[
+  {
+    "sha": "c912e22db08d0a44ad6fd027c09bbdf79c34dbbc",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjOTEyZTIyZGIwOGQwYTQ0YWQ2ZmQwMjdjMDliYmRmNzljMzRkYmJj",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-06-04T15:24:43Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-06-27T03:32:18Z"
+      },
+      "message": "RPC cleanup: Improve HTTP server replies\n\n1) support varying content types\n2) support only sending the header\n3) properly deliver error message as content, if HTTP error\n4) move AcceptedConnection class to header, for wider use",
+      "tree": {
+        "sha": "0eb4939d21c7900a4bbbcdb35488d898bf2d3999",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/0eb4939d21c7900a4bbbcdb35488d898bf2d3999"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/c912e22db08d0a44ad6fd027c09bbdf79c34dbbc",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c912e22db08d0a44ad6fd027c09bbdf79c34dbbc",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/c912e22db08d0a44ad6fd027c09bbdf79c34dbbc",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c912e22db08d0a44ad6fd027c09bbdf79c34dbbc/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "236ae8665efadf7b4456c0a9fbf204a5cb4ce9f4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/236ae8665efadf7b4456c0a9fbf204a5cb4ce9f4",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/236ae8665efadf7b4456c0a9fbf204a5cb4ce9f4"
+      }
+    ],
+    "stats": {
+      "total": 41,
+      "additions": 27,
+      "deletions": 14
+    },
+    "files": [
+      {
+        "sha": "bfa799f84f9de4320334f37c7739d6eebc7ab030",
+        "filename": "src/rpcprotocol.cpp",
+        "status": "modified",
+        "additions": 14,
+        "deletions": 3,
+        "changes": 17,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c912e22db08d0a44ad6fd027c09bbdf79c34dbbc/src/rpcprotocol.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c912e22db08d0a44ad6fd027c09bbdf79c34dbbc/src/rpcprotocol.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcprotocol.cpp?ref=c912e22db08d0a44ad6fd027c09bbdf79c34dbbc",
+        "patch": "@@ -54,7 +54,8 @@ static string rfc1123Time()\n     return DateTimeStrFormat(\"%a, %d %b %Y %H:%M:%S +0000\", GetTime());\n }\n \n-string HTTPReply(int nStatus, const string& strMsg, bool keepalive)\n+string HTTPReply(int nStatus, const string& strMsg, bool keepalive,\n+                 bool headersOnly, const char *contentType)\n {\n     if (nStatus == HTTP_UNAUTHORIZED)\n         return strprintf(\"HTTP/1.0 401 Authorization Required\\r\\n\"\n@@ -73,19 +74,27 @@ string HTTPReply(int nStatus, const string& strMsg, bool keepalive)\n             \"</HEAD>\\r\\n\"\n             \"<BODY><H1>401 Unauthorized.</H1></BODY>\\r\\n\"\n             \"</HTML>\\r\\n\", rfc1123Time(), FormatFullVersion());\n+\n     const char *cStatus;\n          if (nStatus == HTTP_OK) cStatus = \"OK\";\n     else if (nStatus == HTTP_BAD_REQUEST) cStatus = \"Bad Request\";\n     else if (nStatus == HTTP_FORBIDDEN) cStatus = \"Forbidden\";\n     else if (nStatus == HTTP_NOT_FOUND) cStatus = \"Not Found\";\n     else if (nStatus == HTTP_INTERNAL_SERVER_ERROR) cStatus = \"Internal Server Error\";\n     else cStatus = \"\";\n+\n+    bool useInternalContent = false;\n+    if (nStatus != HTTP_OK) {\n+        contentType = \"text/plain\";\n+        useInternalContent = true;\n+    }\n+\n     return strprintf(\n             \"HTTP/1.1 %d %s\\r\\n\"\n             \"Date: %s\\r\\n\"\n             \"Connection: %s\\r\\n\"\n             \"Content-Length: %u\\r\\n\"\n-            \"Content-Type: application/json\\r\\n\"\n+            \"Content-Type: %s\\r\\n\"\n             \"Server: bitcoin-json-rpc/%s\\r\\n\"\n             \"\\r\\n\"\n             \"%s\",\n@@ -94,8 +103,10 @@ string HTTPReply(int nStatus, const string& strMsg, bool keepalive)\n         rfc1123Time(),\n         keepalive ? \"keep-alive\" : \"close\",\n         strMsg.size(),\n+        contentType,\n         FormatFullVersion(),\n-        strMsg);\n+        headersOnly ? \"\" :\n+\t    useInternalContent ? cStatus : strMsg.c_str());\n }\n \n bool ReadHTTPRequestLine(std::basic_istream<char>& stream, int &proto,"
+      },
+      {
+        "sha": "8d415efb1b8293885e01d62568dece758d8018a5",
+        "filename": "src/rpcprotocol.h",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 1,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c912e22db08d0a44ad6fd027c09bbdf79c34dbbc/src/rpcprotocol.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c912e22db08d0a44ad6fd027c09bbdf79c34dbbc/src/rpcprotocol.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcprotocol.h?ref=c912e22db08d0a44ad6fd027c09bbdf79c34dbbc",
+        "patch": "@@ -71,6 +71,16 @@ enum RPCErrorCode\n     RPC_WALLET_ALREADY_UNLOCKED     = -17, // Wallet is already unlocked\n };\n \n+class AcceptedConnection\n+{\n+public:\n+    virtual ~AcceptedConnection() {}\n+\n+    virtual std::iostream& stream() = 0;\n+    virtual std::string peer_address_to_string() const = 0;\n+    virtual void close() = 0;\n+};\n+\n //\n // IOStream device that speaks SSL but can also speak non-SSL\n //\n@@ -141,7 +151,9 @@ class SSLIOStreamDevice : public boost::iostreams::device<boost::iostreams::bidi\n };\n \n std::string HTTPPost(const std::string& strMsg, const std::map<std::string,std::string>& mapRequestHeaders);\n-std::string HTTPReply(int nStatus, const std::string& strMsg, bool keepalive);\n+std::string HTTPReply(int nStatus, const std::string& strMsg, bool keepalive,\n+                      bool headerOnly = false,\n+                      const char *contentType = \"application/json\");\n bool ReadHTTPRequestLine(std::basic_istream<char>& stream, int &proto,\n                          std::string& http_method, std::string& http_uri);\n int ReadHTTPStatus(std::basic_istream<char>& stream, int &proto);"
+      },
+      {
+        "sha": "b85b17c8120c28b66937e1cc280112ecde3eef87",
+        "filename": "src/rpcserver.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 10,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c912e22db08d0a44ad6fd027c09bbdf79c34dbbc/src/rpcserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c912e22db08d0a44ad6fd027c09bbdf79c34dbbc/src/rpcserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcserver.cpp?ref=c912e22db08d0a44ad6fd027c09bbdf79c34dbbc",
+        "patch": "@@ -393,16 +393,6 @@ bool ClientAllowed(const boost::asio::ip::address& address)\n     return false;\n }\n \n-class AcceptedConnection\n-{\n-public:\n-    virtual ~AcceptedConnection() {}\n-\n-    virtual std::iostream& stream() = 0;\n-    virtual std::string peer_address_to_string() const = 0;\n-    virtual void close() = 0;\n-};\n-\n template <typename Protocol>\n class AcceptedConnectionImpl : public AcceptedConnection\n {"
+      }
+    ]
+  },
+  {
+    "sha": "854d013012c2d457d5296227d212b053cbea5239",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4NTRkMDEzMDEyYzJkNDU3ZDUyOTYyMjdkMjEyYjA1M2NiZWE1MjM5",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-06-04T15:38:33Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-06-27T03:32:18Z"
+      },
+      "message": "RPC code movement: separate out JSON-RPC execution logic from HTTP server logic",
+      "tree": {
+        "sha": "f383d7d138a65d988ba158fe11671a2e64a15cbe",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f383d7d138a65d988ba158fe11671a2e64a15cbe"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/854d013012c2d457d5296227d212b053cbea5239",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/854d013012c2d457d5296227d212b053cbea5239",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/854d013012c2d457d5296227d212b053cbea5239",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/854d013012c2d457d5296227d212b053cbea5239/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "c912e22db08d0a44ad6fd027c09bbdf79c34dbbc",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c912e22db08d0a44ad6fd027c09bbdf79c34dbbc",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c912e22db08d0a44ad6fd027c09bbdf79c34dbbc"
+      }
+    ],
+    "stats": {
+      "total": 129,
+      "additions": 72,
+      "deletions": 57
+    },
+    "files": [
+      {
+        "sha": "49bc05e5d697b7877292b9bc7d2c1e96b5317199",
+        "filename": "src/rpcserver.cpp",
+        "status": "modified",
+        "additions": 72,
+        "deletions": 57,
+        "changes": 129,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/854d013012c2d457d5296227d212b053cbea5239/src/rpcserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/854d013012c2d457d5296227d212b053cbea5239/src/rpcserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcserver.cpp?ref=854d013012c2d457d5296227d212b053cbea5239",
+        "patch": "@@ -809,6 +809,71 @@ static string JSONRPCExecBatch(const Array& vReq)\n     return write_string(Value(ret), false) + \"\\n\";\n }\n \n+static bool HTTPReq_JSONRPC(AcceptedConnection *conn,\n+                            string& strRequest,\n+                            map<string, string>& mapHeaders,\n+                            bool fRun)\n+{\n+    // Check authorization\n+    if (mapHeaders.count(\"authorization\") == 0)\n+    {\n+        conn->stream() << HTTPReply(HTTP_UNAUTHORIZED, \"\", false) << std::flush;\n+        return false;\n+    }\n+\n+    if (!HTTPAuthorized(mapHeaders))\n+    {\n+        LogPrintf(\"ThreadRPCServer incorrect password attempt from %s\\n\", conn->peer_address_to_string());\n+        /* Deter brute-forcing short passwords.\n+           If this results in a DoS the user really\n+           shouldn't have their RPC port exposed. */\n+        if (mapArgs[\"-rpcpassword\"].size() < 20)\n+            MilliSleep(250);\n+\n+        conn->stream() << HTTPReply(HTTP_UNAUTHORIZED, \"\", false) << std::flush;\n+        return false;\n+    }\n+\n+    JSONRequest jreq;\n+    try\n+    {\n+        // Parse request\n+        Value valRequest;\n+        if (!read_string(strRequest, valRequest))\n+            throw JSONRPCError(RPC_PARSE_ERROR, \"Parse error\");\n+\n+        string strReply;\n+\n+        // singleton request\n+        if (valRequest.type() == obj_type) {\n+            jreq.parse(valRequest);\n+\n+            Value result = tableRPC.execute(jreq.strMethod, jreq.params);\n+\n+            // Send reply\n+            strReply = JSONRPCReply(result, Value::null, jreq.id);\n+\n+        // array of requests\n+        } else if (valRequest.type() == array_type)\n+            strReply = JSONRPCExecBatch(valRequest.get_array());\n+        else\n+            throw JSONRPCError(RPC_PARSE_ERROR, \"Top-level object parse error\");\n+\n+        conn->stream() << HTTPReply(HTTP_OK, strReply, fRun) << std::flush;\n+    }\n+    catch (Object& objError)\n+    {\n+        ErrorReply(conn->stream(), objError, jreq.id);\n+        return false;\n+    }\n+    catch (std::exception& e)\n+    {\n+        ErrorReply(conn->stream(), JSONRPCError(RPC_PARSE_ERROR, e.what()), jreq.id);\n+        return false;\n+    }\n+    return true;\n+}\n+\n void ServiceConnection(AcceptedConnection *conn)\n {\n     bool fRun = true;\n@@ -825,67 +890,17 @@ void ServiceConnection(AcceptedConnection *conn)\n         // Read HTTP message headers and body\n         ReadHTTPMessage(conn->stream(), mapHeaders, strRequest, nProto);\n \n-        if (strURI != \"/\") {\n-            conn->stream() << HTTPReply(HTTP_NOT_FOUND, \"\", false) << std::flush;\n-            break;\n-        }\n-\n-        // Check authorization\n-        if (mapHeaders.count(\"authorization\") == 0)\n-        {\n-            conn->stream() << HTTPReply(HTTP_UNAUTHORIZED, \"\", false) << std::flush;\n-            break;\n-        }\n-        if (!HTTPAuthorized(mapHeaders))\n-        {\n-            LogPrintf(\"ThreadRPCServer incorrect password attempt from %s\\n\", conn->peer_address_to_string());\n-            /* Deter brute-forcing short passwords.\n-               If this results in a DoS the user really\n-               shouldn't have their RPC port exposed. */\n-            if (mapArgs[\"-rpcpassword\"].size() < 20)\n-                MilliSleep(250);\n-\n-            conn->stream() << HTTPReply(HTTP_UNAUTHORIZED, \"\", false) << std::flush;\n-            break;\n-        }\n+        // HTTP Keep-Alive is false; close connection immediately\n         if (mapHeaders[\"connection\"] == \"close\")\n             fRun = false;\n \n-        JSONRequest jreq;\n-        try\n-        {\n-            // Parse request\n-            Value valRequest;\n-            if (!read_string(strRequest, valRequest))\n-                throw JSONRPCError(RPC_PARSE_ERROR, \"Parse error\");\n-\n-            string strReply;\n-\n-            // singleton request\n-            if (valRequest.type() == obj_type) {\n-                jreq.parse(valRequest);\n-\n-                Value result = tableRPC.execute(jreq.strMethod, jreq.params);\n-\n-                // Send reply\n-                strReply = JSONRPCReply(result, Value::null, jreq.id);\n-\n-            // array of requests\n-            } else if (valRequest.type() == array_type)\n-                strReply = JSONRPCExecBatch(valRequest.get_array());\n-            else\n-                throw JSONRPCError(RPC_PARSE_ERROR, \"Top-level object parse error\");\n-\n-            conn->stream() << HTTPReply(HTTP_OK, strReply, fRun) << std::flush;\n-        }\n-        catch (Object& objError)\n-        {\n-            ErrorReply(conn->stream(), objError, jreq.id);\n-            break;\n+        if (strURI == \"/\") {\n+            if (!HTTPReq_JSONRPC(conn, strRequest, mapHeaders, fRun))\n+                break;\n         }\n-        catch (std::exception& e)\n-        {\n-            ErrorReply(conn->stream(), JSONRPCError(RPC_PARSE_ERROR, e.what()), jreq.id);\n+\n+        else {\n+            conn->stream() << HTTPReply(HTTP_NOT_FOUND, \"\", false) << std::flush;\n             break;\n         }\n     }"
+      }
+    ]
+  },
+  {
+    "sha": "ed5769f536f663a8deb8e8b7a68681cebaa52bdd",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplZDU3NjlmNTM2ZjY2M2E4ZGViOGU4YjdhNjg2ODFjZWJhYTUyYmRk",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-06-27T04:10:53Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-06-27T04:10:53Z"
+      },
+      "message": "Move AcceptedConnection class to rpcserver.h.\n\nAlso, add parens to HTTPReply() to assist readability.",
+      "tree": {
+        "sha": "1fb0ca0333560b8bba9bdbab7d755d412ecc7c2a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/1fb0ca0333560b8bba9bdbab7d755d412ecc7c2a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/ed5769f536f663a8deb8e8b7a68681cebaa52bdd",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ed5769f536f663a8deb8e8b7a68681cebaa52bdd",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/ed5769f536f663a8deb8e8b7a68681cebaa52bdd",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ed5769f536f663a8deb8e8b7a68681cebaa52bdd/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "854d013012c2d457d5296227d212b053cbea5239",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/854d013012c2d457d5296227d212b053cbea5239",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/854d013012c2d457d5296227d212b053cbea5239"
+      }
+    ],
+    "stats": {
+      "total": 24,
+      "additions": 12,
+      "deletions": 12
+    },
+    "files": [
+      {
+        "sha": "2cb4a35c4b3d0884c560f8238c657684601792b9",
+        "filename": "src/rpcprotocol.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed5769f536f663a8deb8e8b7a68681cebaa52bdd/src/rpcprotocol.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed5769f536f663a8deb8e8b7a68681cebaa52bdd/src/rpcprotocol.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcprotocol.cpp?ref=ed5769f536f663a8deb8e8b7a68681cebaa52bdd",
+        "patch": "@@ -105,8 +105,8 @@ string HTTPReply(int nStatus, const string& strMsg, bool keepalive,\n         strMsg.size(),\n         contentType,\n         FormatFullVersion(),\n-        headersOnly ? \"\" :\n-\t    useInternalContent ? cStatus : strMsg.c_str());\n+        (headersOnly ? \"\" :\n+            (useInternalContent ? cStatus : strMsg.c_str())));\n }\n \n bool ReadHTTPRequestLine(std::basic_istream<char>& stream, int &proto,"
+      },
+      {
+        "sha": "f1317e9c28116eeda1ae8dd70a6c350f9a79e7b4",
+        "filename": "src/rpcprotocol.h",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 10,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed5769f536f663a8deb8e8b7a68681cebaa52bdd/src/rpcprotocol.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed5769f536f663a8deb8e8b7a68681cebaa52bdd/src/rpcprotocol.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcprotocol.h?ref=ed5769f536f663a8deb8e8b7a68681cebaa52bdd",
+        "patch": "@@ -71,16 +71,6 @@ enum RPCErrorCode\n     RPC_WALLET_ALREADY_UNLOCKED     = -17, // Wallet is already unlocked\n };\n \n-class AcceptedConnection\n-{\n-public:\n-    virtual ~AcceptedConnection() {}\n-\n-    virtual std::iostream& stream() = 0;\n-    virtual std::string peer_address_to_string() const = 0;\n-    virtual void close() = 0;\n-};\n-\n //\n // IOStream device that speaks SSL but can also speak non-SSL\n //"
+      },
+      {
+        "sha": "fcd293663ffe483c4bf2ab500d9034a1f9cc7166",
+        "filename": "src/rpcserver.h",
+        "status": "modified",
+        "additions": 10,
+        "deletions": 0,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed5769f536f663a8deb8e8b7a68681cebaa52bdd/src/rpcserver.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed5769f536f663a8deb8e8b7a68681cebaa52bdd/src/rpcserver.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcserver.h?ref=ed5769f536f663a8deb8e8b7a68681cebaa52bdd",
+        "patch": "@@ -21,6 +21,16 @@\n class CBlockIndex;\n class CNetAddr;\n \n+class AcceptedConnection\n+{\n+public:\n+    virtual ~AcceptedConnection() {}\n+\n+    virtual std::iostream& stream() = 0;\n+    virtual std::string peer_address_to_string() const = 0;\n+    virtual void close() = 0;\n+};\n+\n /* Start RPC threads */\n void StartRPCThreads();\n /* Alternative to StartRPCThreads for the GUI, when no server is"
+      }
+    ]
+  }
+]

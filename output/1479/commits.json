@@ -1,0 +1,74 @@
+[
+  {
+    "sha": "966a0e8cc94f2590521e0a2513e0cea32b5bb005",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5NjZhMGU4Y2M5NGYyNTkwNTIxZTBhMjUxM2UwY2VhMzJiNWJiMDA1",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-06-18T06:32:33Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-11-13T06:56:48Z"
+      },
+      "message": "add CWalletTx::GetImmatureCredit() and use it in CWallet::GetImmatureBalance()",
+      "tree": {
+        "sha": "a6fb31a0f82a7edc186bd46f1478f3d75930368f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/a6fb31a0f82a7edc186bd46f1478f3d75930368f"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/966a0e8cc94f2590521e0a2513e0cea32b5bb005",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/966a0e8cc94f2590521e0a2513e0cea32b5bb005",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/966a0e8cc94f2590521e0a2513e0cea32b5bb005",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/966a0e8cc94f2590521e0a2513e0cea32b5bb005/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "0d5b1d2a3e0c154da2228632524a077b2b65aa2a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0d5b1d2a3e0c154da2228632524a077b2b65aa2a",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/0d5b1d2a3e0c154da2228632524a077b2b65aa2a"
+      }
+    ],
+    "stats": {
+      "total": 23,
+      "additions": 20,
+      "deletions": 3
+    },
+    "files": [
+      {
+        "sha": "0115e56b8e4b8dd6a25c8c8a9ed884ce8aa59b5c",
+        "filename": "src/wallet.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 3,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/966a0e8cc94f2590521e0a2513e0cea32b5bb005/src/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/966a0e8cc94f2590521e0a2513e0cea32b5bb005/src/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.cpp?ref=966a0e8cc94f2590521e0a2513e0cea32b5bb005",
+        "patch": "@@ -926,9 +926,8 @@ int64 CWallet::GetImmatureBalance() const\n         LOCK(cs_wallet);\n         for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)\n         {\n-            const CWalletTx& pcoin = (*it).second;\n-            if (pcoin.IsCoinBase() && pcoin.GetBlocksToMaturity() > 0 && pcoin.IsInMainChain())\n-                nTotal += GetCredit(pcoin);\n+            const CWalletTx* pcoin = &(*it).second;\n+            nTotal += pcoin->GetImmatureCredit();\n         }\n     }\n     return nTotal;"
+      },
+      {
+        "sha": "5e2f8e0ba172a8a42b2372cfb589da1cc0c30b73",
+        "filename": "src/wallet.h",
+        "status": "modified",
+        "additions": 18,
+        "deletions": 0,
+        "changes": 18,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/966a0e8cc94f2590521e0a2513e0cea32b5bb005/src/wallet.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/966a0e8cc94f2590521e0a2513e0cea32b5bb005/src/wallet.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.h?ref=966a0e8cc94f2590521e0a2513e0cea32b5bb005",
+        "patch": "@@ -375,10 +375,12 @@ class CWalletTx : public CMerkleTx\n     // memory only\n     mutable bool fDebitCached;\n     mutable bool fCreditCached;\n+    mutable bool fImmatureCreditCached;\n     mutable bool fAvailableCreditCached;\n     mutable bool fChangeCached;\n     mutable int64 nDebitCached;\n     mutable int64 nCreditCached;\n+    mutable int64 nImmatureCreditCached;\n     mutable int64 nAvailableCreditCached;\n     mutable int64 nChangeCached;\n \n@@ -416,10 +418,12 @@ class CWalletTx : public CMerkleTx\n         vfSpent.clear();\n         fDebitCached = false;\n         fCreditCached = false;\n+        fImmatureCreditCached = false;\n         fAvailableCreditCached = false;\n         fChangeCached = false;\n         nDebitCached = 0;\n         nCreditCached = 0;\n+        nImmatureCreditCached = 0;\n         nAvailableCreditCached = 0;\n         nChangeCached = 0;\n         nOrderPos = -1;\n@@ -563,6 +567,20 @@ class CWalletTx : public CMerkleTx\n         return nCreditCached;\n     }\n \n+    int64 GetImmatureCredit(bool fUseCache=true) const\n+    {\n+        if (IsCoinBase() && GetBlocksToMaturity() > 0 && IsInMainChain())\n+        {\n+            if (fUseCache && fImmatureCreditCached)\n+                return nImmatureCreditCached;\n+            nImmatureCreditCached = pwallet->GetCredit(*this);\n+            fImmatureCreditCached = true;\n+            return nImmatureCreditCached;\n+        }\n+\n+        return 0;\n+    }\n+\n     int64 GetAvailableCredit(bool fUseCache=true) const\n     {\n         // Must wait until coinbase is safely deep enough in the chain before valuing it"
+      }
+    ]
+  }
+]

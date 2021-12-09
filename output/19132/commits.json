@@ -1,0 +1,100 @@
+[
+  {
+    "sha": "f46b678acff0b2e75e26aa50b14d935b3d251a2a",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmNDZiNjc4YWNmZjBiMmU3NWUyNmFhNTBiMTRkOTM1YjNkMjUxYTJh",
+    "commit": {
+      "author": {
+        "name": "Vasil Dimov",
+        "email": "vd@FreeBSD.org",
+        "date": "2020-06-01T12:04:36Z"
+      },
+      "committer": {
+        "name": "Vasil Dimov",
+        "email": "vd@FreeBSD.org",
+        "date": "2020-06-01T15:14:43Z"
+      },
+      "message": "qt: lock cs_main, m_cached_tip_mutex in that order\n\nAlways lock the mutexes `cs_main` and `m_cached_tip_mutex` in\nthe same order: `cs_main`, `m_cached_tip_mutex`. Otherwise we may end up\nin a deadlock.\n\n`ClientModel::m_cached_tip_blocks` is protected by\n`ClientModel::m_cached_tip_mutex`. There are two access paths that\nlock the two mutexes in opposite order:\n\n```\nvalidation.cpp:2868 CChainState::ActivateBestChain(): lock cs_main\nvalidation.cpp:2916 CChainState::ActivateBestChain(): call uiInterface.NotifyBlockTip()\nui_interface.cpp:52 CClientUIInterface::NotifyBlockTip(): go deep in boost\n...\nqt/clientmodel.cpp:255 BlockTipChanged(): lock m_cached_tip_mutex\n```\n\nand\n\n```\nqt/clientmodel.cpp:119 ClientModel::getBestBlockHash(): lock m_cached_tip_mutex\nqt/clientmodel.cpp:121 ClientModel::getBestBlockHash(): call m_node.getBestBlockHash()\ninterfaces/node.cpp:200 NodeImpl::getBestBlockHash(): lock cs_main\n```\n\nFrom `debug.log`:\n\n```\nPOTENTIAL DEADLOCK DETECTED\nPrevious lock order was:\n m_cs_chainstate validation.cpp:2851\n (1) cs_main validation.cpp:2868\n ::mempool.cs validation.cpp:2868\n (2) clientmodel->m_cached_tip_mutex qt/clientmodel.cpp:255\nCurrent lock order is:\n (2) m_cached_tip_mutex qt/clientmodel.cpp:119\n (1) ::cs_main interfaces/node.cpp:200\n```\n\nThe possible deadlock was introduced in\nhttps://github.com/bitcoin/bitcoin/pull/17993",
+      "tree": {
+        "sha": "c44064bba46e0dc3e0ae07822a9a244645299a4e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/c44064bba46e0dc3e0ae07822a9a244645299a4e"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/f46b678acff0b2e75e26aa50b14d935b3d251a2a",
+      "comment_count": 0,
+      "verification": {
+        "verified": true,
+        "reason": "valid",
+        "signature": "-----BEGIN PGP SIGNATURE-----\n\niQQzBAABCAAdFiEE5k2NRWFNsHVF2czBVN8G9ktVy78FAl7VG2UACgkQVN8G9ktV\ny7+U1x//f+hgxqYMwA8sTpLjxYcNPgBAOTvmMBCMcEAMu9EGOSHjXU4C7jfmK3XW\nqOMuvYAIuvawT8hFtC6lgBXLOIJxMjI/9kuEe7FCYRbwCLzVc0tr2ncrl7kC+jA0\nz4GdLgTknd5UzJQZG+WCcBdEXNFfzULlI1vl/evPtNqGLNezhRVtzwpoV+WcSr+D\nNrNQlWjvaOFPaNzPAsu95wDdTtB9/igUaTBf5zJX1GASQ8gAThZK6TBdvfEGv2W3\nvtfvGMEqSoeM394nQEnbedzxgNP7QcsEWus9nfcI/vxP+G5TSX2CgQdM953aiSVQ\ndrerdQELWu0N/3Ikm2IQzIqpTM3oZ2aGvAHgTohuRob3Xx19s96u6nYcSIUwN2nd\npriYTOghyl6rX3bLhe3Dw6HX29wlFJLp+6MXiXZlA4vxUALNSUVgpDlTZPyLf/5M\n/gpJAu7ASDJDY7L0PFFo3aX+d0QDcLYPoXKOpHo/RRcsiKf1/OxtkYSD6Ub8AUqn\nn9H6wkHokyx/lBBQofQE8px3xCIan9my4NFTAb/LAD9X1T49NhcUwpLRVkMT8Bme\nE6OqsSFUN+ta1ZIXyfeeLKroUfuflS2zzn4EsldcBq4aE2lsyTuVpp8b5ALNlxbu\nPCYUxoSXo2wdeaokps1b7RppGfwxNGlRnwlCZHt+FILXg2hMBPShw/BX2JIM9p1X\n0BgBZLjxrmiOEs/Hx17Iw52TqDm+EJe491kpdSNerLxAukylFQ8aszvj4vSM44yc\npoQgVYN/Rcvd4GTxF6w4kJOKP4Ik6GB7/Hi3En/7eLbgGgTlzh5+0r06f1kP4Pop\n0BoTM3znEogf+vKvMzOhulTBx/yDcosUyEkragvLsDGXMOl88IDB56enN/RcQRgN\n06RKwI6i0DIESWJV7E/7xY1Gen2DBImg5yhEGZqaSjGmGwPCGuc/KH46tPt9/HKl\ndGweLJY3sfFm4AOXyqgbMoX5hvlgNFx4NfAjAPC7JmR9rBHqnCvDxjw9UUMc0GEp\nyiW6QvkzODk4o/+OIvLP67z7p76xJd+Fp+nhvtWFaj31iu0fhrlGc+8k2irmTFlN\ny5IkEP1W7eRRNQLKGgyCCMADblNYiFnsloc8N5/vHieu5Pue9nEs/gZdBZWZrfSI\nWNp7ewwhLp2Bp5lnOrYMnN1kYOT8vDRCntZDGp/ZLX3EG9fBQP0zYLKKcQKMC9Pk\nI+UheLCrAfkYNSnO4C9BwfpLTpPnbUh56qLRlKPFGfNYDEj/PrArQVQuoUSuZByz\nbmnd+z3yiGLIgyl66ouMA9gbIv1y4poM/TaK10LHR4W6epxEppzC/rFvOingMFoX\nl/QchVd/wLwixMqmSreirgcljS8WDA==\n=tVkZ\n-----END PGP SIGNATURE-----",
+        "payload": "tree c44064bba46e0dc3e0ae07822a9a244645299a4e\nparent 9bc7751cadbd038faf8ac1d62cda23fcf00d4cc2\nauthor Vasil Dimov <vd@FreeBSD.org> 1591013076 +0200\ncommitter Vasil Dimov <vd@FreeBSD.org> 1591024483 +0200\n\nqt: lock cs_main, m_cached_tip_mutex in that order\n\nAlways lock the mutexes `cs_main` and `m_cached_tip_mutex` in\nthe same order: `cs_main`, `m_cached_tip_mutex`. Otherwise we may end up\nin a deadlock.\n\n`ClientModel::m_cached_tip_blocks` is protected by\n`ClientModel::m_cached_tip_mutex`. There are two access paths that\nlock the two mutexes in opposite order:\n\n```\nvalidation.cpp:2868 CChainState::ActivateBestChain(): lock cs_main\nvalidation.cpp:2916 CChainState::ActivateBestChain(): call uiInterface.NotifyBlockTip()\nui_interface.cpp:52 CClientUIInterface::NotifyBlockTip(): go deep in boost\n...\nqt/clientmodel.cpp:255 BlockTipChanged(): lock m_cached_tip_mutex\n```\n\nand\n\n```\nqt/clientmodel.cpp:119 ClientModel::getBestBlockHash(): lock m_cached_tip_mutex\nqt/clientmodel.cpp:121 ClientModel::getBestBlockHash(): call m_node.getBestBlockHash()\ninterfaces/node.cpp:200 NodeImpl::getBestBlockHash(): lock cs_main\n```\n\nFrom `debug.log`:\n\n```\nPOTENTIAL DEADLOCK DETECTED\nPrevious lock order was:\n m_cs_chainstate validation.cpp:2851\n (1) cs_main validation.cpp:2868\n ::mempool.cs validation.cpp:2868\n (2) clientmodel->m_cached_tip_mutex qt/clientmodel.cpp:255\nCurrent lock order is:\n (2) m_cached_tip_mutex qt/clientmodel.cpp:119\n (1) ::cs_main interfaces/node.cpp:200\n```\n\nThe possible deadlock was introduced in\nhttps://github.com/bitcoin/bitcoin/pull/17993\n"
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f46b678acff0b2e75e26aa50b14d935b3d251a2a",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/f46b678acff0b2e75e26aa50b14d935b3d251a2a",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f46b678acff0b2e75e26aa50b14d935b3d251a2a/comments",
+    "author": {
+      "login": "vasild",
+      "id": 266751,
+      "node_id": "MDQ6VXNlcjI2Njc1MQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/266751?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/vasild",
+      "html_url": "https://github.com/vasild",
+      "followers_url": "https://api.github.com/users/vasild/followers",
+      "following_url": "https://api.github.com/users/vasild/following{/other_user}",
+      "gists_url": "https://api.github.com/users/vasild/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/vasild/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/vasild/subscriptions",
+      "organizations_url": "https://api.github.com/users/vasild/orgs",
+      "repos_url": "https://api.github.com/users/vasild/repos",
+      "events_url": "https://api.github.com/users/vasild/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/vasild/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "vasild",
+      "id": 266751,
+      "node_id": "MDQ6VXNlcjI2Njc1MQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/266751?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/vasild",
+      "html_url": "https://github.com/vasild",
+      "followers_url": "https://api.github.com/users/vasild/followers",
+      "following_url": "https://api.github.com/users/vasild/following{/other_user}",
+      "gists_url": "https://api.github.com/users/vasild/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/vasild/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/vasild/subscriptions",
+      "organizations_url": "https://api.github.com/users/vasild/orgs",
+      "repos_url": "https://api.github.com/users/vasild/repos",
+      "events_url": "https://api.github.com/users/vasild/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/vasild/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "9bc7751cadbd038faf8ac1d62cda23fcf00d4cc2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9bc7751cadbd038faf8ac1d62cda23fcf00d4cc2",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/9bc7751cadbd038faf8ac1d62cda23fcf00d4cc2"
+      }
+    ],
+    "stats": {
+      "total": 16,
+      "additions": 15,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "c1d358f7f69074b06144f837626b5e6f83619e36",
+        "filename": "src/qt/clientmodel.cpp",
+        "status": "modified",
+        "additions": 15,
+        "deletions": 1,
+        "changes": 16,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f46b678acff0b2e75e26aa50b14d935b3d251a2a/src/qt/clientmodel.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f46b678acff0b2e75e26aa50b14d935b3d251a2a/src/qt/clientmodel.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/clientmodel.cpp?ref=f46b678acff0b2e75e26aa50b14d935b3d251a2a",
+        "patch": "@@ -116,9 +116,23 @@ int ClientModel::getNumBlocks() const\n \n uint256 ClientModel::getBestBlockHash()\n {\n+    uint256 tip{WITH_LOCK(m_cached_tip_mutex, return m_cached_tip_blocks)};\n+\n+    if (!tip.IsNull()) {\n+        return tip;\n+    }\n+\n+    // Lock order must be: first `cs_main`, then `m_cached_tip_mutex`.\n+    // The following will lock `cs_main` (and release it), so we must not\n+    // own `m_cached_tip_mutex` here.\n+    tip = m_node.getBestBlockHash();\n+\n     LOCK(m_cached_tip_mutex);\n+    // We checked that `m_cached_tip_blocks` is not null above, but then we\n+    // released the mutex `m_cached_tip_mutex`, so it could have changed in the\n+    // meantime. Thus, check again.\n     if (m_cached_tip_blocks.IsNull()) {\n-        m_cached_tip_blocks = m_node.getBestBlockHash();\n+        m_cached_tip_blocks = tip;\n     }\n     return m_cached_tip_blocks;\n }"
+      }
+    ]
+  }
+]

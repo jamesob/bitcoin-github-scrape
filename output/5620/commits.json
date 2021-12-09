@@ -1,0 +1,134 @@
+[
+  {
+    "sha": "6715efb9ca5cabeb07ae4ba8390a6e1b7638f66c",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2NzE1ZWZiOWNhNWNhYmViMDdhZTRiYTgzOTBhNmUxYjc2MzhmNjZj",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2015-01-08T13:42:04Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2015-01-15T08:08:22Z"
+      },
+      "message": "[Qt] Payment request expiration bug fix (re-done)\n\n- this is based on #4122 (which can be closed)\n\nCurrently a payment request is only checked for expiration upon receipt.\nIt should be checked again immediately before sending coins to prevent\nthe user from paying to an expired invoice which would then require a\ncustomer service interaction.\n\n- add static verifyExpired() function to PaymentServer to be able to use\n  the same validation code in GUI and unit-testing code\n- extend unit tests to use that function and also add an unit test which\n  overflows, because payment requests allow expires as uint64, whereas we\n  use int64_t for verification of expired payment requests",
+      "tree": {
+        "sha": "a6a984a35af1053209e0cd884ee90eff1d87797a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/a6a984a35af1053209e0cd884ee90eff1d87797a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/6715efb9ca5cabeb07ae4ba8390a6e1b7638f66c",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6715efb9ca5cabeb07ae4ba8390a6e1b7638f66c",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/6715efb9ca5cabeb07ae4ba8390a6e1b7638f66c",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6715efb9ca5cabeb07ae4ba8390a6e1b7638f66c/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "e0cd2f55233d10476b75ac75df95a079735921ec",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e0cd2f55233d10476b75ac75df95a079735921ec",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/e0cd2f55233d10476b75ac75df95a079735921ec"
+      }
+    ],
+    "stats": {
+      "total": 150,
+      "additions": 137,
+      "deletions": 13
+    },
+    "files": [
+      {
+        "sha": "0187e4c2299fca04d6e1bc7cc5934227c23d4d54",
+        "filename": "src/qt/paymentserver.cpp",
+        "status": "modified",
+        "additions": 17,
+        "deletions": 8,
+        "changes": 25,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6715efb9ca5cabeb07ae4ba8390a6e1b7638f66c/src/qt/paymentserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6715efb9ca5cabeb07ae4ba8390a6e1b7638f66c/src/qt/paymentserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.cpp?ref=6715efb9ca5cabeb07ae4ba8390a6e1b7638f66c",
+        "patch": "@@ -518,8 +518,6 @@ bool PaymentServer::processPaymentRequest(PaymentRequestPlus& request, SendCoins\n         return false;\n \n     if (request.IsInitialized()) {\n-        const payments::PaymentDetails& details = request.getDetails();\n-\n         // Payment request network matches client network?\n         if (!verifyNetwork(request.getDetails())) {\n             emit message(tr(\"Payment request rejected\"), tr(\"Payment request network doesn't match client network.\"),\n@@ -528,16 +526,15 @@ bool PaymentServer::processPaymentRequest(PaymentRequestPlus& request, SendCoins\n             return false;\n         }\n \n-        // Expired payment request?\n-        if (details.has_expires() && (int64_t)details.expires() < GetTime())\n-        {\n-            emit message(tr(\"Payment request rejected\"), tr(\"Payment request has expired.\"),\n+        // Make sure any payment requests involved are still valid.\n+        // This is re-checked just before sending coins in WalletModel::sendCoins().\n+        if (verifyExpired(request.getDetails())) {\n+            emit message(tr(\"Payment request rejected\"), tr(\"Payment request expired.\"),\n                 CClientUIInterface::MSG_ERROR);\n \n             return false;\n         }\n-    }\n-    else {\n+    } else {\n         emit message(tr(\"Payment request error\"), tr(\"Payment request is not initialized.\"),\n             CClientUIInterface::MSG_ERROR);\n \n@@ -756,3 +753,15 @@ bool PaymentServer::verifyNetwork(const payments::PaymentDetails& requestDetails\n     }\n     return fVerified;\n }\n+\n+bool PaymentServer::verifyExpired(const payments::PaymentDetails& requestDetails)\n+{\n+    bool fVerified = (requestDetails.has_expires() && (int64_t)requestDetails.expires() < GetTime());\n+    if (fVerified) {\n+        const QString requestExpires = QString::fromStdString(DateTimeStrFormat(\"%Y-%m-%d %H:%M:%S\", (int64_t)requestDetails.expires()));\n+        qWarning() << QString(\"PaymentServer::%1: Payment request expired \\\"%2\\\".\")\n+            .arg(__func__)\n+            .arg(requestExpires);\n+    }\n+    return fVerified;\n+}"
+      },
+      {
+        "sha": "db5f44ff1dfd8e5a444e4a2cec1058d4639df3fb",
+        "filename": "src/qt/paymentserver.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6715efb9ca5cabeb07ae4ba8390a6e1b7638f66c/src/qt/paymentserver.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6715efb9ca5cabeb07ae4ba8390a6e1b7638f66c/src/qt/paymentserver.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.h?ref=6715efb9ca5cabeb07ae4ba8390a6e1b7638f66c",
+        "patch": "@@ -93,6 +93,8 @@ class PaymentServer : public QObject\n \n     // Verify that the payment request network matches the client network\n     static bool verifyNetwork(const payments::PaymentDetails& requestDetails);\n+    // Verify if the payment request is expired\n+    static bool verifyExpired(const payments::PaymentDetails& requestDetails);\n \n signals:\n     // Fired when a valid payment request is received"
+      },
+      {
+        "sha": "ce4a62d1b0761bd8ab5e6b7797ebf30444bb73ce",
+        "filename": "src/qt/sendcoinsdialog.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 0,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6715efb9ca5cabeb07ae4ba8390a6e1b7638f66c/src/qt/sendcoinsdialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6715efb9ca5cabeb07ae4ba8390a6e1b7638f66c/src/qt/sendcoinsdialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/sendcoinsdialog.cpp?ref=6715efb9ca5cabeb07ae4ba8390a6e1b7638f66c",
+        "patch": "@@ -529,6 +529,10 @@ void SendCoinsDialog::processSendCoinsReturn(const WalletModel::SendCoinsReturn\n     case WalletModel::InsaneFee:\n         msgParams.first = tr(\"A fee higher than %1 is considered an insanely high fee.\").arg(BitcoinUnits::formatWithUnit(model->getOptionsModel()->getDisplayUnit(), 10000000));\n         break;\n+    case WalletModel::PaymentRequestExpired:\n+        msgParams.first = tr(\"Payment request expired!\");\n+        msgParams.second = CClientUIInterface::MSG_ERROR;\n+        break;\n     // included to prevent a compiler warning.\n     case WalletModel::OK:\n     default:"
+      },
+      {
+        "sha": "50636d7c67f770132c5591a68aa44995d2a8f100",
+        "filename": "src/qt/test/paymentrequestdata.h",
+        "status": "modified",
+        "additions": 72,
+        "deletions": 0,
+        "changes": 72,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6715efb9ca5cabeb07ae4ba8390a6e1b7638f66c/src/qt/test/paymentrequestdata.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6715efb9ca5cabeb07ae4ba8390a6e1b7638f66c/src/qt/test/paymentrequestdata.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/test/paymentrequestdata.h?ref=6715efb9ca5cabeb07ae4ba8390a6e1b7638f66c",
+        "patch": "@@ -361,3 +361,75 @@ gAFwThsozZxkZxzCn4R8WxNiLFV6m0ye9fEtSbolfaW+EjBMpO03lr/dwNnrclhg\\\n ew+A05xfZztrAt16XKEY7qKJ/eY2nLd0fVAIu/nIt+7/VYVXT83zLrWc150aRS7W\\\n AdJbL3JOJLs6Eyp5zrPbfI8faRttFAdONKDrJgIpuW1E3g==\\\n \";\n+\n+//\n+// Expired payment request (expires is set to 1 = 1970-01-01 00:00:01)\n+//\n+const char* paymentrequest2_cert2_BASE64 =\n+\"\\\n+Egt4NTA5K3NoYTI1NhrQBArNBDCCAkkwggExoAMCAQICAQEwDQYJKoZIhvcNAQEL\\\n+BQAwITEfMB0GA1UEAwwWUGF5bWVudFJlcXVlc3QgVGVzdCBDQTAeFw0xNTAxMTEx\\\n+ODIxMDhaFw0yNTAxMDgxODIxMDhaMCExHzAdBgNVBAMMFlBheW1lbnRSZXF1ZXN0\\\n+IFRlc3QgQ0EwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBAMsZqzkzeBGo+i2N\\\n+mUak3Ciodr1V7S062VOy7N0OQYNDQHYkgDFAUET7cEb5VJaHPv5m3ppTBpU9xBcf\\\n+wbHHUt4VjA+mhRmYrl1khjvZM+X8kEqvWn20BtcM9R6r0yIYec8UERDDHBleL/P8\\\n+RkxEnVLjYTV9zigCXfMsgYb3EQShAgMBAAGjEDAOMAwGA1UdEwQFMAMBAf8wDQYJ\\\n+KoZIhvcNAQELBQADggEBABUJpl3QCqsoDSxAsQdV6zKT4VGV76AzoGj7etQsQY+r\\\n++S26VfWh/fMobEzuxFChr0USgLJ6FoK78hAtoZvt1lrye9yqFv/ig3WLWsJKWHHb\\\n+3RT6oR03CIwZXFSUasi08QDVLxafwsU5OMcPLucF3a1lRL1ccYrNgVCCx1+X7Bos\\\n+tIgDGRQQ4AyoHTcfVd2hEGeUv7k14mOxFsAp6851yosHq9Q2kwmdH+rHEJbjof87\\\n+yyKLagc4owyXBZYkQmkeHWCNqnuRmO5vUsfVb0UUrkD64o7Th/NjwooA7SCiUXl6\\\n+dfygT1b7ggpx7GC+sP2DsIM47IAZ55drjqX5u2f+Ba0iQgoEdGVzdBIgCICt4gQS\\\n+GXapFASsapRTBKxoykO9YhoackY1CqLyiKwYiNLUpQUgASoQVGVzdGluZyB0ZXN0\\\n+bmV0ISqAATXq9A5nmJgtmee/bQTeHeif4w1YYFPBlKghwx6qbVgXTWnwBJtOQhhV\\\n+sZdzbTl95ENR7/Y7VJupW9kDWobCK7zUUhLAzUlwmLlcx6itHw8LTUF5HK+AwsZm\\\n+Zs85lISGvOS0NZW/ENa6l+oQRnL87oqVZr/EDGiuqjz6T0ThQi0l\\\n+\";\n+\n+//\n+// Unexpired payment request (expires is set to 0x7FFFFFFFFFFFFFFF = max. int64_t)\n+//\n+const char* paymentrequest3_cert2_BASE64 =\n+\"\\\n+Egt4NTA5K3NoYTI1NhrQBArNBDCCAkkwggExoAMCAQICAQEwDQYJKoZIhvcNAQEL\\\n+BQAwITEfMB0GA1UEAwwWUGF5bWVudFJlcXVlc3QgVGVzdCBDQTAeFw0xNTAxMTEx\\\n+ODIxMDhaFw0yNTAxMDgxODIxMDhaMCExHzAdBgNVBAMMFlBheW1lbnRSZXF1ZXN0\\\n+IFRlc3QgQ0EwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBAMsZqzkzeBGo+i2N\\\n+mUak3Ciodr1V7S062VOy7N0OQYNDQHYkgDFAUET7cEb5VJaHPv5m3ppTBpU9xBcf\\\n+wbHHUt4VjA+mhRmYrl1khjvZM+X8kEqvWn20BtcM9R6r0yIYec8UERDDHBleL/P8\\\n+RkxEnVLjYTV9zigCXfMsgYb3EQShAgMBAAGjEDAOMAwGA1UdEwQFMAMBAf8wDQYJ\\\n+KoZIhvcNAQELBQADggEBABUJpl3QCqsoDSxAsQdV6zKT4VGV76AzoGj7etQsQY+r\\\n++S26VfWh/fMobEzuxFChr0USgLJ6FoK78hAtoZvt1lrye9yqFv/ig3WLWsJKWHHb\\\n+3RT6oR03CIwZXFSUasi08QDVLxafwsU5OMcPLucF3a1lRL1ccYrNgVCCx1+X7Bos\\\n+tIgDGRQQ4AyoHTcfVd2hEGeUv7k14mOxFsAp6851yosHq9Q2kwmdH+rHEJbjof87\\\n+yyKLagc4owyXBZYkQmkeHWCNqnuRmO5vUsfVb0UUrkD64o7Th/NjwooA7SCiUXl6\\\n+dfygT1b7ggpx7GC+sP2DsIM47IAZ55drjqX5u2f+Ba0iSgoEdGVzdBIgCICt4gQS\\\n+GXapFASsapRTBKxoykO9YhoackY1CqLyiKwYyNfZpQUg//////////9/KhBUZXN0\\\n+aW5nIHRlc3RuZXQhKoABNwi8WnMW4aMvbmvorTiiWJLFhofLFnsoWCJnj3rWLnLh\\\n+n3w6q/fZ26p50ERL/noxdTUfeFsKnlECkUu/fOcOrqyYDiwvxI0SZ034DleVyFU1\\\n+Z3T+X0zcL8oe7bX01Yf+s2V+5JXQXarKnKBrZCGgv2ARjFNSZe7E7vGg5K4Q6Q8=\\\n+\";\n+\n+//\n+// Unexpired payment request (expires is set to 0x8000000000000000 > max. int64_t, allowed uint64)\n+//\n+const char* paymentrequest4_cert2_BASE64 =\n+\"\\\n+Egt4NTA5K3NoYTI1NhrQBArNBDCCAkkwggExoAMCAQICAQEwDQYJKoZIhvcNAQEL\\\n+BQAwITEfMB0GA1UEAwwWUGF5bWVudFJlcXVlc3QgVGVzdCBDQTAeFw0xNTAxMTEx\\\n+ODIxMDhaFw0yNTAxMDgxODIxMDhaMCExHzAdBgNVBAMMFlBheW1lbnRSZXF1ZXN0\\\n+IFRlc3QgQ0EwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBAMsZqzkzeBGo+i2N\\\n+mUak3Ciodr1V7S062VOy7N0OQYNDQHYkgDFAUET7cEb5VJaHPv5m3ppTBpU9xBcf\\\n+wbHHUt4VjA+mhRmYrl1khjvZM+X8kEqvWn20BtcM9R6r0yIYec8UERDDHBleL/P8\\\n+RkxEnVLjYTV9zigCXfMsgYb3EQShAgMBAAGjEDAOMAwGA1UdEwQFMAMBAf8wDQYJ\\\n+KoZIhvcNAQELBQADggEBABUJpl3QCqsoDSxAsQdV6zKT4VGV76AzoGj7etQsQY+r\\\n++S26VfWh/fMobEzuxFChr0USgLJ6FoK78hAtoZvt1lrye9yqFv/ig3WLWsJKWHHb\\\n+3RT6oR03CIwZXFSUasi08QDVLxafwsU5OMcPLucF3a1lRL1ccYrNgVCCx1+X7Bos\\\n+tIgDGRQQ4AyoHTcfVd2hEGeUv7k14mOxFsAp6851yosHq9Q2kwmdH+rHEJbjof87\\\n+yyKLagc4owyXBZYkQmkeHWCNqnuRmO5vUsfVb0UUrkD64o7Th/NjwooA7SCiUXl6\\\n+dfygT1b7ggpx7GC+sP2DsIM47IAZ55drjqX5u2f+Ba0iSwoEdGVzdBIgCICt4gQS\\\n+GXapFASsapRTBKxoykO9YhoackY1CqLyiKwYt+HZpQUggICAgICAgICAASoQVGVz\\\n+dGluZyB0ZXN0bmV0ISqAAXSQG8+GFA18VaKarlYrOz293rNMIub0swKGcQm8jAGX\\\n+HSLaRgHfUDeEPr4hydy4dtfu59KNwe2xsHOHu/SpO4L8SrA4Dm9A7SlNBVWdcLbw\\\n+d2hj739GDLz0b5KuJ2SG6VknMRQM976w/m2qlq0ccVGaaZ2zMIGfpzL3p6adwx/5\\\n+\";"
+      },
+      {
+        "sha": "04935192c85fa97bb51b445686903d9d895b9063",
+        "filename": "src/qt/test/paymentservertests.cpp",
+        "status": "modified",
+        "additions": 32,
+        "deletions": 2,
+        "changes": 34,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6715efb9ca5cabeb07ae4ba8390a6e1b7638f66c/src/qt/test/paymentservertests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6715efb9ca5cabeb07ae4ba8390a6e1b7638f66c/src/qt/test/paymentservertests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/test/paymentservertests.cpp?ref=6715efb9ca5cabeb07ae4ba8390a6e1b7638f66c",
+        "patch": "@@ -143,15 +143,45 @@ void PaymentServerTests::paymentServerTests()\n     QVERIFY(r.paymentRequest.IsInitialized());\n     QCOMPARE(PaymentServer::verifyNetwork(r.paymentRequest.getDetails()), false);\n \n-    // Just get some random data big enough to trigger BIP70 DoS protection\n+    // Expired payment request (expires is set to 1 = 1970-01-01 00:00:01):\n+    data = DecodeBase64(paymentrequest2_cert2_BASE64);\n+    byteArray = QByteArray((const char*)&data[0], data.size());\n+    r.paymentRequest.parse(byteArray);\n+    // Ensure the request is initialized\n+    QVERIFY(r.paymentRequest.IsInitialized());\n+    // compares 1 < GetTime() == false (treated as expired payment request)\n+    QCOMPARE(PaymentServer::verifyExpired(r.paymentRequest.getDetails()), true);\n+\n+    // Unexpired payment request (expires is set to 0x7FFFFFFFFFFFFFFF = max. int64_t):\n+    // 9223372036854775807 (uint64), 9223372036854775807 (int64_t) and -1 (int32_t)\n+    // -1 is 1969-12-31 23:59:59 (for a 32 bit time values)\n+    data = DecodeBase64(paymentrequest3_cert2_BASE64);\n+    byteArray = QByteArray((const char*)&data[0], data.size());\n+    r.paymentRequest.parse(byteArray);\n+    // Ensure the request is initialized\n+    QVERIFY(r.paymentRequest.IsInitialized());\n+    // compares 9223372036854775807 < GetTime() == false (treated as unexpired payment request)\n+    QCOMPARE(PaymentServer::verifyExpired(r.paymentRequest.getDetails()), false);\n+\n+    // Unexpired payment request (expires is set to 0x8000000000000000 > max. int64_t, allowed uint64):\n+    // 9223372036854775808 (uint64), -9223372036854775808 (int64_t) and 0 (int32_t)\n+    // 0 is 1970-01-01 00:00:00 (for a 32 bit time values)\n+    data = DecodeBase64(paymentrequest4_cert2_BASE64);\n+    byteArray = QByteArray((const char*)&data[0], data.size());\n+    r.paymentRequest.parse(byteArray);\n+    // Ensure the request is initialized\n+    QVERIFY(r.paymentRequest.IsInitialized());\n+    // compares -9223372036854775808 < GetTime() == true (treated as expired payment request)\n+    QCOMPARE(PaymentServer::verifyExpired(r.paymentRequest.getDetails()), true);\n+\n+    // Test BIP70 DoS protection:\n     unsigned char randData[BIP70_MAX_PAYMENTREQUEST_SIZE + 1];\n     GetRandBytes(randData, sizeof(randData));\n     // Write data to a temp file:\n     QTemporaryFile tempFile;\n     tempFile.open();\n     tempFile.write((const char*)randData, sizeof(randData));\n     tempFile.close();\n-    // Trigger BIP70 DoS protection\n     QCOMPARE(PaymentServer::readPaymentRequestFromFile(tempFile.fileName(), r.paymentRequest), false);\n \n     delete server;"
+      },
+      {
+        "sha": "57596b77bd771eb6443b92e780ed75b60de2200d",
+        "filename": "src/qt/walletmodel.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 1,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6715efb9ca5cabeb07ae4ba8390a6e1b7638f66c/src/qt/walletmodel.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6715efb9ca5cabeb07ae4ba8390a6e1b7638f66c/src/qt/walletmodel.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/walletmodel.cpp?ref=6715efb9ca5cabeb07ae4ba8390a6e1b7638f66c",
+        "patch": "@@ -6,6 +6,7 @@\n \n #include \"addresstablemodel.h\"\n #include \"guiconstants.h\"\n+#include \"paymentserver.h\"\n #include \"recentrequeststablemodel.h\"\n #include \"transactiontablemodel.h\"\n \n@@ -294,11 +295,16 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(WalletModelTransaction &tran\n         LOCK2(cs_main, wallet->cs_wallet);\n         CWalletTx *newTx = transaction.getTransaction();\n \n-        // Store PaymentRequests in wtx.vOrderForm in wallet.\n         foreach(const SendCoinsRecipient &rcp, transaction.getRecipients())\n         {\n             if (rcp.paymentRequest.IsInitialized())\n             {\n+                // Make sure any payment requests involved are still valid.\n+                if (PaymentServer::verifyExpired(rcp.paymentRequest.getDetails())) {\n+                    return PaymentRequestExpired;\n+                }\n+\n+                // Store PaymentRequests in wtx.vOrderForm in wallet.\n                 std::string key(\"PaymentRequest\");\n                 std::string value;\n                 rcp.paymentRequest.SerializeToString(&value);"
+      },
+      {
+        "sha": "9916d11f93995175632ad456db4400e2088a6102",
+        "filename": "src/qt/walletmodel.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 2,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6715efb9ca5cabeb07ae4ba8390a6e1b7638f66c/src/qt/walletmodel.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6715efb9ca5cabeb07ae4ba8390a6e1b7638f66c/src/qt/walletmodel.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/walletmodel.h?ref=6715efb9ca5cabeb07ae4ba8390a6e1b7638f66c",
+        "patch": "@@ -40,7 +40,7 @@ class SendCoinsRecipient\n     explicit SendCoinsRecipient(const QString &addr, const QString &label, const CAmount& amount, const QString &message):\n         address(addr), label(label), amount(amount), message(message), nVersion(SendCoinsRecipient::CURRENT_VERSION) {}\n \n-    // If from an insecure payment request, this is used for storing\n+    // If from an unauthenticated payment request, this is used for storing\n     // the addresses, e.g. address-A<br />address-B<br />address-C.\n     // Info: As we don't need to process addresses in here when using\n     // payment requests, we can abuse it for displaying an address list.\n@@ -111,7 +111,8 @@ class WalletModel : public QObject\n         DuplicateAddress,\n         TransactionCreationFailed, // Error returned when wallet is still locked\n         TransactionCommitFailed,\n-        InsaneFee\n+        InsaneFee,\n+        PaymentRequestExpired\n     };\n \n     enum EncryptionStatus"
+      }
+    ]
+  }
+]

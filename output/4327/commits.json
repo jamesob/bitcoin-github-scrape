@@ -1,0 +1,218 @@
+[
+  {
+    "sha": "0127a9be14089b3f352ec349b2ecf4488234a4d8",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowMTI3YTliZTE0MDg5YjNmMzUyZWMzNDliMmVjZjQ0ODgyMzRhNGQ4",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-06-11T11:20:59Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-07-07T06:15:14Z"
+      },
+      "message": "remove SOCKS4 support from core and GUI\n\n- now we support SOCKS5 only",
+      "tree": {
+        "sha": "4c19601bbc128767efd76f731a0f3c45bf75ade9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/4c19601bbc128767efd76f731a0f3c45bf75ade9"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/0127a9be14089b3f352ec349b2ecf4488234a4d8",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0127a9be14089b3f352ec349b2ecf4488234a4d8",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/0127a9be14089b3f352ec349b2ecf4488234a4d8",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0127a9be14089b3f352ec349b2ecf4488234a4d8/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "4ed2315e86621cf547fbc3649fcbe39c793a7eb3",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4ed2315e86621cf547fbc3649fcbe39c793a7eb3",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/4ed2315e86621cf547fbc3649fcbe39c793a7eb3"
+      }
+    ],
+    "stats": {
+      "total": 219,
+      "additions": 47,
+      "deletions": 172
+    },
+    "files": [
+      {
+        "sha": "a92d2aad67cf6b232a9be20ebd4870962d2d0dac",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 13,
+        "changes": 19,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0127a9be14089b3f352ec349b2ecf4488234a4d8/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0127a9be14089b3f352ec349b2ecf4488234a4d8/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=0127a9be14089b3f352ec349b2ecf4488234a4d8",
+        "patch": "@@ -238,9 +238,8 @@ std::string HelpMessage(HelpMessageMode mode)\n     strUsage += \"  -onion=<ip:port>       \" + _(\"Use separate SOCKS5 proxy to reach peers via Tor hidden services (default: -proxy)\") + \"\\n\";\n     strUsage += \"  -onlynet=<net>         \" + _(\"Only connect to nodes in network <net> (IPv4, IPv6 or Tor)\") + \"\\n\";\n     strUsage += \"  -port=<port>           \" + _(\"Listen for connections on <port> (default: 8333 or testnet: 18333)\") + \"\\n\";\n-    strUsage += \"  -proxy=<ip:port>       \" + _(\"Connect through SOCKS proxy\") + \"\\n\";\n+    strUsage += \"  -proxy=<ip:port>       \" + _(\"Connect through SOCKS5 proxy\") + \"\\n\";\n     strUsage += \"  -seednode=<ip>         \" + _(\"Connect to a node to retrieve peer addresses, and disconnect\") + \"\\n\";\n-    strUsage += \"  -socks=<n>             \" + _(\"Select SOCKS version for -proxy (4 or 5, default: 5)\") + \"\\n\";\n     strUsage += \"  -timeout=<n>           \" + _(\"Specify connection timeout in milliseconds (default: 5000)\") + \"\\n\";\n #ifdef USE_UPNP\n #if USE_UPNP\n@@ -745,10 +744,6 @@ bool AppInit2(boost::thread_group& threadGroup)\n \n     RegisterNodeSignals(GetNodeSignals());\n \n-    int nSocksVersion = GetArg(\"-socks\", 5);\n-    if (nSocksVersion != 4 && nSocksVersion != 5)\n-        return InitError(strprintf(_(\"Unknown -socks proxy version requested: %i\"), nSocksVersion));\n-\n     if (mapArgs.count(\"-onlynet\")) {\n         std::set<enum Network> nets;\n         BOOST_FOREACH(std::string snet, mapMultiArgs[\"-onlynet\"]) {\n@@ -772,12 +767,10 @@ bool AppInit2(boost::thread_group& threadGroup)\n             return InitError(strprintf(_(\"Invalid -proxy address: '%s'\"), mapArgs[\"-proxy\"]));\n \n         if (!IsLimited(NET_IPV4))\n-            SetProxy(NET_IPV4, addrProxy, nSocksVersion);\n-        if (nSocksVersion > 4) {\n-            if (!IsLimited(NET_IPV6))\n-                SetProxy(NET_IPV6, addrProxy, nSocksVersion);\n-            SetNameProxy(addrProxy, nSocksVersion);\n-        }\n+            SetProxy(NET_IPV4, addrProxy);\n+        if (!IsLimited(NET_IPV6))\n+            SetProxy(NET_IPV6, addrProxy);\n+        SetNameProxy(addrProxy);\n         fProxy = true;\n     }\n \n@@ -791,7 +784,7 @@ bool AppInit2(boost::thread_group& threadGroup)\n             addrOnion = CService(mapArgs[\"-onion\"], 9050);\n         if (!addrOnion.IsValid())\n             return InitError(strprintf(_(\"Invalid -onion address: '%s'\"), mapArgs[\"-onion\"]));\n-        SetProxy(NET_TOR, addrOnion, 5);\n+        SetProxy(NET_TOR, addrOnion);\n         SetReachable(NET_TOR);\n     }\n "
+      },
+      {
+        "sha": "2567c4c780cc142b1bde734f86df330ed25fd743",
+        "filename": "src/netbase.cpp",
+        "status": "modified",
+        "additions": 27,
+        "deletions": 93,
+        "changes": 120,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0127a9be14089b3f352ec349b2ecf4488234a4d8/src/netbase.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0127a9be14089b3f352ec349b2ecf4488234a4d8/src/netbase.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/netbase.cpp?ref=0127a9be14089b3f352ec349b2ecf4488234a4d8",
+        "patch": "@@ -37,7 +37,7 @@ using namespace std;\n \n // Settings\n static proxyType proxyInfo[NET_MAX];\n-static proxyType nameproxyInfo;\n+static CService nameProxy;\n static CCriticalSection cs_proxyInfos;\n int nConnectTimeout = 5000;\n bool fNameLookup = false;\n@@ -214,50 +214,6 @@ bool LookupNumeric(const char *pszName, CService& addr, int portDefault)\n     return Lookup(pszName, addr, portDefault, false);\n }\n \n-bool static Socks4(const CService &addrDest, SOCKET& hSocket)\n-{\n-    LogPrintf(\"SOCKS4 connecting %s\\n\", addrDest.ToString());\n-    if (!addrDest.IsIPv4())\n-    {\n-        closesocket(hSocket);\n-        return error(\"Proxy destination is not IPv4\");\n-    }\n-    char pszSocks4IP[] = \"\\4\\1\\0\\0\\0\\0\\0\\0user\";\n-    struct sockaddr_in addr;\n-    socklen_t len = sizeof(addr);\n-    if (!addrDest.GetSockAddr((struct sockaddr*)&addr, &len) || addr.sin_family != AF_INET)\n-    {\n-        closesocket(hSocket);\n-        return error(\"Cannot get proxy destination address\");\n-    }\n-    memcpy(pszSocks4IP + 2, &addr.sin_port, 2);\n-    memcpy(pszSocks4IP + 4, &addr.sin_addr, 4);\n-    char* pszSocks4 = pszSocks4IP;\n-    int nSize = sizeof(pszSocks4IP);\n-\n-    int ret = send(hSocket, pszSocks4, nSize, MSG_NOSIGNAL);\n-    if (ret != nSize)\n-    {\n-        closesocket(hSocket);\n-        return error(\"Error sending to proxy\");\n-    }\n-    char pchRet[8];\n-    if (recv(hSocket, pchRet, 8, 0) != 8)\n-    {\n-        closesocket(hSocket);\n-        return error(\"Error reading proxy response\");\n-    }\n-    if (pchRet[1] != 0x5a)\n-    {\n-        closesocket(hSocket);\n-        if (pchRet[1] != 0x5b)\n-            LogPrintf(\"ERROR: Proxy returned error %d\\n\", pchRet[1]);\n-        return false;\n-    }\n-    LogPrintf(\"SOCKS4 connected %s\\n\", addrDest.ToString());\n-    return true;\n-}\n-\n bool static Socks5(string strDest, int port, SOCKET& hSocket)\n {\n     LogPrintf(\"SOCKS5 connecting %s\\n\", strDest);\n@@ -468,53 +424,49 @@ bool static ConnectSocketDirectly(const CService &addrConnect, SOCKET& hSocketRe\n     return true;\n }\n \n-bool SetProxy(enum Network net, CService addrProxy, int nSocksVersion) {\n+bool SetProxy(enum Network net, CService addrProxy) {\n     assert(net >= 0 && net < NET_MAX);\n-    if (nSocksVersion != 0 && nSocksVersion != 4 && nSocksVersion != 5)\n-        return false;\n-    if (nSocksVersion != 0 && !addrProxy.IsValid())\n+    if (!addrProxy.IsValid())\n         return false;\n     LOCK(cs_proxyInfos);\n-    proxyInfo[net] = std::make_pair(addrProxy, nSocksVersion);\n+    proxyInfo[net] = addrProxy;\n     return true;\n }\n \n bool GetProxy(enum Network net, proxyType &proxyInfoOut) {\n     assert(net >= 0 && net < NET_MAX);\n     LOCK(cs_proxyInfos);\n-    if (!proxyInfo[net].second)\n+    if (!proxyInfo[net].IsValid())\n         return false;\n     proxyInfoOut = proxyInfo[net];\n     return true;\n }\n \n-bool SetNameProxy(CService addrProxy, int nSocksVersion) {\n-    if (nSocksVersion != 0 && nSocksVersion != 5)\n-        return false;\n-    if (nSocksVersion != 0 && !addrProxy.IsValid())\n+bool SetNameProxy(CService addrProxy) {\n+    if (!addrProxy.IsValid())\n         return false;\n     LOCK(cs_proxyInfos);\n-    nameproxyInfo = std::make_pair(addrProxy, nSocksVersion);\n+    nameProxy = addrProxy;\n     return true;\n }\n \n-bool GetNameProxy(proxyType &nameproxyInfoOut) {\n+bool GetNameProxy(CService &nameProxyOut) {\n     LOCK(cs_proxyInfos);\n-    if (!nameproxyInfo.second)\n+    if(!nameProxy.IsValid())\n         return false;\n-    nameproxyInfoOut = nameproxyInfo;\n+    nameProxyOut = nameProxy;\n     return true;\n }\n \n bool HaveNameProxy() {\n     LOCK(cs_proxyInfos);\n-    return nameproxyInfo.second != 0;\n+    return nameProxy.IsValid();\n }\n \n bool IsProxy(const CNetAddr &addr) {\n     LOCK(cs_proxyInfos);\n     for (int i = 0; i < NET_MAX; i++) {\n-        if (proxyInfo[i].second && (addr == (CNetAddr)proxyInfo[i].first))\n+        if (addr == (CNetAddr)proxyInfo[i])\n             return true;\n     }\n     return false;\n@@ -523,31 +475,18 @@ bool IsProxy(const CNetAddr &addr) {\n bool ConnectSocket(const CService &addrDest, SOCKET& hSocketRet, int nTimeout)\n {\n     proxyType proxy;\n-\n-    // no proxy needed\n+    // no proxy needed (none set for target network)\n     if (!GetProxy(addrDest.GetNetwork(), proxy))\n         return ConnectSocketDirectly(addrDest, hSocketRet, nTimeout);\n \n     SOCKET hSocket = INVALID_SOCKET;\n \n     // first connect to proxy server\n-    if (!ConnectSocketDirectly(proxy.first, hSocket, nTimeout))\n+    if (!ConnectSocketDirectly(proxy, hSocket, nTimeout))\n         return false;\n-\n     // do socks negotiation\n-    switch (proxy.second) {\n-    case 4:\n-        if (!Socks4(addrDest, hSocket))\n-            return false;\n-        break;\n-    case 5:\n-        if (!Socks5(addrDest.ToStringIP(), addrDest.GetPort(), hSocket))\n-            return false;\n-        break;\n-    default:\n-        closesocket(hSocket);\n+    if (!Socks5(addrDest.ToStringIP(), addrDest.GetPort(), hSocket))\n         return false;\n-    }\n \n     hSocketRet = hSocket;\n     return true;\n@@ -561,30 +500,25 @@ bool ConnectSocketByName(CService &addr, SOCKET& hSocketRet, const char *pszDest\n \n     SOCKET hSocket = INVALID_SOCKET;\n \n-    proxyType nameproxy;\n-    GetNameProxy(nameproxy);\n+    CService nameProxy;\n+    GetNameProxy(nameProxy);\n \n-    CService addrResolved(CNetAddr(strDest, fNameLookup && !nameproxy.second), port);\n+    CService addrResolved(CNetAddr(strDest, fNameLookup && !HaveNameProxy()), port);\n     if (addrResolved.IsValid()) {\n         addr = addrResolved;\n         return ConnectSocket(addr, hSocketRet, nTimeout);\n     }\n+\n     addr = CService(\"0.0.0.0:0\");\n-    if (!nameproxy.second)\n+\n+    if (!HaveNameProxy())\n         return false;\n-    if (!ConnectSocketDirectly(nameproxy.first, hSocket, nTimeout))\n+    // first connect to name proxy server\n+    if (!ConnectSocketDirectly(nameProxy, hSocket, nTimeout))\n+        return false;\n+    // do socks negotiation\n+    if (!Socks5(strDest, (unsigned short)port, hSocket))\n         return false;\n-\n-    switch(nameproxy.second) {\n-        default:\n-        case 4:\n-            closesocket(hSocket);\n-            return false;\n-        case 5:\n-            if (!Socks5(strDest, port, hSocket))\n-                return false;\n-            break;\n-    }\n \n     hSocketRet = hSocket;\n     return true;"
+      },
+      {
+        "sha": "ad1e230834832c173fa18818c12f66bff6630dba",
+        "filename": "src/netbase.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 3,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0127a9be14089b3f352ec349b2ecf4488234a4d8/src/netbase.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0127a9be14089b3f352ec349b2ecf4488234a4d8/src/netbase.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/netbase.h?ref=0127a9be14089b3f352ec349b2ecf4488234a4d8",
+        "patch": "@@ -161,14 +161,14 @@ class CService : public CNetAddr\n             )\n };\n \n-typedef std::pair<CService, int> proxyType;\n+typedef CService proxyType;\n \n enum Network ParseNetwork(std::string net);\n void SplitHostPort(std::string in, int &portOut, std::string &hostOut);\n-bool SetProxy(enum Network net, CService addrProxy, int nSocksVersion = 5);\n+bool SetProxy(enum Network net, CService addrProxy);\n bool GetProxy(enum Network net, proxyType &proxyInfoOut);\n bool IsProxy(const CNetAddr &addr);\n-bool SetNameProxy(CService addrProxy, int nSocksVersion = 5);\n+bool SetNameProxy(CService addrProxy);\n bool HaveNameProxy();\n bool LookupHost(const char *pszName, std::vector<CNetAddr>& vIP, unsigned int nMaxSolutions = 0, bool fAllowLookup = true);\n bool Lookup(const char *pszName, CService& addr, int portDefault = 0, bool fAllowLookup = true);"
+      },
+      {
+        "sha": "1f535a4a629fe862b28d98764889fbf67075621e",
+        "filename": "src/qt/forms/optionsdialog.ui",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 20,
+        "changes": 20,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0127a9be14089b3f352ec349b2ecf4488234a4d8/src/qt/forms/optionsdialog.ui",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0127a9be14089b3f352ec349b2ecf4488234a4d8/src/qt/forms/optionsdialog.ui",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/forms/optionsdialog.ui?ref=0127a9be14089b3f352ec349b2ecf4488234a4d8",
+        "patch": "@@ -328,26 +328,6 @@\n            </property>\n           </widget>\n          </item>\n-         <item>\n-          <widget class=\"QLabel\" name=\"socksVersionLabel\">\n-           <property name=\"text\">\n-            <string>SOCKS &amp;Version:</string>\n-           </property>\n-           <property name=\"textFormat\">\n-            <enum>Qt::PlainText</enum>\n-           </property>\n-           <property name=\"buddy\">\n-            <cstring>socksVersion</cstring>\n-           </property>\n-          </widget>\n-         </item>\n-         <item>\n-          <widget class=\"QValueComboBox\" name=\"socksVersion\">\n-           <property name=\"toolTip\">\n-            <string>SOCKS version of the proxy (e.g. 5)</string>\n-           </property>\n-          </widget>\n-         </item>\n          <item>\n           <spacer name=\"horizontalSpacer_1_Network\">\n            <property name=\"orientation\">"
+      },
+      {
+        "sha": "597be40abdf6124cb6b84b42e13a093668186a80",
+        "filename": "src/qt/optionsdialog.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 8,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0127a9be14089b3f352ec349b2ecf4488234a4d8/src/qt/optionsdialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0127a9be14089b3f352ec349b2ecf4488234a4d8/src/qt/optionsdialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/optionsdialog.cpp?ref=0127a9be14089b3f352ec349b2ecf4488234a4d8",
+        "patch": "@@ -52,15 +52,8 @@ OptionsDialog::OptionsDialog(QWidget *parent) :\n     ui->proxyPort->setEnabled(false);\n     ui->proxyPort->setValidator(new QIntValidator(1, 65535, this));\n \n-    /** SOCKS version is only selectable for default proxy and is always 5 for IPv6 and Tor */\n-    ui->socksVersion->setEnabled(false);\n-    ui->socksVersion->addItem(\"5\", 5);\n-    ui->socksVersion->addItem(\"4\", 4);\n-    ui->socksVersion->setCurrentIndex(0);\n-\n     connect(ui->connectSocks, SIGNAL(toggled(bool)), ui->proxyIp, SLOT(setEnabled(bool)));\n     connect(ui->connectSocks, SIGNAL(toggled(bool)), ui->proxyPort, SLOT(setEnabled(bool)));\n-    connect(ui->connectSocks, SIGNAL(toggled(bool)), ui->socksVersion, SLOT(setEnabled(bool)));\n \n     ui->proxyIp->installEventFilter(this);\n \n@@ -182,7 +175,6 @@ void OptionsDialog::setMapper()\n     mapper->addMapping(ui->connectSocks, OptionsModel::ProxyUse);\n     mapper->addMapping(ui->proxyIp, OptionsModel::ProxyIP);\n     mapper->addMapping(ui->proxyPort, OptionsModel::ProxyPort);\n-    mapper->addMapping(ui->socksVersion, OptionsModel::ProxySocksVersion);\n \n     /* Window */\n #ifndef Q_OS_MAC"
+      },
+      {
+        "sha": "f07e66bf04d8266b743e7d22852eba6da79dfdec",
+        "filename": "src/qt/optionsmodel.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 23,
+        "changes": 28,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0127a9be14089b3f352ec349b2ecf4488234a4d8/src/qt/optionsmodel.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0127a9be14089b3f352ec349b2ecf4488234a4d8/src/qt/optionsmodel.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/optionsmodel.cpp?ref=0127a9be14089b3f352ec349b2ecf4488234a4d8",
+        "patch": "@@ -122,11 +122,6 @@ void OptionsModel::Init()\n     // Only try to set -proxy, if user has enabled fUseProxy\n     if (settings.value(\"fUseProxy\").toBool() && !SoftSetArg(\"-proxy\", settings.value(\"addrProxy\").toString().toStdString()))\n         addOverriddenOption(\"-proxy\");\n-    if (!settings.contains(\"nSocksVersion\"))\n-        settings.setValue(\"nSocksVersion\", 5);\n-    // Only try to set -socks, if user has enabled fUseProxy\n-    if (settings.value(\"fUseProxy\").toBool() && !SoftSetArg(\"-socks\", settings.value(\"nSocksVersion\").toString().toStdString()))\n-        addOverriddenOption(\"-socks\");\n \n     // Display\n     if (!settings.contains(\"language\"))\n@@ -188,8 +183,6 @@ QVariant OptionsModel::data(const QModelIndex & index, int role) const\n             QStringList strlIpPort = settings.value(\"addrProxy\").toString().split(\":\", QString::SkipEmptyParts);\n             return strlIpPort.at(1);\n         }\n-        case ProxySocksVersion:\n-            return settings.value(\"nSocksVersion\", 5);\n \n #ifdef ENABLE_WALLET\n         case Fee: {\n@@ -284,13 +277,6 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in\n             }\n         }\n         break;\n-        case ProxySocksVersion: {\n-            if (settings.value(\"nSocksVersion\") != value) {\n-                settings.setValue(\"nSocksVersion\", value.toInt());\n-                setRestartRequired(true);\n-            }\n-        }\n-        break;\n #ifdef ENABLE_WALLET\n         case Fee: { // core option - can be changed on-the-fly\n             // Todo: Add is valid check  and warn via message, if not\n@@ -378,20 +364,16 @@ bool OptionsModel::getProxySettings(QNetworkProxy& proxy) const\n     // GUI settings can be overridden with -proxy.\n     proxyType curProxy;\n     if (GetProxy(NET_IPV4, curProxy)) {\n-        if (curProxy.second == 5) {\n-            proxy.setType(QNetworkProxy::Socks5Proxy);\n-            proxy.setHostName(QString::fromStdString(curProxy.first.ToStringIP()));\n-            proxy.setPort(curProxy.first.GetPort());\n+        proxy.setType(QNetworkProxy::Socks5Proxy);\n+        proxy.setHostName(QString::fromStdString(curProxy.ToStringIP()));\n+        proxy.setPort(curProxy.GetPort());\n \n-            return true;\n-        }\n-        else\n-            return false;\n+        return true;\n     }\n     else\n         proxy.setType(QNetworkProxy::NoProxy);\n \n-    return true;\n+    return false;\n }\n \n void OptionsModel::setRestartRequired(bool fRequired)"
+      },
+      {
+        "sha": "5471625a67e6dd2452601aa7e192f9ba6f83f7da",
+        "filename": "src/qt/paymentserver.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 10,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0127a9be14089b3f352ec349b2ecf4488234a4d8/src/qt/paymentserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0127a9be14089b3f352ec349b2ecf4488234a4d8/src/qt/paymentserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.cpp?ref=0127a9be14089b3f352ec349b2ecf4488234a4d8",
+        "patch": "@@ -341,20 +341,14 @@ void PaymentServer::initNetManager()\n \n     QNetworkProxy proxy;\n \n-    // Query active proxy (fails if no SOCKS5 proxy)\n+    // Query active SOCKS5 proxy\n     if (optionsModel->getProxySettings(proxy)) {\n-        if (proxy.type() == QNetworkProxy::Socks5Proxy) {\n-            netManager->setProxy(proxy);\n+        netManager->setProxy(proxy);\n \n-            qDebug() << \"PaymentServer::initNetManager : Using SOCKS5 proxy\" << proxy.hostName() << \":\" << proxy.port();\n-        }\n-        else\n-            qDebug() << \"PaymentServer::initNetManager : No active proxy server found.\";\n+        qDebug() << \"PaymentServer::initNetManager : Using SOCKS5 proxy\" << proxy.hostName() << \":\" << proxy.port();\n     }\n     else\n-        emit message(tr(\"Net manager warning\"),\n-            tr(\"Your active proxy doesn't support SOCKS5, which is required for payment requests via proxy.\"),\n-            CClientUIInterface::MSG_WARNING);\n+        qDebug() << \"PaymentServer::initNetManager : No active proxy server found.\";\n \n     connect(netManager, SIGNAL(finished(QNetworkReply*)),\n             this, SLOT(netRequestFinished(QNetworkReply*)));"
+      },
+      {
+        "sha": "1e84393025afdf49a5e1f80c81df259ffd61621f",
+        "filename": "src/rpcmisc.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0127a9be14089b3f352ec349b2ecf4488234a4d8/src/rpcmisc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0127a9be14089b3f352ec349b2ecf4488234a4d8/src/rpcmisc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcmisc.cpp?ref=0127a9be14089b3f352ec349b2ecf4488234a4d8",
+        "patch": "@@ -72,7 +72,7 @@ Value getinfo(const Array& params, bool fHelp)\n     obj.push_back(Pair(\"blocks\",        (int)chainActive.Height()));\n     obj.push_back(Pair(\"timeoffset\",    GetTimeOffset()));\n     obj.push_back(Pair(\"connections\",   (int)vNodes.size()));\n-    obj.push_back(Pair(\"proxy\",         (proxy.first.IsValid() ? proxy.first.ToStringIPPort() : string())));\n+    obj.push_back(Pair(\"proxy\",         (proxy.IsValid() ? proxy.ToStringIPPort() : string())));\n     obj.push_back(Pair(\"difficulty\",    (double)GetDifficulty()));\n     obj.push_back(Pair(\"testnet\",       Params().NetworkID() == CBaseChainParams::TESTNET));\n #ifdef ENABLE_WALLET"
+      },
+      {
+        "sha": "cf2c293caf09f6746e664a4bf60a37cbbc8daf38",
+        "filename": "src/rpcnet.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0127a9be14089b3f352ec349b2ecf4488234a4d8/src/rpcnet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0127a9be14089b3f352ec349b2ecf4488234a4d8/src/rpcnet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcnet.cpp?ref=0127a9be14089b3f352ec349b2ecf4488234a4d8",
+        "patch": "@@ -371,7 +371,7 @@ Value getnetworkinfo(const Array& params, bool fHelp)\n     obj.push_back(Pair(\"localservices\",       strprintf(\"%016x\", nLocalServices)));\n     obj.push_back(Pair(\"timeoffset\",    GetTimeOffset()));\n     obj.push_back(Pair(\"connections\",   (int)vNodes.size()));\n-    obj.push_back(Pair(\"proxy\",         (proxy.first.IsValid() ? proxy.first.ToStringIPPort() : string())));\n+    obj.push_back(Pair(\"proxy\",         (proxy.IsValid() ? proxy.ToStringIPPort() : string())));\n     obj.push_back(Pair(\"relayfee\",      ValueFromAmount(::minRelayTxFee.GetFeePerK())));\n     Array localAddresses;\n     {"
+      }
+    ]
+  },
+  {
+    "sha": "a339a37b28176135c7fe5adbd3b50da77a45373d",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphMzM5YTM3YjI4MTc2MTM1YzdmZTVhZGJkM2I1MGRhNzdhNDUzNzNk",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-06-16T06:48:32Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-07-07T06:15:14Z"
+      },
+      "message": "error out, when we detect -socks argument",
+      "tree": {
+        "sha": "7b486f29525297acd9f689dc34d7dd8994fae833",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/7b486f29525297acd9f689dc34d7dd8994fae833"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a339a37b28176135c7fe5adbd3b50da77a45373d",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a339a37b28176135c7fe5adbd3b50da77a45373d",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a339a37b28176135c7fe5adbd3b50da77a45373d",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a339a37b28176135c7fe5adbd3b50da77a45373d/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "0127a9be14089b3f352ec349b2ecf4488234a4d8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0127a9be14089b3f352ec349b2ecf4488234a4d8",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/0127a9be14089b3f352ec349b2ecf4488234a4d8"
+      }
+    ],
+    "stats": {
+      "total": 3,
+      "additions": 3,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "db9247ef6f044ad9234bd9ee7e5343ce6b955186",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a339a37b28176135c7fe5adbd3b50da77a45373d/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a339a37b28176135c7fe5adbd3b50da77a45373d/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=a339a37b28176135c7fe5adbd3b50da77a45373d",
+        "patch": "@@ -565,6 +565,9 @@ bool AppInit2(boost::thread_group& threadGroup)\n     // Check for -debugnet (deprecated)\n     if (GetBoolArg(\"-debugnet\", false))\n         InitWarning(_(\"Warning: Deprecated argument -debugnet ignored, use -debug=net\"));\n+    // Check for -socks - as this is a privacy risk to continue, exit here\n+    if (mapArgs.count(\"-socks\"))\n+        return InitError(_(\"Error: Unsupported argument -socks found. Setting SOCKS version isn't possible anymore, only SOCKS5 proxies are supported.\"));\n     // Check for -tor - as this is a privacy risk to continue, exit here\n     if (GetBoolArg(\"-tor\", false))\n         return InitError(_(\"Error: Unsupported argument -tor found, use -onion.\"));"
+      }
+    ]
+  }
+]

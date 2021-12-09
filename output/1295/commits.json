@@ -1,0 +1,86 @@
+[
+  {
+    "sha": "0fb78eae34b870b9e5b942095d340f2aae49cd60",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowZmI3OGVhZTM0Yjg3MGI5ZTViOTQyMDk1ZDM0MGYyYWFlNDljZDYw",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-05-14T05:11:11Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-05-14T05:11:11Z"
+      },
+      "message": "Always check return values of TxnBegin() and TxnCommit()",
+      "tree": {
+        "sha": "e572b79b017afe24d74fdbb89b0ee3f5fe635833",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/e572b79b017afe24d74fdbb89b0ee3f5fe635833"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/0fb78eae34b870b9e5b942095d340f2aae49cd60",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0fb78eae34b870b9e5b942095d340f2aae49cd60",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/0fb78eae34b870b9e5b942095d340f2aae49cd60",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0fb78eae34b870b9e5b942095d340f2aae49cd60/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "09b4e26a446c302f0cce176bf572da956bb2515e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/09b4e26a446c302f0cce176bf572da956bb2515e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/09b4e26a446c302f0cce176bf572da956bb2515e"
+      }
+    ],
+    "stats": {
+      "total": 21,
+      "additions": 15,
+      "deletions": 6
+    },
+    "files": [
+      {
+        "sha": "8e4361c92a0d20b84f70bac104f03d91e55b56b5",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 2,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0fb78eae34b870b9e5b942095d340f2aae49cd60/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0fb78eae34b870b9e5b942095d340f2aae49cd60/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=0fb78eae34b870b9e5b942095d340f2aae49cd60",
+        "patch": "@@ -1037,7 +1037,8 @@ Value movecmd(const Array& params, bool fHelp)\n         strComment = params[4].get_str();\n \n     CWalletDB walletdb(pwalletMain->strWalletFile);\n-    walletdb.TxnBegin();\n+    if (!walletdb.TxnBegin())\n+        throw JSONRPCError(-20, \"database error\");\n \n     int64 nNow = GetAdjustedTime();\n \n@@ -1059,7 +1060,8 @@ Value movecmd(const Array& params, bool fHelp)\n     credit.strComment = strComment;\n     walletdb.WriteAccountingEntry(credit);\n \n-    walletdb.TxnCommit();\n+    if (!walletdb.TxnCommit())\n+        throw JSONRPCError(-20, \"database error\");\n \n     return true;\n }"
+      },
+      {
+        "sha": "870a8ef6166151a1bde8e807e871e814055325d0",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 3,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0fb78eae34b870b9e5b942095d340f2aae49cd60/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0fb78eae34b870b9e5b942095d340f2aae49cd60/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=0fb78eae34b870b9e5b942095d340f2aae49cd60",
+        "patch": "@@ -1514,7 +1514,9 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)\n {\n     uint256 hash = GetHash();\n \n-    txdb.TxnBegin();\n+    if (!txdb.TxnBegin())\n+        return error(\"SetBestChain() : TxnBegin failed\");\n+\n     if (pindexGenesisBlock == NULL && hash == hashGenesisBlock)\n     {\n         txdb.WriteHashBestChain(hash);\n@@ -1563,7 +1565,10 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)\n                 printf(\"SetBestChain() : ReadFromDisk failed\\n\");\n                 break;\n             }\n-            txdb.TxnBegin();\n+            if (!txdb.TxnBegin()) {\n+                printf(\"SetBestChain() : TxnBegin 2 failed\\n\");\n+                break;\n+            }\n             // errors now are not fatal, we still did a reorganisation to a new chain in a valid way\n             if (!block.SetBestChainInner(txdb, pindex))\n                 break;\n@@ -1621,7 +1626,8 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos)\n     pindexNew->bnChainWork = (pindexNew->pprev ? pindexNew->pprev->bnChainWork : 0) + pindexNew->GetBlockWork();\n \n     CTxDB txdb;\n-    txdb.TxnBegin();\n+    if (!txdb.TxnBegin())\n+        return false;\n     txdb.WriteBlockIndex(CDiskBlockIndex(pindexNew));\n     if (!txdb.TxnCommit())\n         return false;"
+      },
+      {
+        "sha": "96dc986edf9bbd409219428b26ff122a73936540",
+        "filename": "src/wallet.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 1,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0fb78eae34b870b9e5b942095d340f2aae49cd60/src/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0fb78eae34b870b9e5b942095d340f2aae49cd60/src/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.cpp?ref=0fb78eae34b870b9e5b942095d340f2aae49cd60",
+        "patch": "@@ -242,7 +242,8 @@ bool CWallet::EncryptWallet(const SecureString& strWalletPassphrase)\n         if (fFileBacked)\n         {\n             pwalletdbEncryption = new CWalletDB(strWalletFile);\n-            pwalletdbEncryption->TxnBegin();\n+            if (!pwalletdbEncryption->TxnBegin())\n+                return false;\n             pwalletdbEncryption->WriteMasterKey(nMasterKeyMaxID, kMasterKey);\n         }\n "
+      }
+    ]
+  }
+]

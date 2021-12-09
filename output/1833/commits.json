@@ -1,0 +1,74 @@
+[
+  {
+    "sha": "22f9b069035c9ba0416a62714db167eea5ba762f",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyMmY5YjA2OTAzNWM5YmEwNDE2YTYyNzE0ZGIxNjdlZWE1YmE3NjJm",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-09-24T17:53:44Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-09-24T17:53:44Z"
+      },
+      "message": "Send 'mempool' P2P command at the start of each P2P session\nto query remote node mempool contents.",
+      "tree": {
+        "sha": "d66bd49469e7094db5ac7603d2379748f282116a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/d66bd49469e7094db5ac7603d2379748f282116a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/22f9b069035c9ba0416a62714db167eea5ba762f",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/22f9b069035c9ba0416a62714db167eea5ba762f",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/22f9b069035c9ba0416a62714db167eea5ba762f",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/22f9b069035c9ba0416a62714db167eea5ba762f/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "6cbae37667f504d9ecd6173e1eff817d2b7aaf0c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6cbae37667f504d9ecd6173e1eff817d2b7aaf0c",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/6cbae37667f504d9ecd6173e1eff817d2b7aaf0c"
+      }
+    ],
+    "stats": {
+      "total": 19,
+      "additions": 18,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "df3a0f1fd587f7b51d1388b54dfeb1a317673654",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 1,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/22f9b069035c9ba0416a62714db167eea5ba762f/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/22f9b069035c9ba0416a62714db167eea5ba762f/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=22f9b069035c9ba0416a62714db167eea5ba762f",
+        "patch": "@@ -25,6 +25,7 @@ using namespace boost;\n \n CWallet* pwalletMain;\n CClientUIInterface uiInterface;\n+int64 nTimeNodeStart;\n \n //////////////////////////////////////////////////////////////////////////////\n //\n@@ -469,8 +470,10 @@ bool AppInit2()\n     printf(\"\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\");\n     printf(\"Bitcoin version %s (%s)\\n\", FormatFullVersion().c_str(), CLIENT_DATE.c_str());\n     printf(\"Using OpenSSL version %s\\n\", SSLeay_version(SSLEAY_VERSION));\n+\n+    nTimeNodeStart = GetTime();\n     if (!fLogTimestamps)\n-        printf(\"Startup time: %s\\n\", DateTimeStrFormat(\"%x %H:%M:%S\", GetTime()).c_str());\n+        printf(\"Startup time: %s\\n\", DateTimeStrFormat(\"%x %H:%M:%S\", nTimeNodeStart).c_str());\n     printf(\"Default data directory %s\\n\", GetDefaultDataDir().string().c_str());\n     printf(\"Used data directory %s\\n\", GetDataDir().string().c_str());\n     std::ostringstream strErrors;"
+      },
+      {
+        "sha": "d1f84a12e04657a562f1fa0016a3d432518820da",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 14,
+        "deletions": 0,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/22f9b069035c9ba0416a62714db167eea5ba762f/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/22f9b069035c9ba0416a62714db167eea5ba762f/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=22f9b069035c9ba0416a62714db167eea5ba762f",
+        "patch": "@@ -2404,6 +2404,14 @@ bool static AlreadyHave(CTxDB& txdb, const CInv& inv)\n \n \n \n+static bool NodeRecentlyStarted()\n+{\n+    extern int64 nTimeNodeStart;\n+    int64 timediff = GetTime() - nTimeNodeStart;\n+\n+    return (timediff < (2 * 60 * 60));\n+}\n+\n \n // The message start string is designed to be unlikely to occur in normal data.\n // The characters are rarely used upper ASCII, not valid as UTF-8, and produce\n@@ -2510,6 +2518,12 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n             }\n         }\n \n+        // Trigger download of remote node's memory pool\n+        if (!IsInitialBlockDownload() && !pfrom->fInbound &&\n+            !pfrom->fClient && NodeRecentlyStarted() &&\n+            pfrom->nVersion >= MEMPOOL_GD_VERSION)\n+            pfrom->PushMessage(\"mempool\");\n+\n         // Ask the first connected node for block updates\n         static int nAskedForBlocks = 0;\n         if (!pfrom->fClient && !pfrom->fOneShot &&"
+      }
+    ]
+  }
+]

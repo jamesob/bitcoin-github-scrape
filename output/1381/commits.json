@@ -1,0 +1,146 @@
+[
+  {
+    "sha": "f94b64c2f3a1994a21c4d99a1806d4f9611f810c",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmOTRiNjRjMmYzYTE5OTRhMjFjNGQ5OWExODA2ZDRmOTYxMWY4MTBj",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-05-22T19:12:52Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-05-22T19:12:52Z"
+      },
+      "message": "Prevent crashes due to missing or corrupted database records\n\nAny problems seen during deserialization will throw an uncaught\nexception, crashing the entire bitcoin process.  Properly return an\nerror instead, so that we may at least log the error and gracefully\nshutdown other portions of the app.",
+      "tree": {
+        "sha": "71565f3f86e1cedc0118242cd6d0899cecb32718",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/71565f3f86e1cedc0118242cd6d0899cecb32718"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/f94b64c2f3a1994a21c4d99a1806d4f9611f810c",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f94b64c2f3a1994a21c4d99a1806d4f9611f810c",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/f94b64c2f3a1994a21c4d99a1806d4f9611f810c",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f94b64c2f3a1994a21c4d99a1806d4f9611f810c/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "d1edab602a3ee729b308378d9d456f01e6933cfb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d1edab602a3ee729b308378d9d456f01e6933cfb",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/d1edab602a3ee729b308378d9d456f01e6933cfb"
+      }
+    ],
+    "stats": {
+      "total": 25,
+      "additions": 21,
+      "deletions": 4
+    },
+    "files": [
+      {
+        "sha": "5c169fe0ca5805ba152e7c6e034f47412d14c8be",
+        "filename": "src/db.cpp",
+        "status": "modified",
+        "additions": 14,
+        "deletions": 2,
+        "changes": 16,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f94b64c2f3a1994a21c4d99a1806d4f9611f810c/src/db.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f94b64c2f3a1994a21c4d99a1806d4f9611f810c/src/db.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.cpp?ref=f94b64c2f3a1994a21c4d99a1806d4f9611f810c",
+        "patch": "@@ -416,9 +416,15 @@ bool CTxDB::ReadOwnerTxes(uint160 hash160, int nMinHeight, vector<CTransaction>&\n         string strType;\n         uint160 hashItem;\n         CDiskTxPos pos;\n-        ssKey >> strType >> hashItem >> pos;\n         int nItemHeight;\n-        ssValue >> nItemHeight;\n+\n+        try {\n+            ssKey >> strType >> hashItem >> pos;\n+            ssValue >> nItemHeight;\n+        }\n+        catch (std::exception &e) {\n+            return error(\"%s() : deserialize error\", __PRETTY_FUNCTION__);\n+        }\n \n         // Read transaction\n         if (strType != \"owner\" || hashItem != hash160)\n@@ -533,6 +539,8 @@ bool CTxDB::LoadBlockIndex()\n             return false;\n \n         // Unserialize\n+\n+        try {\n         string strType;\n         ssKey >> strType;\n         if (strType == \"blockindex\" && !fRequestShutdown)\n@@ -564,6 +572,10 @@ bool CTxDB::LoadBlockIndex()\n         {\n             break; // if shutdown requested or finished loading block index\n         }\n+        }    // try\n+        catch (std::exception &e) {\n+            return error(\"%s() : deserialize error\", __PRETTY_FUNCTION__);\n+        }\n     }\n     pcursor->close();\n "
+      },
+      {
+        "sha": "a67193b680f2528fcdf5a6a363b0189936dcee69",
+        "filename": "src/db.h",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 2,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f94b64c2f3a1994a21c4d99a1806d4f9611f810c/src/db.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f94b64c2f3a1994a21c4d99a1806d4f9611f810c/src/db.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.h?ref=f94b64c2f3a1994a21c4d99a1806d4f9611f810c",
+        "patch": "@@ -72,8 +72,13 @@ class CDB\n             return false;\n \n         // Unserialize value\n-        CDataStream ssValue((char*)datValue.get_data(), (char*)datValue.get_data() + datValue.get_size(), SER_DISK, CLIENT_VERSION);\n-        ssValue >> value;\n+        try {\n+            CDataStream ssValue((char*)datValue.get_data(), (char*)datValue.get_data() + datValue.get_size(), SER_DISK, CLIENT_VERSION);\n+            ssValue >> value;\n+        }\n+        catch (std::exception &e) {\n+            return false;\n+        }\n \n         // Clear and free memory\n         memset(datValue.get_data(), 0, datValue.get_size());"
+      }
+    ]
+  },
+  {
+    "sha": "8fe791e4e2db4b66f47d44d2ecaf734e2a36e5ed",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4ZmU3OTFlNGUyZGI0YjY2ZjQ3ZDQ0ZDJlY2FmNzM0ZTJhMzZlNWVk",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-05-22T19:23:17Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-05-22T19:23:17Z"
+      },
+      "message": "Prevent crashes due to missing or corrupted blk????.dat records\n\nIn LoadExternalBlockFile(), errors are already caught... silently.\nAdd a warning message, even though we do not abort the program due to\nload error.",
+      "tree": {
+        "sha": "7cfbbcc8c0dd418f852e4de9618d3d241163d5b3",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/7cfbbcc8c0dd418f852e4de9618d3d241163d5b3"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/8fe791e4e2db4b66f47d44d2ecaf734e2a36e5ed",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8fe791e4e2db4b66f47d44d2ecaf734e2a36e5ed",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/8fe791e4e2db4b66f47d44d2ecaf734e2a36e5ed",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8fe791e4e2db4b66f47d44d2ecaf734e2a36e5ed/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "f94b64c2f3a1994a21c4d99a1806d4f9611f810c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f94b64c2f3a1994a21c4d99a1806d4f9611f810c",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/f94b64c2f3a1994a21c4d99a1806d4f9611f810c"
+      }
+    ],
+    "stats": {
+      "total": 20,
+      "additions": 16,
+      "deletions": 4
+    },
+    "files": [
+      {
+        "sha": "388947e484c9b21dfb02ed505c257f54585a53c0",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 2,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8fe791e4e2db4b66f47d44d2ecaf734e2a36e5ed/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8fe791e4e2db4b66f47d44d2ecaf734e2a36e5ed/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=8fe791e4e2db4b66f47d44d2ecaf734e2a36e5ed",
+        "patch": "@@ -2133,8 +2133,9 @@ bool LoadExternalBlockFile(FILE* fileIn)\n                 }\n             }\n         }\n-        catch (std::exception &e)\n-        {\n+        catch (std::exception &e) {\n+            printf(\"%s() : Deserialize or I/O error caught during load\\n\",\n+                   __PRETTY_FUNCTION__);\n         }\n     }\n     printf(\"Loaded %i blocks from external file\\n\", nLoaded);"
+      },
+      {
+        "sha": "c0fe63a32a44685c0281e6163e6819d7857ce475",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 2,
+        "changes": 15,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8fe791e4e2db4b66f47d44d2ecaf734e2a36e5ed/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8fe791e4e2db4b66f47d44d2ecaf734e2a36e5ed/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=8fe791e4e2db4b66f47d44d2ecaf734e2a36e5ed",
+        "patch": "@@ -593,7 +593,13 @@ class CTransaction\n         // Read transaction\n         if (fseek(filein, pos.nTxPos, SEEK_SET) != 0)\n             return error(\"CTransaction::ReadFromDisk() : fseek failed\");\n-        filein >> *this;\n+\n+        try {\n+            filein >> *this;\n+        }\n+        catch (std::exception &e) {\n+            return error(\"%s() : deserialize or I/O error\", __PRETTY_FUNCTION__);\n+        }\n \n         // Return file pointer\n         if (pfileRet)\n@@ -969,7 +975,12 @@ class CBlock\n             filein.nType |= SER_BLOCKHEADERONLY;\n \n         // Read block\n-        filein >> *this;\n+        try {\n+            filein >> *this;\n+        }\n+        catch (std::exception &e) {\n+            return error(\"%s() : deserialize or I/O error\", __PRETTY_FUNCTION__);\n+        }\n \n         // Check the header\n         if (!CheckProofOfWork(GetHash(), nBits))"
+      }
+    ]
+  }
+]

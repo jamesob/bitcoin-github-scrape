@@ -1,0 +1,86 @@
+[
+  {
+    "sha": "3e1ee310437f4c93113f6121425beffdc94702c2",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozZTFlZTMxMDQzN2Y0YzkzMTEzZjYxMjE0MjViZWZmZGM5NDcwMmMy",
+    "commit": {
+      "author": {
+        "name": "sean",
+        "email": "merehap@gmail.com",
+        "date": "2017-11-21T23:40:02Z"
+      },
+      "committer": {
+        "name": "sean",
+        "email": "merehap@gmail.com",
+        "date": "2017-11-22T23:48:14Z"
+      },
+      "message": "[Tests] Adding unit tests for GetDifficulty in blockchain.cpp.\n\nblockchain.cpp has low unit test coverage. This commit is intended\nto start improving its code coverage to reasonable levels. One or more\nfollow up commits will complete the task that this commit is starting\n(though the usefulness of this commit is not dependent upon later\ncommits).\n\nNote that these tests were not written based upon a specification of how\nGetDifficulty *should* work, but rather how it actually *does* work. As\na result, if there are any bugs in the current GetDifficulty\nimplementation, these unit tests serve to lock them in rather than\nexpose them.\n\n-- Why has blockchain.cpp been modified if this is a unit testing change?\n\nSince the existing GetDifficulty function relies on a global variable,\nchainActive, it was not suitable for unit testing purposes. Both the\nexisting GetDifficulty function and the unit tests now call through to\na new, more modular version of GetDifficulty that can work on any chain,\nnot just chainActive.\n\n-- Why does blockchain_tests.cpp directly include blockchain.cpp instead\nof blockchain.h?\n\nWhile the new GetDifficulty function's signature is arguably better than\nthe old one's, it still isn't great, and doesn't seem to warrant inclusion\nas part of the blockchain.h API, especially since only test code is\ndirectly using it. If a better way of exposing the new GetDifficulty\nfunction to unit tests exists, please mention it and the commit will be\nupdated accordingly.\n\n-- Why is the test fixture named blockchain_difficulty_tests rather than\nblockchain_tests?\n\nThe Bitcoin Core policy for naming unit test files is to match the the\nfile under test (\"blockchain\" becomes \"blockchain_tests\"). While this\ncommit complies with that, blockchain.cpp is a massive file, such that\nhaving all of the unit tests in one file will tend towards disorder.\nSince there will be a lot more tests added to this file, the intention\nis to divide up different types of tests into different test fixtures\nwithin the same file.",
+      "tree": {
+        "sha": "e8b563b3a07f1353abd8146064d518009f26a4c5",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/e8b563b3a07f1353abd8146064d518009f26a4c5"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/3e1ee310437f4c93113f6121425beffdc94702c2",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3e1ee310437f4c93113f6121425beffdc94702c2",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/3e1ee310437f4c93113f6121425beffdc94702c2",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3e1ee310437f4c93113f6121425beffdc94702c2/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "2adbddb03840ad71e843c6c4a207a13e871cd1d4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2adbddb03840ad71e843c6c4a207a13e871cd1d4",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/2adbddb03840ad71e843c6c4a207a13e871cd1d4"
+      }
+    ],
+    "stats": {
+      "total": 142,
+      "additions": 138,
+      "deletions": 4
+    },
+    "files": [
+      {
+        "sha": "fb94821b03acaa8210bf539799ca186e5431b8f4",
+        "filename": "src/Makefile.test.include",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3e1ee310437f4c93113f6121425beffdc94702c2/src/Makefile.test.include",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3e1ee310437f4c93113f6121425beffdc94702c2/src/Makefile.test.include",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/Makefile.test.include?ref=3e1ee310437f4c93113f6121425beffdc94702c2",
+        "patch": "@@ -33,6 +33,7 @@ BITCOIN_TESTS =\\\n   test/base64_tests.cpp \\\n   test/bech32_tests.cpp \\\n   test/bip32_tests.cpp \\\n+  test/blockchain_tests.cpp \\\n   test/blockencodings_tests.cpp \\\n   test/bloom_tests.cpp \\\n   test/bswap_tests.cpp \\"
+      },
+      {
+        "sha": "9c5ea723806e9e430d264cc48c27ad0430c202b2",
+        "filename": "src/rpc/blockchain.cpp",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 4,
+        "changes": 15,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3e1ee310437f4c93113f6121425beffdc94702c2/src/rpc/blockchain.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3e1ee310437f4c93113f6121425beffdc94702c2/src/rpc/blockchain.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/blockchain.cpp?ref=3e1ee310437f4c93113f6121425beffdc94702c2",
+        "patch": "@@ -47,18 +47,20 @@ static CUpdatedBlock latestblock;\n \n extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& entry);\n \n-double GetDifficulty(const CBlockIndex* blockindex)\n+/* Calculate the difficulty for a given block index,\n+ * or the block index of the given chain.\n+ */\n+double GetDifficulty(const CChain& chain, const CBlockIndex* blockindex)\n {\n     if (blockindex == nullptr)\n     {\n-        if (chainActive.Tip() == nullptr)\n+        if (chain.Tip() == nullptr)\n             return 1.0;\n         else\n-            blockindex = chainActive.Tip();\n+            blockindex = chain.Tip();\n     }\n \n     int nShift = (blockindex->nBits >> 24) & 0xff;\n-\n     double dDiff =\n         (double)0x0000ffff / (double)(blockindex->nBits & 0x00ffffff);\n \n@@ -76,6 +78,11 @@ double GetDifficulty(const CBlockIndex* blockindex)\n     return dDiff;\n }\n \n+double GetDifficulty(const CBlockIndex* blockindex)\n+{\n+    return GetDifficulty(chainActive, blockindex);\n+}\n+\n UniValue blockheaderToJSON(const CBlockIndex* blockindex)\n {\n     AssertLockHeld(cs_main);"
+      },
+      {
+        "sha": "55fdd2c07192eb5e3538bf4648ab71d4024ed82a",
+        "filename": "src/test/blockchain_tests.cpp",
+        "status": "added",
+        "additions": 126,
+        "deletions": 0,
+        "changes": 126,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3e1ee310437f4c93113f6121425beffdc94702c2/src/test/blockchain_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3e1ee310437f4c93113f6121425beffdc94702c2/src/test/blockchain_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/blockchain_tests.cpp?ref=3e1ee310437f4c93113f6121425beffdc94702c2",
+        "patch": "@@ -0,0 +1,126 @@\n+#include <boost/test/unit_test.hpp>\n+\n+#include \"stdlib.h\"\n+\n+#include \"rpc/blockchain.cpp\"\n+#include \"test/test_bitcoin.h\"\n+\n+/* Equality between doubles is imprecise. Comparison should be done\n+ * with a small threshold of tolerance, rather than exact equality.\n+ */\n+bool DoubleEquals(double a, double b, double epsilon)\n+{\n+    return std::abs(a - b) < epsilon;\n+}\n+\n+CBlockIndex* CreateBlockIndexWithNbits(uint32_t nbits)\n+{\n+    CBlockIndex* block_index = new CBlockIndex();\n+    block_index->nHeight = 46367;\n+    block_index->nTime = 1269211443;\n+    block_index->nBits = nbits;\n+    return block_index;\n+}\n+\n+CChain CreateChainWithNbits(uint32_t nbits)\n+{\n+    CBlockIndex* block_index = CreateBlockIndexWithNbits(nbits);\n+    CChain chain;\n+    chain.SetTip(block_index);\n+    return chain;\n+}\n+\n+void RejectDifficultyMismatch(double difficulty, double expected_difficulty) {\n+     BOOST_CHECK_MESSAGE(\n+        DoubleEquals(difficulty, expected_difficulty, 0.00001),\n+        \"Difficulty was \" + std::to_string(difficulty)\n+            + \" but was expected to be \" + std::to_string(expected_difficulty));\n+}\n+\n+/* Given a BlockIndex with the provided nbits,\n+ * verify that the expected difficulty results.\n+ */\n+void TestDifficulty(uint32_t nbits, double expected_difficulty)\n+{\n+    CBlockIndex* block_index = CreateBlockIndexWithNbits(nbits);\n+    /* Since we are passing in block index explicitly,\n+     * there is no need to set up anything within the chain itself.\n+     */\n+    CChain chain;\n+\n+    double difficulty = GetDifficulty(chain, block_index);\n+    delete block_index;\n+\n+    RejectDifficultyMismatch(difficulty, expected_difficulty);\n+}\n+\n+BOOST_FIXTURE_TEST_SUITE(blockchain_difficulty_tests, BasicTestingSetup)\n+\n+BOOST_AUTO_TEST_CASE(get_difficulty_for_very_low_target)\n+{\n+    TestDifficulty(0x1f111111, 0.000001);\n+}\n+\n+BOOST_AUTO_TEST_CASE(get_difficulty_for_low_target)\n+{\n+    TestDifficulty(0x1ef88f6f, 0.000016);\n+}\n+\n+BOOST_AUTO_TEST_CASE(get_difficulty_for_mid_target)\n+{\n+    TestDifficulty(0x1df88f6f, 0.004023);\n+}\n+\n+BOOST_AUTO_TEST_CASE(get_difficulty_for_high_target)\n+{\n+    TestDifficulty(0x1cf88f6f, 1.029916);\n+}\n+\n+BOOST_AUTO_TEST_CASE(get_difficulty_for_very_high_target)\n+{\n+    TestDifficulty(0x12345678, 5913134931067755359633408.0);\n+}\n+\n+// Verify that difficulty is 1.0 for an empty chain.\n+BOOST_AUTO_TEST_CASE(get_difficulty_for_null_tip)\n+{\n+    CChain chain;\n+    double difficulty = GetDifficulty(chain, nullptr);\n+    RejectDifficultyMismatch(difficulty, 1.0);\n+}\n+\n+/* Verify that if difficulty is based upon the block index\n+ * in the chain, if no block index is explicitly specified.\n+ */\n+BOOST_AUTO_TEST_CASE(get_difficulty_for_null_block_index)\n+{\n+    CChain chain = CreateChainWithNbits(0x1df88f6f);\n+\n+    double difficulty = GetDifficulty(chain, nullptr);\n+    delete chain.Tip();\n+\n+    double expected_difficulty = 0.004023;\n+\n+    RejectDifficultyMismatch(difficulty, expected_difficulty);\n+}\n+\n+/* Verify that difficulty is based upon the explicitly specified\n+ * block index rather than being taken from the provided chain,\n+ * when both are present.\n+ */\n+BOOST_AUTO_TEST_CASE(get_difficulty_for_block_index_overrides_tip)\n+{\n+    CChain chain = CreateChainWithNbits(0x1df88f6f);\n+    /* This block index's nbits should be used\n+     * instead of the chain's when calculating difficulty.\n+     */\n+    CBlockIndex* override_block_index = CreateBlockIndexWithNbits(0x12345678);\n+\n+    double difficulty = GetDifficulty(chain, override_block_index);\n+    delete chain.Tip();\n+    delete override_block_index;\n+\n+    RejectDifficultyMismatch(difficulty, 5913134931067755359633408.0);\n+}\n+\n+BOOST_AUTO_TEST_SUITE_END()"
+      }
+    ]
+  }
+]

@@ -1,0 +1,74 @@
+[
+  {
+    "sha": "7e08e29117546aae66b0b418b2044f77b70b312f",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3ZTA4ZTI5MTE3NTQ2YWFlNjZiMGI0MThiMjA0NGY3N2I3MGIzMTJm",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-01-06T14:09:26Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-01-06T14:09:26Z"
+      },
+      "message": "better std::exception logging for block/undo files",
+      "tree": {
+        "sha": "d948534e625e8c630f22cdd72c4a59dcb59000bb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/d948534e625e8c630f22cdd72c4a59dcb59000bb"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/7e08e29117546aae66b0b418b2044f77b70b312f",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7e08e29117546aae66b0b418b2044f77b70b312f",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/7e08e29117546aae66b0b418b2044f77b70b312f",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7e08e29117546aae66b0b418b2044f77b70b312f/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "37d30ec3cf51aa332ce95ecf52fdd3e8e3d7228b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/37d30ec3cf51aa332ce95ecf52fdd3e8e3d7228b",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/37d30ec3cf51aa332ce95ecf52fdd3e8e3d7228b"
+      }
+    ],
+    "stats": {
+      "total": 26,
+      "additions": 13,
+      "deletions": 13
+    },
+    "files": [
+      {
+        "sha": "05a5b9b857ff6e6268093f2ebd925222bbf7ec43",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 8,
+        "changes": 16,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7e08e29117546aae66b0b418b2044f77b70b312f/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7e08e29117546aae66b0b418b2044f77b70b312f/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=7e08e29117546aae66b0b418b2044f77b70b312f",
+        "patch": "@@ -878,11 +878,11 @@ bool GetTransaction(const uint256 &hash, CTransaction &txOut, uint256 &hashBlock\n                     fseek(file, postx.nTxOffset, SEEK_CUR);\n                     file >> txOut;\n                 } catch (std::exception &e) {\n-                    return error(\"%s() : deserialize or I/O error\", __PRETTY_FUNCTION__);\n+                    return error(\"%s : Deserialize or I/O error - %s\", __PRETTY_FUNCTION__, e.what());\n                 }\n                 hashBlock = header.GetHash();\n                 if (txOut.GetHash() != hash)\n-                    return error(\"%s() : txid mismatch\", __PRETTY_FUNCTION__);\n+                    return error(\"%s : txid mismatch\", __PRETTY_FUNCTION__);\n                 return true;\n             }\n         }\n@@ -931,7 +931,7 @@ bool WriteBlockToDisk(CBlock& block, CDiskBlockPos& pos)\n     // Open history file to append\n     CAutoFile fileout = CAutoFile(OpenBlockFile(pos), SER_DISK, CLIENT_VERSION);\n     if (!fileout)\n-        return error(\"WriteBlockToDisk() : OpenBlockFile failed\");\n+        return error(\"WriteBlockToDisk : OpenBlockFile failed\");\n \n     // Write index header\n     unsigned int nSize = fileout.GetSerializeSize(block);\n@@ -940,7 +940,7 @@ bool WriteBlockToDisk(CBlock& block, CDiskBlockPos& pos)\n     // Write block\n     long fileOutPos = ftell(fileout);\n     if (fileOutPos < 0)\n-        return error(\"WriteBlockToDisk() : ftell failed\");\n+        return error(\"WriteBlockToDisk : ftell failed\");\n     pos.nPos = (unsigned int)fileOutPos;\n     fileout << block;\n \n@@ -959,19 +959,19 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos)\n     // Open history file to read\n     CAutoFile filein = CAutoFile(OpenBlockFile(pos, true), SER_DISK, CLIENT_VERSION);\n     if (!filein)\n-        return error(\"ReadBlockFromDisk(CBlock&, CDiskBlockPos&) : OpenBlockFile failed\");\n+        return error(\"ReadBlockFromDisk : OpenBlockFile failed\");\n \n     // Read block\n     try {\n         filein >> block;\n     }\n     catch (std::exception &e) {\n-        return error(\"%s() : deserialize or I/O error\", __PRETTY_FUNCTION__);\n+        return error(\"%s : Deserialize or I/O error - %s\", __PRETTY_FUNCTION__, e.what());\n     }\n \n     // Check the header\n     if (!CheckProofOfWork(block.GetHash(), block.nBits))\n-        return error(\"ReadBlockFromDisk(CBlock&, CDiskBlockPos&) : errors in block header\");\n+        return error(\"ReadBlockFromDisk : Errors in block header\");\n \n     return true;\n }\n@@ -2852,7 +2852,7 @@ bool LoadExternalBlockFile(FILE* fileIn, CDiskBlockPos *dbp)\n                         break;\n                 }\n             } catch (std::exception &e) {\n-                LogPrintf(\"%s() : Deserialize or I/O error caught during load\\n\", __PRETTY_FUNCTION__);\n+                LogPrintf(\"%s : Deserialize or I/O error - %s\", __PRETTY_FUNCTION__, e.what());\n             }\n         }\n         fclose(fileIn);"
+      },
+      {
+        "sha": "60e733b23ae9de83e1110a13b2347398544e036f",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 5,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7e08e29117546aae66b0b418b2044f77b70b312f/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7e08e29117546aae66b0b418b2044f77b70b312f/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=7e08e29117546aae66b0b418b2044f77b70b312f",
+        "patch": "@@ -336,7 +336,7 @@ class CBlockUndo\n         // Open history file to append\n         CAutoFile fileout = CAutoFile(OpenUndoFile(pos), SER_DISK, CLIENT_VERSION);\n         if (!fileout)\n-            return error(\"CBlockUndo::WriteToDisk() : OpenUndoFile failed\");\n+            return error(\"CBlockUndo::WriteToDisk : OpenUndoFile failed\");\n \n         // Write index header\n         unsigned int nSize = fileout.GetSerializeSize(*this);\n@@ -345,7 +345,7 @@ class CBlockUndo\n         // Write undo data\n         long fileOutPos = ftell(fileout);\n         if (fileOutPos < 0)\n-            return error(\"CBlockUndo::WriteToDisk() : ftell failed\");\n+            return error(\"CBlockUndo::WriteToDisk : ftell failed\");\n         pos.nPos = (unsigned int)fileOutPos;\n         fileout << *this;\n \n@@ -368,7 +368,7 @@ class CBlockUndo\n         // Open history file to read\n         CAutoFile filein = CAutoFile(OpenUndoFile(pos, true), SER_DISK, CLIENT_VERSION);\n         if (!filein)\n-            return error(\"CBlockUndo::ReadFromDisk() : OpenBlockFile failed\");\n+            return error(\"CBlockUndo::ReadFromDisk : OpenBlockFile failed\");\n \n         // Read block\n         uint256 hashChecksum;\n@@ -377,15 +377,15 @@ class CBlockUndo\n             filein >> hashChecksum;\n         }\n         catch (std::exception &e) {\n-            return error(\"%s() : deserialize or I/O error\", __PRETTY_FUNCTION__);\n+            return error(\"%s : Deserialize or I/O error - %s\", __PRETTY_FUNCTION__, e.what());\n         }\n \n         // Verify checksum\n         CHashWriter hasher(SER_GETHASH, PROTOCOL_VERSION);\n         hasher << hashBlock;\n         hasher << *this;\n         if (hashChecksum != hasher.GetHash())\n-            return error(\"CBlockUndo::ReadFromDisk() : checksum mismatch\");\n+            return error(\"CBlockUndo::ReadFromDisk : Checksum mismatch\");\n \n         return true;\n     }"
+      }
+    ]
+  }
+]

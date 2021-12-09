@@ -1,0 +1,117 @@
+[
+  {
+    "sha": "f5f1878ba104a5d6a32eeb20b341326dca6086a5",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmNWYxODc4YmExMDRhNWQ2YTMyZWViMjBiMzQxMzI2ZGNhNjA4NmE1",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jeff@garzik.org",
+        "date": "2011-04-05T02:24:35Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@pobox.com",
+        "date": "2011-04-05T02:24:35Z"
+      },
+      "message": "Fix deadlocks in setaccount, sendfrom RPC calls\n\nSendMoney*() now requires caller to acquire cs_main.\nGetAccountAddress() now requires caller to acquire cs_main, cs_mapWallet.\n\nOrdering is intended to match these two callchains[1]:\n\n1. CRITICAL_BLOCK(cs_main)\n    ProcessMessage(pfrom, strCommand, vMsg)\n        AddToWalletIfMine()\n              AddToWallet(wtx)\n                  CRITICAL_BLOCK(cs_mapWallet)\n\n2. CRITICAL_BLOCK(cs_main)\n    ProcessMessage(pfrom, strCommand, vMsg)\n        AddToWalletIfMine()\n              AddToWallet(wtx)\n                  CRITICAL_BLOCK(cs_mapWallet)\n                      walletdb.WriteName(PubKeyToAddress(vchDefaultKey), \"\")\n                          CRITICAL_BLOCK(cs_mapAddressBook)\n\nSpotted by ArtForz.  Additional deadlock fixes by Gavin.\n\n[1] http://www.bitcoin.org/smf/index.php?topic=4904.msg71897#msg71897",
+      "tree": {
+        "sha": "39284fb8f9a1e82e7f66c49de833c2373dc54b8e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/39284fb8f9a1e82e7f66c49de833c2373dc54b8e"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/f5f1878ba104a5d6a32eeb20b341326dca6086a5",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f5f1878ba104a5d6a32eeb20b341326dca6086a5",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/f5f1878ba104a5d6a32eeb20b341326dca6086a5",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f5f1878ba104a5d6a32eeb20b341326dca6086a5/comments",
+    "author": null,
+    "committer": {
+      "login": "jgarzik",
+      "id": 494411,
+      "node_id": "MDQ6VXNlcjQ5NDQxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/494411?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jgarzik",
+      "html_url": "https://github.com/jgarzik",
+      "followers_url": "https://api.github.com/users/jgarzik/followers",
+      "following_url": "https://api.github.com/users/jgarzik/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jgarzik/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jgarzik/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jgarzik/subscriptions",
+      "organizations_url": "https://api.github.com/users/jgarzik/orgs",
+      "repos_url": "https://api.github.com/users/jgarzik/repos",
+      "events_url": "https://api.github.com/users/jgarzik/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jgarzik/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "454bc86479a387893604cd662aae994d37699672",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/454bc86479a387893604cd662aae994d37699672",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/454bc86479a387893604cd662aae994d37699672"
+      }
+    ],
+    "stats": {
+      "total": 151,
+      "additions": 84,
+      "deletions": 67
+    },
+    "files": [
+      {
+        "sha": "3cfcce569b114f023dadc7fa01839720b7d452ac",
+        "filename": "db.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f5f1878ba104a5d6a32eeb20b341326dca6086a5/db.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f5f1878ba104a5d6a32eeb20b341326dca6086a5/db.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/db.cpp?ref=f5f1878ba104a5d6a32eeb20b341326dca6086a5",
+        "patch": "@@ -668,8 +668,8 @@ bool CWalletDB::LoadWallet()\n #endif\n \n     //// todo: shouldn't we catch exceptions and try to recover and continue?\n-    CRITICAL_BLOCK(cs_mapKeys)\n     CRITICAL_BLOCK(cs_mapWallet)\n+    CRITICAL_BLOCK(cs_mapKeys)\n     {\n         // Get cursor\n         Dbc* pcursor = GetCursor();"
+      },
+      {
+        "sha": "6bd90a32adee4bcc8108eed0a34a08baad4fbc50",
+        "filename": "main.cpp",
+        "status": "modified",
+        "additions": 18,
+        "deletions": 18,
+        "changes": 36,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f5f1878ba104a5d6a32eeb20b341326dca6086a5/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f5f1878ba104a5d6a32eeb20b341326dca6086a5/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/main.cpp?ref=f5f1878ba104a5d6a32eeb20b341326dca6086a5",
+        "patch": "@@ -4046,35 +4046,35 @@ bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey)\n \n \n \n+// requires cs_main lock\n string SendMoney(CScript scriptPubKey, int64 nValue, CWalletTx& wtxNew, bool fAskFee)\n {\n-    CRITICAL_BLOCK(cs_main)\n+    CReserveKey reservekey;\n+    int64 nFeeRequired;\n+    if (!CreateTransaction(scriptPubKey, nValue, wtxNew, reservekey, nFeeRequired))\n     {\n-        CReserveKey reservekey;\n-        int64 nFeeRequired;\n-        if (!CreateTransaction(scriptPubKey, nValue, wtxNew, reservekey, nFeeRequired))\n-        {\n-            string strError;\n-            if (nValue + nFeeRequired > GetBalance())\n-                strError = strprintf(_(\"Error: This is an oversized transaction that requires a transaction fee of %s  \"), FormatMoney(nFeeRequired).c_str());\n-            else\n-                strError = _(\"Error: Transaction creation failed  \");\n-            printf(\"SendMoney() : %s\", strError.c_str());\n-            return strError;\n-        }\n+        string strError;\n+        if (nValue + nFeeRequired > GetBalance())\n+            strError = strprintf(_(\"Error: This is an oversized transaction that requires a transaction fee of %s  \"), FormatMoney(nFeeRequired).c_str());\n+        else\n+            strError = _(\"Error: Transaction creation failed  \");\n+        printf(\"SendMoney() : %s\", strError.c_str());\n+        return strError;\n+    }\n \n-        if (fAskFee && !ThreadSafeAskFee(nFeeRequired, _(\"Sending...\"), NULL))\n-            return \"ABORTED\";\n+    if (fAskFee && !ThreadSafeAskFee(nFeeRequired, _(\"Sending...\"), NULL))\n+        return \"ABORTED\";\n+\n+    if (!CommitTransaction(wtxNew, reservekey))\n+        return _(\"Error: The transaction was rejected.  This might happen if some of the coins in your wallet were already spent, such as if you used a copy of wallet.dat and coins were spent in the copy but not marked as spent here.\");\n \n-        if (!CommitTransaction(wtxNew, reservekey))\n-            return _(\"Error: The transaction was rejected.  This might happen if some of the coins in your wallet were already spent, such as if you used a copy of wallet.dat and coins were spent in the copy but not marked as spent here.\");\n-    }\n     MainFrameRepaint();\n     return \"\";\n }\n \n \n \n+// requires cs_main lock\n string SendMoneyToBitcoinAddress(string strAddress, int64 nValue, CWalletTx& wtxNew, bool fAskFee)\n {\n     // Check amount"
+      },
+      {
+        "sha": "a634fff693f189c6510bb79d945e3819d4e441a3",
+        "filename": "rpc.cpp",
+        "status": "modified",
+        "additions": 48,
+        "deletions": 34,
+        "changes": 82,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f5f1878ba104a5d6a32eeb20b341326dca6086a5/rpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f5f1878ba104a5d6a32eeb20b341326dca6086a5/rpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/rpc.cpp?ref=f5f1878ba104a5d6a32eeb20b341326dca6086a5",
+        "patch": "@@ -315,46 +315,45 @@ Value getnewaddress(const Array& params, bool fHelp)\n }\n \n \n+// requires cs_main, cs_mapWallet locks\n string GetAccountAddress(string strAccount, bool bForceNew=false)\n {\n     string strAddress;\n \n-    CRITICAL_BLOCK(cs_mapWallet)\n-    {\n-        CWalletDB walletdb;\n-        walletdb.TxnBegin();\n+    CWalletDB walletdb;\n+    walletdb.TxnBegin();\n \n-        CAccount account;\n-        walletdb.ReadAccount(strAccount, account);\n+    CAccount account;\n+    walletdb.ReadAccount(strAccount, account);\n \n-        // Check if the current key has been used\n-        if (!account.vchPubKey.empty())\n-        {\n-            CScript scriptPubKey;\n-            scriptPubKey.SetBitcoinAddress(account.vchPubKey);\n-            for (map<uint256, CWalletTx>::iterator it = mapWallet.begin();\n-                 it != mapWallet.end() && !account.vchPubKey.empty();\n-                 ++it)\n-            {\n-                const CWalletTx& wtx = (*it).second;\n-                foreach(const CTxOut& txout, wtx.vout)\n-                    if (txout.scriptPubKey == scriptPubKey)\n-                        account.vchPubKey.clear();\n-            }\n-        }\n-\n-        // Generate a new key\n-        if (account.vchPubKey.empty() || bForceNew)\n+    // Check if the current key has been used\n+    if (!account.vchPubKey.empty())\n+    {\n+        CScript scriptPubKey;\n+        scriptPubKey.SetBitcoinAddress(account.vchPubKey);\n+        for (map<uint256, CWalletTx>::iterator it = mapWallet.begin();\n+             it != mapWallet.end() && !account.vchPubKey.empty();\n+             ++it)\n         {\n-            account.vchPubKey = GetKeyFromKeyPool();\n-            string strAddress = PubKeyToAddress(account.vchPubKey);\n-            SetAddressBookName(strAddress, strAccount);\n-            walletdb.WriteAccount(strAccount, account);\n+            const CWalletTx& wtx = (*it).second;\n+            foreach(const CTxOut& txout, wtx.vout)\n+                if (txout.scriptPubKey == scriptPubKey)\n+                    account.vchPubKey.clear();\n         }\n+    }\n \n-        walletdb.TxnCommit();\n-        strAddress = PubKeyToAddress(account.vchPubKey);\n+    // Generate a new key\n+    if (account.vchPubKey.empty() || bForceNew)\n+    {\n+        account.vchPubKey = GetKeyFromKeyPool();\n+        string strAddress = PubKeyToAddress(account.vchPubKey);\n+        SetAddressBookName(strAddress, strAccount);\n+        walletdb.WriteAccount(strAccount, account);\n     }\n+\n+    walletdb.TxnCommit();\n+    strAddress = PubKeyToAddress(account.vchPubKey);\n+\n     return strAddress;\n }\n \n@@ -368,7 +367,15 @@ Value getaccountaddress(const Array& params, bool fHelp)\n     // Parse the account first so we don't generate a key if there's an error\n     string strAccount = AccountFromValue(params[0]);\n \n-    return GetAccountAddress(strAccount);\n+    Value ret;\n+\n+    CRITICAL_BLOCK(cs_main)\n+    CRITICAL_BLOCK(cs_mapWallet)\n+    {\n+        ret = GetAccountAddress(strAccount);\n+    }\n+\n+    return ret;\n }\n \n \n@@ -392,6 +399,8 @@ Value setaccount(const Array& params, bool fHelp)\n         strAccount = AccountFromValue(params[1]);\n \n     // Detect when changing the account of an address that is the 'unused current key' of another account:\n+    CRITICAL_BLOCK(cs_main)\n+    CRITICAL_BLOCK(cs_mapWallet)\n     CRITICAL_BLOCK(cs_mapAddressBook)\n     {\n         if (mapAddressBook.count(strAddress))\n@@ -475,9 +484,13 @@ Value sendtoaddress(const Array& params, bool fHelp)\n     if (params.size() > 3 && params[3].type() != null_type && !params[3].get_str().empty())\n         wtx.mapValue[\"to\"]      = params[3].get_str();\n \n-    string strError = SendMoneyToBitcoinAddress(strAddress, nAmount, wtx);\n-    if (strError != \"\")\n-        throw JSONRPCError(-4, strError);\n+    CRITICAL_BLOCK(cs_main)\n+    {\n+        string strError = SendMoneyToBitcoinAddress(strAddress, nAmount, wtx);\n+        if (strError != \"\")\n+            throw JSONRPCError(-4, strError);\n+    }\n+\n     return wtx.GetHash().GetHex();\n }\n \n@@ -752,6 +765,7 @@ Value sendfrom(const Array& params, bool fHelp)\n     if (params.size() > 5 && params[5].type() != null_type && !params[5].get_str().empty())\n         wtx.mapValue[\"to\"]      = params[5].get_str();\n \n+    CRITICAL_BLOCK(cs_main)\n     CRITICAL_BLOCK(cs_mapWallet)\n     {\n         // Check funds"
+      },
+      {
+        "sha": "f4c0c4d749d8eb130a9b124fd5334794265466ec",
+        "filename": "ui.cpp",
+        "status": "modified",
+        "additions": 17,
+        "deletions": 14,
+        "changes": 31,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f5f1878ba104a5d6a32eeb20b341326dca6086a5/ui.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f5f1878ba104a5d6a32eeb20b341326dca6086a5/ui.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/ui.cpp?ref=f5f1878ba104a5d6a32eeb20b341326dca6086a5",
+        "patch": "@@ -1934,20 +1934,23 @@ void CSendDialog::OnButtonSend(wxCommandEvent& event)\n \n         if (fBitcoinAddress)\n         {\n-            // Send to bitcoin address\n-            CScript scriptPubKey;\n-            scriptPubKey << OP_DUP << OP_HASH160 << hash160 << OP_EQUALVERIFY << OP_CHECKSIG;\n-\n-            string strError = SendMoney(scriptPubKey, nValue, wtx, true);\n-            if (strError == \"\")\n-                wxMessageBox(_(\"Payment sent  \"), _(\"Sending...\"));\n-            else if (strError == \"ABORTED\")\n-                return; // leave send dialog open\n-            else\n-            {\n-                wxMessageBox(strError + \"  \", _(\"Sending...\"));\n-                EndModal(false);\n-            }\n+\t    CRITICAL_BLOCK(cs_main)\n+\t    {\n+                // Send to bitcoin address\n+                CScript scriptPubKey;\n+                scriptPubKey << OP_DUP << OP_HASH160 << hash160 << OP_EQUALVERIFY << OP_CHECKSIG;\n+\n+                string strError = SendMoney(scriptPubKey, nValue, wtx, true);\n+                if (strError == \"\")\n+                    wxMessageBox(_(\"Payment sent  \"), _(\"Sending...\"));\n+                else if (strError == \"ABORTED\")\n+                    return; // leave send dialog open\n+                else\n+                {\n+                    wxMessageBox(strError + \"  \", _(\"Sending...\"));\n+                    EndModal(false);\n+                }\n+\t    }\n         }\n         else\n         {"
+      }
+    ]
+  }
+]

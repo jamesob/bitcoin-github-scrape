@@ -1,0 +1,308 @@
+[
+  {
+    "sha": "9453018fdc8f02d42832374bcf1d6e3a1df02281",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5NDUzMDE4ZmRjOGYwMmQ0MjgzMjM3NGJjZjFkNmUzYTFkZjAyMjgx",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2019-03-20T01:06:35Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2019-03-23T02:10:22Z"
+      },
+      "message": "Simplify orphan processing in preparation for interruptibility",
+      "tree": {
+        "sha": "61a54a2139ced4aa858e46db29390b2d54d04c4b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/61a54a2139ced4aa858e46db29390b2d54d04c4b"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/9453018fdc8f02d42832374bcf1d6e3a1df02281",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9453018fdc8f02d42832374bcf1d6e3a1df02281",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/9453018fdc8f02d42832374bcf1d6e3a1df02281",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9453018fdc8f02d42832374bcf1d6e3a1df02281/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "68520597ccf8ff3f6e8a7ad6869b06bf2012ae8a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/68520597ccf8ff3f6e8a7ad6869b06bf2012ae8a",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/68520597ccf8ff3f6e8a7ad6869b06bf2012ae8a"
+      }
+    ],
+    "stats": {
+      "total": 110,
+      "additions": 54,
+      "deletions": 56
+    },
+    "files": [
+      {
+        "sha": "d97ad4a3a5d61e4781c659ed0cc037095774e963",
+        "filename": "src/net_processing.cpp",
+        "status": "modified",
+        "additions": 54,
+        "deletions": 56,
+        "changes": 110,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9453018fdc8f02d42832374bcf1d6e3a1df02281/src/net_processing.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9453018fdc8f02d42832374bcf1d6e3a1df02281/src/net_processing.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.cpp?ref=9453018fdc8f02d42832374bcf1d6e3a1df02281",
+        "patch": "@@ -2342,8 +2342,8 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr\n             return true;\n         }\n \n-        std::deque<COutPoint> vWorkQueue;\n-        std::vector<uint256> vEraseQueue;\n+        std::set<uint256> orphan_work_set;\n+\n         CTransactionRef ptx;\n         vRecv >> ptx;\n         const CTransaction& tx = *ptx;\n@@ -2368,7 +2368,12 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr\n             mempool.check(pcoinsTip.get());\n             RelayTransaction(tx, connman);\n             for (unsigned int i = 0; i < tx.vout.size(); i++) {\n-                vWorkQueue.emplace_back(inv.hash, i);\n+                auto it_by_prev = mapOrphanTransactionsByPrev.find(COutPoint(inv.hash, i));\n+                if (it_by_prev != mapOrphanTransactionsByPrev.end()) {\n+                    for (const auto& elem : it_by_prev->second) {\n+                        orphan_work_set.insert(elem->first);\n+                    }\n+                }\n             }\n \n             pfrom->nLastTXTime = GetTime();\n@@ -2380,64 +2385,57 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr\n \n             // Recursively process any orphan transactions that depended on this one\n             std::set<NodeId> setMisbehaving;\n-            while (!vWorkQueue.empty()) {\n-                auto itByPrev = mapOrphanTransactionsByPrev.find(vWorkQueue.front());\n-                vWorkQueue.pop_front();\n-                if (itByPrev == mapOrphanTransactionsByPrev.end())\n-                    continue;\n-                for (auto mi = itByPrev->second.begin();\n-                     mi != itByPrev->second.end();\n-                     ++mi)\n-                {\n-                    const CTransactionRef& porphanTx = (*mi)->second.tx;\n-                    const CTransaction& orphanTx = *porphanTx;\n-                    const uint256& orphanHash = orphanTx.GetHash();\n-                    NodeId fromPeer = (*mi)->second.fromPeer;\n-                    bool fMissingInputs2 = false;\n-                    // Use a dummy CValidationState so someone can't setup nodes to counter-DoS based on orphan\n-                    // resolution (that is, feeding people an invalid transaction based on LegitTxX in order to get\n-                    // anyone relaying LegitTxX banned)\n-                    CValidationState stateDummy;\n-\n-\n-                    if (setMisbehaving.count(fromPeer))\n-                        continue;\n-                    if (AcceptToMemoryPool(mempool, stateDummy, porphanTx, &fMissingInputs2, &lRemovedTxn, false /* bypass_limits */, 0 /* nAbsurdFee */)) {\n-                        LogPrint(BCLog::MEMPOOL, \"   accepted orphan tx %s\\n\", orphanHash.ToString());\n-                        RelayTransaction(orphanTx, connman);\n-                        for (unsigned int i = 0; i < orphanTx.vout.size(); i++) {\n-                            vWorkQueue.emplace_back(orphanHash, i);\n+            while (!orphan_work_set.empty()) {\n+                const uint256 orphanHash = *orphan_work_set.begin();\n+                orphan_work_set.erase(orphan_work_set.begin());\n+\n+                auto orphan_it = mapOrphanTransactions.find(orphanHash);\n+                if (orphan_it == mapOrphanTransactions.end()) continue;\n+\n+                const CTransactionRef porphanTx = orphan_it->second.tx;\n+                const CTransaction& orphanTx = *porphanTx;\n+                NodeId fromPeer = orphan_it->second.fromPeer;\n+                bool fMissingInputs2 = false;\n+                // Use a dummy CValidationState so someone can't setup nodes to counter-DoS based on orphan\n+                // resolution (that is, feeding people an invalid transaction based on LegitTxX in order to get\n+                // anyone relaying LegitTxX banned)\n+                CValidationState stateDummy;\n+\n+                if (setMisbehaving.count(fromPeer)) continue;\n+                if (AcceptToMemoryPool(mempool, stateDummy, porphanTx, &fMissingInputs2, &lRemovedTxn, false /* bypass_limits */, 0 /* nAbsurdFee */)) {\n+                    LogPrint(BCLog::MEMPOOL, \"   accepted orphan tx %s\\n\", orphanHash.ToString());\n+                    RelayTransaction(orphanTx, connman);\n+                    for (unsigned int i = 0; i < orphanTx.vout.size(); i++) {\n+                        auto it_by_prev = mapOrphanTransactionsByPrev.find(COutPoint(orphanHash, i));\n+                        if (it_by_prev != mapOrphanTransactionsByPrev.end()) {\n+                            for (const auto& elem : it_by_prev->second) {\n+                                orphan_work_set.insert(elem->first);\n+                            }\n                         }\n-                        vEraseQueue.push_back(orphanHash);\n                     }\n-                    else if (!fMissingInputs2)\n-                    {\n-                        int nDos = 0;\n-                        if (stateDummy.IsInvalid(nDos) && nDos > 0)\n-                        {\n-                            // Punish peer that gave us an invalid orphan tx\n-                            Misbehaving(fromPeer, nDos);\n-                            setMisbehaving.insert(fromPeer);\n-                            LogPrint(BCLog::MEMPOOL, \"   invalid orphan tx %s\\n\", orphanHash.ToString());\n-                        }\n-                        // Has inputs but not accepted to mempool\n-                        // Probably non-standard or insufficient fee\n-                        LogPrint(BCLog::MEMPOOL, \"   removed orphan tx %s\\n\", orphanHash.ToString());\n-                        vEraseQueue.push_back(orphanHash);\n-                        if (!orphanTx.HasWitness() && !stateDummy.CorruptionPossible()) {\n-                            // Do not use rejection cache for witness transactions or\n-                            // witness-stripped transactions, as they can have been malleated.\n-                            // See https://github.com/bitcoin/bitcoin/issues/8279 for details.\n-                            assert(recentRejects);\n-                            recentRejects->insert(orphanHash);\n-                        }\n+                    EraseOrphanTx(orphanHash);\n+                } else if (!fMissingInputs2) {\n+                    int nDos = 0;\n+                    if (stateDummy.IsInvalid(nDos) && nDos > 0) {\n+                        // Punish peer that gave us an invalid orphan tx\n+                        Misbehaving(fromPeer, nDos);\n+                        setMisbehaving.insert(fromPeer);\n+                        LogPrint(BCLog::MEMPOOL, \"   invalid orphan tx %s\\n\", orphanHash.ToString());\n+                    }\n+                    // Has inputs but not accepted to mempool\n+                    // Probably non-standard or insufficient fee\n+                    LogPrint(BCLog::MEMPOOL, \"   removed orphan tx %s\\n\", orphanHash.ToString());\n+                    if (!orphanTx.HasWitness() && !stateDummy.CorruptionPossible()) {\n+                        // Do not use rejection cache for witness transactions or\n+                        // witness-stripped transactions, as they can have been malleated.\n+                        // See https://github.com/bitcoin/bitcoin/issues/8279 for details.\n+                        assert(recentRejects);\n+                        recentRejects->insert(orphanHash);\n                     }\n-                    mempool.check(pcoinsTip.get());\n+                    EraseOrphanTx(orphanHash);\n                 }\n+                mempool.check(pcoinsTip.get());\n             }\n-\n-            for (const uint256& hash : vEraseQueue)\n-                EraseOrphanTx(hash);\n         }\n         else if (fMissingInputs)\n         {"
+      }
+    ]
+  },
+  {
+    "sha": "6e051f3d323af1d209c02e7a4319834f1947ffa7",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2ZTA1MWYzZDMyM2FmMWQyMDljMDJlN2E0MzE5ODM0ZjE5NDdmZmE3",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2019-03-20T22:09:12Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2019-03-23T02:21:58Z"
+      },
+      "message": "[MOVEONLY] Move processing of orphan queue to ProcessOrphanTx",
+      "tree": {
+        "sha": "788867b34dae9df05fb09c82717483f92eafc13f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/788867b34dae9df05fb09c82717483f92eafc13f"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/6e051f3d323af1d209c02e7a4319834f1947ffa7",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6e051f3d323af1d209c02e7a4319834f1947ffa7",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/6e051f3d323af1d209c02e7a4319834f1947ffa7",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6e051f3d323af1d209c02e7a4319834f1947ffa7/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "9453018fdc8f02d42832374bcf1d6e3a1df02281",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9453018fdc8f02d42832374bcf1d6e3a1df02281",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/9453018fdc8f02d42832374bcf1d6e3a1df02281"
+      }
+    ],
+    "stats": {
+      "total": 111,
+      "additions": 59,
+      "deletions": 52
+    },
+    "files": [
+      {
+        "sha": "55ab826c76eab6cc54256df74ee894bf389f28d4",
+        "filename": "src/net_processing.cpp",
+        "status": "modified",
+        "additions": 59,
+        "deletions": 52,
+        "changes": 111,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6e051f3d323af1d209c02e7a4319834f1947ffa7/src/net_processing.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6e051f3d323af1d209c02e7a4319834f1947ffa7/src/net_processing.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.cpp?ref=6e051f3d323af1d209c02e7a4319834f1947ffa7",
+        "patch": "@@ -1713,6 +1713,64 @@ bool static ProcessHeadersMessage(CNode *pfrom, CConnman *connman, const std::ve\n     return true;\n }\n \n+void static ProcessOrphanTx(CConnman* connman, std::set<uint256>& orphan_work_set, std::list<CTransactionRef>& removed_txn) EXCLUSIVE_LOCKS_REQUIRED(cs_main, g_cs_orphans)\n+{\n+    AssertLockHeld(cs_main);\n+    AssertLockHeld(g_cs_orphans);\n+    std::set<NodeId> setMisbehaving;\n+    while (!orphan_work_set.empty()) {\n+        const uint256 orphanHash = *orphan_work_set.begin();\n+        orphan_work_set.erase(orphan_work_set.begin());\n+\n+        auto orphan_it = mapOrphanTransactions.find(orphanHash);\n+        if (orphan_it == mapOrphanTransactions.end()) continue;\n+\n+        const CTransactionRef porphanTx = orphan_it->second.tx;\n+        const CTransaction& orphanTx = *porphanTx;\n+        NodeId fromPeer = orphan_it->second.fromPeer;\n+        bool fMissingInputs2 = false;\n+        // Use a dummy CValidationState so someone can't setup nodes to counter-DoS based on orphan\n+        // resolution (that is, feeding people an invalid transaction based on LegitTxX in order to get\n+        // anyone relaying LegitTxX banned)\n+        CValidationState stateDummy;\n+\n+        if (setMisbehaving.count(fromPeer)) continue;\n+        if (AcceptToMemoryPool(mempool, stateDummy, porphanTx, &fMissingInputs2, &removed_txn, false /* bypass_limits */, 0 /* nAbsurdFee */)) {\n+            LogPrint(BCLog::MEMPOOL, \"   accepted orphan tx %s\\n\", orphanHash.ToString());\n+            RelayTransaction(orphanTx, connman);\n+            for (unsigned int i = 0; i < orphanTx.vout.size(); i++) {\n+                auto it_by_prev = mapOrphanTransactionsByPrev.find(COutPoint(orphanHash, i));\n+                if (it_by_prev != mapOrphanTransactionsByPrev.end()) {\n+                    for (const auto& elem : it_by_prev->second) {\n+                        orphan_work_set.insert(elem->first);\n+                    }\n+                }\n+            }\n+            EraseOrphanTx(orphanHash);\n+        } else if (!fMissingInputs2) {\n+            int nDos = 0;\n+            if (stateDummy.IsInvalid(nDos) && nDos > 0) {\n+                // Punish peer that gave us an invalid orphan tx\n+                Misbehaving(fromPeer, nDos);\n+                setMisbehaving.insert(fromPeer);\n+                LogPrint(BCLog::MEMPOOL, \"   invalid orphan tx %s\\n\", orphanHash.ToString());\n+            }\n+            // Has inputs but not accepted to mempool\n+            // Probably non-standard or insufficient fee\n+            LogPrint(BCLog::MEMPOOL, \"   removed orphan tx %s\\n\", orphanHash.ToString());\n+            if (!orphanTx.HasWitness() && !stateDummy.CorruptionPossible()) {\n+                // Do not use rejection cache for witness transactions or\n+                // witness-stripped transactions, as they can have been malleated.\n+                // See https://github.com/bitcoin/bitcoin/issues/8279 for details.\n+                assert(recentRejects);\n+                recentRejects->insert(orphanHash);\n+            }\n+            EraseOrphanTx(orphanHash);\n+        }\n+        mempool.check(pcoinsTip.get());\n+    }\n+}\n+\n bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStream& vRecv, int64_t nTimeReceived, const CChainParams& chainparams, CConnman* connman, const std::atomic<bool>& interruptMsgProc, bool enable_bip61)\n {\n     LogPrint(BCLog::NET, \"received: %s (%u bytes) peer=%d\\n\", SanitizeString(strCommand), vRecv.size(), pfrom->GetId());\n@@ -2384,58 +2442,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr\n                 mempool.size(), mempool.DynamicMemoryUsage() / 1000);\n \n             // Recursively process any orphan transactions that depended on this one\n-            std::set<NodeId> setMisbehaving;\n-            while (!orphan_work_set.empty()) {\n-                const uint256 orphanHash = *orphan_work_set.begin();\n-                orphan_work_set.erase(orphan_work_set.begin());\n-\n-                auto orphan_it = mapOrphanTransactions.find(orphanHash);\n-                if (orphan_it == mapOrphanTransactions.end()) continue;\n-\n-                const CTransactionRef porphanTx = orphan_it->second.tx;\n-                const CTransaction& orphanTx = *porphanTx;\n-                NodeId fromPeer = orphan_it->second.fromPeer;\n-                bool fMissingInputs2 = false;\n-                // Use a dummy CValidationState so someone can't setup nodes to counter-DoS based on orphan\n-                // resolution (that is, feeding people an invalid transaction based on LegitTxX in order to get\n-                // anyone relaying LegitTxX banned)\n-                CValidationState stateDummy;\n-\n-                if (setMisbehaving.count(fromPeer)) continue;\n-                if (AcceptToMemoryPool(mempool, stateDummy, porphanTx, &fMissingInputs2, &lRemovedTxn, false /* bypass_limits */, 0 /* nAbsurdFee */)) {\n-                    LogPrint(BCLog::MEMPOOL, \"   accepted orphan tx %s\\n\", orphanHash.ToString());\n-                    RelayTransaction(orphanTx, connman);\n-                    for (unsigned int i = 0; i < orphanTx.vout.size(); i++) {\n-                        auto it_by_prev = mapOrphanTransactionsByPrev.find(COutPoint(orphanHash, i));\n-                        if (it_by_prev != mapOrphanTransactionsByPrev.end()) {\n-                            for (const auto& elem : it_by_prev->second) {\n-                                orphan_work_set.insert(elem->first);\n-                            }\n-                        }\n-                    }\n-                    EraseOrphanTx(orphanHash);\n-                } else if (!fMissingInputs2) {\n-                    int nDos = 0;\n-                    if (stateDummy.IsInvalid(nDos) && nDos > 0) {\n-                        // Punish peer that gave us an invalid orphan tx\n-                        Misbehaving(fromPeer, nDos);\n-                        setMisbehaving.insert(fromPeer);\n-                        LogPrint(BCLog::MEMPOOL, \"   invalid orphan tx %s\\n\", orphanHash.ToString());\n-                    }\n-                    // Has inputs but not accepted to mempool\n-                    // Probably non-standard or insufficient fee\n-                    LogPrint(BCLog::MEMPOOL, \"   removed orphan tx %s\\n\", orphanHash.ToString());\n-                    if (!orphanTx.HasWitness() && !stateDummy.CorruptionPossible()) {\n-                        // Do not use rejection cache for witness transactions or\n-                        // witness-stripped transactions, as they can have been malleated.\n-                        // See https://github.com/bitcoin/bitcoin/issues/8279 for details.\n-                        assert(recentRejects);\n-                        recentRejects->insert(orphanHash);\n-                    }\n-                    EraseOrphanTx(orphanHash);\n-                }\n-                mempool.check(pcoinsTip.get());\n-            }\n+            ProcessOrphanTx(connman, orphan_work_set, lRemovedTxn);\n         }\n         else if (fMissingInputs)\n         {"
+      }
+    ]
+  },
+  {
+    "sha": "866c8058a706931f025335b3e794ed2f4d287918",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4NjZjODA1OGE3MDY5MzFmMDI1MzM1YjNlNzk0ZWQyZjRkMjg3OTE4",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2019-03-20T22:26:21Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2019-03-23T02:25:50Z"
+      },
+      "message": "Interrupt orphan processing after every transaction\n\nThis makes orphan processing work like handling getdata messages:\nAfter every actual transaction validation attempt, interrupt\nprocessing to deal with messages arriving from other peers.",
+      "tree": {
+        "sha": "d74a092a186f5644da463592f1cf2e934e2d82ea",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/d74a092a186f5644da463592f1cf2e934e2d82ea"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/866c8058a706931f025335b3e794ed2f4d287918",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/866c8058a706931f025335b3e794ed2f4d287918",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/866c8058a706931f025335b3e794ed2f4d287918",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/866c8058a706931f025335b3e794ed2f4d287918/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "6e051f3d323af1d209c02e7a4319834f1947ffa7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6e051f3d323af1d209c02e7a4319834f1947ffa7",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/6e051f3d323af1d209c02e7a4319834f1947ffa7"
+      }
+    ],
+    "stats": {
+      "total": 23,
+      "additions": 18,
+      "deletions": 5
+    },
+    "files": [
+      {
+        "sha": "f1d09f5934f3449207fc163e3c2be4cc65a41750",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/866c8058a706931f025335b3e794ed2f4d287918/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/866c8058a706931f025335b3e794ed2f4d287918/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=866c8058a706931f025335b3e794ed2f4d287918",
+        "patch": "@@ -739,6 +739,8 @@ class CNode\n     CAmount lastSentFeeFilter{0};\n     int64_t nextSendTimeFeeFilter{0};\n \n+    std::set<uint256> orphan_work_set;\n+\n     CNode(NodeId id, ServiceFlags nLocalServicesIn, int nMyStartingHeightIn, SOCKET hSocketIn, const CAddress &addrIn, uint64_t nKeyedNetGroupIn, uint64_t nLocalHostNonceIn, const CAddress &addrBindIn, const std::string &addrNameIn = \"\", bool fInboundIn = false);\n     ~CNode();\n     CNode(const CNode&) = delete;"
+      },
+      {
+        "sha": "0654a96e2611f13702b2f4b1ec52c7271a2ee69c",
+        "filename": "src/net_processing.cpp",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 5,
+        "changes": 21,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/866c8058a706931f025335b3e794ed2f4d287918/src/net_processing.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/866c8058a706931f025335b3e794ed2f4d287918/src/net_processing.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.cpp?ref=866c8058a706931f025335b3e794ed2f4d287918",
+        "patch": "@@ -1718,7 +1718,8 @@ void static ProcessOrphanTx(CConnman* connman, std::set<uint256>& orphan_work_se\n     AssertLockHeld(cs_main);\n     AssertLockHeld(g_cs_orphans);\n     std::set<NodeId> setMisbehaving;\n-    while (!orphan_work_set.empty()) {\n+    bool done = false;\n+    while (!done && !orphan_work_set.empty()) {\n         const uint256 orphanHash = *orphan_work_set.begin();\n         orphan_work_set.erase(orphan_work_set.begin());\n \n@@ -1747,6 +1748,7 @@ void static ProcessOrphanTx(CConnman* connman, std::set<uint256>& orphan_work_se\n                 }\n             }\n             EraseOrphanTx(orphanHash);\n+            done = true;\n         } else if (!fMissingInputs2) {\n             int nDos = 0;\n             if (stateDummy.IsInvalid(nDos) && nDos > 0) {\n@@ -1766,6 +1768,7 @@ void static ProcessOrphanTx(CConnman* connman, std::set<uint256>& orphan_work_se\n                 recentRejects->insert(orphanHash);\n             }\n             EraseOrphanTx(orphanHash);\n+            done = true;\n         }\n         mempool.check(pcoinsTip.get());\n     }\n@@ -2400,8 +2403,6 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr\n             return true;\n         }\n \n-        std::set<uint256> orphan_work_set;\n-\n         CTransactionRef ptx;\n         vRecv >> ptx;\n         const CTransaction& tx = *ptx;\n@@ -2429,7 +2430,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr\n                 auto it_by_prev = mapOrphanTransactionsByPrev.find(COutPoint(inv.hash, i));\n                 if (it_by_prev != mapOrphanTransactionsByPrev.end()) {\n                     for (const auto& elem : it_by_prev->second) {\n-                        orphan_work_set.insert(elem->first);\n+                        pfrom->orphan_work_set.insert(elem->first);\n                     }\n                 }\n             }\n@@ -2442,7 +2443,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr\n                 mempool.size(), mempool.DynamicMemoryUsage() / 1000);\n \n             // Recursively process any orphan transactions that depended on this one\n-            ProcessOrphanTx(connman, orphan_work_set, lRemovedTxn);\n+            ProcessOrphanTx(connman, pfrom->orphan_work_set, lRemovedTxn);\n         }\n         else if (fMissingInputs)\n         {\n@@ -3174,11 +3175,21 @@ bool PeerLogicValidation::ProcessMessages(CNode* pfrom, std::atomic<bool>& inter\n     if (!pfrom->vRecvGetData.empty())\n         ProcessGetData(pfrom, chainparams, connman, interruptMsgProc);\n \n+    if (!pfrom->orphan_work_set.empty()) {\n+        std::list<CTransactionRef> removed_txn;\n+        LOCK2(cs_main, g_cs_orphans);\n+        ProcessOrphanTx(connman, pfrom->orphan_work_set, removed_txn);\n+        for (const CTransactionRef& removedTx : removed_txn) {\n+            AddToCompactExtraTransactions(removedTx);\n+        }\n+    }\n+\n     if (pfrom->fDisconnect)\n         return false;\n \n     // this maintains the order of responses\n     if (!pfrom->vRecvGetData.empty()) return true;\n+    if (!pfrom->orphan_work_set.empty()) return true;\n \n     // Don't bother if send buffer is too full to respond anyway\n     if (pfrom->fPauseSend)"
+      }
+    ]
+  }
+]

@@ -1,0 +1,196 @@
+[
+  {
+    "sha": "f0784ac470a5541343e7985ceb0cb3c28d9a964e",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmMDc4NGFjNDcwYTU1NDEzNDNlNzk4NWNlYjBjYjNjMjhkOWE5NjRl",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2013-08-02T00:47:22Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieterw@google.com",
+        "date": "2013-08-15T21:53:55Z"
+      },
+      "message": "Fix non-standard disconnected transactions causing mempool orphans",
+      "tree": {
+        "sha": "fa24cd824fda9619a3a7519cabc5300bc3891bac",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/fa24cd824fda9619a3a7519cabc5300bc3891bac"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/f0784ac470a5541343e7985ceb0cb3c28d9a964e",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f0784ac470a5541343e7985ceb0cb3c28d9a964e",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/f0784ac470a5541343e7985ceb0cb3c28d9a964e",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f0784ac470a5541343e7985ceb0cb3c28d9a964e/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": null,
+    "parents": [
+      {
+        "sha": "4323bfeafda4a5e0101710d94b518d41819a2325",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4323bfeafda4a5e0101710d94b518d41819a2325",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/4323bfeafda4a5e0101710d94b518d41819a2325"
+      }
+    ],
+    "stats": {
+      "total": 17,
+      "additions": 9,
+      "deletions": 8
+    },
+    "files": [
+      {
+        "sha": "4c568245e06742dce79076753044789ec8f52d79",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 8,
+        "changes": 17,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f0784ac470a5541343e7985ceb0cb3c28d9a964e/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f0784ac470a5541343e7985ceb0cb3c28d9a964e/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=f0784ac470a5541343e7985ceb0cb3c28d9a964e",
+        "patch": "@@ -973,15 +973,15 @@ bool CTxMemPool::remove(const CTransaction &tx, bool fRecursive)\n     {\n         LOCK(cs);\n         uint256 hash = tx.GetHash();\n+        if (fRecursive) {\n+            for (unsigned int i = 0; i < tx.vout.size(); i++) {\n+                std::map<COutPoint, CInPoint>::iterator it = mapNextTx.find(COutPoint(hash, i));\n+                if (it != mapNextTx.end())\n+                    remove(*it->second.ptx, true);\n+            }\n+        }\n         if (mapTx.count(hash))\n         {\n-            if (fRecursive) {\n-                for (unsigned int i = 0; i < tx.vout.size(); i++) {\n-                    std::map<COutPoint, CInPoint>::iterator it = mapNextTx.find(COutPoint(hash, i));\n-                    if (it != mapNextTx.end())\n-                        remove(*it->second.ptx, true);\n-                }\n-            }\n             BOOST_FOREACH(const CTxIn& txin, tx.vin)\n                 mapNextTx.erase(txin.prevout);\n             mapTx.erase(hash);\n@@ -2083,7 +2083,8 @@ bool SetBestChain(CValidationState &state, CBlockIndex* pindexNew)\n     BOOST_FOREACH(CTransaction& tx, vResurrect) {\n         // ignore validation errors in resurrected transactions\n         CValidationState stateDummy;\n-        mempool.accept(stateDummy, tx, false, NULL);\n+        if (!mempool.accept(stateDummy, tx, false, NULL))\n+            mempool.remove(tx, true);\n     }\n \n     // Delete redundant memory transactions that are in the connected branch"
+      }
+    ]
+  },
+  {
+    "sha": "2461aba1ac4e0673ed0568713b48e4bb37c8b041",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyNDYxYWJhMWFjNGUwNjczZWQwNTY4NzEzYjQ4ZTRiYjM3YzhiMDQx",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2013-08-03T11:08:34Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieterw@google.com",
+        "date": "2013-08-15T21:55:35Z"
+      },
+      "message": "Mempool consistency check",
+      "tree": {
+        "sha": "354795fad656bcf84a1edb174b1538dba263bb32",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/354795fad656bcf84a1edb174b1538dba263bb32"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/2461aba1ac4e0673ed0568713b48e4bb37c8b041",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2461aba1ac4e0673ed0568713b48e4bb37c8b041",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/2461aba1ac4e0673ed0568713b48e4bb37c8b041",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2461aba1ac4e0673ed0568713b48e4bb37c8b041/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": null,
+    "parents": [
+      {
+        "sha": "f0784ac470a5541343e7985ceb0cb3c28d9a964e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f0784ac470a5541343e7985ceb0cb3c28d9a964e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/f0784ac470a5541343e7985ceb0cb3c28d9a964e"
+      }
+    ],
+    "stats": {
+      "total": 52,
+      "additions": 52,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "2592ad1b132fa7543ce1474a192d069eb8c5531a",
+        "filename": "src/chainparams.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 0,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/2461aba1ac4e0673ed0568713b48e4bb37c8b041/src/chainparams.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/2461aba1ac4e0673ed0568713b48e4bb37c8b041/src/chainparams.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/chainparams.h?ref=2461aba1ac4e0673ed0568713b48e4bb37c8b041",
+        "patch": "@@ -99,4 +99,8 @@ inline bool TestNet() {\n     return Params().NetworkID() == CChainParams::TESTNET;\n }\n \n+inline bool RegTest() {\n+    return Params().NetworkID() == CChainParams::REGTEST;\n+}\n+\n #endif"
+      },
+      {
+        "sha": "9f3d52641415fbf1f172a3217cbe3256ad984e19",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/2461aba1ac4e0673ed0568713b48e4bb37c8b041/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/2461aba1ac4e0673ed0568713b48e4bb37c8b041/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=2461aba1ac4e0673ed0568713b48e4bb37c8b041",
+        "patch": "@@ -424,6 +424,7 @@ bool AppInit2(boost::thread_group& threadGroup)\n \n     fDebug = GetBoolArg(\"-debug\", false);\n     fBenchmark = GetBoolArg(\"-benchmark\", false);\n+    mempool.fChecks = GetBoolArg(\"-checkmempool\", RegTest());\n \n     // -par=0 means autodetect, but nScriptCheckThreads==0 means no concurrency\n     nScriptCheckThreads = GetArg(\"-par\", 0);"
+      },
+      {
+        "sha": "2ccd5131d1e951fa8caeaa349b6fcd0b67657880",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 45,
+        "deletions": 0,
+        "changes": 45,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/2461aba1ac4e0673ed0568713b48e4bb37c8b041/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/2461aba1ac4e0673ed0568713b48e4bb37c8b041/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=2461aba1ac4e0673ed0568713b48e4bb37c8b041",
+        "patch": "@@ -1014,6 +1014,45 @@ void CTxMemPool::clear()\n     ++nTransactionsUpdated;\n }\n \n+bool CTxMemPool::fChecks = false;\n+\n+void CTxMemPool::check(CCoinsViewCache *pcoins) const\n+{\n+    if (!fChecks)\n+        return;\n+\n+    printf(\"Checking mempool with %u transactions and %u inputs\\n\", (unsigned int)mapTx.size(), (unsigned int)mapNextTx.size());\n+\n+    LOCK(cs);\n+    for (std::map<uint256, CTransaction>::const_iterator it = mapTx.begin(); it != mapTx.end(); it++) {\n+        unsigned int i = 0;\n+        BOOST_FOREACH(const CTxIn &txin, it->second.vin) {\n+            // Check that every mempool transaction's inputs refer to available coins, or other mempool tx's.\n+            std::map<uint256, CTransaction>::const_iterator it2 = mapTx.find(txin.prevout.hash);\n+            if (it2 != mapTx.end()) {\n+                assert(it2->second.vout.size() > txin.prevout.n && !it2->second.vout[txin.prevout.n].IsNull());\n+            } else {\n+                CCoins &coins = pcoins->GetCoins(txin.prevout.hash);\n+                assert(coins.IsAvailable(txin.prevout.n));\n+            }\n+            // Check whether its inputs are marked in mapNextTx.\n+            std::map<COutPoint, CInPoint>::const_iterator it3 = mapNextTx.find(txin.prevout);\n+            assert(it3 != mapNextTx.end());\n+            assert(it3->second.ptx == &it->second);\n+            assert(it3->second.n == i);\n+            i++;\n+        }\n+    }\n+    for (std::map<COutPoint, CInPoint>::const_iterator it = mapNextTx.begin(); it != mapNextTx.end(); it++) {\n+        uint256 hash = it->second.ptx->GetHash();\n+        std::map<uint256, CTransaction>::const_iterator it2 = mapTx.find(hash);\n+        assert(it2 != mapTx.end());\n+        assert(&it2->second == it->second.ptx);\n+        assert(it2->second.vin.size() > it->second.n);\n+        assert(it->first == it->second.ptx->vin[it->second.n].prevout);\n+    }\n+}\n+\n void CTxMemPool::queryHashes(std::vector<uint256>& vtxid)\n {\n     vtxid.clear();\n@@ -1970,6 +2009,8 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C\n \n bool SetBestChain(CValidationState &state, CBlockIndex* pindexNew)\n {\n+    mempool.check(pcoinsTip);\n+\n     // All modifications to the coin state will be done in this cache.\n     // Only when all have succeeded, we push it to pcoinsTip.\n     CCoinsViewCache view(*pcoinsTip, true);\n@@ -2093,6 +2134,8 @@ bool SetBestChain(CValidationState &state, CBlockIndex* pindexNew)\n         mempool.removeConflicts(tx);\n     }\n \n+    mempool.check(pcoinsTip);\n+\n     // Update best block in wallet (so we can detect restored wallets)\n     if ((pindexNew->nHeight % 20160) == 0 || (!fIsInitialDownload && (pindexNew->nHeight % 144) == 0))\n     {\n@@ -3678,6 +3721,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n         CValidationState state;\n         if (mempool.accept(state, tx, true, &fMissingInputs))\n         {\n+            mempool.check(pcoinsTip);\n             RelayTransaction(tx, inv.hash);\n             mapAlreadyAskedFor.erase(inv);\n             vWorkQueue.push_back(inv.hash);\n@@ -3713,6 +3757,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n                         vEraseQueue.push_back(orphanHash);\n                         printf(\"   removed orphan tx %s\\n\", orphanHash.ToString().c_str());\n                     }\n+                    mempool.check(pcoinsTip);\n                 }\n             }\n "
+      },
+      {
+        "sha": "a690a2bc9c3bbf288f8882f969bc7946775e7169",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/2461aba1ac4e0673ed0568713b48e4bb37c8b041/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/2461aba1ac4e0673ed0568713b48e4bb37c8b041/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=2461aba1ac4e0673ed0568713b48e4bb37c8b041",
+        "patch": "@@ -1077,6 +1077,7 @@ class CBlockLocator\n class CTxMemPool\n {\n public:\n+    static bool fChecks;\n     mutable CCriticalSection cs;\n     std::map<uint256, CTransaction> mapTx;\n     std::map<COutPoint, CInPoint> mapNextTx;\n@@ -1088,6 +1089,7 @@ class CTxMemPool\n     void clear();\n     void queryHashes(std::vector<uint256>& vtxid);\n     void pruneSpent(const uint256& hash, CCoins &coins);\n+    void check(CCoinsViewCache *pcoins) const;\n \n     unsigned long size()\n     {"
+      }
+    ]
+  }
+]

@@ -1,0 +1,182 @@
+[
+  {
+    "sha": "33e863dfcdb9f92a8c85460fd321b9bca18d9a3d",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozM2U4NjNkZmNkYjlmOTJhOGM4NTQ2MGZkMzIxYjliY2ExOGQ5YTNk",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-11-20T14:56:51Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-01-22T08:48:18Z"
+      },
+      "message": "[Qt] extend validate line edit and btc address validator\n\n- remove btc address length from address validator\n- add an optional btc address check in validated line edit that defaults\n  to off and is used in GUIUtil::setupAddressWidget()\n- an isAcceptable() check is added to validated line edit on focus out\n  which only kicks in, when a validator is used with that widget\n- remove an isAcceptable() check from sendcoinsentry.cpp\n- remove obsolete attributes from ui files, which are set by calling\n  GUIUtil::setupAddressWidget()\n- move some more things to GUIUtil::setupAddressWidget() and remove them\n  from normal code e.g. placeholder text",
+      "tree": {
+        "sha": "753153def8d757dec2f1bac7e46f0d9adfe9c876",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/753153def8d757dec2f1bac7e46f0d9adfe9c876"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/33e863dfcdb9f92a8c85460fd321b9bca18d9a3d",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/33e863dfcdb9f92a8c85460fd321b9bca18d9a3d",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/33e863dfcdb9f92a8c85460fd321b9bca18d9a3d",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/33e863dfcdb9f92a8c85460fd321b9bca18d9a3d/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "2f06b5965ae564dea4d13b5c0ec79cfb58d2c74a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2f06b5965ae564dea4d13b5c0ec79cfb58d2c74a",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/2f06b5965ae564dea4d13b5c0ec79cfb58d2c74a"
+      }
+    ],
+    "stats": {
+      "total": 179,
+      "additions": 123,
+      "deletions": 56
+    },
+    "files": [
+      {
+        "sha": "a88a6679c7cd7cdce3ec396be09759f572e65487",
+        "filename": "src/qt/bitcoinaddressvalidator.cpp",
+        "status": "modified",
+        "additions": 28,
+        "deletions": 14,
+        "changes": 42,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/33e863dfcdb9f92a8c85460fd321b9bca18d9a3d/src/qt/bitcoinaddressvalidator.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/33e863dfcdb9f92a8c85460fd321b9bca18d9a3d/src/qt/bitcoinaddressvalidator.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoinaddressvalidator.cpp?ref=33e863dfcdb9f92a8c85460fd321b9bca18d9a3d",
+        "patch": "@@ -4,6 +4,8 @@\n \n #include \"bitcoinaddressvalidator.h\"\n \n+#include \"base58.h\"\n+\n /* Base58 characters are:\n      \"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz\"\n \n@@ -24,8 +26,14 @@ BitcoinAddressValidator::BitcoinAddressValidator(QObject *parent) :\n \n QValidator::State BitcoinAddressValidator::validate(QString &input, int &pos) const\n {\n+    Q_UNUSED(pos);\n+\n+    // Empty address is \"intermediate\" input\n+    if (input.isEmpty())\n+        return QValidator::Intermediate;\n+\n     // Correction\n-    for(int idx=0; idx<input.size();)\n+    for (int idx = 0; idx < input.size();)\n     {\n         bool removeChar = false;\n         QChar ch = input.at(idx);\n@@ -42,26 +50,28 @@ QValidator::State BitcoinAddressValidator::validate(QString &input, int &pos) co\n         default:\n             break;\n         }\n+\n         // Remove whitespace\n-        if(ch.isSpace())\n+        if (ch.isSpace())\n             removeChar = true;\n+\n         // To next character\n-        if(removeChar)\n+        if (removeChar)\n             input.remove(idx, 1);\n         else\n             ++idx;\n     }\n \n     // Validation\n     QValidator::State state = QValidator::Acceptable;\n-    for(int idx=0; idx<input.size(); ++idx)\n+    for (int idx = 0; idx < input.size(); ++idx)\n     {\n         int ch = input.at(idx).unicode();\n \n-        if(((ch >= '0' && ch<='9') ||\n-           (ch >= 'a' && ch<='z') ||\n-           (ch >= 'A' && ch<='Z')) &&\n-           ch != 'l' && ch != 'I' && ch != '0' && ch != 'O')\n+        if (((ch >= '0' && ch<='9') ||\n+            (ch >= 'a' && ch<='z') ||\n+            (ch >= 'A' && ch<='Z')) &&\n+            ch != 'l' && ch != 'I' && ch != '0' && ch != 'O')\n         {\n             // Alphanumeric and not a 'forbidden' character\n         }\n@@ -71,11 +81,15 @@ QValidator::State BitcoinAddressValidator::validate(QString &input, int &pos) co\n         }\n     }\n \n-    // Empty address is \"intermediate\" input\n-    if(input.isEmpty())\n-    {\n-        state = QValidator::Intermediate;\n-    }\n-\n     return state;\n }\n+\n+bool BitcoinAddressValidator::validateAddress(const QString &address)\n+{\n+    // Validate the passed btc address\n+    CBitcoinAddress addr(address.toStdString());\n+    if (addr.IsValid())\n+        return QValidator::Acceptable;\n+\n+    return false;\n+}"
+      },
+      {
+        "sha": "fa8c1e4a84917e0c74bd990d860e330dab462d39",
+        "filename": "src/qt/bitcoinaddressvalidator.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 3,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/33e863dfcdb9f92a8c85460fd321b9bca18d9a3d/src/qt/bitcoinaddressvalidator.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/33e863dfcdb9f92a8c85460fd321b9bca18d9a3d/src/qt/bitcoinaddressvalidator.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoinaddressvalidator.h?ref=33e863dfcdb9f92a8c85460fd321b9bca18d9a3d",
+        "patch": "@@ -15,11 +15,10 @@ class BitcoinAddressValidator : public QValidator\n     Q_OBJECT\n \n public:\n-    explicit BitcoinAddressValidator(QObject *parent = 0);\n+    explicit BitcoinAddressValidator(QObject *parent);\n \n     State validate(QString &input, int &pos) const;\n-\n-    static const int MaxAddressLength = 35;\n+    static bool validateAddress(const QString &address);\n };\n \n #endif // BITCOINADDRESSVALIDATOR_H"
+      },
+      {
+        "sha": "c1aea36338929e8043697cfcfb35952ab0109b20",
+        "filename": "src/qt/forms/editaddressdialog.ui",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 9,
+        "changes": 25,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/33e863dfcdb9f92a8c85460fd321b9bca18d9a3d/src/qt/forms/editaddressdialog.ui",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/33e863dfcdb9f92a8c85460fd321b9bca18d9a3d/src/qt/forms/editaddressdialog.ui",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/forms/editaddressdialog.ui?ref=33e863dfcdb9f92a8c85460fd321b9bca18d9a3d",
+        "patch": "@@ -47,7 +47,7 @@\n       </widget>\n      </item>\n      <item row=\"1\" column=\"1\">\n-      <widget class=\"QLineEdit\" name=\"addressEdit\">\n+      <widget class=\"QValidatedLineEdit\" name=\"addressEdit\">\n        <property name=\"toolTip\">\n         <string>The address associated with this address list entry. This can only be modified for sending addresses.</string>\n        </property>\n@@ -67,6 +67,13 @@\n    </item>\n   </layout>\n  </widget>\n+ <customwidgets>\n+  <customwidget>\n+   <class>QValidatedLineEdit</class>\n+   <extends>QLineEdit</extends>\n+   <header>qvalidatedlineedit.h</header>\n+  </customwidget>\n+ </customwidgets>\n  <resources/>\n  <connections>\n   <connection>\n@@ -76,12 +83,12 @@\n    <slot>accept()</slot>\n    <hints>\n     <hint type=\"sourcelabel\">\n-     <x>248</x>\n-     <y>254</y>\n+     <x>20</x>\n+     <y>20</y>\n     </hint>\n     <hint type=\"destinationlabel\">\n-     <x>157</x>\n-     <y>274</y>\n+     <x>20</x>\n+     <y>20</y>\n     </hint>\n    </hints>\n   </connection>\n@@ -92,12 +99,12 @@\n    <slot>reject()</slot>\n    <hints>\n     <hint type=\"sourcelabel\">\n-     <x>316</x>\n-     <y>260</y>\n+     <x>20</x>\n+     <y>20</y>\n     </hint>\n     <hint type=\"destinationlabel\">\n-     <x>286</x>\n-     <y>274</y>\n+     <x>20</x>\n+     <y>20</y>\n     </hint>\n    </hints>\n   </connection>"
+      },
+      {
+        "sha": "aa271b4f2a32404042eaeff7f545f9cd54488a92",
+        "filename": "src/qt/forms/signverifymessagedialog.ui",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 9,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/33e863dfcdb9f92a8c85460fd321b9bca18d9a3d/src/qt/forms/signverifymessagedialog.ui",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/33e863dfcdb9f92a8c85460fd321b9bca18d9a3d/src/qt/forms/signverifymessagedialog.ui",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/forms/signverifymessagedialog.ui?ref=33e863dfcdb9f92a8c85460fd321b9bca18d9a3d",
+        "patch": "@@ -19,9 +19,6 @@\n   <layout class=\"QVBoxLayout\" name=\"verticalLayout\">\n    <item>\n     <widget class=\"QTabWidget\" name=\"tabWidget\">\n-     <property name=\"currentIndex\">\n-      <number>0</number>\n-     </property>\n      <widget class=\"QWidget\" name=\"tabSignMessage\">\n       <attribute name=\"title\">\n        <string>&amp;Sign Message</string>\n@@ -50,9 +47,6 @@\n            <property name=\"toolTip\">\n             <string>The address to sign the message with (e.g. 1NS17iag9jJgTHD1VXjvLCEnZuQ3rJDE9L)</string>\n            </property>\n-           <property name=\"maxLength\">\n-            <number>34</number>\n-           </property>\n           </widget>\n          </item>\n          <item>\n@@ -263,9 +257,6 @@\n            <property name=\"toolTip\">\n             <string>The address the message was signed with (e.g. 1NS17iag9jJgTHD1VXjvLCEnZuQ3rJDE9L)</string>\n            </property>\n-           <property name=\"maxLength\">\n-            <number>34</number>\n-           </property>\n           </widget>\n          </item>\n          <item>"
+      },
+      {
+        "sha": "e091aa04bc17c59fe6fde9b22292f640ff359495",
+        "filename": "src/qt/guiutil.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 3,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/33e863dfcdb9f92a8c85460fd321b9bca18d9a3d/src/qt/guiutil.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/33e863dfcdb9f92a8c85460fd321b9bca18d9a3d/src/qt/guiutil.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/guiutil.cpp?ref=33e863dfcdb9f92a8c85460fd321b9bca18d9a3d",
+        "patch": "@@ -6,6 +6,7 @@\n \n #include \"bitcoinaddressvalidator.h\"\n #include \"bitcoinunits.h\"\n+#include \"qvalidatedlineedit.h\"\n #include \"walletmodel.h\"\n \n #include \"core.h\"\n@@ -72,11 +73,16 @@ QFont bitcoinAddressFont()\n     return font;\n }\n \n-void setupAddressWidget(QLineEdit *widget, QWidget *parent)\n+void setupAddressWidget(QValidatedLineEdit *widget, QWidget *parent)\n {\n-    widget->setMaxLength(BitcoinAddressValidator::MaxAddressLength);\n-    widget->setValidator(new BitcoinAddressValidator(parent));\n+    parent->setFocusProxy(widget);\n+\n+    widget->setBtcAddressField(true);\n     widget->setFont(bitcoinAddressFont());\n+#if QT_VERSION >= 0x040700\n+    widget->setPlaceholderText(QObject::tr(\"Enter a Bitcoin address (e.g. 1NS17iag9jJgTHD1VXjvLCEnZuQ3rJDE9L)\"));\n+#endif\n+    widget->setValidator(new BitcoinAddressValidator(parent));\n }\n \n void setupAmountWidget(QLineEdit *widget, QWidget *parent)"
+      },
+      {
+        "sha": "52124ff20ab585b0f7bd91ac56f2f1e69a5efaec",
+        "filename": "src/qt/guiutil.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 1,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/33e863dfcdb9f92a8c85460fd321b9bca18d9a3d/src/qt/guiutil.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/33e863dfcdb9f92a8c85460fd321b9bca18d9a3d/src/qt/guiutil.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/guiutil.h?ref=33e863dfcdb9f92a8c85460fd321b9bca18d9a3d",
+        "patch": "@@ -9,6 +9,7 @@\n #include <QObject>\n #include <QString>\n \n+class QValidatedLineEdit;\n class SendCoinsRecipient;\n \n QT_BEGIN_NAMESPACE\n@@ -32,7 +33,7 @@ namespace GUIUtil\n     QFont bitcoinAddressFont();\n \n     // Set up widgets for address and amounts\n-    void setupAddressWidget(QLineEdit *widget, QWidget *parent);\n+    void setupAddressWidget(QValidatedLineEdit *widget, QWidget *parent);\n     void setupAmountWidget(QLineEdit *widget, QWidget *parent);\n \n     // Parse \"bitcoin:\" URI into recipient object, return true on successful parsing"
+      },
+      {
+        "sha": "c85dd62517a85fc9d77ea9ef44938b33beff2d11",
+        "filename": "src/qt/qvalidatedlineedit.cpp",
+        "status": "modified",
+        "additions": 57,
+        "deletions": 1,
+        "changes": 58,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/33e863dfcdb9f92a8c85460fd321b9bca18d9a3d/src/qt/qvalidatedlineedit.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/33e863dfcdb9f92a8c85460fd321b9bca18d9a3d/src/qt/qvalidatedlineedit.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/qvalidatedlineedit.cpp?ref=33e863dfcdb9f92a8c85460fd321b9bca18d9a3d",
+        "patch": "@@ -4,10 +4,13 @@\n \n #include \"qvalidatedlineedit.h\"\n \n+#include \"bitcoinaddressvalidator.h\"\n #include \"guiconstants.h\"\n \n QValidatedLineEdit::QValidatedLineEdit(QWidget *parent) :\n-    QLineEdit(parent), valid(true)\n+    QLineEdit(parent),\n+    valid(true),\n+    checkOnFocusOut(false)\n {\n     connect(this, SIGNAL(textChanged(QString)), this, SLOT(markValid()));\n }\n@@ -34,11 +37,20 @@ void QValidatedLineEdit::focusInEvent(QFocusEvent *evt)\n {\n     // Clear invalid flag on focus\n     setValid(true);\n+\n     QLineEdit::focusInEvent(evt);\n }\n \n+void QValidatedLineEdit::focusOutEvent(QFocusEvent *evt)\n+{\n+    checkValidity();\n+\n+    QLineEdit::focusOutEvent(evt);\n+}\n+\n void QValidatedLineEdit::markValid()\n {\n+    // As long as a user is typing ensure we display state as valid\n     setValid(true);\n }\n \n@@ -47,3 +59,47 @@ void QValidatedLineEdit::clear()\n     setValid(true);\n     QLineEdit::clear();\n }\n+\n+void QValidatedLineEdit::setEnabled(bool enabled)\n+{\n+    if (!enabled)\n+    {\n+        // A disabled QValidatedLineEdit should be marked valid\n+        setValid(true);\n+    }\n+    else\n+    {\n+        // Recheck validity when QValidatedLineEdit gets enabled\n+        checkValidity();\n+    }\n+\n+    QLineEdit::setEnabled(enabled);\n+}\n+\n+void QValidatedLineEdit::checkValidity()\n+{\n+    if (text().isEmpty())\n+    {\n+        setValid(true);\n+    }\n+    else if (hasAcceptableInput())\n+    {\n+        setValid(true);\n+\n+        // Check BTC address on focus out\n+        if (checkOnFocusOut)\n+        {\n+            if (BitcoinAddressValidator::validateAddress(text()))\n+                setValid(true);\n+            else\n+                setValid(false);\n+        }\n+    }\n+    else\n+        setValid(false);\n+}\n+\n+void QValidatedLineEdit::setBtcAddressField(bool state)\n+{\n+    checkOnFocusOut = state;\n+}"
+      },
+      {
+        "sha": "9c47a5ea77d9e910f52987482fbca87c7b0a821e",
+        "filename": "src/qt/qvalidatedlineedit.h",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 1,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/33e863dfcdb9f92a8c85460fd321b9bca18d9a3d/src/qt/qvalidatedlineedit.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/33e863dfcdb9f92a8c85460fd321b9bca18d9a3d/src/qt/qvalidatedlineedit.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/qvalidatedlineedit.h?ref=33e863dfcdb9f92a8c85460fd321b9bca18d9a3d",
+        "patch": "@@ -15,20 +15,25 @@ class QValidatedLineEdit : public QLineEdit\n     Q_OBJECT\n \n public:\n-    explicit QValidatedLineEdit(QWidget *parent = 0);\n+    explicit QValidatedLineEdit(QWidget *parent);\n     void clear();\n+    void setBtcAddressField(bool state);\n \n protected:\n     void focusInEvent(QFocusEvent *evt);\n+    void focusOutEvent(QFocusEvent *evt);\n \n private:\n     bool valid;\n+    bool checkOnFocusOut;\n \n public slots:\n     void setValid(bool valid);\n+    void setEnabled(bool enabled);\n \n private slots:\n     void markValid();\n+    void checkValidity();\n };\n \n #endif // QVALIDATEDLINEEDIT_H"
+      },
+      {
+        "sha": "bca938d232f9cfc28deafd20680bd75fda8ad941",
+        "filename": "src/qt/sendcoinsdialog.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 7,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/33e863dfcdb9f92a8c85460fd321b9bca18d9a3d/src/qt/sendcoinsdialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/33e863dfcdb9f92a8c85460fd321b9bca18d9a3d/src/qt/sendcoinsdialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/sendcoinsdialog.cpp?ref=33e863dfcdb9f92a8c85460fd321b9bca18d9a3d",
+        "patch": "@@ -33,17 +33,15 @@ SendCoinsDialog::SendCoinsDialog(QWidget *parent) :\n     ui->clearButton->setIcon(QIcon());\n     ui->sendButton->setIcon(QIcon());\n #endif\n-#if QT_VERSION >= 0x040700\n-    ui->lineEditCoinControlChange->setPlaceholderText(tr(\"Enter a Bitcoin address (e.g. 1NS17iag9jJgTHD1VXjvLCEnZuQ3rJDE9L)\"));\n-#endif\n+\n+    GUIUtil::setupAddressWidget(ui->lineEditCoinControlChange, this);\n \n     addEntry();\n \n     connect(ui->addButton, SIGNAL(clicked()), this, SLOT(addEntry()));\n     connect(ui->clearButton, SIGNAL(clicked()), this, SLOT(clear()));\n \n     // Coin Control\n-    ui->lineEditCoinControlChange->setFont(GUIUtil::bitcoinAddressFont());\n     connect(ui->pushButtonCoinControl, SIGNAL(clicked()), this, SLOT(coinControlButtonClicked()));\n     connect(ui->checkBoxCoinControlChange, SIGNAL(stateChanged(int)), this, SLOT(coinControlChangeChecked(int)));\n     connect(ui->lineEditCoinControlChange, SIGNAL(textEdited(const QString &)), this, SLOT(coinControlChangeEdited(const QString &)));\n@@ -533,7 +531,6 @@ void SendCoinsDialog::coinControlChangeChecked(int state)\n     if (state == Qt::Unchecked)\n     {\n         CoinControlDialog::coinControl->destChange = CNoDestination();\n-        ui->lineEditCoinControlChange->setValid(true);\n         ui->labelCoinControlChangeLabel->clear();\n     }\n     else\n@@ -560,7 +557,6 @@ void SendCoinsDialog::coinControlChangeEdited(const QString& text)\n         }\n         else if (!addr.IsValid()) // Invalid address\n         {\n-            ui->lineEditCoinControlChange->setValid(false);\n             ui->labelCoinControlChangeLabel->setText(tr(\"Warning: Invalid Bitcoin address\"));\n         }\n         else // Valid address\n@@ -570,7 +566,6 @@ void SendCoinsDialog::coinControlChangeEdited(const QString& text)\n             addr.GetKeyID(keyid);\n             if (!model->getPubKey(keyid, pubkey)) // Unknown change address\n             {\n-                ui->lineEditCoinControlChange->setValid(false);\n                 ui->labelCoinControlChangeLabel->setText(tr(\"Warning: Unknown change address\"));\n             }\n             else // Known change address"
+      },
+      {
+        "sha": "0e74bfe64647ac53787a6d065fced2725fe385ce",
+        "filename": "src/qt/sendcoinsentry.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 3,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/33e863dfcdb9f92a8c85460fd321b9bca18d9a3d/src/qt/sendcoinsentry.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/33e863dfcdb9f92a8c85460fd321b9bca18d9a3d/src/qt/sendcoinsentry.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/sendcoinsentry.cpp?ref=33e863dfcdb9f92a8c85460fd321b9bca18d9a3d",
+        "patch": "@@ -28,9 +28,7 @@ SendCoinsEntry::SendCoinsEntry(QWidget *parent) :\n #endif\n #if QT_VERSION >= 0x040700\n     ui->addAsLabel->setPlaceholderText(tr(\"Enter a label for this address to add it to your address book\"));\n-    ui->payTo->setPlaceholderText(tr(\"Enter a Bitcoin address (e.g. 1NS17iag9jJgTHD1VXjvLCEnZuQ3rJDE9L)\"));\n #endif\n-    setFocusProxy(ui->payTo);\n \n     // normal bitcoin address field\n     GUIUtil::setupAddressWidget(ui->payTo, this);\n@@ -118,7 +116,7 @@ bool SendCoinsEntry::validate()\n     if (recipient.paymentRequest.IsInitialized())\n         return retval;\n \n-    if (!ui->payTo->hasAcceptableInput() || !model->validateAddress(ui->payTo->text()))\n+    if (!model->validateAddress(ui->payTo->text()))\n     {\n         ui->payTo->setValid(false);\n         retval = false;"
+      },
+      {
+        "sha": "3e56412c7c06ef06eb6de2ac5cd9fb0d01dc113a",
+        "filename": "src/qt/signverifymessagedialog.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 5,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/33e863dfcdb9f92a8c85460fd321b9bca18d9a3d/src/qt/signverifymessagedialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/33e863dfcdb9f92a8c85460fd321b9bca18d9a3d/src/qt/signverifymessagedialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/signverifymessagedialog.cpp?ref=33e863dfcdb9f92a8c85460fd321b9bca18d9a3d",
+        "patch": "@@ -26,11 +26,8 @@ SignVerifyMessageDialog::SignVerifyMessageDialog(QWidget *parent) :\n     ui->setupUi(this);\n \n #if QT_VERSION >= 0x040700\n-    ui->addressIn_SM->setPlaceholderText(tr(\"Enter a Bitcoin address (e.g. 1NS17iag9jJgTHD1VXjvLCEnZuQ3rJDE9L)\"));\n     ui->signatureOut_SM->setPlaceholderText(tr(\"Click \\\"Sign Message\\\" to generate signature\"));\n-\n     ui->addressIn_VM->setPlaceholderText(tr(\"Enter a Bitcoin address (e.g. 1NS17iag9jJgTHD1VXjvLCEnZuQ3rJDE9L)\"));\n-    ui->signatureIn_VM->setPlaceholderText(tr(\"Enter Bitcoin signature\"));\n #endif\n \n     GUIUtil::setupAddressWidget(ui->addressIn_SM, this);\n@@ -112,7 +109,6 @@ void SignVerifyMessageDialog::on_signMessageButton_SM_clicked()\n     CBitcoinAddress addr(ui->addressIn_SM->text().toStdString());\n     if (!addr.IsValid())\n     {\n-        ui->addressIn_SM->setValid(false);\n         ui->statusLabel_SM->setStyleSheet(\"QLabel { color: red; }\");\n         ui->statusLabel_SM->setText(tr(\"The entered address is invalid.\") + QString(\" \") + tr(\"Please check the address and try again.\"));\n         return;\n@@ -193,7 +189,6 @@ void SignVerifyMessageDialog::on_verifyMessageButton_VM_clicked()\n     CBitcoinAddress addr(ui->addressIn_VM->text().toStdString());\n     if (!addr.IsValid())\n     {\n-        ui->addressIn_VM->setValid(false);\n         ui->statusLabel_VM->setStyleSheet(\"QLabel { color: red; }\");\n         ui->statusLabel_VM->setText(tr(\"The entered address is invalid.\") + QString(\" \") + tr(\"Please check the address and try again.\"));\n         return;"
+      }
+    ]
+  }
+]

@@ -1,0 +1,86 @@
+[
+  {
+    "sha": "976c08b68a516514b7d987ea7dd3ec59ca166ba0",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5NzZjMDhiNjhhNTE2NTE0YjdkOTg3ZWE3ZGQzZWM1OWNhMTY2YmEw",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-05-23T20:21:25Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-05-23T20:21:25Z"
+      },
+      "message": "JSON-RPC: Add 'sendrawtx' op, for sending pre-built TX's to network",
+      "tree": {
+        "sha": "f0ccd128d914f7dd1bb41d96e31b982785c61d7a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f0ccd128d914f7dd1bb41d96e31b982785c61d7a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/976c08b68a516514b7d987ea7dd3ec59ca166ba0",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/976c08b68a516514b7d987ea7dd3ec59ca166ba0",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/976c08b68a516514b7d987ea7dd3ec59ca166ba0",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/976c08b68a516514b7d987ea7dd3ec59ca166ba0/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "7a99821377eb46a1cc8b0115daf3af01ddb26a16",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7a99821377eb46a1cc8b0115daf3af01ddb26a16",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/7a99821377eb46a1cc8b0115daf3af01ddb26a16"
+      }
+    ],
+    "stats": {
+      "total": 38,
+      "additions": 37,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "8f4fb93a5a3f6221013fd127fb43451dabf40310",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 35,
+        "deletions": 0,
+        "changes": 35,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/976c08b68a516514b7d987ea7dd3ec59ca166ba0/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/976c08b68a516514b7d987ea7dd3ec59ca166ba0/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=976c08b68a516514b7d987ea7dd3ec59ca166ba0",
+        "patch": "@@ -2217,6 +2217,40 @@ Value getblock(const Array& params, bool fHelp)\n                        (params.size() > 1) ? params[1].get_obj() : emptyobj);\n }\n \n+Value sendrawtx(const Array& params, bool fHelp)\n+{\n+    if (fHelp || params.size() < 1 || params.size() > 1)\n+        throw runtime_error(\n+            \"sendrawtx <hex string>\\n\"\n+            \"Submits raw transaction (serialized, hex-encoded) to local node and network.\");\n+\n+    // parse hex string from parameter\n+    vector<unsigned char> txData(ParseHex(params[0].get_str()));\n+    CDataStream ssData(txData, SER_NETWORK, PROTOCOL_VERSION);\n+    CTransaction tx;\n+\n+    // deserialize binary data stream\n+    try {\n+        ssData >> tx;\n+    }\n+    catch (std::exception &e) {\n+        throw JSONRPCError(-22, \"TX decode failed\");\n+    }\n+\n+    // push to local node\n+    CTxDB txdb(\"r\");\n+    if (!tx.AcceptToMemoryPool(txdb))\n+        throw JSONRPCError(-22, \"TX rejected\");\n+\n+    SyncWithWallets(tx, NULL, true);\n+\n+    // relay to network\n+    CInv inv(MSG_TX, tx.GetHash());\n+    RelayInventory(inv);\n+\n+    return true;\n+}\n+\n \n \n \n@@ -2280,6 +2314,7 @@ static const CRPCCommand vRPCCommands[] =\n     { \"listsinceblock\",         &listsinceblock,         false },\n     { \"dumpprivkey\",            &dumpprivkey,            false },\n     { \"importprivkey\",          &importprivkey,          false },\n+    { \"sendrawtx\",              &sendrawtx,              false },\n };\n \n CRPCTable::CRPCTable()"
+      },
+      {
+        "sha": "557f9dd99a4cf9d1d6759daa6382b63424931db3",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/976c08b68a516514b7d987ea7dd3ec59ca166ba0/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/976c08b68a516514b7d987ea7dd3ec59ca166ba0/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=976c08b68a516514b7d987ea7dd3ec59ca166ba0",
+        "patch": "@@ -109,7 +109,7 @@ void static EraseFromWallets(uint256 hash)\n }\n \n // make sure all wallets know about the given transaction, in the given block\n-void static SyncWithWallets(const CTransaction& tx, const CBlock* pblock = NULL, bool fUpdate = false)\n+void SyncWithWallets(const CTransaction& tx, const CBlock* pblock, bool fUpdate)\n {\n     BOOST_FOREACH(CWallet* pwallet, setpwalletRegistered)\n         pwallet->AddToWalletIfInvolvingMe(tx, pblock, fUpdate);"
+      },
+      {
+        "sha": "29c9a8bce34f41cf4e0344f1541d3cf24ed45432",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/976c08b68a516514b7d987ea7dd3ec59ca166ba0/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/976c08b68a516514b7d987ea7dd3ec59ca166ba0/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=976c08b68a516514b7d987ea7dd3ec59ca166ba0",
+        "patch": "@@ -81,6 +81,7 @@ class CTxIndex;\n \n void RegisterWallet(CWallet* pwalletIn);\n void UnregisterWallet(CWallet* pwalletIn);\n+void SyncWithWallets(const CTransaction& tx, const CBlock* pblock = NULL, bool fUpdate = false);\n bool ProcessBlock(CNode* pfrom, CBlock* pblock);\n bool CheckDiskSpace(uint64 nAdditionalBytes=0);\n FILE* OpenBlockFile(unsigned int nFile, unsigned int nBlockPos, const char* pszMode=\"rb\");"
+      }
+    ]
+  }
+]

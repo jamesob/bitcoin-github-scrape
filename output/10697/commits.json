@@ -1,0 +1,222 @@
+[
+  {
+    "sha": "cd6d27c94410774e135f55090c005bc34e432184",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjZDZkMjdjOTQ0MTA3NzRlMTM1ZjU1MDkwYzAwNWJjMzRlNDMyMTg0",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-06-07T21:51:34Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-10-31T20:37:25Z"
+      },
+      "message": "Dont let ForEachNode hold cs_vNodes while making callbacks",
+      "tree": {
+        "sha": "7978dfc0f951ff3d013c7fe3dd556214b5cb8aa8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/7978dfc0f951ff3d013c7fe3dd556214b5cb8aa8"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/cd6d27c94410774e135f55090c005bc34e432184",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/cd6d27c94410774e135f55090c005bc34e432184",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/cd6d27c94410774e135f55090c005bc34e432184",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/cd6d27c94410774e135f55090c005bc34e432184/comments",
+    "author": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "8335cb478183d800e274f6e96f9d7269ae584220",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8335cb478183d800e274f6e96f9d7269ae584220",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/8335cb478183d800e274f6e96f9d7269ae584220"
+      }
+    ],
+    "stats": {
+      "total": 149,
+      "additions": 103,
+      "deletions": 46
+    },
+    "files": [
+      {
+        "sha": "834eee7f7bc172f9bf4f176d9e9896eb7fa8e42e",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 99,
+        "deletions": 6,
+        "changes": 105,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/cd6d27c94410774e135f55090c005bc34e432184/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/cd6d27c94410774e135f55090c005bc34e432184/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=cd6d27c94410774e135f55090c005bc34e432184",
+        "patch": "@@ -2837,16 +2837,109 @@ void CConnman::PushMessage(CNode* pnode, CSerializedNetMsg&& msg)\n bool CConnman::ForNode(NodeId id, std::function<bool(CNode* pnode)> func)\n {\n     CNode* found = nullptr;\n-    LOCK(cs_vNodes);\n-    for (auto&& pnode : vNodes) {\n-        if(pnode->GetId() == id) {\n-            found = pnode;\n-            break;\n+    {\n+        LOCK(cs_vNodes);\n+        for (auto&& pnode : vNodes) {\n+            if(pnode->GetId() == id) {\n+                found = pnode;\n+                found->AddRef();\n+                break;\n+            }\n         }\n     }\n-    return found != nullptr && NodeFullyConnected(found) && func(found);\n+    bool res = false;\n+    if (found != nullptr) {\n+        res = NodeFullyConnected(found) && func(found);\n+        found->Release();\n+    }\n+    return res;\n }\n \n+void CConnman::ForEachNode(std::function<void (CNode* pnode)> func)\n+{\n+    std::vector<CNode*> vNodes_copy;\n+    {\n+        LOCK(cs_vNodes);\n+        vNodes_copy.reserve(vNodes.size());\n+        for (auto&& node : vNodes) {\n+            node->AddRef();\n+            vNodes_copy.push_back(node);\n+        }\n+    }\n+    for (CNode* node : vNodes_copy) {\n+        if (NodeFullyConnected(node)) {\n+            func(node);\n+        }\n+        node->Release();\n+    }\n+};\n+\n+void CConnman::ForEachNode(std::function<void (const CNode* pnode)> func) const\n+{\n+    std::vector<CNode*> vNodes_copy;\n+    {\n+        LOCK(cs_vNodes);\n+        vNodes_copy.reserve(vNodes.size());\n+        for (auto&& node : vNodes) {\n+            node->AddRef();\n+            vNodes_copy.push_back(node);\n+        }\n+    }\n+    for (CNode* node : vNodes_copy) {\n+        if (NodeFullyConnected(node)) {\n+            func(node);\n+        }\n+        node->Release();\n+    }\n+};\n+\n+void CConnman::ForEachNodeThen(std::function<void (CNode* pnode)> pre, std::function<void ()> post)\n+{\n+    std::vector<CNode*> vNodes_copy;\n+    {\n+        LOCK(cs_vNodes);\n+        vNodes_copy.reserve(vNodes.size());\n+        for (auto&& node : vNodes) {\n+            node->AddRef();\n+            vNodes_copy.push_back(node);\n+        }\n+    }\n+    for (CNode* node : vNodes_copy) {\n+        if (NodeFullyConnected(node)) {\n+            pre(node);\n+        }\n+    }\n+    post();\n+    for (CNode* node : vNodes_copy) {\n+        node->Release();\n+    }\n+};\n+\n+void CConnman::ForEachNodeThen(std::function<void (const CNode* pnode)> pre, std::function<void ()> post) const\n+{\n+    std::vector<CNode*> vNodes_copy;\n+    {\n+        LOCK(cs_vNodes);\n+        vNodes_copy.reserve(vNodes.size());\n+        for (auto&& node : vNodes) {\n+            node->AddRef();\n+            vNodes_copy.push_back(node);\n+        }\n+    }\n+    for (CNode* node : vNodes_copy) {\n+        if (NodeFullyConnected(node)) {\n+            pre(node);\n+        }\n+    }\n+    post();\n+    for (CNode* node : vNodes_copy) {\n+        node->Release();\n+    }\n+};\n+\n+\n+\n+\n int64_t PoissonNextSend(int64_t nNow, int average_interval_seconds) {\n     return nNow + (int64_t)(log1p(GetRand(1ULL << 48) * -0.0000000000000035527136788 /* -1/2^48 */) * average_interval_seconds * -1000000.0 + 0.5);\n }"
+      },
+      {
+        "sha": "d116ea86fb55c1869bdb6e985e78fc8c69d88a6b",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 40,
+        "changes": 44,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/cd6d27c94410774e135f55090c005bc34e432184/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/cd6d27c94410774e135f55090c005bc34e432184/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=cd6d27c94410774e135f55090c005bc34e432184",
+        "patch": "@@ -178,47 +178,11 @@ class CConnman\n \n     void PushMessage(CNode* pnode, CSerializedNetMsg&& msg);\n \n-    template<typename Callable>\n-    void ForEachNode(Callable&& func)\n-    {\n-        LOCK(cs_vNodes);\n-        for (auto&& node : vNodes) {\n-            if (NodeFullyConnected(node))\n-                func(node);\n-        }\n-    };\n-\n-    template<typename Callable>\n-    void ForEachNode(Callable&& func) const\n-    {\n-        LOCK(cs_vNodes);\n-        for (auto&& node : vNodes) {\n-            if (NodeFullyConnected(node))\n-                func(node);\n-        }\n-    };\n+    void ForEachNode(std::function<void (CNode* pnode)> func);\n+    void ForEachNode(std::function<void (const CNode* pnode)> func) const;\n \n-    template<typename Callable, typename CallableAfter>\n-    void ForEachNodeThen(Callable&& pre, CallableAfter&& post)\n-    {\n-        LOCK(cs_vNodes);\n-        for (auto&& node : vNodes) {\n-            if (NodeFullyConnected(node))\n-                pre(node);\n-        }\n-        post();\n-    };\n-\n-    template<typename Callable, typename CallableAfter>\n-    void ForEachNodeThen(Callable&& pre, CallableAfter&& post) const\n-    {\n-        LOCK(cs_vNodes);\n-        for (auto&& node : vNodes) {\n-            if (NodeFullyConnected(node))\n-                pre(node);\n-        }\n-        post();\n-    };\n+    void ForEachNodeThen(std::function<void (CNode* pnode)> pre, std::function<void ()> post);\n+    void ForEachNodeThen(std::function<void (const CNode* pnode)> pre, std::function<void ()> post) const;\n \n     // Addrman functions\n     size_t GetAddressCount() const;"
+      }
+    ]
+  },
+  {
+    "sha": "50ef0b0fbd9e066286a33c44b879746a79be8e34",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1MGVmMGIwZmJkOWUwNjYyODZhMzNjNDRiODc5NzQ2YTc5YmU4ZTM0",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-06-07T21:57:29Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-10-31T20:37:25Z"
+      },
+      "message": "Improve LeaveCritical strictness",
+      "tree": {
+        "sha": "26ae94d2ff4c0333adbcc1a2151623dc799331ca",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/26ae94d2ff4c0333adbcc1a2151623dc799331ca"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/50ef0b0fbd9e066286a33c44b879746a79be8e34",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/50ef0b0fbd9e066286a33c44b879746a79be8e34",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/50ef0b0fbd9e066286a33c44b879746a79be8e34",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/50ef0b0fbd9e066286a33c44b879746a79be8e34/comments",
+    "author": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "cd6d27c94410774e135f55090c005bc34e432184",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/cd6d27c94410774e135f55090c005bc34e432184",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/cd6d27c94410774e135f55090c005bc34e432184"
+      }
+    ],
+    "stats": {
+      "total": 26,
+      "additions": 15,
+      "deletions": 11
+    },
+    "files": [
+      {
+        "sha": "bed5561c2f3d1484dadaf0fa5e3496fe9b70431c",
+        "filename": "src/sync.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 3,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/50ef0b0fbd9e066286a33c44b879746a79be8e34/src/sync.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/50ef0b0fbd9e066286a33c44b879746a79be8e34/src/sync.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/sync.cpp?ref=50ef0b0fbd9e066286a33c44b879746a79be8e34",
+        "patch": "@@ -123,8 +123,12 @@ static void push_lock(void* c, const CLockLocation& locklocation)\n     }\n }\n \n-static void pop_lock()\n+static void pop_lock(void* cs)\n {\n+    // We assert here that locks are popped in the order they were locked.\n+    // This is a super-overly-restrictive requirement, but we need it to\n+    // make our deadlock detection work properly.\n+    assert((*lockstack).back().first == cs);\n     (*lockstack).pop_back();\n }\n \n@@ -133,9 +137,9 @@ void EnterCritical(const char* pszName, const char* pszFile, int nLine, void* cs\n     push_lock(cs, CLockLocation(pszName, pszFile, nLine, fTry));\n }\n \n-void LeaveCritical()\n+void LeaveCritical(void* cs)\n {\n-    pop_lock();\n+    pop_lock(cs);\n }\n \n std::string LocksHeld()"
+      },
+      {
+        "sha": "507a5abd70e5a434c8cff55e94e88e9a38f97d03",
+        "filename": "src/sync.h",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 8,
+        "changes": 16,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/50ef0b0fbd9e066286a33c44b879746a79be8e34/src/sync.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/50ef0b0fbd9e066286a33c44b879746a79be8e34/src/sync.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/sync.h?ref=50ef0b0fbd9e066286a33c44b879746a79be8e34",
+        "patch": "@@ -72,13 +72,13 @@ class LOCKABLE AnnotatedMixin : public PARENT\n \n #ifdef DEBUG_LOCKORDER\n void EnterCritical(const char* pszName, const char* pszFile, int nLine, void* cs, bool fTry = false);\n-void LeaveCritical();\n+void LeaveCritical(void* cs);\n std::string LocksHeld();\n void AssertLockHeldInternal(const char* pszName, const char* pszFile, int nLine, void* cs);\n void DeleteLock(void* cs);\n #else\n void static inline EnterCritical(const char* pszName, const char* pszFile, int nLine, void* cs, bool fTry = false) {}\n-void static inline LeaveCritical() {}\n+void static inline LeaveCritical(void* cs) {}\n void static inline AssertLockHeldInternal(const char* pszName, const char* pszFile, int nLine, void* cs) {}\n void static inline DeleteLock(void* cs) {}\n #endif\n@@ -131,7 +131,7 @@ class SCOPED_LOCKABLE CMutexLock\n         EnterCritical(pszName, pszFile, nLine, (void*)(lock.mutex()), true);\n         lock.try_lock();\n         if (!lock.owns_lock())\n-            LeaveCritical();\n+            LeaveCritical((void*)(lock.mutex()));\n         return lock.owns_lock();\n     }\n \n@@ -158,7 +158,7 @@ class SCOPED_LOCKABLE CMutexLock\n     ~CMutexLock() UNLOCK_FUNCTION()\n     {\n         if (lock.owns_lock())\n-            LeaveCritical();\n+            LeaveCritical((void*)(lock.mutex()));\n     }\n \n     operator bool()\n@@ -182,10 +182,10 @@ typedef CMutexLock<CCriticalSection> CCriticalBlock;\n         (cs).lock();                                          \\\n     }\n \n-#define LEAVE_CRITICAL_SECTION(cs) \\\n-    {                              \\\n-        (cs).unlock();             \\\n-        LeaveCritical();           \\\n+#define LEAVE_CRITICAL_SECTION(cs)   \\\n+    {                                \\\n+        (cs).unlock();               \\\n+        LeaveCritical((void*)(&cs)); \\\n     }\n \n class CSemaphore"
+      }
+    ]
+  }
+]

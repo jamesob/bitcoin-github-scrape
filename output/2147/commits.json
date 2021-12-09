@@ -1,0 +1,86 @@
+[
+  {
+    "sha": "8ffbd6c3789843cb024a3ee425ac4cc0482eaeb7",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4ZmZiZDZjMzc4OTg0M2NiMDI0YTNlZTQyNWFjNGNjMDQ4MmVhZWI3",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-01-03T21:06:18Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-01-06T02:42:40Z"
+      },
+      "message": "Bitcoin-Qt: give testnet a unique IPC message queue name\n\n- this prevents an interference with the IPC message queue (which is used\n  for URI processing) when running a testnet and mainnet instance in\n  parallel\n- to check for testnet, I had to raise the ParseParameters() call in\n  main() to the topmost position",
+      "tree": {
+        "sha": "6c6ca803e1f6460f114720bf8473efea0f87087f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/6c6ca803e1f6460f114720bf8473efea0f87087f"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/8ffbd6c3789843cb024a3ee425ac4cc0482eaeb7",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8ffbd6c3789843cb024a3ee425ac4cc0482eaeb7",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/8ffbd6c3789843cb024a3ee425ac4cc0482eaeb7",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8ffbd6c3789843cb024a3ee425ac4cc0482eaeb7/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "1f4fdb70f0c5791a4742aa8f59fc42cff9740cfc",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1f4fdb70f0c5791a4742aa8f59fc42cff9740cfc",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/1f4fdb70f0c5791a4742aa8f59fc42cff9740cfc"
+      }
+    ],
+    "stats": {
+      "total": 36,
+      "additions": 25,
+      "deletions": 11
+    },
+    "files": [
+      {
+        "sha": "c3701ced7f91a1cbd76ff1f49f0003e2169d0318",
+        "filename": "src/qt/bitcoin.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 3,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8ffbd6c3789843cb024a3ee425ac4cc0482eaeb7/src/qt/bitcoin.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8ffbd6c3789843cb024a3ee425ac4cc0482eaeb7/src/qt/bitcoin.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoin.cpp?ref=8ffbd6c3789843cb024a3ee425ac4cc0482eaeb7",
+        "patch": "@@ -113,6 +113,14 @@ static void handleRunawayException(std::exception *e)\n #ifndef BITCOIN_QT_TEST\n int main(int argc, char *argv[])\n {\n+    // Command-line options take precedence:\n+    ParseParameters(argc, argv);\n+\n+    if(GetBoolArg(\"-testnet\")) // Separate message queue name for testnet\n+        strBitcoinURIQueueName = BITCOINURI_QUEUE_NAME_TESTNET;\n+    else\n+        strBitcoinURIQueueName = BITCOINURI_QUEUE_NAME_MAINNET;\n+\n     // Do this early as we don't want to bother initializing if we are just calling IPC\n     ipcScanRelay(argc, argv);\n \n@@ -126,9 +134,6 @@ int main(int argc, char *argv[])\n     // Install global event filter that makes sure that long tooltips can be word-wrapped\n     app.installEventFilter(new GUIUtil::ToolTipToRichTextFilter(TOOLTIP_WRAP_THRESHOLD, &app));\n \n-    // Command-line options take precedence:\n-    ParseParameters(argc, argv);\n-\n     // ... then bitcoin.conf:\n     if (!boost::filesystem::is_directory(GetDataDir(false)))\n     {"
+      },
+      {
+        "sha": "2777fab852a57a4d12622d4cfd588c46c149779a",
+        "filename": "src/qt/qtipcserver.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 6,
+        "changes": 15,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8ffbd6c3789843cb024a3ee425ac4cc0482eaeb7/src/qt/qtipcserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8ffbd6c3789843cb024a3ee425ac4cc0482eaeb7/src/qt/qtipcserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/qtipcserver.cpp?ref=8ffbd6c3789843cb024a3ee425ac4cc0482eaeb7",
+        "patch": "@@ -26,6 +26,9 @@ using namespace boost;\n using namespace boost::interprocess;\n using namespace boost::posix_time;\n \n+// holds Bitcoin-Qt message queue name (initialized in bitcoin.cpp)\n+std::string strBitcoinURIQueueName;\n+\n #if defined MAC_OSX || defined __FreeBSD__\n // URI handling not implemented on OSX yet\n \n@@ -46,7 +49,7 @@ static bool ipcScanCmd(int argc, char *argv[], bool fRelay)\n         {\n             const char *strURI = argv[i];\n             try {\n-                boost::interprocess::message_queue mq(boost::interprocess::open_only, BITCOINURI_QUEUE_NAME);\n+                boost::interprocess::message_queue mq(boost::interprocess::open_only, strBitcoinURIQueueName.c_str());\n                 if (mq.try_send(strURI, strlen(strURI), 0))\n                     fSent = true;\n                 else if (fRelay)\n@@ -76,7 +79,7 @@ static void ipcThread(void* pArg)\n {\n     // Make this thread recognisable as the GUI-IPC thread\n     RenameThread(\"bitcoin-gui-ipc\");\n-\t\n+\n     try\n     {\n         ipcThread2(pArg);\n@@ -112,7 +115,7 @@ static void ipcThread2(void* pArg)\n     }\n \n     // Remove message queue\n-    message_queue::remove(BITCOINURI_QUEUE_NAME);\n+    message_queue::remove(strBitcoinURIQueueName.c_str());\n     // Cleanup allocated memory\n     delete mq;\n }\n@@ -125,7 +128,7 @@ void ipcInit(int argc, char *argv[])\n     unsigned int nPriority = 0;\n \n     try {\n-        mq = new message_queue(open_or_create, BITCOINURI_QUEUE_NAME, 2, MAX_URI_LENGTH);\n+        mq = new message_queue(open_or_create, strBitcoinURIQueueName.c_str(), 2, MAX_URI_LENGTH);\n \n         // Make sure we don't lose any bitcoin: URIs\n         for (int i = 0; i < 2; i++)\n@@ -140,10 +143,10 @@ void ipcInit(int argc, char *argv[])\n         }\n \n         // Make sure only one bitcoin instance is listening\n-        message_queue::remove(BITCOINURI_QUEUE_NAME);\n+        message_queue::remove(strBitcoinURIQueueName.c_str());\n         delete mq;\n \n-        mq = new message_queue(open_or_create, BITCOINURI_QUEUE_NAME, 2, MAX_URI_LENGTH);\n+        mq = new message_queue(open_or_create, strBitcoinURIQueueName.c_str(), 2, MAX_URI_LENGTH);\n     }\n     catch (interprocess_exception &ex) {\n         printf(\"ipcInit() - boost interprocess exception #%d: %s\\n\", ex.get_error_code(), ex.what());"
+      },
+      {
+        "sha": "f775f272c27c940e9c10ce8c66fda0d12cbd68b5",
+        "filename": "src/qt/qtipcserver.h",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 2,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8ffbd6c3789843cb024a3ee425ac4cc0482eaeb7/src/qt/qtipcserver.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8ffbd6c3789843cb024a3ee425ac4cc0482eaeb7/src/qt/qtipcserver.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/qtipcserver.h?ref=8ffbd6c3789843cb024a3ee425ac4cc0482eaeb7",
+        "patch": "@@ -1,8 +1,14 @@\n #ifndef QTIPCSERVER_H\n #define QTIPCSERVER_H\n \n-// Define Bitcoin-Qt message queue name\n-#define BITCOINURI_QUEUE_NAME \"BitcoinURI\"\n+#include <string>\n+\n+// Define Bitcoin-Qt message queue name for mainnet\n+#define BITCOINURI_QUEUE_NAME_MAINNET \"BitcoinURI\"\n+// Define Bitcoin-Qt message queue name for testnet\n+#define BITCOINURI_QUEUE_NAME_TESTNET \"BitcoinURI-testnet\"\n+\n+extern std::string strBitcoinURIQueueName;\n \n void ipcScanRelay(int argc, char *argv[]);\n void ipcInit(int argc, char *argv[]);"
+      }
+    ]
+  }
+]

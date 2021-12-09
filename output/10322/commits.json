@@ -1,0 +1,296 @@
+[
+  {
+    "sha": "f544094d5e1ee627ebd34542aead7bf1241fae19",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmNTQ0MDk0ZDVlMWVlNjI3ZWJkMzQ1NDJhZWFkN2JmMTI0MWZhZTE5",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2017-05-03T01:21:33Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2017-05-05T18:56:19Z"
+      },
+      "message": "Use hardware timestamps in RNG seeding",
+      "tree": {
+        "sha": "b56a7c9cbf9056885b1fb8914a872fc4820fff54",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/b56a7c9cbf9056885b1fb8914a872fc4820fff54"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/f544094d5e1ee627ebd34542aead7bf1241fae19",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f544094d5e1ee627ebd34542aead7bf1241fae19",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/f544094d5e1ee627ebd34542aead7bf1241fae19",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f544094d5e1ee627ebd34542aead7bf1241fae19/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "75171f099e82e3527d7c3469b15891bd92227ec2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/75171f099e82e3527d7c3469b15891bd92227ec2",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/75171f099e82e3527d7c3469b15891bd92227ec2"
+      }
+    ],
+    "stats": {
+      "total": 22,
+      "additions": 15,
+      "deletions": 7
+    },
+    "files": [
+      {
+        "sha": "40879e8737a08d60dca2673f5765b2d0e32c3541",
+        "filename": "src/random.cpp",
+        "status": "modified",
+        "additions": 15,
+        "deletions": 7,
+        "changes": 22,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f544094d5e1ee627ebd34542aead7bf1241fae19/src/random.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f544094d5e1ee627ebd34542aead7bf1241fae19/src/random.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/random.cpp?ref=f544094d5e1ee627ebd34542aead7bf1241fae19",
+        "patch": "@@ -16,6 +16,7 @@\n \n #include <stdlib.h>\n #include <limits>\n+#include <chrono>\n \n #ifndef WIN32\n #include <sys/time.h>\n@@ -43,15 +44,22 @@ static void RandFailure()\n \n static inline int64_t GetPerformanceCounter()\n {\n-    int64_t nCounter = 0;\n-#ifdef WIN32\n-    QueryPerformanceCounter((LARGE_INTEGER*)&nCounter);\n+    // Read the hardware time stamp counter when available.\n+    // See https://en.wikipedia.org/wiki/Time_Stamp_Counter for more information.\n+#if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))\n+    return __rdtsc();\n+#elif !defined(_MSC_VER) && defined(__i386__)\n+    uint64_t r = 0;\n+    __asm__ volatile (\"rdtsc\" : \"=A\"(r)); // Constrain the r variable to the eax:edx pair.\n+    return r;\n+#elif !defined(_MSC_VER) && (defined(__x86_64__) || defined(__amd64__))\n+    uint64_t r1 = 0, r2 = 0;\n+    __asm__ volatile (\"rdtsc\" : \"=a\"(r1), \"=d\"(r2)); // Constrain r1 to rax and r2 to rdx.\n+    return (r2 << 32) | r1;\n #else\n-    timeval t;\n-    gettimeofday(&t, NULL);\n-    nCounter = (int64_t)(t.tv_sec * 1000000 + t.tv_usec);\n+    // Fall back to using C++11 clock (usually microsecond or nanosecond precision)\n+    return std::chrono::high_resolution_clock::now().time_since_epoch().count();\n #endif\n-    return nCounter;\n }\n \n void RandAddSeed()"
+      }
+    ]
+  },
+  {
+    "sha": "33f853d8d88917b145e2793bf8eb1b4e3790e7e7",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozM2Y4NTNkOGQ4ODkxN2IxNDVlMjc5M2JmOGViMWI0ZTM3OTBlN2U3",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2017-05-05T18:32:06Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2017-05-05T18:56:24Z"
+      },
+      "message": "Test that GetPerformanceCounter() increments",
+      "tree": {
+        "sha": "65ca7a2c2d47eaa28d87ad1513a7ebc3a385d3a3",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/65ca7a2c2d47eaa28d87ad1513a7ebc3a385d3a3"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/33f853d8d88917b145e2793bf8eb1b4e3790e7e7",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/33f853d8d88917b145e2793bf8eb1b4e3790e7e7",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/33f853d8d88917b145e2793bf8eb1b4e3790e7e7",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/33f853d8d88917b145e2793bf8eb1b4e3790e7e7/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "f544094d5e1ee627ebd34542aead7bf1241fae19",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f544094d5e1ee627ebd34542aead7bf1241fae19",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/f544094d5e1ee627ebd34542aead7bf1241fae19"
+      }
+    ],
+    "stats": {
+      "total": 12,
+      "additions": 11,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "8107cb3105909bdd1af26b0b7317e1941e834e6d",
+        "filename": "src/random.cpp",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 1,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/33f853d8d88917b145e2793bf8eb1b4e3790e7e7/src/random.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/33f853d8d88917b145e2793bf8eb1b4e3790e7e7/src/random.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/random.cpp?ref=33f853d8d88917b145e2793bf8eb1b4e3790e7e7",
+        "patch": "@@ -17,6 +17,7 @@\n #include <stdlib.h>\n #include <limits>\n #include <chrono>\n+#include <thread>\n \n #ifndef WIN32\n #include <sys/time.h>\n@@ -262,6 +263,8 @@ FastRandomContext::FastRandomContext(const uint256& seed) : requires_seed(false)\n \n bool Random_SanityCheck()\n {\n+    uint64_t start = GetPerformanceCounter();\n+\n     /* This does not measure the quality of randomness, but it does test that\n      * OSRandom() overwrites all 32 bytes of the output given a maximum\n      * number of tries.\n@@ -288,7 +291,14 @@ bool Random_SanityCheck()\n \n         tries += 1;\n     } while (num_overwritten < NUM_OS_RANDOM_BYTES && tries < MAX_TRIES);\n-    return (num_overwritten == NUM_OS_RANDOM_BYTES); /* If this failed, bailed out after too many tries */\n+    if (num_overwritten != NUM_OS_RANDOM_BYTES) return false; /* If this failed, bailed out after too many tries */\n+\n+    // Check that GetPerformanceCounter increases at least during a GetOSRand() call + 1ms sleep.\n+    std::this_thread::sleep_for(std::chrono::milliseconds(1));\n+    uint64_t stop = GetPerformanceCounter();\n+    if (stop == start) return false;\n+\n+    return true;\n }\n \n FastRandomContext::FastRandomContext(bool fDeterministic) : requires_seed(!fDeterministic), bytebuf_size(0), bitbuf_size(0)"
+      }
+    ]
+  },
+  {
+    "sha": "2c0a6f157da3c6bb3b0a1e77f003caf0d9cb9d6c",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyYzBhNmYxNTdkYTNjNmJiM2IwYTFlNzdmMDAzY2FmMGQ5Y2I5ZDZj",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2017-05-05T18:45:37Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2017-05-05T18:56:24Z"
+      },
+      "message": "Use sanity check timestamps as entropy",
+      "tree": {
+        "sha": "d07d700e05c3f9d5ddc889128eea024275af5370",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/d07d700e05c3f9d5ddc889128eea024275af5370"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/2c0a6f157da3c6bb3b0a1e77f003caf0d9cb9d6c",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2c0a6f157da3c6bb3b0a1e77f003caf0d9cb9d6c",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/2c0a6f157da3c6bb3b0a1e77f003caf0d9cb9d6c",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2c0a6f157da3c6bb3b0a1e77f003caf0d9cb9d6c/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "33f853d8d88917b145e2793bf8eb1b4e3790e7e7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/33f853d8d88917b145e2793bf8eb1b4e3790e7e7",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/33f853d8d88917b145e2793bf8eb1b4e3790e7e7"
+      }
+    ],
+    "stats": {
+      "total": 4,
+      "additions": 4,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "805d7d3872a27a0c385a14e5aa7b0ec40ed694f2",
+        "filename": "src/random.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 0,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/2c0a6f157da3c6bb3b0a1e77f003caf0d9cb9d6c/src/random.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/2c0a6f157da3c6bb3b0a1e77f003caf0d9cb9d6c/src/random.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/random.cpp?ref=2c0a6f157da3c6bb3b0a1e77f003caf0d9cb9d6c",
+        "patch": "@@ -298,6 +298,10 @@ bool Random_SanityCheck()\n     uint64_t stop = GetPerformanceCounter();\n     if (stop == start) return false;\n \n+    // We called GetPerformanceCounter. Use it as entropy.\n+    RAND_add((const unsigned char*)&start, sizeof(start), 1);\n+    RAND_add((const unsigned char*)&stop, sizeof(stop), 1);\n+\n     return true;\n }\n "
+      }
+    ]
+  }
+]

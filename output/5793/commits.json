@@ -1,0 +1,122 @@
+[
+  {
+    "sha": "9673c35dafee3522ec707c0ecc5e02ae9bba9409",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5NjczYzM1ZGFmZWUzNTIyZWM3MDdjMGVjYzVlMDJhZTliYmE5NDA5",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2015-02-14T20:41:12Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2015-02-19T11:06:49Z"
+      },
+      "message": "[Qt, Win] honor current network when creating autostart link\n\n- creates a \"Bitcoin (testnet).lnk\" when on testnet or a \"Bitcoin\n  (regtest).lnk, when on regtest\n- fixes #5778",
+      "tree": {
+        "sha": "580f5d66b7832a2e893fee0476168eb949a9bfe3",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/580f5d66b7832a2e893fee0476168eb949a9bfe3"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/9673c35dafee3522ec707c0ecc5e02ae9bba9409",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9673c35dafee3522ec707c0ecc5e02ae9bba9409",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/9673c35dafee3522ec707c0ecc5e02ae9bba9409",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9673c35dafee3522ec707c0ecc5e02ae9bba9409/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "e3a3cd7a28c8a0f2f212f15b69cef6fcbecbd98e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e3a3cd7a28c8a0f2f212f15b69cef6fcbecbd98e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/e3a3cd7a28c8a0f2f212f15b69cef6fcbecbd98e"
+      }
+    ],
+    "stats": {
+      "total": 35,
+      "additions": 27,
+      "deletions": 8
+    },
+    "files": [
+      {
+        "sha": "d2dcdf63959d0c62590b5cc634500aaff366dc03",
+        "filename": "src/qt/guiutil.cpp",
+        "status": "modified",
+        "additions": 27,
+        "deletions": 8,
+        "changes": 35,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9673c35dafee3522ec707c0ecc5e02ae9bba9409/src/qt/guiutil.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9673c35dafee3522ec707c0ecc5e02ae9bba9409/src/qt/guiutil.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/guiutil.cpp?ref=9673c35dafee3522ec707c0ecc5e02ae9bba9409",
+        "patch": "@@ -40,6 +40,7 @@\n #if BOOST_FILESYSTEM_VERSION >= 3\n #include <boost/filesystem/detail/utf8_codecvt_facet.hpp>\n #endif\n+#include <boost/scoped_array.hpp>\n \n #include <QAbstractItemView>\n #include <QApplication>\n@@ -567,12 +568,17 @@ TableViewLastColumnResizingFixer::TableViewLastColumnResizingFixer(QTableView* t\n #ifdef WIN32\n boost::filesystem::path static StartupShortcutPath()\n {\n+    if (GetBoolArg(\"-testnet\", false))\n+        return GetSpecialFolderPath(CSIDL_STARTUP) / \"Bitcoin (testnet).lnk\";\n+    else if (GetBoolArg(\"-regtest\", false))\n+        return GetSpecialFolderPath(CSIDL_STARTUP) / \"Bitcoin (regtest).lnk\";\n+\n     return GetSpecialFolderPath(CSIDL_STARTUP) / \"Bitcoin.lnk\";\n }\n \n bool GetStartOnSystemStartup()\n {\n-    // check for Bitcoin.lnk\n+    // check for Bitcoin*.lnk\n     return boost::filesystem::exists(StartupShortcutPath());\n }\n \n@@ -588,29 +594,43 @@ bool SetStartOnSystemStartup(bool fAutoStart)\n         // Get a pointer to the IShellLink interface.\n         IShellLink* psl = NULL;\n         HRESULT hres = CoCreateInstance(CLSID_ShellLink, NULL,\n-                                CLSCTX_INPROC_SERVER, IID_IShellLink,\n-                                reinterpret_cast<void**>(&psl));\n+            CLSCTX_INPROC_SERVER, IID_IShellLink,\n+            reinterpret_cast<void**>(&psl));\n \n         if (SUCCEEDED(hres))\n         {\n             // Get the current executable path\n             TCHAR pszExePath[MAX_PATH];\n             GetModuleFileName(NULL, pszExePath, sizeof(pszExePath));\n \n-            TCHAR pszArgs[5] = TEXT(\"-min\");\n+            // Start client minimized\n+            QString strArgs = \"-min\";\n+            // Set -testnet /-regtest options\n+            strArgs += QString::fromStdString(strprintf(\" -testnet=%d -regtest=%d\", GetBoolArg(\"-testnet\", false), GetBoolArg(\"-regtest\", false)));\n+\n+#ifdef UNICODE\n+            boost::scoped_array<TCHAR> args(new TCHAR[strArgs.length() + 1]);\n+            // Convert the QString to TCHAR*\n+            strArgs.toWCharArray(args.get());\n+            // Add missing '\\0'-termination to string\n+            args[strArgs.length()] = '\\0';\n+#endif\n \n             // Set the path to the shortcut target\n             psl->SetPath(pszExePath);\n             PathRemoveFileSpec(pszExePath);\n             psl->SetWorkingDirectory(pszExePath);\n             psl->SetShowCmd(SW_SHOWMINNOACTIVE);\n-            psl->SetArguments(pszArgs);\n+#ifndef UNICODE\n+            psl->SetArguments(strArgs.toStdString().c_str());\n+#else\n+            psl->SetArguments(args.get());\n+#endif\n \n             // Query IShellLink for the IPersistFile interface for\n             // saving the shortcut in persistent storage.\n             IPersistFile* ppf = NULL;\n-            hres = psl->QueryInterface(IID_IPersistFile,\n-                                       reinterpret_cast<void**>(&ppf));\n+            hres = psl->QueryInterface(IID_IPersistFile, reinterpret_cast<void**>(&ppf));\n             if (SUCCEEDED(hres))\n             {\n                 WCHAR pwsz[MAX_PATH];\n@@ -630,7 +650,6 @@ bool SetStartOnSystemStartup(bool fAutoStart)\n     }\n     return true;\n }\n-\n #elif defined(Q_OS_LINUX)\n \n // Follow the Desktop Application Autostart Spec:"
+      }
+    ]
+  },
+  {
+    "sha": "6cb4a5253551269db4ce6d853b39e61f9050a21e",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2Y2I0YTUyNTM1NTEyNjlkYjRjZTZkODUzYjM5ZTYxZjkwNTBhMjFl",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2015-02-15T15:27:08Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2015-02-19T11:08:47Z"
+      },
+      "message": "[Qt, Linux] honor current network when creating autostart link",
+      "tree": {
+        "sha": "80bd49a330e824b320ecea1360bd38a1c8870ab4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/80bd49a330e824b320ecea1360bd38a1c8870ab4"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/6cb4a5253551269db4ce6d853b39e61f9050a21e",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6cb4a5253551269db4ce6d853b39e61f9050a21e",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/6cb4a5253551269db4ce6d853b39e61f9050a21e",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6cb4a5253551269db4ce6d853b39e61f9050a21e/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "9673c35dafee3522ec707c0ecc5e02ae9bba9409",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9673c35dafee3522ec707c0ecc5e02ae9bba9409",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/9673c35dafee3522ec707c0ecc5e02ae9bba9409"
+      }
+    ],
+    "stats": {
+      "total": 11,
+      "additions": 8,
+      "deletions": 3
+    },
+    "files": [
+      {
+        "sha": "9db0a75971ac5ed2497022de013207380c00192a",
+        "filename": "src/qt/guiutil.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 3,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6cb4a5253551269db4ce6d853b39e61f9050a21e/src/qt/guiutil.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6cb4a5253551269db4ce6d853b39e61f9050a21e/src/qt/guiutil.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/guiutil.cpp?ref=6cb4a5253551269db4ce6d853b39e61f9050a21e",
+        "patch": "@@ -653,7 +653,7 @@ bool SetStartOnSystemStartup(bool fAutoStart)\n #elif defined(Q_OS_LINUX)\n \n // Follow the Desktop Application Autostart Spec:\n-//  http://standards.freedesktop.org/autostart-spec/autostart-spec-latest.html\n+// http://standards.freedesktop.org/autostart-spec/autostart-spec-latest.html\n \n boost::filesystem::path static GetAutostartDir()\n {\n@@ -709,8 +709,13 @@ bool SetStartOnSystemStartup(bool fAutoStart)\n         // Write a bitcoin.desktop file to the autostart directory:\n         optionFile << \"[Desktop Entry]\\n\";\n         optionFile << \"Type=Application\\n\";\n-        optionFile << \"Name=Bitcoin\\n\";\n-        optionFile << \"Exec=\" << pszExePath << \" -min\\n\";\n+        if (GetBoolArg(\"-testnet\", false))\n+            optionFile << \"Name=Bitcoin (testnet)\\n\";\n+        else if (GetBoolArg(\"-regtest\", false))\n+            optionFile << \"Name=Bitcoin (regtest)\\n\";\n+        else\n+            optionFile << \"Name=Bitcoin\\n\";\n+        optionFile << \"Exec=\" << pszExePath << strprintf(\" -min -testnet=%d -regtest=%d\\n\", GetBoolArg(\"-testnet\", false), GetBoolArg(\"-regtest\", false));\n         optionFile << \"Terminal=false\\n\";\n         optionFile << \"Hidden=false\\n\";\n         optionFile.close();"
+      }
+    ]
+  }
+]

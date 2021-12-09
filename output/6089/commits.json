@@ -1,0 +1,198 @@
+[
+  {
+    "sha": "ef3281750d9698ed58e07e72232d1604652f5fff",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplZjMyODE3NTBkOTY5OGVkNThlMDdlNzIyMzJkMTYwNDY1MmY1ZmZm",
+    "commit": {
+      "author": {
+        "name": "Suhas Daftuar",
+        "email": "sdaftuar@gmail.com",
+        "date": "2015-04-30T20:40:22Z"
+      },
+      "committer": {
+        "name": "Suhas Daftuar",
+        "email": "sdaftuar@gmail.com",
+        "date": "2015-04-30T20:40:22Z"
+      },
+      "message": "Fix mininode disconnections to work with select",
+      "tree": {
+        "sha": "87d64a474f2e2015b8e9004b34575cbd8724963d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/87d64a474f2e2015b8e9004b34575cbd8724963d"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/ef3281750d9698ed58e07e72232d1604652f5fff",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ef3281750d9698ed58e07e72232d1604652f5fff",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/ef3281750d9698ed58e07e72232d1604652f5fff",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ef3281750d9698ed58e07e72232d1604652f5fff/comments",
+    "author": {
+      "login": "sdaftuar",
+      "id": 7463573,
+      "node_id": "MDQ6VXNlcjc0NjM1NzM=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7463573?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sdaftuar",
+      "html_url": "https://github.com/sdaftuar",
+      "followers_url": "https://api.github.com/users/sdaftuar/followers",
+      "following_url": "https://api.github.com/users/sdaftuar/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sdaftuar/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sdaftuar/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sdaftuar/subscriptions",
+      "organizations_url": "https://api.github.com/users/sdaftuar/orgs",
+      "repos_url": "https://api.github.com/users/sdaftuar/repos",
+      "events_url": "https://api.github.com/users/sdaftuar/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sdaftuar/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sdaftuar",
+      "id": 7463573,
+      "node_id": "MDQ6VXNlcjc0NjM1NzM=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7463573?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sdaftuar",
+      "html_url": "https://github.com/sdaftuar",
+      "followers_url": "https://api.github.com/users/sdaftuar/followers",
+      "following_url": "https://api.github.com/users/sdaftuar/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sdaftuar/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sdaftuar/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sdaftuar/subscriptions",
+      "organizations_url": "https://api.github.com/users/sdaftuar/orgs",
+      "repos_url": "https://api.github.com/users/sdaftuar/repos",
+      "events_url": "https://api.github.com/users/sdaftuar/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sdaftuar/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "f026ab606d7bc317a725888296921df961d26208",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f026ab606d7bc317a725888296921df961d26208",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/f026ab606d7bc317a725888296921df961d26208"
+      }
+    ],
+    "stats": {
+      "total": 31,
+      "additions": 20,
+      "deletions": 11
+    },
+    "files": [
+      {
+        "sha": "d1a57b54fa3d10817fdc1fbe247eb6d3528d94aa",
+        "filename": "qa/rpc-tests/mininode.py",
+        "status": "modified",
+        "additions": 20,
+        "deletions": 11,
+        "changes": 31,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ef3281750d9698ed58e07e72232d1604652f5fff/qa/rpc-tests/mininode.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ef3281750d9698ed58e07e72232d1604652f5fff/qa/rpc-tests/mininode.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/qa/rpc-tests/mininode.py?ref=ef3281750d9698ed58e07e72232d1604652f5fff",
+        "patch": "@@ -37,6 +37,11 @@\n \n MAX_INV_SZ = 50000\n \n+# Keep our own socket map for asyncore, so that we can track disconnects\n+# ourselves (to workaround an issue with closing an asyncore socket when \n+# using select)\n+mininode_socket_map = dict()\n+\n # Serialization/deserialization tools\n def sha256(s):\n     return hashlib.new('sha256', s).digest()\n@@ -1076,7 +1081,7 @@ class NodeConn(asyncore.dispatcher):\n     }\n \n     def __init__(self, dstaddr, dstport, rpc, callback, net=\"regtest\"):\n-        asyncore.dispatcher.__init__(self)\n+        asyncore.dispatcher.__init__(self, map=mininode_socket_map)\n         self.log = logging.getLogger(\"NodeConn(%s:%d)\" % (dstaddr, dstport))\n         self.dstaddr = dstaddr\n         self.dstport = dstport\n@@ -1140,14 +1145,10 @@ def readable(self):\n         return True\n \n     def writable(self):\n-        if self.disconnect:\n-            self.handle_close()\n-            return False\n-        else:\n-            self.sendbufLock.acquire()\n-            length = len(self.sendbuf)\n-            self.sendbufLock.release()\n-            return (length > 0)\n+        self.sendbufLock.acquire()\n+        length = len(self.sendbuf)\n+        self.sendbufLock.release()\n+        return (length > 0)\n \n     def handle_write(self):\n         self.sendbufLock.acquire()\n@@ -1229,12 +1230,20 @@ def got_message(self, message):\n \n     def disconnect_node(self):\n         self.disconnect = True\n-        self.send_message(self.messagemap['ping']())\n \n \n class NetworkThread(Thread):\n     def run(self):\n-        asyncore.loop(0.1, True)\n+        while mininode_socket_map:\n+            # We check for whether to disconnect outside of the asyncore\n+            # loop to workaround the behavior of asyncore when using\n+            # select\n+            disconnected = []\n+            for fd, obj in mininode_socket_map.items():\n+                if obj.disconnect:\n+                    disconnected.append(obj)\n+            [ obj.handle_close() for obj in disconnected ]\n+            asyncore.loop(0.1, use_poll=True, map=mininode_socket_map, count=1)\n \n \n # An exception we can raise if we detect a potential disconnect"
+      }
+    ]
+  },
+  {
+    "sha": "5487975ca3e26e959a815679ba326fb33d6baf8d",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1NDg3OTc1Y2EzZTI2ZTk1OWE4MTU2NzliYTMyNmZiMzNkNmJhZjhk",
+    "commit": {
+      "author": {
+        "name": "Suhas Daftuar",
+        "email": "sdaftuar@gmail.com",
+        "date": "2015-04-30T20:40:36Z"
+      },
+      "committer": {
+        "name": "Suhas Daftuar",
+        "email": "sdaftuar@gmail.com",
+        "date": "2015-04-30T20:40:36Z"
+      },
+      "message": "Don't run invalidblockrequest.py in travis until race condition is fixed",
+      "tree": {
+        "sha": "f741dc7606b49ca676ce628e34f8e6f865af0bc4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f741dc7606b49ca676ce628e34f8e6f865af0bc4"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/5487975ca3e26e959a815679ba326fb33d6baf8d",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5487975ca3e26e959a815679ba326fb33d6baf8d",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/5487975ca3e26e959a815679ba326fb33d6baf8d",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5487975ca3e26e959a815679ba326fb33d6baf8d/comments",
+    "author": {
+      "login": "sdaftuar",
+      "id": 7463573,
+      "node_id": "MDQ6VXNlcjc0NjM1NzM=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7463573?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sdaftuar",
+      "html_url": "https://github.com/sdaftuar",
+      "followers_url": "https://api.github.com/users/sdaftuar/followers",
+      "following_url": "https://api.github.com/users/sdaftuar/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sdaftuar/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sdaftuar/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sdaftuar/subscriptions",
+      "organizations_url": "https://api.github.com/users/sdaftuar/orgs",
+      "repos_url": "https://api.github.com/users/sdaftuar/repos",
+      "events_url": "https://api.github.com/users/sdaftuar/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sdaftuar/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sdaftuar",
+      "id": 7463573,
+      "node_id": "MDQ6VXNlcjc0NjM1NzM=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7463573?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sdaftuar",
+      "html_url": "https://github.com/sdaftuar",
+      "followers_url": "https://api.github.com/users/sdaftuar/followers",
+      "following_url": "https://api.github.com/users/sdaftuar/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sdaftuar/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sdaftuar/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sdaftuar/subscriptions",
+      "organizations_url": "https://api.github.com/users/sdaftuar/orgs",
+      "repos_url": "https://api.github.com/users/sdaftuar/repos",
+      "events_url": "https://api.github.com/users/sdaftuar/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sdaftuar/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "ef3281750d9698ed58e07e72232d1604652f5fff",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ef3281750d9698ed58e07e72232d1604652f5fff",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/ef3281750d9698ed58e07e72232d1604652f5fff"
+      }
+    ],
+    "stats": {
+      "total": 2,
+      "additions": 1,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "840addb251f27385a1dd51e3816f539494206132",
+        "filename": "qa/pull-tester/rpc-tests.sh",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5487975ca3e26e959a815679ba326fb33d6baf8d/qa/pull-tester/rpc-tests.sh",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5487975ca3e26e959a815679ba326fb33d6baf8d/qa/pull-tester/rpc-tests.sh",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/qa/pull-tester/rpc-tests.sh?ref=5487975ca3e26e959a815679ba326fb33d6baf8d",
+        "patch": "@@ -31,7 +31,7 @@ testScripts=(\n     'merkle_blocks.py'\n #    'forknotify.py'\n     'maxblocksinflight.py'\n-    'invalidblockrequest.py'\n+#    'invalidblockrequest.py'\n );\n if [ \"x${ENABLE_BITCOIND}${ENABLE_UTILS}${ENABLE_WALLET}\" = \"x111\" ]; then\n     for (( i = 0; i < ${#testScripts[@]}; i++ ))"
+      }
+    ]
+  }
+]

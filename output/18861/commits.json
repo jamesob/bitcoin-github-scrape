@@ -1,0 +1,296 @@
+[
+  {
+    "sha": "c6131bf407c1ada78a0e5509a702bc7da0bfd57d",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjNjEzMWJmNDA3YzFhZGE3OGEwZTU1MDlhNzAyYmM3ZGEwYmZkNTdk",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter@wuille.net",
+        "date": "2020-05-07T17:22:47Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2020-05-12T20:16:55Z"
+      },
+      "message": "Abstract logic to determine whether to answer tx GETDATA",
+      "tree": {
+        "sha": "ab9ff6d007ae74c7c5cc71f07b277e453e61a7a7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/ab9ff6d007ae74c7c5cc71f07b277e453e61a7a7"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/c6131bf407c1ada78a0e5509a702bc7da0bfd57d",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c6131bf407c1ada78a0e5509a702bc7da0bfd57d",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/c6131bf407c1ada78a0e5509a702bc7da0bfd57d",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c6131bf407c1ada78a0e5509a702bc7da0bfd57d/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "8da1e43b63cb36759eeb1fcfd6768163265c44e2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8da1e43b63cb36759eeb1fcfd6768163265c44e2",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/8da1e43b63cb36759eeb1fcfd6768163265c44e2"
+      }
+    ],
+    "stats": {
+      "total": 49,
+      "additions": 24,
+      "deletions": 25
+    },
+    "files": [
+      {
+        "sha": "0193e3f1e35595911f5230b91488dc244adaa71a",
+        "filename": "src/net_processing.cpp",
+        "status": "modified",
+        "additions": 24,
+        "deletions": 25,
+        "changes": 49,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c6131bf407c1ada78a0e5509a702bc7da0bfd57d/src/net_processing.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c6131bf407c1ada78a0e5509a702bc7da0bfd57d/src/net_processing.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.cpp?ref=c6131bf407c1ada78a0e5509a702bc7da0bfd57d",
+        "patch": "@@ -1608,6 +1608,26 @@ void static ProcessGetBlockData(CNode* pfrom, const CChainParams& chainparams, c\n     }\n }\n \n+//! Determine whether or not a peer can request a transaction, and return it (or nullptr if not found or not allowed).\n+CTransactionRef static FindTxForGetData(const uint256& txid, const std::chrono::seconds mempool_req, const std::chrono::seconds longlived_mempool_time) EXCLUSIVE_LOCKS_REQUIRED(cs_main)\n+{\n+    // Look up transaction in relay pool\n+    auto mi = mapRelay.find(txid);\n+    if (mi != mapRelay.end()) return mi->second;\n+\n+    auto txinfo = mempool.info(txid);\n+    if (txinfo.tx) {\n+        // To protect privacy, do not answer getdata using the mempool when\n+        // that TX couldn't have been INVed in reply to a MEMPOOL request,\n+        // or when it's too recent to have expired from mapRelay.\n+        if ((mempool_req.count() && txinfo.m_time <= mempool_req) || txinfo.m_time <= longlived_mempool_time) {\n+            return txinfo.tx;\n+        }\n+    }\n+\n+    return {};\n+}\n+\n void static ProcessGetData(CNode* pfrom, const CChainParams& chainparams, CConnman* connman, CTxMemPool& mempool, const std::atomic<bool>& interruptMsgProc) LOCKS_EXCLUDED(cs_main)\n {\n     AssertLockNotHeld(cs_main);\n@@ -1643,31 +1663,10 @@ void static ProcessGetData(CNode* pfrom, const CChainParams& chainparams, CConnm\n                 continue;\n             }\n \n-            // Send stream from relay memory\n-            bool push = false;\n-            auto mi = mapRelay.find(inv.hash);\n-            int nSendFlags = (inv.type == MSG_TX ? SERIALIZE_TRANSACTION_NO_WITNESS : 0);\n-            if (mi != mapRelay.end()) {\n-                connman->PushMessage(pfrom, msgMaker.Make(nSendFlags, NetMsgType::TX, *mi->second));\n-                push = true;\n-            } else {\n-                auto txinfo = mempool.info(inv.hash);\n-                // To protect privacy, do not answer getdata using the mempool when\n-                // that TX couldn't have been INVed in reply to a MEMPOOL request,\n-                // or when it's too recent to have expired from mapRelay.\n-                if (txinfo.tx && (\n-                     (mempool_req.count() && txinfo.m_time <= mempool_req)\n-                      || (txinfo.m_time <= longlived_mempool_time)))\n-                {\n-                    connman->PushMessage(pfrom, msgMaker.Make(nSendFlags, NetMsgType::TX, *txinfo.tx));\n-                    push = true;\n-                }\n-            }\n-\n-            if (push) {\n-                // We interpret fulfilling a GETDATA for a transaction as a\n-                // successful initial broadcast and remove it from our\n-                // unbroadcast set.\n+            CTransactionRef tx = FindTxForGetData(inv.hash, mempool_req, longlived_mempool_time);\n+            if (tx) {\n+                int nSendFlags = (inv.type == MSG_TX ? SERIALIZE_TRANSACTION_NO_WITNESS : 0);\n+                connman->PushMessage(pfrom, msgMaker.Make(nSendFlags, NetMsgType::TX, *tx));\n                 mempool.RemoveUnbroadcastTx(inv.hash);\n             } else {\n                 vNotFound.push_back(inv);"
+      }
+    ]
+  },
+  {
+    "sha": "f2f32a3dee9a965c8198f9ddd3aaebc627c273e4",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmMmYzMmEzZGVlOWE5NjVjODE5OGY5ZGRkM2FhZWJjNjI3YzI3M2U0",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2020-05-12T19:40:54Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2020-05-12T20:17:42Z"
+      },
+      "message": "Push down use of cs_main into FindTxForGetData",
+      "tree": {
+        "sha": "76a6a61ca1c135a0437f35d37b0015a997a568c4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/76a6a61ca1c135a0437f35d37b0015a997a568c4"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/f2f32a3dee9a965c8198f9ddd3aaebc627c273e4",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f2f32a3dee9a965c8198f9ddd3aaebc627c273e4",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/f2f32a3dee9a965c8198f9ddd3aaebc627c273e4",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f2f32a3dee9a965c8198f9ddd3aaebc627c273e4/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "c6131bf407c1ada78a0e5509a702bc7da0bfd57d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c6131bf407c1ada78a0e5509a702bc7da0bfd57d",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c6131bf407c1ada78a0e5509a702bc7da0bfd57d"
+      }
+    ],
+    "stats": {
+      "total": 59,
+      "additions": 28,
+      "deletions": 31
+    },
+    "files": [
+      {
+        "sha": "418d1474d197a45e3f04c09051653a99772da9b6",
+        "filename": "src/net_processing.cpp",
+        "status": "modified",
+        "additions": 28,
+        "deletions": 31,
+        "changes": 59,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f2f32a3dee9a965c8198f9ddd3aaebc627c273e4/src/net_processing.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f2f32a3dee9a965c8198f9ddd3aaebc627c273e4/src/net_processing.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.cpp?ref=f2f32a3dee9a965c8198f9ddd3aaebc627c273e4",
+        "patch": "@@ -1609,11 +1609,14 @@ void static ProcessGetBlockData(CNode* pfrom, const CChainParams& chainparams, c\n }\n \n //! Determine whether or not a peer can request a transaction, and return it (or nullptr if not found or not allowed).\n-CTransactionRef static FindTxForGetData(const uint256& txid, const std::chrono::seconds mempool_req, const std::chrono::seconds longlived_mempool_time) EXCLUSIVE_LOCKS_REQUIRED(cs_main)\n+CTransactionRef static FindTxForGetData(const uint256& txid, const std::chrono::seconds mempool_req, const std::chrono::seconds longlived_mempool_time) LOCKS_EXCLUDED(cs_main)\n {\n-    // Look up transaction in relay pool\n-    auto mi = mapRelay.find(txid);\n-    if (mi != mapRelay.end()) return mi->second;\n+    {\n+        LOCK(cs_main);\n+        // Look up transaction in relay pool\n+        auto mi = mapRelay.find(txid);\n+        if (mi != mapRelay.end()) return mi->second;\n+    }\n \n     auto txinfo = mempool.info(txid);\n     if (txinfo.tx) {\n@@ -1642,37 +1645,31 @@ void static ProcessGetData(CNode* pfrom, const CChainParams& chainparams, CConnm\n     const std::chrono::seconds mempool_req = pfrom->m_tx_relay != nullptr ? pfrom->m_tx_relay->m_last_mempool_req.load()\n                                                                           : std::chrono::seconds::min();\n \n-    {\n-        LOCK(cs_main);\n-\n-        // Process as many TX items from the front of the getdata queue as\n-        // possible, since they're common and it's efficient to batch process\n-        // them.\n-        while (it != pfrom->vRecvGetData.end() && (it->type == MSG_TX || it->type == MSG_WITNESS_TX)) {\n-            if (interruptMsgProc)\n-                return;\n-            // The send buffer provides backpressure. If there's no space in\n-            // the buffer, pause processing until the next call.\n-            if (pfrom->fPauseSend)\n-                break;\n+    // Process as many TX items from the front of the getdata queue as\n+    // possible, since they're common and it's efficient to batch process\n+    // them.\n+    while (it != pfrom->vRecvGetData.end() && (it->type == MSG_TX || it->type == MSG_WITNESS_TX)) {\n+        if (interruptMsgProc) return;\n+        // The send buffer provides backpressure. If there's no space in\n+        // the buffer, pause processing until the next call.\n+        if (pfrom->fPauseSend) break;\n \n-            const CInv &inv = *it++;\n+        const CInv &inv = *it++;\n \n-            if (pfrom->m_tx_relay == nullptr) {\n-                // Ignore GETDATA requests for transactions from blocks-only peers.\n-                continue;\n-            }\n+        if (pfrom->m_tx_relay == nullptr) {\n+            // Ignore GETDATA requests for transactions from blocks-only peers.\n+            continue;\n+        }\n \n-            CTransactionRef tx = FindTxForGetData(inv.hash, mempool_req, longlived_mempool_time);\n-            if (tx) {\n-                int nSendFlags = (inv.type == MSG_TX ? SERIALIZE_TRANSACTION_NO_WITNESS : 0);\n-                connman->PushMessage(pfrom, msgMaker.Make(nSendFlags, NetMsgType::TX, *tx));\n-                mempool.RemoveUnbroadcastTx(inv.hash);\n-            } else {\n-                vNotFound.push_back(inv);\n-            }\n+        CTransactionRef tx = FindTxForGetData(inv.hash, mempool_req, longlived_mempool_time);\n+        if (tx) {\n+            int nSendFlags = (inv.type == MSG_TX ? SERIALIZE_TRANSACTION_NO_WITNESS : 0);\n+            connman->PushMessage(pfrom, msgMaker.Make(nSendFlags, NetMsgType::TX, *tx));\n+            mempool.RemoveUnbroadcastTx(inv.hash);\n+        } else {\n+            vNotFound.push_back(inv);\n         }\n-    } // release cs_main\n+    }\n \n     // Only process one BLOCK item per call, since they're uncommon and can be\n     // expensive to process."
+      }
+    ]
+  },
+  {
+    "sha": "2896c412fadbc03916a33028f4f50fd87ac48edb",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyODk2YzQxMmZhZGJjMDM5MTZhMzMwMjhmNGY1MGZkODdhYzQ4ZWRi",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter@wuille.net",
+        "date": "2020-05-07T17:29:00Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2020-05-12T22:33:18Z"
+      },
+      "message": "Do not answer GETDATA for to-be-announced tx",
+      "tree": {
+        "sha": "5a87687cb23843da71e612c7097ae8d9b06f729d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/5a87687cb23843da71e612c7097ae8d9b06f729d"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/2896c412fadbc03916a33028f4f50fd87ac48edb",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2896c412fadbc03916a33028f4f50fd87ac48edb",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/2896c412fadbc03916a33028f4f50fd87ac48edb",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2896c412fadbc03916a33028f4f50fd87ac48edb/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "f2f32a3dee9a965c8198f9ddd3aaebc627c273e4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f2f32a3dee9a965c8198f9ddd3aaebc627c273e4",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/f2f32a3dee9a965c8198f9ddd3aaebc627c273e4"
+      }
+    ],
+    "stats": {
+      "total": 12,
+      "additions": 10,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "0050904932e41cb3698d91aea0a0d7dca23e9b70",
+        "filename": "src/net_processing.cpp",
+        "status": "modified",
+        "additions": 10,
+        "deletions": 2,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/2896c412fadbc03916a33028f4f50fd87ac48edb/src/net_processing.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/2896c412fadbc03916a33028f4f50fd87ac48edb/src/net_processing.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.cpp?ref=2896c412fadbc03916a33028f4f50fd87ac48edb",
+        "patch": "@@ -1609,8 +1609,16 @@ void static ProcessGetBlockData(CNode* pfrom, const CChainParams& chainparams, c\n }\n \n //! Determine whether or not a peer can request a transaction, and return it (or nullptr if not found or not allowed).\n-CTransactionRef static FindTxForGetData(const uint256& txid, const std::chrono::seconds mempool_req, const std::chrono::seconds longlived_mempool_time) LOCKS_EXCLUDED(cs_main)\n+CTransactionRef static FindTxForGetData(CNode* peer, const uint256& txid, const std::chrono::seconds mempool_req, const std::chrono::seconds longlived_mempool_time) LOCKS_EXCLUDED(cs_main)\n {\n+    // Check if the requested transaction is so recent that we're just\n+    // about to announce it to the peer; if so, they certainly shouldn't\n+    // know we already have it.\n+    {\n+        LOCK(peer->m_tx_relay->cs_tx_inventory);\n+        if (peer->m_tx_relay->setInventoryTxToSend.count(txid)) return {};\n+    }\n+\n     {\n         LOCK(cs_main);\n         // Look up transaction in relay pool\n@@ -1661,7 +1669,7 @@ void static ProcessGetData(CNode* pfrom, const CChainParams& chainparams, CConnm\n             continue;\n         }\n \n-        CTransactionRef tx = FindTxForGetData(inv.hash, mempool_req, longlived_mempool_time);\n+        CTransactionRef tx = FindTxForGetData(pfrom, inv.hash, mempool_req, longlived_mempool_time);\n         if (tx) {\n             int nSendFlags = (inv.type == MSG_TX ? SERIALIZE_TRANSACTION_NO_WITNESS : 0);\n             connman->PushMessage(pfrom, msgMaker.Make(nSendFlags, NetMsgType::TX, *tx));"
+      }
+    ]
+  }
+]

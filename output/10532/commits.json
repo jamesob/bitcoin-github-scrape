@@ -1,0 +1,1841 @@
+[
+  {
+    "sha": "6fda80155976e25add4160e6e573827d9e4ebacc",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2ZmRhODAxNTU5NzZlMjVhZGQ0MTYwZTZlNTczODI3ZDllNGViYWNj",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-06-02T16:47:28Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-06-14T21:40:35Z"
+      },
+      "message": "Bugfix: Don't ban peers just because they have header chains we consider invalid",
+      "tree": {
+        "sha": "e6f03fedd9a9084a8a00a16c7149081f9de3819c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/e6f03fedd9a9084a8a00a16c7149081f9de3819c"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/6fda80155976e25add4160e6e573827d9e4ebacc",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6fda80155976e25add4160e6e573827d9e4ebacc",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/6fda80155976e25add4160e6e573827d9e4ebacc",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6fda80155976e25add4160e6e573827d9e4ebacc/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "228c319a944b0ba7c835b1909ee1c2056c652eb1",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/228c319a944b0ba7c835b1909ee1c2056c652eb1",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/228c319a944b0ba7c835b1909ee1c2056c652eb1"
+      }
+    ],
+    "stats": {
+      "total": 30,
+      "additions": 13,
+      "deletions": 17
+    },
+    "files": [
+      {
+        "sha": "b576103bc74eba193e2c80b0b07ddb0f4f2e8c4b",
+        "filename": "src/net_processing.cpp",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 14,
+        "changes": 27,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6fda80155976e25add4160e6e573827d9e4ebacc/src/net_processing.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6fda80155976e25add4160e6e573827d9e4ebacc/src/net_processing.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.cpp?ref=6fda80155976e25add4160e6e573827d9e4ebacc",
+        "patch": "@@ -2260,12 +2260,23 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr\n         LOCK(cs_main);\n         CNodeState *nodestate = State(pfrom->GetId());\n \n+        uint256 hashLastBlock;\n+        for (const CBlockHeader& header : headers) {\n+            if (!hashLastBlock.IsNull() && header.hashPrevBlock != hashLastBlock) {\n+                Misbehaving(pfrom->GetId(), 20);\n+                return error(\"non-continuous headers sequence\");\n+            }\n+            hashLastBlock = header.GetHash();\n+            if (!CheckProofOfWork(header.GetHash(), header.nBits, chainparams.GetConsensus())) {\n+                Misbehaving(pfrom->GetId(), 50);\n+                return error(\"proof of work failed\");\n+            }\n+        }\n+\n         // If this looks like it could be a block announcement (nCount <\n         // MAX_BLOCKS_TO_ANNOUNCE), use special logic for handling headers that\n         // don't connect:\n         // - Send a getheaders message in response to try to connect the chain.\n-        // - The peer can send up to MAX_UNCONNECTING_HEADERS in a row that\n-        //   don't connect before giving DoS points\n         // - Once a headers message is received that is valid and does connect,\n         //   nUnconnectingHeaders gets reset back to 0.\n         if (mapBlockIndex.find(headers[0].hashPrevBlock) == mapBlockIndex.end() && nCount < MAX_BLOCKS_TO_ANNOUNCE) {\n@@ -2281,20 +2292,8 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr\n             // we can use this peer to download.\n             UpdateBlockAvailability(pfrom->GetId(), headers.back().GetHash());\n \n-            if (nodestate->nUnconnectingHeaders % MAX_UNCONNECTING_HEADERS == 0) {\n-                Misbehaving(pfrom->GetId(), 20);\n-            }\n             return true;\n         }\n-\n-        uint256 hashLastBlock;\n-        for (const CBlockHeader& header : headers) {\n-            if (!hashLastBlock.IsNull() && header.hashPrevBlock != hashLastBlock) {\n-                Misbehaving(pfrom->GetId(), 20);\n-                return error(\"non-continuous headers sequence\");\n-            }\n-            hashLastBlock = header.GetHash();\n-        }\n         }\n \n         CValidationState state;"
+      },
+      {
+        "sha": "3b80f19705b400fc0dc44b5e004ab5486260382e",
+        "filename": "src/validation.h",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 3,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6fda80155976e25add4160e6e573827d9e4ebacc/src/validation.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6fda80155976e25add4160e6e573827d9e4ebacc/src/validation.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.h?ref=6fda80155976e25add4160e6e573827d9e4ebacc",
+        "patch": "@@ -141,9 +141,6 @@ static const bool DEFAULT_FEEFILTER = true;\n /** Maximum number of headers to announce when relaying blocks with headers message.*/\n static const unsigned int MAX_BLOCKS_TO_ANNOUNCE = 8;\n \n-/** Maximum number of unconnecting headers announcements before DoS score */\n-static const int MAX_UNCONNECTING_HEADERS = 10;\n-\n static const bool DEFAULT_PEERBLOOMFILTERS = true;\n \n /** Default for -stopatheight */"
+      }
+    ]
+  },
+  {
+    "sha": "35433a2cd2ab257d530b5a97021d47cb21064979",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozNTQzM2EyY2QyYWIyNTdkNTMwYjVhOTcwMjFkNDdjYjIxMDY0OTc5",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-06-13T08:27:42Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-06-14T21:40:35Z"
+      },
+      "message": "Instead of DoS banning for invalid blocks, merely disconnect nodes if we're relying on them as a primary node",
+      "tree": {
+        "sha": "365a9ab4a47e2b47e4667972b8198f4db61a8e56",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/365a9ab4a47e2b47e4667972b8198f4db61a8e56"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/35433a2cd2ab257d530b5a97021d47cb21064979",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/35433a2cd2ab257d530b5a97021d47cb21064979",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/35433a2cd2ab257d530b5a97021d47cb21064979",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/35433a2cd2ab257d530b5a97021d47cb21064979/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "6fda80155976e25add4160e6e573827d9e4ebacc",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6fda80155976e25add4160e6e573827d9e4ebacc",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/6fda80155976e25add4160e6e573827d9e4ebacc"
+      }
+    ],
+    "stats": {
+      "total": 49,
+      "additions": 43,
+      "deletions": 6
+    },
+    "files": [
+      {
+        "sha": "7f3d50e7892d3cce016fcf15483ab87a1512dcec",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 0,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/35433a2cd2ab257d530b5a97021d47cb21064979/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/35433a2cd2ab257d530b5a97021d47cb21064979/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=35433a2cd2ab257d530b5a97021d47cb21064979",
+        "patch": "@@ -811,6 +811,11 @@ class CNode\n         return nLocalServices;\n     }\n \n+    bool PunishInvalidBlocks() const\n+    {\n+        return !(fInbound || fFeeler || fWhitelisted || fAddnode);\n+    }\n+\n     std::string GetAddrName() const;\n     //! Sets the addrName only if it was not previously set\n     void MaybeSetAddrName(const std::string& addrNameIn);"
+      },
+      {
+        "sha": "ac56d5ce8962594bf0baa3ed364461fccc37b5e2",
+        "filename": "src/net_processing.cpp",
+        "status": "modified",
+        "additions": 38,
+        "deletions": 6,
+        "changes": 44,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/35433a2cd2ab257d530b5a97021d47cb21064979/src/net_processing.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/35433a2cd2ab257d530b5a97021d47cb21064979/src/net_processing.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.cpp?ref=35433a2cd2ab257d530b5a97021d47cb21064979",
+        "patch": "@@ -855,6 +855,30 @@ void PeerLogicValidation::UpdatedBlockTip(const CBlockIndex *pindexNew, const CB\n     nTimeBestReceived = GetTime();\n }\n \n+namespace {\n+\n+void HandleBlockDoS(std::string node_name, CNode * const pfrom, const int nDoS, const bool is_header) {\n+    // We never actually DoS ban for invalid blocks, merely disconnect nodes if we're relying on them as a primary node\n+    NodeId node_id = pfrom->GetId();\n+    if (node_name.empty()) {\n+        node_name = \"(unknown)\";\n+        LOCK(cs_main);\n+        CNodeState *nodestate = State(node_id);\n+        if (nodestate) {\n+            node_name = nodestate->name;\n+        }\n+    }\n+    const std::string msg = strprintf(\"%s peer=%d got DoS score %d on invalid block%s\", node_name, node_id, nDoS, is_header ? \" header\" : \"\");\n+    if (pfrom->PunishInvalidBlocks()) {\n+        LogPrint(BCLog::NET, \"%s; simply disconnecting\\n\", msg);\n+        pfrom->fDisconnect = true;\n+    } else {\n+        LogPrint(BCLog::NET, \"%s; tolerating\\n\", msg);\n+    }\n+}\n+\n+}\n+\n void PeerLogicValidation::BlockChecked(const CBlock& block, const CValidationState& state) {\n     LOCK(cs_main);\n \n@@ -865,10 +889,16 @@ void PeerLogicValidation::BlockChecked(const CBlock& block, const CValidationSta\n     if (state.IsInvalid(nDoS)) {\n         // Don't send reject message with code 0 or an internal reject code.\n         if (it != mapBlockSource.end() && State(it->second.first) && state.GetRejectCode() > 0 && state.GetRejectCode() < REJECT_INTERNAL) {\n+            const NodeId node_id = it->second.first;\n+            CNodeState * const nodestate = State(node_id);\n             CBlockReject reject = {(unsigned char)state.GetRejectCode(), state.GetRejectReason().substr(0, MAX_REJECT_MESSAGE_LENGTH), hash};\n             State(it->second.first)->rejects.push_back(reject);\n-            if (nDoS > 0 && it->second.second)\n-                Misbehaving(it->second.first, nDoS);\n+            if (nDoS > 0 && it->second.second) {\n+                connman->ForNode(node_id, [nodestate, nDoS](CNode* pfrom){\n+                    HandleBlockDoS(nodestate->name, pfrom, nDoS, false);\n+                    return true;\n+                });\n+            }\n         }\n     }\n     // Check that:\n@@ -1991,8 +2021,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr\n             int nDoS;\n             if (state.IsInvalid(nDoS)) {\n                 if (nDoS > 0) {\n-                    LOCK(cs_main);\n-                    Misbehaving(pfrom->GetId(), nDoS);\n+                    HandleBlockDoS(\"\", pfrom, nDoS, true);\n                 }\n                 LogPrintf(\"Peer %d sent us invalid header via cmpctblock\\n\", pfrom->GetId());\n                 return true;\n@@ -2292,6 +2321,10 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr\n             // we can use this peer to download.\n             UpdateBlockAvailability(pfrom->GetId(), headers.back().GetHash());\n \n+            if (pfrom->PunishInvalidBlocks()) {\n+                pfrom->fDisconnect = true;\n+            }\n+\n             return true;\n         }\n         }\n@@ -2301,8 +2334,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr\n             int nDoS;\n             if (state.IsInvalid(nDoS)) {\n                 if (nDoS > 0) {\n-                    LOCK(cs_main);\n-                    Misbehaving(pfrom->GetId(), nDoS);\n+                    HandleBlockDoS(\"\", pfrom, nDoS, true);\n                 }\n                 return error(\"invalid header received\");\n             }"
+      }
+    ]
+  },
+  {
+    "sha": "a511b894f310bb88fab32b3004c7a6671e296cee",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphNTExYjg5NGYzMTBiYjg4ZmFiMzJiMzAwNGM3YTY2NzFlMjk2Y2Vl",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-06-14T21:23:00Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-06-15T03:08:40Z"
+      },
+      "message": "Bugfix: net: Apply whitelisting criteria to outgoing connections",
+      "tree": {
+        "sha": "6f04da89542942ff24464721db574511308f8fd5",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/6f04da89542942ff24464721db574511308f8fd5"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a511b894f310bb88fab32b3004c7a6671e296cee",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a511b894f310bb88fab32b3004c7a6671e296cee",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a511b894f310bb88fab32b3004c7a6671e296cee",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a511b894f310bb88fab32b3004c7a6671e296cee/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "9828f9a9962c1bee5c343847030b9cfd87a40a5e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9828f9a9962c1bee5c343847030b9cfd87a40a5e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/9828f9a9962c1bee5c343847030b9cfd87a40a5e"
+      }
+    ],
+    "stats": {
+      "total": 7,
+      "additions": 5,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "c92385669c5a9d1fe6ba5268fc88fcd71d526d20",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a511b894f310bb88fab32b3004c7a6671e296cee/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a511b894f310bb88fab32b3004c7a6671e296cee/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=a511b894f310bb88fab32b3004c7a6671e296cee",
+        "patch": "@@ -396,7 +396,7 @@ std::string HelpMessage(HelpMessageMode mode)\n #endif\n #endif\n     strUsage += HelpMessageOpt(\"-whitebind=<addr>\", _(\"Bind to given address and whitelist peers connecting to it. Use [host]:port notation for IPv6\"));\n-    strUsage += HelpMessageOpt(\"-whitelist=<IP address or network>\", _(\"Whitelist peers connecting from the given IP address (e.g. 1.2.3.4) or CIDR notated network (e.g. 1.2.3.0/24). Can be specified multiple times.\") +\n+    strUsage += HelpMessageOpt(\"-whitelist=<IP address or network>\", _(\"Whitelist peers using the given IP address (e.g. 1.2.3.4) or CIDR notated network (e.g. 1.2.3.0/24). Can be specified multiple times.\") +\n         \" \" + _(\"Whitelisted peers cannot be DoS banned and their transactions are always relayed, even if they are already in the mempool, useful e.g. for a gateway\"));\n     strUsage += HelpMessageOpt(\"-whitelistrelay\", strprintf(_(\"Accept relayed transactions received from whitelisted peers even when not relaying transactions (default: %d)\"), DEFAULT_WHITELISTRELAY));\n     strUsage += HelpMessageOpt(\"-whitelistforcerelay\", strprintf(_(\"Force relay of transactions from whitelisted peers even if they violate local relay policy (default: %d)\"), DEFAULT_WHITELISTFORCERELAY));"
+      },
+      {
+        "sha": "72982f2cdd405ff11302fc6a408460cb166d76f0",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a511b894f310bb88fab32b3004c7a6671e296cee/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a511b894f310bb88fab32b3004c7a6671e296cee/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=a511b894f310bb88fab32b3004c7a6671e296cee",
+        "patch": "@@ -1930,6 +1930,9 @@ bool CConnman::OpenNetworkConnection(const CAddress& addrConnect, bool fCountFai\n         pnode->fFeeler = true;\n     if (fAddnode)\n         pnode->fAddnode = true;\n+    if (IsWhitelistedRange(pnode->addr)) {\n+        pnode->fWhitelisted = true;\n+    }\n \n     GetNodeSignals().InitializeNode(pnode, *this);\n     {"
+      },
+      {
+        "sha": "637806cc0f8e80f86a622debd0395e7353b86b13",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a511b894f310bb88fab32b3004c7a6671e296cee/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a511b894f310bb88fab32b3004c7a6671e296cee/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=a511b894f310bb88fab32b3004c7a6671e296cee",
+        "patch": "@@ -347,7 +347,7 @@ class CConnman\n     uint64_t nMaxOutboundLimit;\n     uint64_t nMaxOutboundTimeframe;\n \n-    // Whitelisted ranges. Any node connecting from these is automatically\n+    // Whitelisted ranges. Any node communicating using these is automatically\n     // whitelisted (as well as those connecting to whitelisted binds).\n     std::vector<CSubNet> vWhitelistedRange;\n     CCriticalSection cs_vWhitelistedRange;"
+      }
+    ]
+  },
+  {
+    "sha": "c5daa0df1a95cf536b011ce3449b3572260b9b2f",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjNWRhYTBkZjFhOTVjZjUzNmIwMTFjZTM0NDliMzU3MjI2MGI5YjJm",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-06-15T03:09:12Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-06-15T03:09:12Z"
+      },
+      "message": "Merge branch 'whitelist_outgoing' into bip148",
+      "tree": {
+        "sha": "678553f59f3e1f47d3c2ff7b355a786a1d14bfa4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/678553f59f3e1f47d3c2ff7b355a786a1d14bfa4"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/c5daa0df1a95cf536b011ce3449b3572260b9b2f",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c5daa0df1a95cf536b011ce3449b3572260b9b2f",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/c5daa0df1a95cf536b011ce3449b3572260b9b2f",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c5daa0df1a95cf536b011ce3449b3572260b9b2f/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "35433a2cd2ab257d530b5a97021d47cb21064979",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/35433a2cd2ab257d530b5a97021d47cb21064979",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/35433a2cd2ab257d530b5a97021d47cb21064979"
+      },
+      {
+        "sha": "a511b894f310bb88fab32b3004c7a6671e296cee",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a511b894f310bb88fab32b3004c7a6671e296cee",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/a511b894f310bb88fab32b3004c7a6671e296cee"
+      }
+    ],
+    "stats": {
+      "total": 7,
+      "additions": 5,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "7cf8b85f57e6d0c369a31354ad5bd8fce0fed4a1",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c5daa0df1a95cf536b011ce3449b3572260b9b2f/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c5daa0df1a95cf536b011ce3449b3572260b9b2f/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=c5daa0df1a95cf536b011ce3449b3572260b9b2f",
+        "patch": "@@ -415,7 +415,7 @@ std::string HelpMessage(HelpMessageMode mode)\n #endif\n #endif\n     strUsage += HelpMessageOpt(\"-whitebind=<addr>\", _(\"Bind to given address and whitelist peers connecting to it. Use [host]:port notation for IPv6\"));\n-    strUsage += HelpMessageOpt(\"-whitelist=<IP address or network>\", _(\"Whitelist peers connecting from the given IP address (e.g. 1.2.3.4) or CIDR notated network (e.g. 1.2.3.0/24). Can be specified multiple times.\") +\n+    strUsage += HelpMessageOpt(\"-whitelist=<IP address or network>\", _(\"Whitelist peers using the given IP address (e.g. 1.2.3.4) or CIDR notated network (e.g. 1.2.3.0/24). Can be specified multiple times.\") +\n         \" \" + _(\"Whitelisted peers cannot be DoS banned and their transactions are always relayed, even if they are already in the mempool, useful e.g. for a gateway\"));\n     strUsage += HelpMessageOpt(\"-maxuploadtarget=<n>\", strprintf(_(\"Tries to keep outbound traffic under the given target (in MiB per 24h), 0 = no limit (default: %d)\"), DEFAULT_MAX_UPLOAD_TARGET));\n "
+      },
+      {
+        "sha": "a68840aee9ec7c834a5a3c9797d683408b5bf9dc",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c5daa0df1a95cf536b011ce3449b3572260b9b2f/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c5daa0df1a95cf536b011ce3449b3572260b9b2f/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=c5daa0df1a95cf536b011ce3449b3572260b9b2f",
+        "patch": "@@ -1971,6 +1971,9 @@ bool CConnman::OpenNetworkConnection(const CAddress& addrConnect, bool fCountFai\n         pnode->fFeeler = true;\n     if (fAddnode)\n         pnode->fAddnode = true;\n+    if (IsWhitelistedRange(pnode->addr)) {\n+        pnode->fWhitelisted = true;\n+    }\n \n     GetNodeSignals().InitializeNode(pnode, *this);\n     {"
+      },
+      {
+        "sha": "fd210f8f76641a3fc150cf4a2cedfec75ec1b00f",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c5daa0df1a95cf536b011ce3449b3572260b9b2f/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c5daa0df1a95cf536b011ce3449b3572260b9b2f/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=c5daa0df1a95cf536b011ce3449b3572260b9b2f",
+        "patch": "@@ -343,7 +343,7 @@ class CConnman\n     uint64_t nMaxOutboundLimit;\n     uint64_t nMaxOutboundTimeframe;\n \n-    // Whitelisted ranges. Any node connecting from these is automatically\n+    // Whitelisted ranges. Any node communicating using these is automatically\n     // whitelisted (as well as those connecting to whitelisted binds).\n     std::vector<CSubNet> vWhitelistedRange;\n     CCriticalSection cs_vWhitelistedRange;"
+      }
+    ]
+  },
+  {
+    "sha": "fd5ff21212951b42320b1677f4d06cf7fdbe23ed",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmZDVmZjIxMjEyOTUxYjQyMzIwYjE2NzdmNGQwNmNmN2ZkYmUyM2Vk",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-05-31T22:35:37Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-06-15T03:33:15Z"
+      },
+      "message": "Define a service bit for BIP148",
+      "tree": {
+        "sha": "72662642e43db294946275b64ed6baed30894c3c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/72662642e43db294946275b64ed6baed30894c3c"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/fd5ff21212951b42320b1677f4d06cf7fdbe23ed",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fd5ff21212951b42320b1677f4d06cf7fdbe23ed",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/fd5ff21212951b42320b1677f4d06cf7fdbe23ed",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fd5ff21212951b42320b1677f4d06cf7fdbe23ed/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "c5daa0df1a95cf536b011ce3449b3572260b9b2f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c5daa0df1a95cf536b011ce3449b3572260b9b2f",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c5daa0df1a95cf536b011ce3449b3572260b9b2f"
+      }
+    ],
+    "stats": {
+      "total": 6,
+      "additions": 6,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "9a8b367fdb181e367b6a281fc231ebc5b42e1745",
+        "filename": "src/protocol.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fd5ff21212951b42320b1677f4d06cf7fdbe23ed/src/protocol.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fd5ff21212951b42320b1677f4d06cf7fdbe23ed/src/protocol.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/protocol.h?ref=fd5ff21212951b42320b1677f4d06cf7fdbe23ed",
+        "patch": "@@ -275,6 +275,9 @@ enum ServiceFlags : uint64_t {\n     // collisions and other cases where nodes may be advertising a service they\n     // do not actually support. Other service bits should be allocated via the\n     // BIP process.\n+\n+    // NODE_BIP148 means the node enforces BIP 148's mandatory Segwit activation beginning August 1, 2017\n+    NODE_BIP148 = (1 << 27),\n };\n \n /** A CService with information about it as peer */"
+      },
+      {
+        "sha": "ef98a043d2bae056943603f6743eef53f3c5e59e",
+        "filename": "src/qt/guiutil.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fd5ff21212951b42320b1677f4d06cf7fdbe23ed/src/qt/guiutil.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fd5ff21212951b42320b1677f4d06cf7fdbe23ed/src/qt/guiutil.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/guiutil.cpp?ref=fd5ff21212951b42320b1677f4d06cf7fdbe23ed",
+        "patch": "@@ -930,6 +930,9 @@ QString formatServicesStr(quint64 mask)\n             case NODE_XTHIN:\n                 strList.append(\"XTHIN\");\n                 break;\n+            case NODE_BIP148:\n+                strList.append(\"BIP148\");\n+                break;\n             default:\n                 strList.append(QString(\"%1[%2]\").arg(\"UNKNOWN\").arg(check));\n             }"
+      }
+    ]
+  },
+  {
+    "sha": "3a7f7fecbde62fb009664d0d17a84c71656cc79c",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozYTdmN2ZlY2JkZTYyZmIwMDk2NjRkMGQxN2E4NGM3MTY1NmNjNzlj",
+    "commit": {
+      "author": {
+        "name": "mk",
+        "email": "mk@mkwia.com",
+        "date": "2017-04-10T19:40:32Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-06-15T03:33:15Z"
+      },
+      "message": "Add BIP148 UASF logic",
+      "tree": {
+        "sha": "56089b7e633f19779020321cb299a31d6055dba5",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/56089b7e633f19779020321cb299a31d6055dba5"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/3a7f7fecbde62fb009664d0d17a84c71656cc79c",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3a7f7fecbde62fb009664d0d17a84c71656cc79c",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/3a7f7fecbde62fb009664d0d17a84c71656cc79c",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3a7f7fecbde62fb009664d0d17a84c71656cc79c/comments",
+    "author": {
+      "login": "mkwia",
+      "id": 14859988,
+      "node_id": "MDQ6VXNlcjE0ODU5OTg4",
+      "avatar_url": "https://avatars.githubusercontent.com/u/14859988?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/mkwia",
+      "html_url": "https://github.com/mkwia",
+      "followers_url": "https://api.github.com/users/mkwia/followers",
+      "following_url": "https://api.github.com/users/mkwia/following{/other_user}",
+      "gists_url": "https://api.github.com/users/mkwia/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/mkwia/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/mkwia/subscriptions",
+      "organizations_url": "https://api.github.com/users/mkwia/orgs",
+      "repos_url": "https://api.github.com/users/mkwia/repos",
+      "events_url": "https://api.github.com/users/mkwia/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/mkwia/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "fd5ff21212951b42320b1677f4d06cf7fdbe23ed",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fd5ff21212951b42320b1677f4d06cf7fdbe23ed",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/fd5ff21212951b42320b1677f4d06cf7fdbe23ed"
+      }
+    ],
+    "stats": {
+      "total": 23,
+      "additions": 23,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "216c6dca491df97712f426b987ef14165705a08c",
+        "filename": "src/validation.cpp",
+        "status": "modified",
+        "additions": 20,
+        "deletions": 0,
+        "changes": 20,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3a7f7fecbde62fb009664d0d17a84c71656cc79c/src/validation.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3a7f7fecbde62fb009664d0d17a84c71656cc79c/src/validation.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.cpp?ref=3a7f7fecbde62fb009664d0d17a84c71656cc79c",
+        "patch": "@@ -1607,6 +1607,20 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd\n         flags |= SCRIPT_VERIFY_NULLDUMMY;\n     }\n \n+    // BIP148 mandatory segwit signalling.\n+    int64_t nMedianTimePast = pindex->GetMedianTimePast();\n+    if ( (nMedianTimePast >= 1501545600) &&  // Tue 01 Aug 2017 00:00:00 UTC\n+         (nMedianTimePast <= 1510704000) &&  // Wed 15 Nov 2017 00:00:00 UTC\n+         (!IsWitnessLockedIn(pindex->pprev, chainparams.GetConsensus()) &&  // Segwit is not locked in\n+          !IsWitnessEnabled(pindex->pprev, chainparams.GetConsensus())) )   // and is not active.\n+    {\n+        bool fVersionBits = (pindex->nVersion & VERSIONBITS_TOP_MASK) == VERSIONBITS_TOP_BITS;\n+        bool fSegbit = (pindex->nVersion & VersionBitsMask(chainparams.GetConsensus(), Consensus::DEPLOYMENT_SEGWIT)) != 0;\n+        if (!(fVersionBits && fSegbit)) {\n+            return state.DoS(0, error(\"ConnectBlock(): relayed block must signal for segwit, please upgrade\"), REJECT_INVALID, \"bad-no-segwit\");\n+        }\n+    }\n+\n     int64_t nTime2 = GetTimeMicros(); nTimeForks += nTime2 - nTime1;\n     LogPrint(BCLog::BENCH, \"    - Fork checks: %.2fms [%.2fs]\\n\", 0.001 * (nTime2 - nTime1), nTimeForks * 0.000001);\n \n@@ -2730,6 +2744,12 @@ bool IsWitnessEnabled(const CBlockIndex* pindexPrev, const Consensus::Params& pa\n     return (VersionBitsState(pindexPrev, params, Consensus::DEPLOYMENT_SEGWIT, versionbitscache) == THRESHOLD_ACTIVE);\n }\n \n+bool IsWitnessLockedIn(const CBlockIndex* pindexPrev, const Consensus::Params& params)\n+{\n+    LOCK(cs_main);\n+    return (VersionBitsState(pindexPrev, params, Consensus::DEPLOYMENT_SEGWIT, versionbitscache) == THRESHOLD_LOCKED_IN);\n+}\n+\n // Compute at which vout of the block's coinbase transaction the witness\n // commitment occurs, or -1 if not found.\n static int GetWitnessCommitmentIndex(const CBlock& block)"
+      },
+      {
+        "sha": "4dcf84b8cee85280b5d9e9d9ce5efe8e914ed3ee",
+        "filename": "src/validation.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3a7f7fecbde62fb009664d0d17a84c71656cc79c/src/validation.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3a7f7fecbde62fb009664d0d17a84c71656cc79c/src/validation.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.h?ref=3a7f7fecbde62fb009664d0d17a84c71656cc79c",
+        "patch": "@@ -404,6 +404,9 @@ bool TestBlockValidity(CValidationState& state, const CChainParams& chainparams,\n /** Check whether witness commitments are required for block. */\n bool IsWitnessEnabled(const CBlockIndex* pindexPrev, const Consensus::Params& params);\n \n+/** Check if Segregated Witness is Locked In */\n+bool IsWitnessLockedIn(const CBlockIndex* pindexPrev, const Consensus::Params& params);\n+\n /** When there are blocks in the active chain with missing data, rewind the chainstate and remove them from the block index */\n bool RewindBlockIndex(const CChainParams& params);\n "
+      }
+    ]
+  },
+  {
+    "sha": "7afb67d7c09abbda995dc325b17d70fd69e9c306",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3YWZiNjdkN2MwOWFiYmRhOTk1ZGMzMjViMTdkNzBmZDY5ZTljMzA2",
+    "commit": {
+      "author": {
+        "name": "root",
+        "email": "erik@q32.com",
+        "date": "2017-05-19T04:00:39Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-06-15T03:33:15Z"
+      },
+      "message": "Add a -bip148 option",
+      "tree": {
+        "sha": "250c542d8b0940173304fe65a756a2897a9b0baf",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/250c542d8b0940173304fe65a756a2897a9b0baf"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/7afb67d7c09abbda995dc325b17d70fd69e9c306",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7afb67d7c09abbda995dc325b17d70fd69e9c306",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/7afb67d7c09abbda995dc325b17d70fd69e9c306",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7afb67d7c09abbda995dc325b17d70fd69e9c306/comments",
+    "author": {
+      "login": "earonesty",
+      "id": 50769,
+      "node_id": "MDQ6VXNlcjUwNzY5",
+      "avatar_url": "https://avatars.githubusercontent.com/u/50769?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/earonesty",
+      "html_url": "https://github.com/earonesty",
+      "followers_url": "https://api.github.com/users/earonesty/followers",
+      "following_url": "https://api.github.com/users/earonesty/following{/other_user}",
+      "gists_url": "https://api.github.com/users/earonesty/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/earonesty/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/earonesty/subscriptions",
+      "organizations_url": "https://api.github.com/users/earonesty/orgs",
+      "repos_url": "https://api.github.com/users/earonesty/repos",
+      "events_url": "https://api.github.com/users/earonesty/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/earonesty/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "3a7f7fecbde62fb009664d0d17a84c71656cc79c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3a7f7fecbde62fb009664d0d17a84c71656cc79c",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/3a7f7fecbde62fb009664d0d17a84c71656cc79c"
+      }
+    ],
+    "stats": {
+      "total": 33,
+      "additions": 22,
+      "deletions": 11
+    },
+    "files": [
+      {
+        "sha": "ea61949e23b5abdd58fb63ae092562257d7a38f8",
+        "filename": "doc/man/bitcoin-qt.1",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7afb67d7c09abbda995dc325b17d70fd69e9c306/doc/man/bitcoin-qt.1",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7afb67d7c09abbda995dc325b17d70fd69e9c306/doc/man/bitcoin-qt.1",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/doc/man/bitcoin-qt.1?ref=7afb67d7c09abbda995dc325b17d70fd69e9c306",
+        "patch": "@@ -451,6 +451,9 @@ Set maximum size of high\\-priority/low\\-fee transactions in bytes\n .IP\n Set lowest fee rate (in BTC/kB) for transactions to be included in block\n creation. (default: 0.00001)\n+\\fB\\-bip148\\fR\n+.IP\n+Enable BIP148 enforcement\n .PP\n RPC server options:\n .HP"
+      },
+      {
+        "sha": "b369ffda76a3f2c2fee13e06b1dc04195b1e8e8e",
+        "filename": "doc/man/bitcoind.1",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7afb67d7c09abbda995dc325b17d70fd69e9c306/doc/man/bitcoind.1",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7afb67d7c09abbda995dc325b17d70fd69e9c306/doc/man/bitcoind.1",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/doc/man/bitcoind.1?ref=7afb67d7c09abbda995dc325b17d70fd69e9c306",
+        "patch": "@@ -456,6 +456,9 @@ Set maximum size of high\\-priority/low\\-fee transactions in bytes\n .IP\n Set lowest fee rate (in BTC/kB) for transactions to be included in block\n creation. (default: 0.00001)\n+\\fB\\-bip148\\fR\n+.IP\n+Enable BIP148 enforcement\n .PP\n RPC server options:\n .HP"
+      },
+      {
+        "sha": "3c5b7844ffbd4669d8971f66c237a39e3eb71f51",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7afb67d7c09abbda995dc325b17d70fd69e9c306/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7afb67d7c09abbda995dc325b17d70fd69e9c306/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=7afb67d7c09abbda995dc325b17d70fd69e9c306",
+        "patch": "@@ -496,6 +496,7 @@ std::string HelpMessage(HelpMessageMode mode)\n     strUsage += HelpMessageOpt(\"-blockmaxweight=<n>\", strprintf(_(\"Set maximum BIP141 block weight (default: %d)\"), DEFAULT_BLOCK_MAX_WEIGHT));\n     strUsage += HelpMessageOpt(\"-blockmaxsize=<n>\", strprintf(_(\"Set maximum block size in bytes (default: %d)\"), DEFAULT_BLOCK_MAX_SIZE));\n     strUsage += HelpMessageOpt(\"-blockmintxfee=<amt>\", strprintf(_(\"Set lowest fee rate (in %s/kB) for transactions to be included in block creation. (default: %s)\"), CURRENCY_UNIT, FormatMoney(DEFAULT_BLOCK_MIN_TX_FEE)));\n+    strUsage += HelpMessageOpt(\"-bip148\", strprintf(_(\"Enable BIP148/UASF (default: %d)\"), DEFAULT_BIP148));\n     if (showDebug)\n         strUsage += HelpMessageOpt(\"-blockversion=<n>\", \"Override block version to test forking scenarios\");\n "
+      },
+      {
+        "sha": "4221672e88ee63a836fe10e43afc2ed448319112",
+        "filename": "src/validation.cpp",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 11,
+        "changes": 24,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7afb67d7c09abbda995dc325b17d70fd69e9c306/src/validation.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7afb67d7c09abbda995dc325b17d70fd69e9c306/src/validation.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.cpp?ref=7afb67d7c09abbda995dc325b17d70fd69e9c306",
+        "patch": "@@ -1607,17 +1607,19 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd\n         flags |= SCRIPT_VERIFY_NULLDUMMY;\n     }\n \n-    // BIP148 mandatory segwit signalling.\n-    int64_t nMedianTimePast = pindex->GetMedianTimePast();\n-    if ( (nMedianTimePast >= 1501545600) &&  // Tue 01 Aug 2017 00:00:00 UTC\n-         (nMedianTimePast <= 1510704000) &&  // Wed 15 Nov 2017 00:00:00 UTC\n-         (!IsWitnessLockedIn(pindex->pprev, chainparams.GetConsensus()) &&  // Segwit is not locked in\n-          !IsWitnessEnabled(pindex->pprev, chainparams.GetConsensus())) )   // and is not active.\n-    {\n-        bool fVersionBits = (pindex->nVersion & VERSIONBITS_TOP_MASK) == VERSIONBITS_TOP_BITS;\n-        bool fSegbit = (pindex->nVersion & VersionBitsMask(chainparams.GetConsensus(), Consensus::DEPLOYMENT_SEGWIT)) != 0;\n-        if (!(fVersionBits && fSegbit)) {\n-            return state.DoS(0, error(\"ConnectBlock(): relayed block must signal for segwit, please upgrade\"), REJECT_INVALID, \"bad-no-segwit\");\n+    if (gArgs.GetBoolArg(\"-bip148\", DEFAULT_BIP148)) {\n+        // BIP148 mandatory segwit signalling.\n+        int64_t nMedianTimePast = pindex->GetMedianTimePast();\n+        if ( (nMedianTimePast >= 1501545600) &&  // Tue 01 Aug 2017 00:00:00 UTC\n+             (nMedianTimePast <= 1510704000) &&  // Wed 15 Nov 2017 00:00:00 UTC\n+             (!IsWitnessLockedIn(pindex->pprev, chainparams.GetConsensus()) &&  // Segwit is not locked in\n+              !IsWitnessEnabled(pindex->pprev, chainparams.GetConsensus())) )   // and is not active.\n+        {\n+            bool fVersionBits = (pindex->nVersion & VERSIONBITS_TOP_MASK) == VERSIONBITS_TOP_BITS;\n+            bool fSegbit = (pindex->nVersion & VersionBitsMask(chainparams.GetConsensus(), Consensus::DEPLOYMENT_SEGWIT)) != 0;\n+            if (!(fVersionBits && fSegbit)) {\n+                return state.DoS(0, error(\"ConnectBlock(): relayed block must signal for segwit, please upgrade\"), REJECT_INVALID, \"bad-no-segwit\");\n+            }\n         }\n     }\n "
+      },
+      {
+        "sha": "c0574d3d73f4e0426cf815440a51494c13117394",
+        "filename": "src/validation.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7afb67d7c09abbda995dc325b17d70fd69e9c306/src/validation.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7afb67d7c09abbda995dc325b17d70fd69e9c306/src/validation.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.h?ref=7afb67d7c09abbda995dc325b17d70fd69e9c306",
+        "patch": "@@ -75,6 +75,8 @@ static const unsigned int MAX_BLOCKFILE_SIZE = 0x8000000; // 128 MiB\n static const unsigned int BLOCKFILE_CHUNK_SIZE = 0x1000000; // 16 MiB\n /** The pre-allocation chunk size for rev?????.dat files (since 0.8) */\n static const unsigned int UNDOFILE_CHUNK_SIZE = 0x100000; // 1 MiB\n+/** Default for -bip148 enforcement */\n+static const unsigned int DEFAULT_BIP148 = false;\n \n /** Maximum number of script-checking threads allowed */\n static const int MAX_SCRIPTCHECK_THREADS = 16;"
+      }
+    ]
+  },
+  {
+    "sha": "517bb42ebb9848db1d69b91499e80f1396743188",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1MTdiYjQyZWJiOTg0OGRiMWQ2OWI5MTQ5OWU4MGYxMzk2NzQzMTg4",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-05-31T21:55:15Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-06-15T03:33:15Z"
+      },
+      "message": "Add BIP148 indicator to user agent comments",
+      "tree": {
+        "sha": "714c41acde817dbc4637bb4061e61238bfdf4a23",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/714c41acde817dbc4637bb4061e61238bfdf4a23"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/517bb42ebb9848db1d69b91499e80f1396743188",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/517bb42ebb9848db1d69b91499e80f1396743188",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/517bb42ebb9848db1d69b91499e80f1396743188",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/517bb42ebb9848db1d69b91499e80f1396743188/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "7afb67d7c09abbda995dc325b17d70fd69e9c306",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7afb67d7c09abbda995dc325b17d70fd69e9c306",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/7afb67d7c09abbda995dc325b17d70fd69e9c306"
+      }
+    ],
+    "stats": {
+      "total": 14,
+      "additions": 14,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "e05332ae07c8fe3078f0723da283035cf280f95a",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 14,
+        "deletions": 0,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/517bb42ebb9848db1d69b91499e80f1396743188/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/517bb42ebb9848db1d69b91499e80f1396743188/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=517bb42ebb9848db1d69b91499e80f1396743188",
+        "patch": "@@ -1269,6 +1269,20 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)\n             uacomments.push_back(cmt);\n         }\n     }\n+    // Add BIP148 enforcement indicator; note this uses characters forbidden by SAFE_CHARS_UA_COMMENT (but not BIP14) to avoid users confusing it with a mere uacomment option\n+    {\n+        std::string uacomment_bip148;\n+        if (gArgs.GetBoolArg(\"-bip148\", DEFAULT_BIP148)) {\n+            uacomment_bip148 = \"+\";\n+        } else {\n+            uacomment_bip148 = \"!\";\n+        }\n+        uacomment_bip148 += \"BIP148\";\n+        if (!gArgs.IsArgSet(\"-bip148\")) {\n+            uacomment_bip148 += \"=\";\n+        }\n+        uacomments.push_back(uacomment_bip148);\n+    }\n     strSubVersion = FormatSubVersion(CLIENT_NAME, CLIENT_VERSION, uacomments);\n     if (strSubVersion.size() > MAX_SUBVERSION_LENGTH) {\n         return InitError(strprintf(_(\"Total length of network version string (%i) exceeds maximum length (%i). Reduce the number or size of uacomments.\"),"
+      }
+    ]
+  },
+  {
+    "sha": "2fbfd1281f229ae934ec0a1622ddf19abf8b86d9",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyZmJmZDEyODFmMjI5YWU5MzRlYzBhMTYyMmRkZjE5YWJmOGI4NmQ5",
+    "commit": {
+      "author": {
+        "name": "Anthony Towns",
+        "email": "aj@erisian.com.au",
+        "date": "2017-05-27T06:50:16Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-06-15T03:33:15Z"
+      },
+      "message": "bip148: functional test\n\nBasic functional test for behaviour with -bip148 flag.",
+      "tree": {
+        "sha": "d280ea392ac279e7da0be9e03ee83b013ed124e7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/d280ea392ac279e7da0be9e03ee83b013ed124e7"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/2fbfd1281f229ae934ec0a1622ddf19abf8b86d9",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2fbfd1281f229ae934ec0a1622ddf19abf8b86d9",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/2fbfd1281f229ae934ec0a1622ddf19abf8b86d9",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2fbfd1281f229ae934ec0a1622ddf19abf8b86d9/comments",
+    "author": {
+      "login": "ajtowns",
+      "id": 127186,
+      "node_id": "MDQ6VXNlcjEyNzE4Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/127186?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ajtowns",
+      "html_url": "https://github.com/ajtowns",
+      "followers_url": "https://api.github.com/users/ajtowns/followers",
+      "following_url": "https://api.github.com/users/ajtowns/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ajtowns/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ajtowns/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ajtowns/subscriptions",
+      "organizations_url": "https://api.github.com/users/ajtowns/orgs",
+      "repos_url": "https://api.github.com/users/ajtowns/repos",
+      "events_url": "https://api.github.com/users/ajtowns/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ajtowns/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "517bb42ebb9848db1d69b91499e80f1396743188",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/517bb42ebb9848db1d69b91499e80f1396743188",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/517bb42ebb9848db1d69b91499e80f1396743188"
+      }
+    ],
+    "stats": {
+      "total": 169,
+      "additions": 169,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "719f827478b6d8573feb8f5bfad017d96dfc7caf",
+        "filename": "test/functional/bip148-segwit-uasf.py",
+        "status": "added",
+        "additions": 169,
+        "deletions": 0,
+        "changes": 169,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/2fbfd1281f229ae934ec0a1622ddf19abf8b86d9/test/functional/bip148-segwit-uasf.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/2fbfd1281f229ae934ec0a1622ddf19abf8b86d9/test/functional/bip148-segwit-uasf.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/bip148-segwit-uasf.py?ref=2fbfd1281f229ae934ec0a1622ddf19abf8b86d9",
+        "patch": "@@ -0,0 +1,169 @@\n+#!/usr/bin/env python3\n+# Copyright (c) 2015-2016 The Bitcoin Core developers\n+# Distributed under the MIT software license, see the accompanying\n+# file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\"\"\"Test the Mandatory Activation of Segregated Witness (BIP148) soft-fork logic.\"\"\"\n+\n+from test_framework.test_framework import BitcoinTestFramework\n+from test_framework.util import *\n+\n+## Scenario:\n+#\n+# Four miners, whose hashrate and strategies are:\n+#\n+#     A ( 9%): mine longest chain, signalling segwit\n+#     B (27%): mine longest chain, not signalling segwit\n+#     C (37%): bip 148 enforcing, signalling segwit\n+#     D (27%): switches from (A) to (C) during August\n+#\n+# (1, 3, 4 and 3 elevenths of total hashrate respectively; mining\n+#  11 blocks a day, gives 143 blocks in 13 days, just one block\n+#  short of a retarget cycle)\n+#\n+# B, with 27% of hashrate is sufficient to block activation (which\n+#    requires 25% on regtest)\n+# A+B+D has 65% of hashrate prior to D switching\n+# C+D has 55% of hashrate post D's switch, and since C's hashrate is larger\n+#   than D's the original BIP-148 chain will eventually have more work\n+#   than D's chain, forcing a reorg and eventual consensus\n+\n+def bip9_blockver(*bits):\n+    return \"-blockversion=%d\" % (0x20000000 + sum(1<<b for b in bits))\n+\n+class BIP148Test(BitcoinTestFramework):\n+    AUG_1 = 1501545600\n+\n+    def __init__(self):\n+        super().__init__()\n+        self.num_nodes = 8\n+        self.setup_clean_chain = False\n+        self.extra_args = [\n+             [bip9_blockver(0)],   # for initial CSV activation only\n+             [bip9_blockver(1)],\n+             [bip9_blockver()],\n+             [bip9_blockver(1), \"-bip148\"],\n+             [bip9_blockver(1)],\n+             [],           # non-mining user, restarts with -bip148 on Aug 5th\n+             [],           # well connected, non BIP148 peer\n+             [\"-bip148\"]]  # well connected, BIP148 peer\n+\n+        self.day = -30 # 30 days before BIP168 activation\n+        self.blockrate = [0,1,3,4,3,0,0]\n+        self.sync_groups = [set((0,1,2,4,5,6)), set((3,7))]\n+\n+    def connect_all(self):\n+        connect_nodes(self.nodes[6],7)\n+        for i in range(6):\n+            connect_nodes(self.nodes[i], 6)\n+            connect_nodes(self.nodes[i], 7)\n+            self.log.info(\"connecting %d and 6, 7\" % (i))\n+\n+    def setup_network(self):\n+        self.setup_nodes()\n+        self.connect_all()\n+        self.sync_all()\n+\n+    def mining(self):\n+        time = self.AUG_1 + (self.day*24*60*60)\n+        to_mine = self.blockrate[:]\n+        groups = [ [self.nodes[i] for i in g] for g in self.sync_groups ]\n+\n+        while sum(to_mine) > 0:\n+            for peer,blks in enumerate(to_mine):\n+                if blks == 0: continue\n+                set_node_times(self.nodes, time)\n+                to_mine[peer] -= 1\n+                self.nodes[peer].generate(1)\n+                for g in groups:\n+                    if peer in g:\n+                        self.sync_all( [g] )\n+                time += 10*60\n+\n+        self.day += 1\n+\n+    def bip148_restart(self, peer):\n+        self.log.info(\"Restarting node %d with -bip148\" % (peer,))\n+        stop_node(self.nodes[peer], peer)\n+        time = self.AUG_1 + (self.day*24*60*60)\n+        self.nodes[peer] = start_node(peer, self.options.tmpdir, self.extra_args[4] + [\"-bip148\", \"-mocktime=%d\" % (time)])\n+\n+        n = self.nodes[peer]\n+        blk = n.getblock(n.getbestblockhash())\n+        worstblock = None\n+        while blk[\"mediantime\"] >= self.AUG_1:\n+            if blk[\"version\"] | 0x20000002 != blk[\"version\"]:\n+                worstblock = blk\n+            blk = n.getblock(blk[\"previousblockhash\"])\n+        if worstblock is not None:\n+            self.log.info(\"Invalidating block %d:%x:%s\" % (worstblock[\"height\"], worstblock[\"version\"], worstblock[\"hash\"]))\n+            n.invalidateblock(worstblock[\"hash\"])\n+\n+        self.log.info(\"Reconnecting nodes\")\n+        self.connect_all()\n+        self.log.info(\"Removing %d from non-BIP148 sync group\" % (peer,))\n+        self.sync_groups[0].remove(peer)\n+        self.log.info(\"Adding %d to BIP148 sync group\" % (peer,))\n+        self.sync_groups[1].add(peer)\n+\n+    def run_test(self):\n+        cnt = self.nodes[0].getblockcount()\n+\n+        # Lock in CSV\n+        self.nodes[0].generate(500)\n+        if (self.nodes[0].getblockcount() != cnt + 500):\n+            raise AssertionError(\"Failed to mine 500 bip9 bit 0 blocks\")\n+        cnt += 500\n+\n+        if get_bip9_status(self.nodes[0], 'csv')[\"status\"] != \"active\":\n+            raise AssertionError(\"Failed to activate OP_CSV\")\n+\n+        self.sync_all()\n+\n+        for d in range(120):\n+            if self.day == 0:\n+                swstatus = get_bip9_status(self.nodes[0], 'segwit')[\"status\"]\n+                if swstatus != \"started\":\n+                    raise AssertionError(\"segwit soft-fork in state %s rather than started\" % (swstatus))\n+\n+            self.mining()\n+            tips = set(n.getbestblockhash() for n in self.nodes)\n+            heights = [n.getblockcount() for n in self.nodes]\n+            segwit = [get_bip9_status(n, 'segwit')[\"status\"] for n in self.nodes]\n+            connect = [len(n.getpeerinfo()) for n in self.nodes]\n+            maxh = max(heights)\n+            out = [\"%d:\" % (maxh)]\n+            for c,h,s in zip(connect,heights,segwit):\n+                a = \"S\" if s == \"active\" else \"n\"\n+                a = \"%d/%s\" % (c,a)\n+                if h < maxh:\n+                    out.append(\"%s%d\" % (a, h-maxh))\n+                else:\n+                    out.append(a)\n+\n+            self.log.info(\"Day %d: status: %s\" % (self.day, out))\n+\n+            if self.day == 7:\n+                self.bip148_restart(5)\n+\n+            if self.day == 20:\n+                self.bip148_restart(4)\n+\n+            for i in range(6):\n+                if connect[i] == 0:\n+                    raise AssertionError(\"Peer %d has no connected peers after %d blocks\" % (i,maxh))\n+\n+            if self.day > 5 and len(tips) == 1:\n+                synccount += 1\n+            else:\n+                synccount = 0\n+            if synccount > 5:\n+                self.log.info(\"In sync for five days, consensus achieved\")\n+                break\n+\n+        if len(tips) > 1:\n+            raise AssertionError(\"Chain split still exists at day %d\" % (self.day))\n+\n+        return\n+\n+if __name__ == '__main__':\n+    BIP148Test().main()"
+      }
+    ]
+  },
+  {
+    "sha": "b894fb368a9713d88790f3f5903ddfa4fa614712",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiODk0ZmIzNjhhOTcxM2Q4ODc5MGYzZjU5MDNkZGZhNGZhNjE0NzEy",
+    "commit": {
+      "author": {
+        "name": "Anthony Towns",
+        "email": "aj@erisian.com.au",
+        "date": "2017-05-27T07:46:25Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-06-15T03:33:15Z"
+      },
+      "message": "bip148: ensure nodes are synced prior to bip148 date",
+      "tree": {
+        "sha": "ac2fd72a91acb1713fcb13ce787038edff9bafe3",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/ac2fd72a91acb1713fcb13ce787038edff9bafe3"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/b894fb368a9713d88790f3f5903ddfa4fa614712",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b894fb368a9713d88790f3f5903ddfa4fa614712",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/b894fb368a9713d88790f3f5903ddfa4fa614712",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b894fb368a9713d88790f3f5903ddfa4fa614712/comments",
+    "author": {
+      "login": "ajtowns",
+      "id": 127186,
+      "node_id": "MDQ6VXNlcjEyNzE4Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/127186?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ajtowns",
+      "html_url": "https://github.com/ajtowns",
+      "followers_url": "https://api.github.com/users/ajtowns/followers",
+      "following_url": "https://api.github.com/users/ajtowns/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ajtowns/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ajtowns/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ajtowns/subscriptions",
+      "organizations_url": "https://api.github.com/users/ajtowns/orgs",
+      "repos_url": "https://api.github.com/users/ajtowns/repos",
+      "events_url": "https://api.github.com/users/ajtowns/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ajtowns/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "2fbfd1281f229ae934ec0a1622ddf19abf8b86d9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2fbfd1281f229ae934ec0a1622ddf19abf8b86d9",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/2fbfd1281f229ae934ec0a1622ddf19abf8b86d9"
+      }
+    ],
+    "stats": {
+      "total": 12,
+      "additions": 8,
+      "deletions": 4
+    },
+    "files": [
+      {
+        "sha": "e82dcc6982c77949dea74fd12e2fb7d6dec51976",
+        "filename": "test/functional/bip148-segwit-uasf.py",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 4,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b894fb368a9713d88790f3f5903ddfa4fa614712/test/functional/bip148-segwit-uasf.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b894fb368a9713d88790f3f5903ddfa4fa614712/test/functional/bip148-segwit-uasf.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/bip148-segwit-uasf.py?ref=b894fb368a9713d88790f3f5903ddfa4fa614712",
+        "patch": "@@ -49,7 +49,6 @@ def __init__(self):\n \n         self.day = -30 # 30 days before BIP168 activation\n         self.blockrate = [0,1,3,4,3,0,0]\n-        self.sync_groups = [set((0,1,2,4,5,6)), set((3,7))]\n \n     def connect_all(self):\n         connect_nodes(self.nodes[6],7)\n@@ -107,6 +106,9 @@ def bip148_restart(self, peer):\n \n     def run_test(self):\n         cnt = self.nodes[0].getblockcount()\n+        self.sync_groups = [set(range(self.num_nodes))]\n+        # (if nodes aren't synced initially, the non-segwit blocks may get accidentally orphaned\n+        #  activating/locking in segwit...)\n \n         # Lock in CSV\n         self.nodes[0].generate(500)\n@@ -120,10 +122,12 @@ def run_test(self):\n         self.sync_all()\n \n         for d in range(120):\n+            swstatus = get_bip9_status(self.nodes[0], 'segwit')[\"status\"]\n             if self.day == 0:\n-                swstatus = get_bip9_status(self.nodes[0], 'segwit')[\"status\"]\n                 if swstatus != \"started\":\n-                    raise AssertionError(\"segwit soft-fork in state %s rather than started\" % (swstatus))\n+                    raise AssertionError(\"segwit soft-fork in state %s rather than started at day 0\" % (swstatus))\n+                self.log.info(\"Splitting sync groups\")\n+                self.sync_groups = [set((0,1,2,4,5,6)), set((3,7))]\n \n             self.mining()\n             tips = set(n.getbestblockhash() for n in self.nodes)\n@@ -140,7 +144,7 @@ def run_test(self):\n                 else:\n                     out.append(a)\n \n-            self.log.info(\"Day %d: status: %s\" % (self.day, out))\n+            self.log.info(\"Day %d:%s: status: %s:\" % (self.day, swstatus, out))\n \n             if self.day == 7:\n                 self.bip148_restart(5)"
+      }
+    ]
+  },
+  {
+    "sha": "6bf37b37625cd14e7d6cc8915b3a92a8f559d828",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2YmYzN2IzNzYyNWNkMTRlN2Q2Y2M4OTE1YjNhOTJhOGY1NTlkODI4",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-06-13T07:18:22Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-06-18T03:17:54Z"
+      },
+      "message": "Test: Fix bip148-segwit-uasf.py",
+      "tree": {
+        "sha": "dc4bafd7b20b0a318b9f6fc7b3fe7ab973042d49",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/dc4bafd7b20b0a318b9f6fc7b3fe7ab973042d49"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/6bf37b37625cd14e7d6cc8915b3a92a8f559d828",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6bf37b37625cd14e7d6cc8915b3a92a8f559d828",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/6bf37b37625cd14e7d6cc8915b3a92a8f559d828",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6bf37b37625cd14e7d6cc8915b3a92a8f559d828/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "b894fb368a9713d88790f3f5903ddfa4fa614712",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b894fb368a9713d88790f3f5903ddfa4fa614712",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b894fb368a9713d88790f3f5903ddfa4fa614712"
+      }
+    ],
+    "stats": {
+      "total": 131,
+      "additions": 110,
+      "deletions": 21
+    },
+    "files": [
+      {
+        "sha": "4d7764e8604c6549795672128f2ea70e2162e495",
+        "filename": "test/functional/bip148-segwit-uasf.py",
+        "status": "modified",
+        "additions": 109,
+        "deletions": 21,
+        "changes": 130,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6bf37b37625cd14e7d6cc8915b3a92a8f559d828/test/functional/bip148-segwit-uasf.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6bf37b37625cd14e7d6cc8915b3a92a8f559d828/test/functional/bip148-segwit-uasf.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/bip148-segwit-uasf.py?ref=6bf37b37625cd14e7d6cc8915b3a92a8f559d828",
+        "patch": "@@ -4,9 +4,12 @@\n # file COPYING or http://www.opensource.org/licenses/mit-license.php.\n \"\"\"Test the Mandatory Activation of Segregated Witness (BIP148) soft-fork logic.\"\"\"\n \n+from test_framework.mininode import wait_until\n from test_framework.test_framework import BitcoinTestFramework\n from test_framework.util import *\n \n+import re\n+\n ## Scenario:\n #\n # Four miners, whose hashrate and strategies are:\n@@ -46,9 +49,12 @@ def __init__(self):\n              [],           # non-mining user, restarts with -bip148 on Aug 5th\n              [],           # well connected, non BIP148 peer\n              [\"-bip148\"]]  # well connected, BIP148 peer\n+        for ea in self.extra_args:\n+            ea.append('-whitelist=::/0')\n \n-        self.day = -30 # 30 days before BIP168 activation\n+        self.day = -30 # 30 days before BIP148 activation\n         self.blockrate = [0,1,3,4,3,0,0]\n+        self.ancestor_cache = {}\n \n     def connect_all(self):\n         connect_nodes(self.nodes[6],7)\n@@ -62,53 +68,137 @@ def setup_network(self):\n         self.connect_all()\n         self.sync_all()\n \n+    def is_block_ancestor(self, rpc, tip, ancestor, ancestor_height):\n+        cache_key = tip + ancestor\n+        if cache_key in self.ancestor_cache:\n+            return self.ancestor_cache[cache_key]\n+        blockinfo = rpc.getblock(tip)\n+        while blockinfo['height'] > ancestor_height:\n+            blockinfo = rpc.getblock(blockinfo['previousblockhash'])\n+            parent_cache_key = blockinfo['hash'] + ancestor\n+            if parent_cache_key in self.ancestor_cache:\n+                rv = self.ancestor_cache[parent_cache_key]\n+                self.ancestor_cache[cache_key] = rv\n+                return rv\n+        rv = (blockinfo['hash'] == ancestor)\n+        self.ancestor_cache[cache_key] = rv\n+        return rv\n+\n+    def sync_chaintips(self, nodes=None, timeout=60, extra_check=None):\n+        if nodes is None:\n+            nodes = list(range(len(self.nodes)))\n+        statuses_where_node_has_the_block = ('valid-fork', 'active')\n+        def chaintip_check():\n+            if extra_check is not None:\n+                if not extra_check():\n+                    return False\n+            all_known_tips = {}\n+            chaintips_replies = [(r, self.nodes[r].getchaintips()) for r in nodes]\n+            for (r, tips) in chaintips_replies:\n+                for tip in tips:\n+                    if tip['hash'] in all_known_tips and tip['status'] not in statuses_where_node_has_the_block:\n+                        continue\n+                    all_known_tips[tip['hash']] = (r, tip)\n+\n+            # Make sure we know a node we can fetch the block from\n+            for tip in all_known_tips.keys():\n+                if all_known_tips[tip][1]['status'] not in statuses_where_node_has_the_block:\n+                    for r in nodes:\n+                        try:\n+                            all_known_tips[tip] = (r, self.nodes[r].getblock(tip))\n+                            break\n+                        except:\n+                            pass\n+\n+            self.log.debug('There are %d tips: %s' % (len(all_known_tips), tuple(sorted(all_known_tips.keys()))))\n+            for (r, tips) in chaintips_replies:\n+                invalid_blocks = []\n+                my_known_tips = set()\n+                active = None\n+                # Ideally, best should use chainwork, but that's not in getchaintips...\n+                best = {'height':0}\n+                for tip in tips:\n+                    my_known_tips.add(tip['hash'])\n+                    if tip['status'] == 'invalid':\n+                        invalid_blocks.append(tip)\n+                    else:\n+                        if tip['height'] > best['height']:\n+                            best = tip\n+                    if tip['status'] == 'active':\n+                        active = tip\n+                        if tip['height'] == best['height']:\n+                            best = tip\n+                if best != active:\n+                    self.log.debug(\"Best potentially-valid block is not active on node %s\" % (r,))\n+                    return False\n+                missing_tips = all_known_tips.keys() - my_known_tips\n+                for tip in set(missing_tips):\n+                    for inv_tip in invalid_blocks:\n+                        if self.is_block_ancestor(self.nodes[all_known_tips[tip][0]], tip, inv_tip['hash'], inv_tip['height']):\n+                            # One of our invalid tips is a parent of the missing tip\n+                            missing_tips.remove(tip)\n+                            break\n+                    for known_tip in my_known_tips:\n+                        # NOTE: Can't assume this node has the block, in case it's invalid\n+                        if self.is_block_ancestor(self.nodes[all_known_tips[known_tip][0]], known_tip, tip, all_known_tips[tip][1]['height']):\n+                            # We have a valid tip that descends from the missing tip\n+                            missing_tips.remove(tip)\n+                            break\n+                    if tip in missing_tips:\n+                        self.log.debug('Node %s missing tip %s' % (r, tip))\n+                        return False\n+            self.log.debug('All nodes have all syncable tips')\n+            return True\n+        assert wait_until(chaintip_check, timeout=timeout)\n+\n+    def get_peerset(self, rpc):\n+        def extract_nodenum(subver):\n+            m = re.search(r'\\((.*?)[;)]', subver)\n+            return m.group(1)\n+        return {pi['id']: extract_nodenum(pi['subver']) for pi in rpc.getpeerinfo()}\n+\n     def mining(self):\n         time = self.AUG_1 + (self.day*24*60*60)\n         to_mine = self.blockrate[:]\n-        groups = [ [self.nodes[i] for i in g] for g in self.sync_groups ]\n \n         while sum(to_mine) > 0:\n             for peer,blks in enumerate(to_mine):\n                 if blks == 0: continue\n                 set_node_times(self.nodes, time)\n+\n+                peerset_before = tuple(self.get_peerset(r) for r in self.nodes)\n+                def check_peerset():\n+                    peerset_after = tuple(self.get_peerset(r) for r in self.nodes)\n+                    if peerset_before != peerset_after:\n+                        raise AssertionError(\"Network break!\\nBefore=%s\\nAfter =%s\" % (peerset_before, peerset_after))\n+                    return True\n+\n                 to_mine[peer] -= 1\n                 self.nodes[peer].generate(1)\n-                for g in groups:\n-                    if peer in g:\n-                        self.sync_all( [g] )\n+\n+                self.sync_chaintips(extra_check=check_peerset)\n                 time += 10*60\n \n         self.day += 1\n \n     def bip148_restart(self, peer):\n         self.log.info(\"Restarting node %d with -bip148\" % (peer,))\n-        stop_node(self.nodes[peer], peer)\n+        self.stop_node(peer)\n         time = self.AUG_1 + (self.day*24*60*60)\n-        self.nodes[peer] = start_node(peer, self.options.tmpdir, self.extra_args[4] + [\"-bip148\", \"-mocktime=%d\" % (time)])\n+        self.nodes[peer] = self.start_node(peer, self.options.tmpdir, self.extra_args[4] + [\"-bip148\", \"-mocktime=%d\" % (time)])\n \n         n = self.nodes[peer]\n         blk = n.getblock(n.getbestblockhash())\n-        worstblock = None\n         while blk[\"mediantime\"] >= self.AUG_1:\n             if blk[\"version\"] | 0x20000002 != blk[\"version\"]:\n-                worstblock = blk\n+                raise AssertionError(\"Invalid BIP148 block in node running with -bip148\")\n             blk = n.getblock(blk[\"previousblockhash\"])\n-        if worstblock is not None:\n-            self.log.info(\"Invalidating block %d:%x:%s\" % (worstblock[\"height\"], worstblock[\"version\"], worstblock[\"hash\"]))\n-            n.invalidateblock(worstblock[\"hash\"])\n \n         self.log.info(\"Reconnecting nodes\")\n         self.connect_all()\n-        self.log.info(\"Removing %d from non-BIP148 sync group\" % (peer,))\n-        self.sync_groups[0].remove(peer)\n-        self.log.info(\"Adding %d to BIP148 sync group\" % (peer,))\n-        self.sync_groups[1].add(peer)\n \n     def run_test(self):\n         cnt = self.nodes[0].getblockcount()\n-        self.sync_groups = [set(range(self.num_nodes))]\n-        # (if nodes aren't synced initially, the non-segwit blocks may get accidentally orphaned\n-        #  activating/locking in segwit...)\n \n         # Lock in CSV\n         self.nodes[0].generate(500)\n@@ -126,8 +216,6 @@ def run_test(self):\n             if self.day == 0:\n                 if swstatus != \"started\":\n                     raise AssertionError(\"segwit soft-fork in state %s rather than started at day 0\" % (swstatus))\n-                self.log.info(\"Splitting sync groups\")\n-                self.sync_groups = [set((0,1,2,4,5,6)), set((3,7))]\n \n             self.mining()\n             tips = set(n.getbestblockhash() for n in self.nodes)"
+      },
+      {
+        "sha": "a586d9e316db679f96de0064aa90444c7f2ea75e",
+        "filename": "test/functional/test_runner.py",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6bf37b37625cd14e7d6cc8915b3a92a8f559d828/test/functional/test_runner.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6bf37b37625cd14e7d6cc8915b3a92a8f559d828/test/functional/test_runner.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/test_runner.py?ref=6bf37b37625cd14e7d6cc8915b3a92a8f559d828",
+        "patch": "@@ -56,6 +56,7 @@\n     'wallet-hd.py',\n     'walletbackup.py',\n     # vv Tests less than 5m vv\n+    'bip148-segwit-uasf.py',\n     'p2p-fullblocktest.py',\n     'fundrawtransaction.py',\n     'p2p-compactblocks.py',"
+      }
+    ]
+  },
+  {
+    "sha": "649314e643bf60066e8d87e62183328888cfc85a",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2NDkzMTRlNjQzYmY2MDA2NmU4ZDg3ZTYyMTgzMzI4ODg4Y2ZjODVh",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-05-31T22:17:20Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-06-18T03:17:54Z"
+      },
+      "message": "Move BIP148 logic into dedicated CheckBIP148 function",
+      "tree": {
+        "sha": "8292e68752e7c15ff3d68c63d46e2285e42ab8d7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/8292e68752e7c15ff3d68c63d46e2285e42ab8d7"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/649314e643bf60066e8d87e62183328888cfc85a",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/649314e643bf60066e8d87e62183328888cfc85a",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/649314e643bf60066e8d87e62183328888cfc85a",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/649314e643bf60066e8d87e62183328888cfc85a/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "6bf37b37625cd14e7d6cc8915b3a92a8f559d828",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6bf37b37625cd14e7d6cc8915b3a92a8f559d828",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/6bf37b37625cd14e7d6cc8915b3a92a8f559d828"
+      }
+    ],
+    "stats": {
+      "total": 33,
+      "additions": 22,
+      "deletions": 11
+    },
+    "files": [
+      {
+        "sha": "f225c9338800610b820c1961b455add3c1957c54",
+        "filename": "src/validation.cpp",
+        "status": "modified",
+        "additions": 19,
+        "deletions": 11,
+        "changes": 30,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/649314e643bf60066e8d87e62183328888cfc85a/src/validation.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/649314e643bf60066e8d87e62183328888cfc85a/src/validation.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.cpp?ref=649314e643bf60066e8d87e62183328888cfc85a",
+        "patch": "@@ -1609,17 +1609,8 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd\n \n     if (gArgs.GetBoolArg(\"-bip148\", DEFAULT_BIP148)) {\n         // BIP148 mandatory segwit signalling.\n-        int64_t nMedianTimePast = pindex->GetMedianTimePast();\n-        if ( (nMedianTimePast >= 1501545600) &&  // Tue 01 Aug 2017 00:00:00 UTC\n-             (nMedianTimePast <= 1510704000) &&  // Wed 15 Nov 2017 00:00:00 UTC\n-             (!IsWitnessLockedIn(pindex->pprev, chainparams.GetConsensus()) &&  // Segwit is not locked in\n-              !IsWitnessEnabled(pindex->pprev, chainparams.GetConsensus())) )   // and is not active.\n-        {\n-            bool fVersionBits = (pindex->nVersion & VERSIONBITS_TOP_MASK) == VERSIONBITS_TOP_BITS;\n-            bool fSegbit = (pindex->nVersion & VersionBitsMask(chainparams.GetConsensus(), Consensus::DEPLOYMENT_SEGWIT)) != 0;\n-            if (!(fVersionBits && fSegbit)) {\n-                return state.DoS(0, error(\"ConnectBlock(): relayed block must signal for segwit, please upgrade\"), REJECT_INVALID, \"bad-no-segwit\");\n-            }\n+        if (!CheckBIP148(pindex, chainparams.GetConsensus())) {\n+            return state.DoS(0, error(\"ConnectBlock(): relayed block must signal for segwit, please upgrade\"), REJECT_INVALID, \"bad-no-segwit\");\n         }\n     }\n \n@@ -2752,6 +2743,23 @@ bool IsWitnessLockedIn(const CBlockIndex* pindexPrev, const Consensus::Params& p\n     return (VersionBitsState(pindexPrev, params, Consensus::DEPLOYMENT_SEGWIT, versionbitscache) == THRESHOLD_LOCKED_IN);\n }\n \n+bool CheckBIP148(const CBlockIndex* pindex, const Consensus::Params& params)\n+{\n+    int64_t nMedianTimePast = pindex->GetMedianTimePast();\n+    if ( (nMedianTimePast >= 1501545600) &&  // Tue 01 Aug 2017 00:00:00 UTC\n+         (nMedianTimePast <= 1510704000) &&  // Wed 15 Nov 2017 00:00:00 UTC\n+         (!IsWitnessLockedIn(pindex->pprev, params) &&  // Segwit is not locked in\n+          !IsWitnessEnabled(pindex->pprev, params)) )   // and is not active.\n+    {\n+        bool fVersionBits = (pindex->nVersion & VERSIONBITS_TOP_MASK) == VERSIONBITS_TOP_BITS;\n+        bool fSegbit = (pindex->nVersion & VersionBitsMask(params, Consensus::DEPLOYMENT_SEGWIT)) != 0;\n+        if (!(fVersionBits && fSegbit)) {\n+            return false;\n+        }\n+    }\n+    return true;\n+}\n+\n // Compute at which vout of the block's coinbase transaction the witness\n // commitment occurs, or -1 if not found.\n static int GetWitnessCommitmentIndex(const CBlock& block)"
+      },
+      {
+        "sha": "4a01472e0105ce956032fc7124b277e63da79fc5",
+        "filename": "src/validation.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/649314e643bf60066e8d87e62183328888cfc85a/src/validation.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/649314e643bf60066e8d87e62183328888cfc85a/src/validation.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.h?ref=649314e643bf60066e8d87e62183328888cfc85a",
+        "patch": "@@ -409,6 +409,9 @@ bool IsWitnessEnabled(const CBlockIndex* pindexPrev, const Consensus::Params& pa\n /** Check if Segregated Witness is Locked In */\n bool IsWitnessLockedIn(const CBlockIndex* pindexPrev, const Consensus::Params& params);\n \n+/** Check if block complies with BIP148 rule; note this accepts pindex for the block, not pindexPrev! */\n+bool CheckBIP148(const CBlockIndex* pindex, const Consensus::Params&);\n+\n /** When there are blocks in the active chain with missing data, rewind the chainstate and remove them from the block index */\n bool RewindBlockIndex(const CChainParams& params);\n "
+      }
+    ]
+  },
+  {
+    "sha": "a2762bf3bcd3d9191e09de55256c4c381c99307b",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphMjc2MmJmM2JjZDNkOTE5MWUwOWRlNTUyNTZjNGMzODFjOTkzMDdi",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-05-31T22:20:33Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-06-18T03:17:54Z"
+      },
+      "message": "Check BIP148 on historical blocks and rewind if necessary",
+      "tree": {
+        "sha": "ed2539485c3cc559a8c4687525d9ee7367f07f3a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/ed2539485c3cc559a8c4687525d9ee7367f07f3a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a2762bf3bcd3d9191e09de55256c4c381c99307b",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a2762bf3bcd3d9191e09de55256c4c381c99307b",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a2762bf3bcd3d9191e09de55256c4c381c99307b",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a2762bf3bcd3d9191e09de55256c4c381c99307b/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "649314e643bf60066e8d87e62183328888cfc85a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/649314e643bf60066e8d87e62183328888cfc85a",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/649314e643bf60066e8d87e62183328888cfc85a"
+      }
+    ],
+    "stats": {
+      "total": 4,
+      "additions": 4,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "8db77605a661af28026ce5294282cdeca9d4ca28",
+        "filename": "src/validation.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 0,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a2762bf3bcd3d9191e09de55256c4c381c99307b/src/validation.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a2762bf3bcd3d9191e09de55256c4c381c99307b/src/validation.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.cpp?ref=a2762bf3bcd3d9191e09de55256c4c381c99307b",
+        "patch": "@@ -3570,10 +3570,14 @@ bool RewindBlockIndex(const CChainParams& params)\n     LOCK(cs_main);\n \n     int nHeight = 1;\n+    bool fCheckBIP148 = gArgs.GetBoolArg(\"-bip148\", DEFAULT_BIP148);\n     while (nHeight <= chainActive.Height()) {\n         if (IsWitnessEnabled(chainActive[nHeight - 1], params.GetConsensus()) && !(chainActive[nHeight]->nStatus & BLOCK_OPT_WITNESS)) {\n             break;\n         }\n+        if (fCheckBIP148 && !CheckBIP148(chainActive[nHeight], params.GetConsensus())) {\n+            break;\n+        }\n         nHeight++;\n     }\n "
+      }
+    ]
+  },
+  {
+    "sha": "0ee869709b0b3e46f4411f7aa9958139511df17c",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowZWU4Njk3MDliMGIzZTQ2ZjQ0MTFmN2FhOTk1ODEzOTUxMWRmMTdj",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-05-31T22:37:13Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-06-18T03:17:55Z"
+      },
+      "message": "Preferentially peer with nodes enforcing BIP148 to avoid partitioning risk",
+      "tree": {
+        "sha": "4764aa4a437863bfb0ee53172b0986389ddb7be8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/4764aa4a437863bfb0ee53172b0986389ddb7be8"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/0ee869709b0b3e46f4411f7aa9958139511df17c",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0ee869709b0b3e46f4411f7aa9958139511df17c",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/0ee869709b0b3e46f4411f7aa9958139511df17c",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0ee869709b0b3e46f4411f7aa9958139511df17c/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "a2762bf3bcd3d9191e09de55256c4c381c99307b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a2762bf3bcd3d9191e09de55256c4c381c99307b",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/a2762bf3bcd3d9191e09de55256c4c381c99307b"
+      }
+    ],
+    "stats": {
+      "total": 6,
+      "additions": 6,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "d215501b48fbb6bd7b7e8ccadb966eb54e41a434",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 0,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0ee869709b0b3e46f4411f7aa9958139511df17c/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0ee869709b0b3e46f4411f7aa9958139511df17c/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=0ee869709b0b3e46f4411f7aa9958139511df17c",
+        "patch": "@@ -1613,6 +1613,12 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)\n         nRelevantServices = ServiceFlags(nRelevantServices | NODE_WITNESS);\n     }\n \n+    if (gArgs.GetBoolArg(\"-bip148\", DEFAULT_BIP148)) {\n+        // We want to preferentially peer with other nodes that enforce BIP148, in case of a chain split\n+        nLocalServices = ServiceFlags(nLocalServices | NODE_BIP148);\n+        nRelevantServices = ServiceFlags(nRelevantServices | NODE_BIP148);\n+    }\n+\n     // ********************************************************* Step 10: import blocks\n \n     if (!CheckDiskSpace())"
+      }
+    ]
+  },
+  {
+    "sha": "64706f2eea1048f061da42f00832e3254ce09950",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2NDcwNmYyZWVhMTA0OGYwNjFkYTQyZjAwODMyZTMyNTRjZTA5OTUw",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-06-15T20:30:50Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-06-18T03:17:55Z"
+      },
+      "message": "doc/bips: Add BIP148",
+      "tree": {
+        "sha": "c583f0ae227402bcc66b9cac86f01dd7450527ed",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/c583f0ae227402bcc66b9cac86f01dd7450527ed"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/64706f2eea1048f061da42f00832e3254ce09950",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/64706f2eea1048f061da42f00832e3254ce09950",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/64706f2eea1048f061da42f00832e3254ce09950",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/64706f2eea1048f061da42f00832e3254ce09950/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "0ee869709b0b3e46f4411f7aa9958139511df17c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0ee869709b0b3e46f4411f7aa9958139511df17c",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/0ee869709b0b3e46f4411f7aa9958139511df17c"
+      }
+    ],
+    "stats": {
+      "total": 1,
+      "additions": 1,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "27a3fb3d514fb059c537584b38c1b71cccf2d71e",
+        "filename": "doc/bips.md",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/64706f2eea1048f061da42f00832e3254ce09950/doc/bips.md",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/64706f2eea1048f061da42f00832e3254ce09950/doc/bips.md",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/doc/bips.md?ref=64706f2eea1048f061da42f00832e3254ce09950",
+        "patch": "@@ -32,4 +32,5 @@ BIPs that are implemented by Bitcoin Core (up-to-date up to **v0.13.0**):\n * [`BIP 144`](https://github.com/bitcoin/bips/blob/master/bip-0144.mediawiki): Segregated Witness as of **0.13.0** ([PR 8149](https://github.com/bitcoin/bitcoin/pull/8149)).\n * [`BIP 145`](https://github.com/bitcoin/bips/blob/master/bip-0145.mediawiki): getblocktemplate updates for Segregated Witness as of **v0.13.0** ([PR 8149](https://github.com/bitcoin/bitcoin/pull/8149)).\n * [`BIP 147`](https://github.com/bitcoin/bips/blob/master/bip-0147.mediawiki): NULLDUMMY softfork as of **v0.13.1** ([PR 8636](https://github.com/bitcoin/bitcoin/pull/8636) and [PR 8937](https://github.com/bitcoin/bitcoin/pull/8937)).\n+* [`BIP 148`](https://github.com/bitcoin/bips/blob/master/bip-0148.mediawiki): Mandatory activation of Segwit softfork as of **v0.14.3** only with `-bip148=1` ([PR 10532](https://github.com/bitcoin/bitcoin/pull/10532)).\n * [`BIP 152`](https://github.com/bitcoin/bips/blob/master/bip-0152.mediawiki): Compact block transfer and related optimizations are used as of **v0.13.0** ([PR 8068](https://github.com/bitcoin/bitcoin/pull/8068))."
+      }
+    ]
+  },
+  {
+    "sha": "57ce0351d86ae846bbbf3b2c528be8ed806ae4e9",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1N2NlMDM1MWQ4NmFlODQ2YmJiZjNiMmM1MjhiZThlZDgwNmFlNGU5",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-06-18T04:16:59Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-06-18T04:16:59Z"
+      },
+      "message": "Test/bip148-segwit-uasf.py: Check UA comments",
+      "tree": {
+        "sha": "8b5bc9702b7bdcd8c7de9464ce1d58e3aff1f0cf",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/8b5bc9702b7bdcd8c7de9464ce1d58e3aff1f0cf"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/57ce0351d86ae846bbbf3b2c528be8ed806ae4e9",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/57ce0351d86ae846bbbf3b2c528be8ed806ae4e9",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/57ce0351d86ae846bbbf3b2c528be8ed806ae4e9",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/57ce0351d86ae846bbbf3b2c528be8ed806ae4e9/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "64706f2eea1048f061da42f00832e3254ce09950",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/64706f2eea1048f061da42f00832e3254ce09950",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/64706f2eea1048f061da42f00832e3254ce09950"
+      }
+    ],
+    "stats": {
+      "total": 10,
+      "additions": 9,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "94be80c8eb1211af61dc2435e4276b10689e4968",
+        "filename": "test/functional/bip148-segwit-uasf.py",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 1,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/57ce0351d86ae846bbbf3b2c528be8ed806ae4e9/test/functional/bip148-segwit-uasf.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/57ce0351d86ae846bbbf3b2c528be8ed806ae4e9/test/functional/bip148-segwit-uasf.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/bip148-segwit-uasf.py?ref=57ce0351d86ae846bbbf3b2c528be8ed806ae4e9",
+        "patch": "@@ -42,7 +42,7 @@ def __init__(self):\n         self.setup_clean_chain = False\n         self.extra_args = [\n              [bip9_blockver(0)],   # for initial CSV activation only\n-             [bip9_blockver(1)],\n+             [bip9_blockver(1), \"-bip148=0\"],\n              [bip9_blockver()],\n              [bip9_blockver(1), \"-bip148\"],\n              [bip9_blockver(1)],\n@@ -197,7 +197,15 @@ def bip148_restart(self, peer):\n         self.log.info(\"Reconnecting nodes\")\n         self.connect_all()\n \n+    def get_bip148_uacomment(self, subver):\n+        m = re.search(r'([+!]BIP148\\=?)', subver)\n+        return m.group(1)\n+\n     def run_test(self):\n+        assert self.get_bip148_uacomment(self.nodes[0].getnetworkinfo()['subversion']) == '!BIP148='\n+        assert self.get_bip148_uacomment(self.nodes[1].getnetworkinfo()['subversion']) == '!BIP148'\n+        assert self.get_bip148_uacomment(self.nodes[3].getnetworkinfo()['subversion']) == '+BIP148'\n+\n         cnt = self.nodes[0].getblockcount()\n \n         # Lock in CSV"
+      }
+    ]
+  },
+  {
+    "sha": "b59c910ff592e40681f75b431c39824edef5e1af",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiNTljOTEwZmY1OTJlNDA2ODFmNzViNDMxYzM5ODI0ZWRlZjVlMWFm",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-06-22T18:39:48Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2017-06-22T18:39:48Z"
+      },
+      "message": "When we find an invalid block violating BIP148 that has already been pruned, error immediately, rather than silently fail to rewind",
+      "tree": {
+        "sha": "c1e0dce74dd147a660486ac855f519bd60a2a078",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/c1e0dce74dd147a660486ac855f519bd60a2a078"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/b59c910ff592e40681f75b431c39824edef5e1af",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b59c910ff592e40681f75b431c39824edef5e1af",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/b59c910ff592e40681f75b431c39824edef5e1af",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b59c910ff592e40681f75b431c39824edef5e1af/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "57ce0351d86ae846bbbf3b2c528be8ed806ae4e9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/57ce0351d86ae846bbbf3b2c528be8ed806ae4e9",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/57ce0351d86ae846bbbf3b2c528be8ed806ae4e9"
+      }
+    ],
+    "stats": {
+      "total": 3,
+      "additions": 3,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "546dae42e9b934880a1d0387cfb178ea2c6d1fa1",
+        "filename": "src/validation.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b59c910ff592e40681f75b431c39824edef5e1af/src/validation.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b59c910ff592e40681f75b431c39824edef5e1af/src/validation.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.cpp?ref=b59c910ff592e40681f75b431c39824edef5e1af",
+        "patch": "@@ -3576,6 +3576,9 @@ bool RewindBlockIndex(const CChainParams& params)\n             break;\n         }\n         if (fCheckBIP148 && !CheckBIP148(chainActive[nHeight], params.GetConsensus())) {\n+            if (!(chainActive[nHeight]->nStatus & BLOCK_HAVE_DATA)) {\n+                return error(\"RewindBlockIndex: invalid block found violating BIP148 at height %i has already been pruned\", nHeight);\n+            }\n             break;\n         }\n         nHeight++;"
+      }
+    ]
+  }
+]

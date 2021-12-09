@@ -1,0 +1,110 @@
+[
+  {
+    "sha": "81bbef26099eb54f4dcc32e45b5e0416857a330d",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4MWJiZWYyNjA5OWViNTRmNGRjYzMyZTQ1YjVlMDQxNjg1N2EzMzBk",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-09-23T10:55:05Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-10-04T07:35:24Z"
+      },
+      "message": "add LOCK() for proxy related data-structures\n\n- fix #1560 by properly locking proxy related data-structures\n- update GetProxy() and introduce GetNameProxy() to be able to use a\n  thread-safe local copy from proxyInfo and nameproxyInfo\n- update usage of GetProxy() all over the source to match the new\n  behaviour, as it now fills a full proxyType object\n- rename GetNameProxy() into HaveNameProxy() to be more clear",
+      "tree": {
+        "sha": "ebccf84ff2f56d1f6e02fbb410cc39b65c3fed6b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/ebccf84ff2f56d1f6e02fbb410cc39b65c3fed6b"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/81bbef26099eb54f4dcc32e45b5e0416857a330d",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/81bbef26099eb54f4dcc32e45b5e0416857a330d",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/81bbef26099eb54f4dcc32e45b5e0416857a330d",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/81bbef26099eb54f4dcc32e45b5e0416857a330d/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "0547b02af78dcf2d84e4905b56c7f95d9582b2f9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0547b02af78dcf2d84e4905b56c7f95d9582b2f9",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/0547b02af78dcf2d84e4905b56c7f95d9582b2f9"
+      }
+    ],
+    "stats": {
+      "total": 126,
+      "additions": 77,
+      "deletions": 49
+    },
+    "files": [
+      {
+        "sha": "5b5510a5b21f5a4802412246a7d4f3a74f6b69d2",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/81bbef26099eb54f4dcc32e45b5e0416857a330d/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/81bbef26099eb54f4dcc32e45b5e0416857a330d/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=81bbef26099eb54f4dcc32e45b5e0416857a330d",
+        "patch": "@@ -1185,7 +1185,7 @@ void ThreadDNSAddressSeed2(void* parg)\n         printf(\"Loading addresses from DNS seeds (could take a while)\\n\");\n \n         for (unsigned int seed_idx = 0; seed_idx < ARRAYLEN(strDNSSeed); seed_idx++) {\n-            if (GetNameProxy()) {\n+            if (HaveNameProxy()) {\n                 AddOneShot(strDNSSeed[seed_idx][1]);\n             } else {\n                 vector<CNetAddr> vaddr;\n@@ -1529,7 +1529,7 @@ void ThreadOpenAddedConnections2(void* parg)\n     if (mapArgs.count(\"-addnode\") == 0)\n         return;\n \n-    if (GetNameProxy()) {\n+    if (HaveNameProxy()) {\n         while(!fShutdown) {\n             BOOST_FOREACH(string& strAddNode, mapMultiArgs[\"-addnode\"]) {\n                 CAddress addr;"
+      },
+      {
+        "sha": "95d64939ba707fb943cb12a55b1c70e33b2b03b3",
+        "filename": "src/netbase.cpp",
+        "status": "modified",
+        "additions": 29,
+        "deletions": 12,
+        "changes": 41,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/81bbef26099eb54f4dcc32e45b5e0416857a330d/src/netbase.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/81bbef26099eb54f4dcc32e45b5e0416857a330d/src/netbase.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/netbase.cpp?ref=81bbef26099eb54f4dcc32e45b5e0416857a330d",
+        "patch": "@@ -5,6 +5,7 @@\n \n #include \"netbase.h\"\n #include \"util.h\"\n+#include \"sync.h\"\n \n #ifndef WIN32\n #include <sys/fcntl.h>\n@@ -16,9 +17,9 @@\n using namespace std;\n \n // Settings\n-typedef std::pair<CService, int> proxyType;\n static proxyType proxyInfo[NET_MAX];\n static proxyType nameproxyInfo;\n+static CCriticalSection cs_proxyInfos;\n int nConnectTimeout = 5000;\n bool fNameLookup = false;\n \n@@ -432,15 +433,17 @@ bool SetProxy(enum Network net, CService addrProxy, int nSocksVersion) {\n         return false;\n     if (nSocksVersion != 0 && !addrProxy.IsValid())\n         return false;\n+    LOCK(cs_proxyInfos);\n     proxyInfo[net] = std::make_pair(addrProxy, nSocksVersion);\n     return true;\n }\n \n-bool GetProxy(enum Network net, CService &addrProxy) {\n+bool GetProxy(enum Network net, proxyType &proxyInfoOut) {\n     assert(net >= 0 && net < NET_MAX);\n+    LOCK(cs_proxyInfos);\n     if (!proxyInfo[net].second)\n         return false;\n-    addrProxy = proxyInfo[net].first;\n+    proxyInfoOut = proxyInfo[net];\n     return true;\n }\n \n@@ -449,16 +452,27 @@ bool SetNameProxy(CService addrProxy, int nSocksVersion) {\n         return false;\n     if (nSocksVersion != 0 && !addrProxy.IsValid())\n         return false;\n+    LOCK(cs_proxyInfos);\n     nameproxyInfo = std::make_pair(addrProxy, nSocksVersion);\n     return true;\n }\n \n-bool GetNameProxy() {\n+bool GetNameProxy(proxyType &nameproxyInfoOut) {\n+    LOCK(cs_proxyInfos);\n+    if (!nameproxyInfo.second)\n+        return false;\n+    nameproxyInfoOut = nameproxyInfo;\n+    return true;\n+}\n+\n+bool HaveNameProxy() {\n+    LOCK(cs_proxyInfos);\n     return nameproxyInfo.second != 0;\n }\n \n bool IsProxy(const CNetAddr &addr) {\n-    for (int i=0; i<NET_MAX; i++) {\n+    LOCK(cs_proxyInfos);\n+    for (int i = 0; i < NET_MAX; i++) {\n         if (proxyInfo[i].second && (addr == (CNetAddr)proxyInfo[i].first))\n             return true;\n     }\n@@ -467,10 +481,10 @@ bool IsProxy(const CNetAddr &addr) {\n \n bool ConnectSocket(const CService &addrDest, SOCKET& hSocketRet, int nTimeout)\n {\n-    const proxyType &proxy = proxyInfo[addrDest.GetNetwork()];\n+    proxyType proxy;\n \n     // no proxy needed\n-    if (!proxy.second)\n+    if (!GetProxy(addrDest.GetNetwork(), proxy))\n         return ConnectSocketDirectly(addrDest, hSocketRet, nTimeout);\n \n     SOCKET hSocket = INVALID_SOCKET;\n@@ -504,19 +518,22 @@ bool ConnectSocketByName(CService &addr, SOCKET& hSocketRet, const char *pszDest\n     SplitHostPort(string(pszDest), port, strDest);\n \n     SOCKET hSocket = INVALID_SOCKET;\n-    CService addrResolved(CNetAddr(strDest, fNameLookup && !nameproxyInfo.second), port);\n+\n+    proxyType nameproxy;\n+    GetNameProxy(nameproxy);\n+\n+    CService addrResolved(CNetAddr(strDest, fNameLookup && !nameproxy.second), port);\n     if (addrResolved.IsValid()) {\n         addr = addrResolved;\n         return ConnectSocket(addr, hSocketRet, nTimeout);\n     }\n     addr = CService(\"0.0.0.0:0\");\n-    if (!nameproxyInfo.second)\n+    if (!nameproxy.second)\n         return false;\n-    if (!ConnectSocketDirectly(nameproxyInfo.first, hSocket, nTimeout))\n+    if (!ConnectSocketDirectly(nameproxy.first, hSocket, nTimeout))\n         return false;\n \n-    switch(nameproxyInfo.second)\n-    {\n+    switch(nameproxy.second) {\n         default:\n         case 4: return false;\n         case 5:"
+      },
+      {
+        "sha": "0a29d4ff0c9a37e8ccd9e7bc2559301b30e291a9",
+        "filename": "src/netbase.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 2,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/81bbef26099eb54f4dcc32e45b5e0416857a330d/src/netbase.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/81bbef26099eb54f4dcc32e45b5e0416857a330d/src/netbase.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/netbase.h?ref=81bbef26099eb54f4dcc32e45b5e0416857a330d",
+        "patch": "@@ -133,13 +133,15 @@ class CService : public CNetAddr\n             )\n };\n \n+typedef std::pair<CService, int> proxyType;\n+\n enum Network ParseNetwork(std::string net);\n void SplitHostPort(std::string in, int &portOut, std::string &hostOut);\n bool SetProxy(enum Network net, CService addrProxy, int nSocksVersion = 5);\n-bool GetProxy(enum Network net, CService &addrProxy);\n+bool GetProxy(enum Network net, proxyType &proxyInfoOut);\n bool IsProxy(const CNetAddr &addr);\n bool SetNameProxy(CService addrProxy, int nSocksVersion = 5);\n-bool GetNameProxy();\n+bool HaveNameProxy();\n bool LookupHost(const char *pszName, std::vector<CNetAddr>& vIP, unsigned int nMaxSolutions = 0, bool fAllowLookup = true);\n bool LookupHostNumeric(const char *pszName, std::vector<CNetAddr>& vIP, unsigned int nMaxSolutions = 0);\n bool Lookup(const char *pszName, CService& addr, int portDefault = 0, bool fAllowLookup = true);"
+      },
+      {
+        "sha": "756fe61ecd0fe598a8052b19bdfe2ccfd721d1a8",
+        "filename": "src/qt/optionsmodel.cpp",
+        "status": "modified",
+        "additions": 39,
+        "deletions": 30,
+        "changes": 69,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/81bbef26099eb54f4dcc32e45b5e0416857a330d/src/qt/optionsmodel.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/81bbef26099eb54f4dcc32e45b5e0416857a330d/src/qt/optionsmodel.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/optionsmodel.cpp?ref=81bbef26099eb54f4dcc32e45b5e0416857a330d",
+        "patch": "@@ -145,18 +145,18 @@ QVariant OptionsModel::data(const QModelIndex & index, int role) const\n         case ProxyUse:\n             return settings.value(\"fUseProxy\", false);\n         case ProxyIP: {\n-            CService addrProxy;\n-            if (GetProxy(NET_IPV4, addrProxy))\n-                return QVariant(QString::fromStdString(addrProxy.ToStringIP()));\n+            proxyType proxy;\n+            if (GetProxy(NET_IPV4, proxy))\n+                return QVariant(QString::fromStdString(proxy.first.ToStringIP()));\n             else\n                 return QVariant(QString::fromStdString(\"127.0.0.1\"));\n         }\n         case ProxyPort: {\n-            CService addrProxy;\n-            if (GetProxy(NET_IPV4, addrProxy))\n-                return QVariant(addrProxy.GetPort());\n+            proxyType proxy;\n+            if (GetProxy(NET_IPV4, proxy))\n+                return QVariant(proxy.first.GetPort());\n             else\n-                return 9050;\n+                return QVariant(9050);\n         }\n         case ProxySocksVersion:\n             return settings.value(\"nSocksVersion\", 5);\n@@ -176,6 +176,7 @@ QVariant OptionsModel::data(const QModelIndex & index, int role) const\n     }\n     return QVariant();\n }\n+\n bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, int role)\n {\n     bool successful = true; /* set to false on parse error */\n@@ -204,29 +205,37 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in\n             settings.setValue(\"fUseProxy\", value.toBool());\n             ApplyProxySettings();\n             break;\n-        case ProxyIP:\n-            {\n-                CService addrProxy(\"127.0.0.1\", 9050);\n-                GetProxy(NET_IPV4, addrProxy);\n-                CNetAddr addr(value.toString().toStdString());\n-                addrProxy.SetIP(addr);\n-                settings.setValue(\"addrProxy\", addrProxy.ToStringIPPort().c_str());\n-                successful = ApplyProxySettings();\n-            }\n-            break;\n-        case ProxyPort:\n-            {\n-                CService addrProxy(\"127.0.0.1\", 9050);\n-                GetProxy(NET_IPV4, addrProxy);\n-                addrProxy.SetPort(value.toInt());\n-                settings.setValue(\"addrProxy\", addrProxy.ToStringIPPort().c_str());\n-                successful = ApplyProxySettings();\n-            }\n-            break;\n-        case ProxySocksVersion:\n-            settings.setValue(\"nSocksVersion\", value.toInt());\n-            ApplyProxySettings();\n-            break;\n+        case ProxyIP: {\n+            proxyType proxy;\n+            proxy.first = CService(\"127.0.0.1\", 9050);\n+            GetProxy(NET_IPV4, proxy);\n+\n+            CNetAddr addr(value.toString().toStdString());\n+            proxy.first.SetIP(addr);\n+            settings.setValue(\"addrProxy\", proxy.first.ToStringIPPort().c_str());\n+            successful = ApplyProxySettings();\n+        }\n+        break;\n+        case ProxyPort: {\n+            proxyType proxy;\n+            proxy.first = CService(\"127.0.0.1\", 9050);\n+            GetProxy(NET_IPV4, proxy);\n+\n+            proxy.first.SetPort(value.toInt());\n+            settings.setValue(\"addrProxy\", proxy.first.ToStringIPPort().c_str());\n+            successful = ApplyProxySettings();\n+        }\n+        break;\n+        case ProxySocksVersion: {\n+            proxyType proxy;\n+            proxy.second = 5;\n+            GetProxy(NET_IPV4, proxy);\n+\n+            proxy.second = value.toInt();\n+            settings.setValue(\"nSocksVersion\", proxy.second);\n+            successful = ApplyProxySettings();\n+        }\n+        break;\n         case Fee:\n             nTransactionFee = value.toLongLong();\n             settings.setValue(\"nTransactionFee\", nTransactionFee);"
+      },
+      {
+        "sha": "fda921a64140bfc87e7b65748fa45bdb810ead1b",
+        "filename": "src/rpcwallet.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 3,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/81bbef26099eb54f4dcc32e45b5e0416857a330d/src/rpcwallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/81bbef26099eb54f4dcc32e45b5e0416857a330d/src/rpcwallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcwallet.cpp?ref=81bbef26099eb54f4dcc32e45b5e0416857a330d",
+        "patch": "@@ -62,8 +62,8 @@ Value getinfo(const Array& params, bool fHelp)\n             \"getinfo\\n\"\n             \"Returns an object containing various state info.\");\n \n-    CService addrProxy;\n-    GetProxy(NET_IPV4, addrProxy);\n+    proxyType proxy;\n+    GetProxy(NET_IPV4, proxy);\n \n     Object obj;\n     obj.push_back(Pair(\"version\",       (int)CLIENT_VERSION));\n@@ -72,7 +72,7 @@ Value getinfo(const Array& params, bool fHelp)\n     obj.push_back(Pair(\"balance\",       ValueFromAmount(pwalletMain->GetBalance())));\n     obj.push_back(Pair(\"blocks\",        (int)nBestHeight));\n     obj.push_back(Pair(\"connections\",   (int)vNodes.size()));\n-    obj.push_back(Pair(\"proxy\",         (addrProxy.IsValid() ? addrProxy.ToStringIPPort() : string())));\n+    obj.push_back(Pair(\"proxy\",         (proxy.first.IsValid() ? proxy.first.ToStringIPPort() : string())));\n     obj.push_back(Pair(\"difficulty\",    (double)GetDifficulty()));\n     obj.push_back(Pair(\"testnet\",       fTestNet));\n     obj.push_back(Pair(\"keypoololdest\", (boost::int64_t)pwalletMain->GetOldestKeyPoolTime()));"
+      }
+    ]
+  }
+]

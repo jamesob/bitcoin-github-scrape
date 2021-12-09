@@ -1,0 +1,198 @@
+[
+  {
+    "sha": "680b0c0138243c1e48c09a891a926b778388b587",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2ODBiMGMwMTM4MjQzYzFlNDhjMDlhODkxYTkyNmI3NzgzODhiNTg3",
+    "commit": {
+      "author": {
+        "name": "Suhas Daftuar",
+        "email": "sdaftuar@chaincode.com",
+        "date": "2016-11-22T22:36:16Z"
+      },
+      "committer": {
+        "name": "Suhas Daftuar",
+        "email": "sdaftuar@gmail.com",
+        "date": "2016-12-26T10:30:26Z"
+      },
+      "message": "Release cs_main before calling ProcessNewBlock (cmpctblock handling)",
+      "tree": {
+        "sha": "ce46de69b087905ef1d3d0192bed71e5fef28924",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/ce46de69b087905ef1d3d0192bed71e5fef28924"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/680b0c0138243c1e48c09a891a926b778388b587",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/680b0c0138243c1e48c09a891a926b778388b587",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/680b0c0138243c1e48c09a891a926b778388b587",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/680b0c0138243c1e48c09a891a926b778388b587/comments",
+    "author": {
+      "login": "sdaftuar",
+      "id": 7463573,
+      "node_id": "MDQ6VXNlcjc0NjM1NzM=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7463573?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sdaftuar",
+      "html_url": "https://github.com/sdaftuar",
+      "followers_url": "https://api.github.com/users/sdaftuar/followers",
+      "following_url": "https://api.github.com/users/sdaftuar/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sdaftuar/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sdaftuar/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sdaftuar/subscriptions",
+      "organizations_url": "https://api.github.com/users/sdaftuar/orgs",
+      "repos_url": "https://api.github.com/users/sdaftuar/repos",
+      "events_url": "https://api.github.com/users/sdaftuar/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sdaftuar/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sdaftuar",
+      "id": 7463573,
+      "node_id": "MDQ6VXNlcjc0NjM1NzM=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7463573?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sdaftuar",
+      "html_url": "https://github.com/sdaftuar",
+      "followers_url": "https://api.github.com/users/sdaftuar/followers",
+      "following_url": "https://api.github.com/users/sdaftuar/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sdaftuar/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sdaftuar/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sdaftuar/subscriptions",
+      "organizations_url": "https://api.github.com/users/sdaftuar/orgs",
+      "repos_url": "https://api.github.com/users/sdaftuar/repos",
+      "events_url": "https://api.github.com/users/sdaftuar/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sdaftuar/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "041331e1da23e4136fd046ed870cdcc177464176",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/041331e1da23e4136fd046ed870cdcc177464176",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/041331e1da23e4136fd046ed870cdcc177464176"
+      }
+    ],
+    "stats": {
+      "total": 15,
+      "additions": 13,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "8a2c35cf3f137f8bbad811f0d2790d88c7f6c816",
+        "filename": "src/net_processing.cpp",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 2,
+        "changes": 15,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/680b0c0138243c1e48c09a891a926b778388b587/src/net_processing.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/680b0c0138243c1e48c09a891a926b778388b587/src/net_processing.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.cpp?ref=680b0c0138243c1e48c09a891a926b778388b587",
+        "patch": "@@ -1782,11 +1782,19 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv,\n             }\n         }\n \n+        // When we succeed in decoding a block's txids from a cmpctblock\n+        // message we typically jump to the BLOCKTXN handling code, with a\n+        // dummy (empty) BLOCKTXN message, to re-use the logic there in\n+        // completing processing of the putative block (without cs_main).\n+        bool fProcessBLOCKTXN = false;\n+        CDataStream blockTxnMsg(SER_NETWORK, PROTOCOL_VERSION);\n+\n         // Keep a CBlock for \"optimistic\" compactblock reconstructions (see\n         // below)\n         std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>();\n         bool fBlockReconstructed = false;\n \n+        {\n         LOCK(cs_main);\n         // If AcceptBlockHeader returned true, it set pindex\n         assert(pindex);\n@@ -1868,9 +1876,8 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv,\n                     // Dirty hack to jump to BLOCKTXN code (TODO: move message handling into their own functions)\n                     BlockTransactions txn;\n                     txn.blockhash = cmpctblock.header.GetHash();\n-                    CDataStream blockTxnMsg(SER_NETWORK, PROTOCOL_VERSION);\n                     blockTxnMsg << txn;\n-                    return ProcessMessage(pfrom, NetMsgType::BLOCKTXN, blockTxnMsg, nTimeReceived, chainparams, connman);\n+                    fProcessBLOCKTXN = true;\n                 } else {\n                     req.blockhash = pindex->GetBlockHash();\n                     connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::GETBLOCKTXN, req));\n@@ -1911,6 +1918,10 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv,\n                 return ProcessMessage(pfrom, NetMsgType::HEADERS, vHeadersMsg, nTimeReceived, chainparams, connman);\n             }\n         }\n+        } // cs_main\n+\n+        if (fProcessBLOCKTXN)\n+            return ProcessMessage(pfrom, NetMsgType::BLOCKTXN, blockTxnMsg, nTimeReceived, chainparams, connman);\n \n         if (fBlockReconstructed) {\n             // If we got here, we were able to optimistically reconstruct a"
+      }
+    ]
+  },
+  {
+    "sha": "bd02bddb938fa7ddf4e5dc7c3ce2a787feba848a",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiZDAyYmRkYjkzOGZhN2RkZjRlNWRjN2MzY2UyYTc4N2ZlYmE4NDhh",
+    "commit": {
+      "author": {
+        "name": "Suhas Daftuar",
+        "email": "sdaftuar@gmail.com",
+        "date": "2016-12-01T15:27:12Z"
+      },
+      "committer": {
+        "name": "Suhas Daftuar",
+        "email": "sdaftuar@gmail.com",
+        "date": "2016-12-26T10:34:54Z"
+      },
+      "message": "Release cs_main before processing cmpctblock as header",
+      "tree": {
+        "sha": "4abdba7ee15d678da5a96f873a425ac7532e9b6f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/4abdba7ee15d678da5a96f873a425ac7532e9b6f"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/bd02bddb938fa7ddf4e5dc7c3ce2a787feba848a",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/bd02bddb938fa7ddf4e5dc7c3ce2a787feba848a",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/bd02bddb938fa7ddf4e5dc7c3ce2a787feba848a",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/bd02bddb938fa7ddf4e5dc7c3ce2a787feba848a/comments",
+    "author": {
+      "login": "sdaftuar",
+      "id": 7463573,
+      "node_id": "MDQ6VXNlcjc0NjM1NzM=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7463573?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sdaftuar",
+      "html_url": "https://github.com/sdaftuar",
+      "followers_url": "https://api.github.com/users/sdaftuar/followers",
+      "following_url": "https://api.github.com/users/sdaftuar/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sdaftuar/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sdaftuar/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sdaftuar/subscriptions",
+      "organizations_url": "https://api.github.com/users/sdaftuar/orgs",
+      "repos_url": "https://api.github.com/users/sdaftuar/repos",
+      "events_url": "https://api.github.com/users/sdaftuar/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sdaftuar/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sdaftuar",
+      "id": 7463573,
+      "node_id": "MDQ6VXNlcjc0NjM1NzM=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7463573?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sdaftuar",
+      "html_url": "https://github.com/sdaftuar",
+      "followers_url": "https://api.github.com/users/sdaftuar/followers",
+      "following_url": "https://api.github.com/users/sdaftuar/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sdaftuar/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sdaftuar/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sdaftuar/subscriptions",
+      "organizations_url": "https://api.github.com/users/sdaftuar/orgs",
+      "repos_url": "https://api.github.com/users/sdaftuar/repos",
+      "events_url": "https://api.github.com/users/sdaftuar/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sdaftuar/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "680b0c0138243c1e48c09a891a926b778388b587",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/680b0c0138243c1e48c09a891a926b778388b587",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/680b0c0138243c1e48c09a891a926b778388b587"
+      }
+    ],
+    "stats": {
+      "total": 11,
+      "additions": 9,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "166786333680b3b45918461992f20903c5be1ea9",
+        "filename": "src/net_processing.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 2,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/bd02bddb938fa7ddf4e5dc7c3ce2a787feba848a/src/net_processing.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/bd02bddb938fa7ddf4e5dc7c3ce2a787feba848a/src/net_processing.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.cpp?ref=bd02bddb938fa7ddf4e5dc7c3ce2a787feba848a",
+        "patch": "@@ -1789,6 +1789,11 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv,\n         bool fProcessBLOCKTXN = false;\n         CDataStream blockTxnMsg(SER_NETWORK, PROTOCOL_VERSION);\n \n+        // If we end up treating this as a plain headers message, call that as well\n+        // without cs_main.\n+        bool fRevertToHeaderProcessing = false;\n+        CDataStream vHeadersMsg(SER_NETWORK, PROTOCOL_VERSION);\n+\n         // Keep a CBlock for \"optimistic\" compactblock reconstructions (see\n         // below)\n         std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>();\n@@ -1913,16 +1918,18 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv,\n                 // Dirty hack to process as if it were just a headers message (TODO: move message handling into their own functions)\n                 std::vector<CBlock> headers;\n                 headers.push_back(cmpctblock.header);\n-                CDataStream vHeadersMsg(SER_NETWORK, PROTOCOL_VERSION);\n                 vHeadersMsg << headers;\n-                return ProcessMessage(pfrom, NetMsgType::HEADERS, vHeadersMsg, nTimeReceived, chainparams, connman);\n+                fRevertToHeaderProcessing = true;\n             }\n         }\n         } // cs_main\n \n         if (fProcessBLOCKTXN)\n             return ProcessMessage(pfrom, NetMsgType::BLOCKTXN, blockTxnMsg, nTimeReceived, chainparams, connman);\n \n+        if (fRevertToHeaderProcessing)\n+            return ProcessMessage(pfrom, NetMsgType::HEADERS, vHeadersMsg, nTimeReceived, chainparams, connman);\n+\n         if (fBlockReconstructed) {\n             // If we got here, we were able to optimistically reconstruct a\n             // block that is in flight from some other peer."
+      }
+    ]
+  }
+]

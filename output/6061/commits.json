@@ -1,0 +1,112 @@
+[
+  {
+    "sha": "eb837199a06293ea541171bdc4652591c6506921",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplYjgzNzE5OWEwNjI5M2VhNTQxMTcxYmRjNDY1MjU5MWM2NTA2OTIx",
+    "commit": {
+      "author": {
+        "name": "Jorge Tim\u00f3n",
+        "email": "jtimon@jtimon.cc",
+        "date": "2015-04-24T14:45:16Z"
+      },
+      "committer": {
+        "name": "Jorge Tim\u00f3n",
+        "email": "jtimon@jtimon.cc",
+        "date": "2015-06-10T12:07:30Z"
+      },
+      "message": "Consensus: Refactor: Separate Consensus::CheckTxInputs and GetSpendHeight in CheckInputs",
+      "tree": {
+        "sha": "a25704eaa447286aeed4f4eae66ac32b5cb202de",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/a25704eaa447286aeed4f4eae66ac32b5cb202de"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/eb837199a06293ea541171bdc4652591c6506921",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/eb837199a06293ea541171bdc4652591c6506921",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/eb837199a06293ea541171bdc4652591c6506921",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/eb837199a06293ea541171bdc4652591c6506921/comments",
+    "author": {
+      "login": "jtimon",
+      "id": 1008458,
+      "node_id": "MDQ6VXNlcjEwMDg0NTg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1008458?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jtimon",
+      "html_url": "https://github.com/jtimon",
+      "followers_url": "https://api.github.com/users/jtimon/followers",
+      "following_url": "https://api.github.com/users/jtimon/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jtimon/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jtimon/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jtimon/subscriptions",
+      "organizations_url": "https://api.github.com/users/jtimon/orgs",
+      "repos_url": "https://api.github.com/users/jtimon/repos",
+      "events_url": "https://api.github.com/users/jtimon/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jtimon/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "jtimon",
+      "id": 1008458,
+      "node_id": "MDQ6VXNlcjEwMDg0NTg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1008458?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jtimon",
+      "html_url": "https://github.com/jtimon",
+      "followers_url": "https://api.github.com/users/jtimon/followers",
+      "following_url": "https://api.github.com/users/jtimon/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jtimon/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jtimon/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jtimon/subscriptions",
+      "organizations_url": "https://api.github.com/users/jtimon/orgs",
+      "repos_url": "https://api.github.com/users/jtimon/repos",
+      "events_url": "https://api.github.com/users/jtimon/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jtimon/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "b6ea3bcede1cbbf89486b9d67329e0110c4624ae",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b6ea3bcede1cbbf89486b9d67329e0110c4624ae",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b6ea3bcede1cbbf89486b9d67329e0110c4624ae"
+      }
+    ],
+    "stats": {
+      "total": 37,
+      "additions": 28,
+      "deletions": 9
+    },
+    "files": [
+      {
+        "sha": "662964785092d7d1bb9b0a567a3018368fce573c",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 21,
+        "deletions": 9,
+        "changes": 30,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/eb837199a06293ea541171bdc4652591c6506921/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/eb837199a06293ea541171bdc4652591c6506921/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=eb837199a06293ea541171bdc4652591c6506921",
+        "patch": "@@ -1379,22 +1379,21 @@ bool CScriptCheck::operator()() {\n     return true;\n }\n \n-bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsViewCache &inputs, bool fScriptChecks, unsigned int flags, bool cacheStore, std::vector<CScriptCheck> *pvChecks)\n+int GetSpendHeight(const CCoinsViewCache& inputs)\n {\n-    if (!tx.IsCoinBase())\n-    {\n-        if (pvChecks)\n-            pvChecks->reserve(tx.vin.size());\n+    LOCK(cs_main);\n+    CBlockIndex* pindexPrev = mapBlockIndex.find(inputs.GetBestBlock())->second;\n+    return pindexPrev->nHeight + 1;\n+}\n \n+namespace Consensus {\n+bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoinsViewCache& inputs, int nSpendHeight)\n+{\n         // This doesn't trigger the DoS code on purpose; if it did, it would make it easier\n         // for an attacker to attempt to split the network.\n         if (!inputs.HaveInputs(tx))\n             return state.Invalid(error(\"CheckInputs(): %s inputs unavailable\", tx.GetHash().ToString()));\n \n-        // While checking, GetBestBlock() refers to the parent block.\n-        // This is also true for mempool checks.\n-        CBlockIndex *pindexPrev = mapBlockIndex.find(inputs.GetBestBlock())->second;\n-        int nSpendHeight = pindexPrev->nHeight + 1;\n         CAmount nValueIn = 0;\n         CAmount nFees = 0;\n         for (unsigned int i = 0; i < tx.vin.size(); i++)\n@@ -1433,6 +1432,19 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi\n         if (!MoneyRange(nFees))\n             return state.DoS(100, error(\"CheckInputs(): nFees out of range\"),\n                              REJECT_INVALID, \"bad-txns-fee-outofrange\");\n+    return true;\n+}\n+}// namespace Consensus\n+\n+bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsViewCache &inputs, bool fScriptChecks, unsigned int flags, bool cacheStore, std::vector<CScriptCheck> *pvChecks)\n+{\n+    if (!tx.IsCoinBase())\n+    {\n+        if (!Consensus::CheckTxInputs(tx, state, inputs, GetSpendHeight(inputs)))\n+            return false;\n+\n+        if (pvChecks)\n+            pvChecks->reserve(tx.vin.size());\n \n         // The first loop above does all the inexpensive checks.\n         // Only if ALL inputs pass do we perform expensive ECDSA signature checks."
+      },
+      {
+        "sha": "9bc0ff8066b85cc0d1e7755c21b75af93d87f3da",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 0,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/eb837199a06293ea541171bdc4652591c6506921/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/eb837199a06293ea541171bdc4652591c6506921/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=eb837199a06293ea541171bdc4652591c6506921",
+        "patch": "@@ -507,4 +507,11 @@ extern CCoinsViewCache *pcoinsTip;\n /** Global variable that points to the active block tree (protected by cs_main) */\n extern CBlockTreeDB *pblocktree;\n \n+/**\n+ * Return the spend height, which is one more than the inputs.GetBestBlock().\n+ * While checking, GetBestBlock() refers to the parent block. (protected by cs_main)\n+ * This is also true for mempool checks.\n+ */\n+int GetSpendHeight(const CCoinsViewCache& inputs);\n+\n #endif // BITCOIN_MAIN_H"
+      }
+    ]
+  }
+]

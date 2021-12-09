@@ -1,0 +1,74 @@
+[
+  {
+    "sha": "984e7ae2fc6319fbd1071fa36efa416a8321d62b",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5ODRlN2FlMmZjNjMxOWZiZDEwNzFmYTM2ZWZhNDE2YTgzMjFkNjJi",
+    "commit": {
+      "author": {
+        "name": "Pavel Vasin",
+        "email": "git@vasin.nl",
+        "date": "2017-03-20T20:55:37Z"
+      },
+      "committer": {
+        "name": "Pavel Vasin",
+        "email": "git@vasin.nl",
+        "date": "2017-08-18T18:56:40Z"
+      },
+      "message": "wallet: don't leak height of local chain if not synced\n\nFixes #10020",
+      "tree": {
+        "sha": "a1ca6990d38d5d5f2043a0e8f67fd1246190f570",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/a1ca6990d38d5d5f2043a0e8f67fd1246190f570"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/984e7ae2fc6319fbd1071fa36efa416a8321d62b",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/984e7ae2fc6319fbd1071fa36efa416a8321d62b",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/984e7ae2fc6319fbd1071fa36efa416a8321d62b",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/984e7ae2fc6319fbd1071fa36efa416a8321d62b/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "22e301a3d56dc9e6878380ee92c7d19ca43119d2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/22e301a3d56dc9e6878380ee92c7d19ca43119d2",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/22e301a3d56dc9e6878380ee92c7d19ca43119d2"
+      }
+    ],
+    "stats": {
+      "total": 16,
+      "additions": 14,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "94ac2fc267e6ae0a6c16b888ff4750d46aff6fba",
+        "filename": "src/wallet/wallet.cpp",
+        "status": "modified",
+        "additions": 12,
+        "deletions": 2,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/984e7ae2fc6319fbd1071fa36efa416a8321d62b/src/wallet/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/984e7ae2fc6319fbd1071fa36efa416a8321d62b/src/wallet/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.cpp?ref=984e7ae2fc6319fbd1071fa36efa416a8321d62b",
+        "patch": "@@ -2610,6 +2610,15 @@ static CFeeRate GetDiscardRate(const CBlockPolicyEstimator& estimator)\n     return discard_rate;\n }\n \n+static bool IsCurrentForAntiFeeSniping()\n+{\n+    if (pindexBestHeader->nChainWork < UintToArith256(Params().GetConsensus().nMinimumChainWork))\n+        return false;\n+    if (pindexBestHeader->GetBlockTime() < (GetTime() - MAX_ANTI_FEE_SNIPING_TIP_AGE))\n+        return false;\n+    return true;\n+}\n+\n bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletTx& wtxNew, CReserveKey& reservekey, CAmount& nFeeRet,\n                                 int& nChangePosInOut, std::string& strFailReason, const CCoinControl& coin_control, bool sign)\n {\n@@ -2658,7 +2667,8 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT\n     // enough, that fee sniping isn't a problem yet, but by implementing a fix\n     // now we ensure code won't be written that makes assumptions about\n     // nLockTime that preclude a fix later.\n-    txNew.nLockTime = chainActive.Height();\n+    if (IsCurrentForAntiFeeSniping())\n+        txNew.nLockTime = pindexBestHeader->nHeight;\n \n     // Secondly occasionally randomly pick a nLockTime even further back, so\n     // that transactions that are delayed after signing for whatever reason,\n@@ -2667,7 +2677,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend, CWalletT\n     if (GetRandInt(10) == 0)\n         txNew.nLockTime = std::max(0, (int)txNew.nLockTime - GetRandInt(100));\n \n-    assert(txNew.nLockTime <= (unsigned int)chainActive.Height());\n+    assert(txNew.nLockTime <= (unsigned int)pindexBestHeader->nHeight);\n     assert(txNew.nLockTime < LOCKTIME_THRESHOLD);\n     FeeCalculation feeCalc;\n     unsigned int nBytes;"
+      },
+      {
+        "sha": "91c12678a272b8b7924b61ffc6f35682444cd507",
+        "filename": "src/wallet/wallet.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/984e7ae2fc6319fbd1071fa36efa416a8321d62b/src/wallet/wallet.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/984e7ae2fc6319fbd1071fa36efa416a8321d62b/src/wallet/wallet.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.h?ref=984e7ae2fc6319fbd1071fa36efa416a8321d62b",
+        "patch": "@@ -67,6 +67,8 @@ static const bool DEFAULT_WALLETBROADCAST = true;\n static const bool DEFAULT_DISABLE_WALLET = false;\n //! if set, all keys will be derived by using BIP32\n static const bool DEFAULT_USE_HD_WALLET = true;\n+//! Maximum age of our tip for us to be considered current for anti fee sniping\n+static const int64_t MAX_ANTI_FEE_SNIPING_TIP_AGE = 2 * 60 * 60;\n \n extern const char * DEFAULT_WALLET_DAT;\n "
+      }
+    ]
+  }
+]

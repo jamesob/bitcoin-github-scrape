@@ -1,0 +1,710 @@
+[
+  {
+    "sha": "7659438a63ef162b4a4f942f86683ae6785f8162",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3NjU5NDM4YTYzZWYxNjJiNGE0Zjk0MmY4NjY4M2FlNjc4NWY4MTYy",
+    "commit": {
+      "author": {
+        "name": "Suhas Daftuar",
+        "email": "sdaftuar@gmail.com",
+        "date": "2015-10-19T16:42:42Z"
+      },
+      "committer": {
+        "name": "Suhas Daftuar",
+        "email": "sdaftuar@gmail.com",
+        "date": "2016-03-14T16:11:08Z"
+      },
+      "message": "CTxMemPool::removeForBlock now uses RemoveStaged",
+      "tree": {
+        "sha": "fc4ac8f84465ca93ae84af4a3bdac2debd277dde",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/fc4ac8f84465ca93ae84af4a3bdac2debd277dde"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/7659438a63ef162b4a4f942f86683ae6785f8162",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7659438a63ef162b4a4f942f86683ae6785f8162",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/7659438a63ef162b4a4f942f86683ae6785f8162",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7659438a63ef162b4a4f942f86683ae6785f8162/comments",
+    "author": {
+      "login": "sdaftuar",
+      "id": 7463573,
+      "node_id": "MDQ6VXNlcjc0NjM1NzM=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7463573?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sdaftuar",
+      "html_url": "https://github.com/sdaftuar",
+      "followers_url": "https://api.github.com/users/sdaftuar/followers",
+      "following_url": "https://api.github.com/users/sdaftuar/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sdaftuar/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sdaftuar/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sdaftuar/subscriptions",
+      "organizations_url": "https://api.github.com/users/sdaftuar/orgs",
+      "repos_url": "https://api.github.com/users/sdaftuar/repos",
+      "events_url": "https://api.github.com/users/sdaftuar/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sdaftuar/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sdaftuar",
+      "id": 7463573,
+      "node_id": "MDQ6VXNlcjc0NjM1NzM=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7463573?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sdaftuar",
+      "html_url": "https://github.com/sdaftuar",
+      "followers_url": "https://api.github.com/users/sdaftuar/followers",
+      "following_url": "https://api.github.com/users/sdaftuar/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sdaftuar/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sdaftuar/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sdaftuar/subscriptions",
+      "organizations_url": "https://api.github.com/users/sdaftuar/orgs",
+      "repos_url": "https://api.github.com/users/sdaftuar/repos",
+      "events_url": "https://api.github.com/users/sdaftuar/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sdaftuar/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "0735c0ca7c22ce6529643ff0063c4188a901d75f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0735c0ca7c22ce6529643ff0063c4188a901d75f",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/0735c0ca7c22ce6529643ff0063c4188a901d75f"
+      }
+    ],
+    "stats": {
+      "total": 8,
+      "additions": 6,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "01f6c97aea080c5b39d55c39f12faa6b2f2952b9",
+        "filename": "src/txmempool.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 2,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7659438a63ef162b4a4f942f86683ae6785f8162/src/txmempool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7659438a63ef162b4a4f942f86683ae6785f8162/src/txmempool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.cpp?ref=7659438a63ef162b4a4f942f86683ae6785f8162",
+        "patch": "@@ -564,8 +564,12 @@ void CTxMemPool::removeForBlock(const std::vector<CTransaction>& vtx, unsigned i\n     }\n     BOOST_FOREACH(const CTransaction& tx, vtx)\n     {\n-        std::list<CTransaction> dummy;\n-        remove(tx, dummy, false);\n+        txiter it = mapTx.find(tx.GetHash());\n+        if (it != mapTx.end()) {\n+            setEntries stage;\n+            stage.insert(it);\n+            RemoveStaged(stage);\n+        }\n         removeConflicts(tx, conflicts);\n         ClearPrioritisation(tx.GetHash());\n     }"
+      }
+    ]
+  },
+  {
+    "sha": "5de2baa138cda501038a4558bc169b2cfe5b7d6b",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1ZGUyYmFhMTM4Y2RhNTAxMDM4YTQ1NThiYzE2OWIyY2ZlNWI3ZDZi",
+    "commit": {
+      "author": {
+        "name": "Suhas Daftuar",
+        "email": "sdaftuar@gmail.com",
+        "date": "2015-10-19T16:43:38Z"
+      },
+      "committer": {
+        "name": "Suhas Daftuar",
+        "email": "sdaftuar@gmail.com",
+        "date": "2016-03-14T16:11:09Z"
+      },
+      "message": "Rename CTxMemPool::remove -> removeRecursive\n\nremove is no longer called non-recursively, so simplify the logic\nand eliminate an unnecessary parameter",
+      "tree": {
+        "sha": "09ac5f907ece46db950951e56144caa64db61156",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/09ac5f907ece46db950951e56144caa64db61156"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/5de2baa138cda501038a4558bc169b2cfe5b7d6b",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5de2baa138cda501038a4558bc169b2cfe5b7d6b",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/5de2baa138cda501038a4558bc169b2cfe5b7d6b",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5de2baa138cda501038a4558bc169b2cfe5b7d6b/comments",
+    "author": {
+      "login": "sdaftuar",
+      "id": 7463573,
+      "node_id": "MDQ6VXNlcjc0NjM1NzM=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7463573?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sdaftuar",
+      "html_url": "https://github.com/sdaftuar",
+      "followers_url": "https://api.github.com/users/sdaftuar/followers",
+      "following_url": "https://api.github.com/users/sdaftuar/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sdaftuar/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sdaftuar/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sdaftuar/subscriptions",
+      "organizations_url": "https://api.github.com/users/sdaftuar/orgs",
+      "repos_url": "https://api.github.com/users/sdaftuar/repos",
+      "events_url": "https://api.github.com/users/sdaftuar/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sdaftuar/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sdaftuar",
+      "id": 7463573,
+      "node_id": "MDQ6VXNlcjc0NjM1NzM=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7463573?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sdaftuar",
+      "html_url": "https://github.com/sdaftuar",
+      "followers_url": "https://api.github.com/users/sdaftuar/followers",
+      "following_url": "https://api.github.com/users/sdaftuar/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sdaftuar/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sdaftuar/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sdaftuar/subscriptions",
+      "organizations_url": "https://api.github.com/users/sdaftuar/orgs",
+      "repos_url": "https://api.github.com/users/sdaftuar/repos",
+      "events_url": "https://api.github.com/users/sdaftuar/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sdaftuar/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "7659438a63ef162b4a4f942f86683ae6785f8162",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7659438a63ef162b4a4f942f86683ae6785f8162",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/7659438a63ef162b4a4f942f86683ae6785f8162"
+      }
+    ],
+    "stats": {
+      "total": 42,
+      "additions": 19,
+      "deletions": 23
+    },
+    "files": [
+      {
+        "sha": "d5254806adbde5cbd42f73522712a050a77fd640",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5de2baa138cda501038a4558bc169b2cfe5b7d6b/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5de2baa138cda501038a4558bc169b2cfe5b7d6b/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=5de2baa138cda501038a4558bc169b2cfe5b7d6b",
+        "patch": "@@ -2502,7 +2502,7 @@ bool static DisconnectTip(CValidationState& state, const Consensus::Params& cons\n         list<CTransaction> removed;\n         CValidationState stateDummy;\n         if (tx.IsCoinBase() || !AcceptToMemoryPool(mempool, stateDummy, tx, false, NULL, true)) {\n-            mempool.remove(tx, removed, true);\n+            mempool.removeRecursive(tx, removed);\n         } else if (mempool.exists(tx.GetHash())) {\n             vHashUpdate.push_back(tx.GetHash());\n         }"
+      },
+      {
+        "sha": "ebdf7dbaa20d9f819d7bb806858e7f3f061a9e5b",
+        "filename": "src/test/mempool_tests.cpp",
+        "status": "modified",
+        "additions": 10,
+        "deletions": 10,
+        "changes": 20,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5de2baa138cda501038a4558bc169b2cfe5b7d6b/src/test/mempool_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5de2baa138cda501038a4558bc169b2cfe5b7d6b/src/test/mempool_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/mempool_tests.cpp?ref=5de2baa138cda501038a4558bc169b2cfe5b7d6b",
+        "patch": "@@ -57,12 +57,12 @@ BOOST_AUTO_TEST_CASE(MempoolRemoveTest)\n     std::list<CTransaction> removed;\n \n     // Nothing in pool, remove should do nothing:\n-    testPool.remove(txParent, removed, true);\n+    testPool.removeRecursive(txParent, removed);\n     BOOST_CHECK_EQUAL(removed.size(), 0);\n \n     // Just the parent:\n     testPool.addUnchecked(txParent.GetHash(), entry.FromTx(txParent));\n-    testPool.remove(txParent, removed, true);\n+    testPool.removeRecursive(txParent, removed);\n     BOOST_CHECK_EQUAL(removed.size(), 1);\n     removed.clear();\n     \n@@ -74,16 +74,16 @@ BOOST_AUTO_TEST_CASE(MempoolRemoveTest)\n         testPool.addUnchecked(txGrandChild[i].GetHash(), entry.FromTx(txGrandChild[i]));\n     }\n     // Remove Child[0], GrandChild[0] should be removed:\n-    testPool.remove(txChild[0], removed, true);\n+    testPool.removeRecursive(txChild[0], removed);\n     BOOST_CHECK_EQUAL(removed.size(), 2);\n     removed.clear();\n     // ... make sure grandchild and child are gone:\n-    testPool.remove(txGrandChild[0], removed, true);\n+    testPool.removeRecursive(txGrandChild[0], removed);\n     BOOST_CHECK_EQUAL(removed.size(), 0);\n-    testPool.remove(txChild[0], removed, true);\n+    testPool.removeRecursive(txChild[0], removed);\n     BOOST_CHECK_EQUAL(removed.size(), 0);\n     // Remove parent, all children/grandchildren should go:\n-    testPool.remove(txParent, removed, true);\n+    testPool.removeRecursive(txParent, removed);\n     BOOST_CHECK_EQUAL(removed.size(), 5);\n     BOOST_CHECK_EQUAL(testPool.size(), 0);\n     removed.clear();\n@@ -96,7 +96,7 @@ BOOST_AUTO_TEST_CASE(MempoolRemoveTest)\n     }\n     // Now remove the parent, as might happen if a block-re-org occurs but the parent cannot be\n     // put into the mempool (maybe because it is non-standard):\n-    testPool.remove(txParent, removed, true);\n+    testPool.removeRecursive(txParent, removed);\n     BOOST_CHECK_EQUAL(removed.size(), 6);\n     BOOST_CHECK_EQUAL(testPool.size(), 0);\n     removed.clear();\n@@ -281,11 +281,11 @@ BOOST_AUTO_TEST_CASE(MempoolIndexingTest)\n \n     // Now try removing tx10 and verify the sort order returns to normal\n     std::list<CTransaction> removed;\n-    pool.remove(pool.mapTx.find(tx10.GetHash())->GetTx(), removed, true);\n+    pool.removeRecursive(pool.mapTx.find(tx10.GetHash())->GetTx(), removed);\n     CheckSort<descendant_score>(pool, snapshotOrder);\n \n-    pool.remove(pool.mapTx.find(tx9.GetHash())->GetTx(), removed, true);\n-    pool.remove(pool.mapTx.find(tx8.GetHash())->GetTx(), removed, true);\n+    pool.removeRecursive(pool.mapTx.find(tx9.GetHash())->GetTx(), removed);\n+    pool.removeRecursive(pool.mapTx.find(tx8.GetHash())->GetTx(), removed);\n     /* Now check the sort on the mining score index.\n      * Final order should be:\n      *"
+      },
+      {
+        "sha": "2d1b78bea23b1d6694a78cb28afe4be12de6439f",
+        "filename": "src/txmempool.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 11,
+        "changes": 18,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5de2baa138cda501038a4558bc169b2cfe5b7d6b/src/txmempool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5de2baa138cda501038a4558bc169b2cfe5b7d6b/src/txmempool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.cpp?ref=5de2baa138cda501038a4558bc169b2cfe5b7d6b",
+        "patch": "@@ -461,7 +461,7 @@ void CTxMemPool::CalculateDescendants(txiter entryit, setEntries &setDescendants\n     }\n }\n \n-void CTxMemPool::remove(const CTransaction &origTx, std::list<CTransaction>& removed, bool fRecursive)\n+void CTxMemPool::removeRecursive(const CTransaction &origTx, std::list<CTransaction>& removed)\n {\n     // Remove transaction from memory pool\n     {\n@@ -470,8 +470,8 @@ void CTxMemPool::remove(const CTransaction &origTx, std::list<CTransaction>& rem\n         txiter origit = mapTx.find(origTx.GetHash());\n         if (origit != mapTx.end()) {\n             txToRemove.insert(origit);\n-        } else if (fRecursive) {\n-            // If recursively removing but origTx isn't in the mempool\n+        } else {\n+            // When recursively removing but origTx isn't in the mempool\n             // be sure to remove any children that are in the pool. This can\n             // happen during chain re-orgs if origTx isn't re-accepted into\n             // the mempool for any reason.\n@@ -485,12 +485,8 @@ void CTxMemPool::remove(const CTransaction &origTx, std::list<CTransaction>& rem\n             }\n         }\n         setEntries setAllRemoves;\n-        if (fRecursive) {\n-            BOOST_FOREACH(txiter it, txToRemove) {\n-                CalculateDescendants(it, setAllRemoves);\n-            }\n-        } else {\n-            setAllRemoves.swap(txToRemove);\n+        BOOST_FOREACH(txiter it, txToRemove) {\n+            CalculateDescendants(it, setAllRemoves);\n         }\n         BOOST_FOREACH(txiter it, setAllRemoves) {\n             removed.push_back(it->GetTx());\n@@ -524,7 +520,7 @@ void CTxMemPool::removeForReorg(const CCoinsViewCache *pcoins, unsigned int nMem\n     }\n     BOOST_FOREACH(const CTransaction& tx, transactionsToRemove) {\n         list<CTransaction> removed;\n-        remove(tx, removed, true);\n+        removeRecursive(tx, removed);\n     }\n }\n \n@@ -539,7 +535,7 @@ void CTxMemPool::removeConflicts(const CTransaction &tx, std::list<CTransaction>\n             const CTransaction &txConflict = *it->second.ptx;\n             if (txConflict != tx)\n             {\n-                remove(txConflict, removed, true);\n+                removeRecursive(txConflict, removed);\n                 ClearPrioritisation(txConflict.GetHash());\n             }\n         }"
+      },
+      {
+        "sha": "da5a97649f5b29a5992f09b03fbaf06c659c6b8f",
+        "filename": "src/txmempool.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5de2baa138cda501038a4558bc169b2cfe5b7d6b/src/txmempool.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5de2baa138cda501038a4558bc169b2cfe5b7d6b/src/txmempool.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.h?ref=5de2baa138cda501038a4558bc169b2cfe5b7d6b",
+        "patch": "@@ -428,7 +428,7 @@ class CTxMemPool\n     bool addUnchecked(const uint256& hash, const CTxMemPoolEntry &entry, bool fCurrentEstimate = true);\n     bool addUnchecked(const uint256& hash, const CTxMemPoolEntry &entry, setEntries &setAncestors, bool fCurrentEstimate = true);\n \n-    void remove(const CTransaction &tx, std::list<CTransaction>& removed, bool fRecursive = false);\n+    void removeRecursive(const CTransaction &tx, std::list<CTransaction>& removed);\n     void removeForReorg(const CCoinsViewCache *pcoins, unsigned int nMemPoolHeight, int flags);\n     void removeConflicts(const CTransaction &tx, std::list<CTransaction>& removed);\n     void removeForBlock(const std::vector<CTransaction>& vtx, unsigned int nBlockHeight,"
+      }
+    ]
+  },
+  {
+    "sha": "76a76321d2f36992178ddaaf4d023c5e33c14fbf",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3NmE3NjMyMWQyZjM2OTkyMTc4ZGRhYWY0ZDAyM2M1ZTMzYzE0ZmJm",
+    "commit": {
+      "author": {
+        "name": "Suhas Daftuar",
+        "email": "sdaftuar@gmail.com",
+        "date": "2015-10-21T14:18:24Z"
+      },
+      "committer": {
+        "name": "Suhas Daftuar",
+        "email": "sdaftuar@gmail.com",
+        "date": "2016-03-14T16:13:31Z"
+      },
+      "message": "Remove work limit in UpdateForDescendants()\n\nThe work limit served to prevent the descendant walking algorithm from doing\ntoo much work by marking the parent transaction as dirty.  However to implement\nancestor tracking, it's not possible to similarly mark those descendant\ntransactions as dirty without having to calculate them to begin with.\n\nThis commit removes the work limit altogether.  With appropriate\nchain limits (-limitdescendantcount) the concern about doing too much\nwork inside this function should be mitigated.",
+      "tree": {
+        "sha": "05e6af5410f7cb9bd2f75d41bf14ff394df09c33",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/05e6af5410f7cb9bd2f75d41bf14ff394df09c33"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/76a76321d2f36992178ddaaf4d023c5e33c14fbf",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/76a76321d2f36992178ddaaf4d023c5e33c14fbf",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/76a76321d2f36992178ddaaf4d023c5e33c14fbf",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/76a76321d2f36992178ddaaf4d023c5e33c14fbf/comments",
+    "author": {
+      "login": "sdaftuar",
+      "id": 7463573,
+      "node_id": "MDQ6VXNlcjc0NjM1NzM=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7463573?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sdaftuar",
+      "html_url": "https://github.com/sdaftuar",
+      "followers_url": "https://api.github.com/users/sdaftuar/followers",
+      "following_url": "https://api.github.com/users/sdaftuar/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sdaftuar/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sdaftuar/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sdaftuar/subscriptions",
+      "organizations_url": "https://api.github.com/users/sdaftuar/orgs",
+      "repos_url": "https://api.github.com/users/sdaftuar/repos",
+      "events_url": "https://api.github.com/users/sdaftuar/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sdaftuar/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sdaftuar",
+      "id": 7463573,
+      "node_id": "MDQ6VXNlcjc0NjM1NzM=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7463573?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sdaftuar",
+      "html_url": "https://github.com/sdaftuar",
+      "followers_url": "https://api.github.com/users/sdaftuar/followers",
+      "following_url": "https://api.github.com/users/sdaftuar/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sdaftuar/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sdaftuar/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sdaftuar/subscriptions",
+      "organizations_url": "https://api.github.com/users/sdaftuar/orgs",
+      "repos_url": "https://api.github.com/users/sdaftuar/repos",
+      "events_url": "https://api.github.com/users/sdaftuar/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sdaftuar/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "5de2baa138cda501038a4558bc169b2cfe5b7d6b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5de2baa138cda501038a4558bc169b2cfe5b7d6b",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/5de2baa138cda501038a4558bc169b2cfe5b7d6b"
+      }
+    ],
+    "stats": {
+      "total": 92,
+      "additions": 12,
+      "deletions": 80
+    },
+    "files": [
+      {
+        "sha": "7a69d9666884150d71113a69b4b7498efdfcfc4f",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 14,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/76a76321d2f36992178ddaaf4d023c5e33c14fbf/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/76a76321d2f36992178ddaaf4d023c5e33c14fbf/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=76a76321d2f36992178ddaaf4d023c5e33c14fbf",
+        "patch": "@@ -1194,20 +1194,6 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState& state, const C\n                 // Save these to avoid repeated lookups\n                 setIterConflicting.insert(mi);\n \n-                // If this entry is \"dirty\", then we don't have descendant\n-                // state for this transaction, which means we probably have\n-                // lots of in-mempool descendants.\n-                // Don't allow replacements of dirty transactions, to ensure\n-                // that we don't spend too much time walking descendants.\n-                // This should be rare.\n-                if (mi->IsDirty()) {\n-                    return state.DoS(0, false,\n-                            REJECT_NONSTANDARD, \"too many potential replacements\", false,\n-                            strprintf(\"too many potential replacements: rejecting replacement %s; cannot replace tx %s with untracked descendants\",\n-                                hash.ToString(),\n-                                mi->GetTx().GetHash().ToString()));\n-                }\n-\n                 // Don't allow the replacement to reduce the feerate of the\n                 // mempool.\n                 //"
+      },
+      {
+        "sha": "693d42667b0c0cae7e3930b46fcc57e3feb20790",
+        "filename": "src/txmempool.cpp",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 48,
+        "changes": 59,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/76a76321d2f36992178ddaaf4d023c5e33c14fbf/src/txmempool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/76a76321d2f36992178ddaaf4d023c5e33c14fbf/src/txmempool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.cpp?ref=76a76321d2f36992178ddaaf4d023c5e33c14fbf",
+        "patch": "@@ -64,21 +64,13 @@ void CTxMemPoolEntry::UpdateFeeDelta(int64_t newFeeDelta)\n // Update the given tx for any in-mempool descendants.\n // Assumes that setMemPoolChildren is correct for the given tx and all\n // descendants.\n-bool CTxMemPool::UpdateForDescendants(txiter updateIt, int maxDescendantsToVisit, cacheMap &cachedDescendants, const std::set<uint256> &setExclude)\n+void CTxMemPool::UpdateForDescendants(txiter updateIt, cacheMap &cachedDescendants, const std::set<uint256> &setExclude)\n {\n-    // Track the number of entries (outside setExclude) that we'd need to visit\n-    // (will bail out if it exceeds maxDescendantsToVisit)\n-    int nChildrenToVisit = 0;\n-\n     setEntries stageEntries, setAllDescendants;\n     stageEntries = GetMemPoolChildren(updateIt);\n \n     while (!stageEntries.empty()) {\n         const txiter cit = *stageEntries.begin();\n-        if (cit->IsDirty()) {\n-            // Don't consider any more children if any descendant is dirty\n-            return false;\n-        }\n         setAllDescendants.insert(cit);\n         stageEntries.erase(cit);\n         const setEntries &setChildren = GetMemPoolChildren(cit);\n@@ -88,22 +80,11 @@ bool CTxMemPool::UpdateForDescendants(txiter updateIt, int maxDescendantsToVisit\n                 // We've already calculated this one, just add the entries for this set\n                 // but don't traverse again.\n                 BOOST_FOREACH(const txiter cacheEntry, cacheIt->second) {\n-                    // update visit count only for new child transactions\n-                    // (outside of setExclude and stageEntries)\n-                    if (setAllDescendants.insert(cacheEntry).second &&\n-                            !setExclude.count(cacheEntry->GetTx().GetHash()) &&\n-                            !stageEntries.count(cacheEntry)) {\n-                        nChildrenToVisit++;\n-                    }\n+                    setAllDescendants.insert(cacheEntry);\n                 }\n             } else if (!setAllDescendants.count(childEntry)) {\n-                // Schedule for later processing and update our visit count\n-                if (stageEntries.insert(childEntry).second && !setExclude.count(childEntry->GetTx().GetHash())) {\n-                        nChildrenToVisit++;\n-                }\n-            }\n-            if (nChildrenToVisit > maxDescendantsToVisit) {\n-                return false;\n+                // Schedule for later processing\n+                stageEntries.insert(childEntry);\n             }\n         }\n     }\n@@ -121,7 +102,6 @@ bool CTxMemPool::UpdateForDescendants(txiter updateIt, int maxDescendantsToVisit\n         }\n     }\n     mapTx.modify(updateIt, update_descendant_state(modifySize, modifyFee, modifyCount));\n-    return true;\n }\n \n // vHashesToUpdate is the set of transaction hashes from a disconnected block\n@@ -167,10 +147,7 @@ void CTxMemPool::UpdateTransactionsFromBlock(const std::vector<uint256> &vHashes\n                 UpdateParent(childIter, it, true);\n             }\n         }\n-        if (!UpdateForDescendants(it, 100, mapMemPoolDescendantsToUpdate, setAlreadyIncluded)) {\n-            // Mark as dirty if we can't do the calculation.\n-            mapTx.modify(it, set_dirty());\n-        }\n+        UpdateForDescendants(it, mapMemPoolDescendantsToUpdate, setAlreadyIncluded);\n     }\n }\n \n@@ -301,22 +278,13 @@ void CTxMemPool::UpdateForRemoveFromMempool(const setEntries &entriesToRemove)\n     }\n }\n \n-void CTxMemPoolEntry::SetDirty()\n-{\n-    nCountWithDescendants = 0;\n-    nSizeWithDescendants = nTxSize;\n-    nModFeesWithDescendants = GetModifiedFee();\n-}\n-\n void CTxMemPoolEntry::UpdateState(int64_t modifySize, CAmount modifyFee, int64_t modifyCount)\n {\n-    if (!IsDirty()) {\n-        nSizeWithDescendants += modifySize;\n-        assert(int64_t(nSizeWithDescendants) > 0);\n-        nModFeesWithDescendants += modifyFee;\n-        nCountWithDescendants += modifyCount;\n-        assert(int64_t(nCountWithDescendants) > 0);\n-    }\n+    nSizeWithDescendants += modifySize;\n+    assert(int64_t(nSizeWithDescendants) > 0);\n+    nModFeesWithDescendants += modifyFee;\n+    nCountWithDescendants += modifyCount;\n+    assert(int64_t(nCountWithDescendants) > 0);\n }\n \n CTxMemPool::CTxMemPool(const CFeeRate& _minReasonableRelayFee) :\n@@ -658,12 +626,7 @@ void CTxMemPool::check(const CCoinsViewCache *pcoins) const\n         assert(setChildrenCheck == GetMemPoolChildren(it));\n         // Also check to make sure size is greater than sum with immediate children.\n         // just a sanity check, not definitive that this calc is correct...\n-        if (!it->IsDirty()) {\n-            assert(it->GetSizeWithDescendants() >= childSizes + it->GetTxSize());\n-        } else {\n-            assert(it->GetSizeWithDescendants() == it->GetTxSize());\n-            assert(it->GetModFeesWithDescendants() == it->GetModifiedFee());\n-        }\n+        assert(it->GetSizeWithDescendants() >= childSizes + it->GetTxSize());\n \n         if (fDependsWait)\n             waitingOnDependants.push_back(&(*it));"
+      },
+      {
+        "sha": "b1b6645a06a1c8efeeb8b25e181da9a58e3798ac",
+        "filename": "src/txmempool.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 18,
+        "changes": 19,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/76a76321d2f36992178ddaaf4d023c5e33c14fbf/src/txmempool.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/76a76321d2f36992178ddaaf4d023c5e33c14fbf/src/txmempool.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.h?ref=76a76321d2f36992178ddaaf4d023c5e33c14fbf",
+        "patch": "@@ -108,13 +108,6 @@ class CTxMemPoolEntry\n     // modified fees with descendants.\n     void UpdateFeeDelta(int64_t feeDelta);\n \n-    /** We can set the entry to be dirty if doing the full calculation of in-\n-     *  mempool descendants will be too expensive, which can potentially happen\n-     *  when re-adding transactions from a block back to the mempool.\n-     */\n-    void SetDirty();\n-    bool IsDirty() const { return nCountWithDescendants == 0; }\n-\n     uint64_t GetCountWithDescendants() const { return nCountWithDescendants; }\n     uint64_t GetSizeWithDescendants() const { return nSizeWithDescendants; }\n     CAmount GetModFeesWithDescendants() const { return nModFeesWithDescendants; }\n@@ -138,12 +131,6 @@ struct update_descendant_state\n         int64_t modifyCount;\n };\n \n-struct set_dirty\n-{\n-    void operator() (CTxMemPoolEntry &e)\n-        { e.SetDirty(); }\n-};\n-\n struct update_fee_delta\n {\n     update_fee_delta(int64_t _feeDelta) : feeDelta(_feeDelta) { }\n@@ -555,15 +542,11 @@ class CTxMemPool\n      *  updated and hence their state is already reflected in the parent\n      *  state).\n      *\n-     *  If updating an entry requires looking at more than maxDescendantsToVisit\n-     *  transactions, outside of the ones in setExclude, then give up.\n-     *\n      *  cachedDescendants will be updated with the descendants of the transaction\n      *  being updated, so that future invocations don't need to walk the\n      *  same transaction again, if encountered in another transaction chain.\n      */\n-    bool UpdateForDescendants(txiter updateIt,\n-            int maxDescendantsToVisit,\n+    void UpdateForDescendants(txiter updateIt,\n             cacheMap &cachedDescendants,\n             const std::set<uint256> &setExclude);\n     /** Update ancestors of hash to add/remove it as a descendant transaction. */"
+      }
+    ]
+  },
+  {
+    "sha": "72abd2ce3c5ad8157d3a993693df1919a6ad79c3",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3MmFiZDJjZTNjNWFkODE1N2QzYTk5MzY5M2RmMTkxOWE2YWQ3OWMz",
+    "commit": {
+      "author": {
+        "name": "Suhas Daftuar",
+        "email": "sdaftuar@gmail.com",
+        "date": "2015-10-19T14:54:28Z"
+      },
+      "committer": {
+        "name": "Suhas Daftuar",
+        "email": "sdaftuar@gmail.com",
+        "date": "2016-03-14T16:13:33Z"
+      },
+      "message": "Add ancestor tracking to mempool\n\nThis implements caching of ancestor state to each mempool entry, similar to\ndescendant tracking, but also including caching sigops-with-ancestors (as that\nmetric will be helpful to future code that implements better transaction\nselection in CreatenewBlock).",
+      "tree": {
+        "sha": "313c63149c1b4dd3a6374463e0c15b58c343ed83",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/313c63149c1b4dd3a6374463e0c15b58c343ed83"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/72abd2ce3c5ad8157d3a993693df1919a6ad79c3",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/72abd2ce3c5ad8157d3a993693df1919a6ad79c3",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/72abd2ce3c5ad8157d3a993693df1919a6ad79c3",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/72abd2ce3c5ad8157d3a993693df1919a6ad79c3/comments",
+    "author": {
+      "login": "sdaftuar",
+      "id": 7463573,
+      "node_id": "MDQ6VXNlcjc0NjM1NzM=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7463573?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sdaftuar",
+      "html_url": "https://github.com/sdaftuar",
+      "followers_url": "https://api.github.com/users/sdaftuar/followers",
+      "following_url": "https://api.github.com/users/sdaftuar/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sdaftuar/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sdaftuar/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sdaftuar/subscriptions",
+      "organizations_url": "https://api.github.com/users/sdaftuar/orgs",
+      "repos_url": "https://api.github.com/users/sdaftuar/repos",
+      "events_url": "https://api.github.com/users/sdaftuar/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sdaftuar/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sdaftuar",
+      "id": 7463573,
+      "node_id": "MDQ6VXNlcjc0NjM1NzM=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7463573?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sdaftuar",
+      "html_url": "https://github.com/sdaftuar",
+      "followers_url": "https://api.github.com/users/sdaftuar/followers",
+      "following_url": "https://api.github.com/users/sdaftuar/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sdaftuar/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sdaftuar/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sdaftuar/subscriptions",
+      "organizations_url": "https://api.github.com/users/sdaftuar/orgs",
+      "repos_url": "https://api.github.com/users/sdaftuar/repos",
+      "events_url": "https://api.github.com/users/sdaftuar/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sdaftuar/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "76a76321d2f36992178ddaaf4d023c5e33c14fbf",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/76a76321d2f36992178ddaaf4d023c5e33c14fbf",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/76a76321d2f36992178ddaaf4d023c5e33c14fbf"
+      }
+    ],
+    "stats": {
+      "total": 139,
+      "additions": 117,
+      "deletions": 22
+    },
+    "files": [
+      {
+        "sha": "2ae560e01b5255a54838f058f9caa65a6a936585",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/72abd2ce3c5ad8157d3a993693df1919a6ad79c3/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/72abd2ce3c5ad8157d3a993693df1919a6ad79c3/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=72abd2ce3c5ad8157d3a993693df1919a6ad79c3",
+        "patch": "@@ -1323,7 +1323,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState& state, const C\n                     FormatMoney(nModifiedFees - nConflictingFees),\n                     (int)nSize - (int)nConflictingSize);\n         }\n-        pool.RemoveStaged(allConflicting);\n+        pool.RemoveStaged(allConflicting, false);\n \n         // Store transaction in memory\n         pool.addUnchecked(hash, entry, setAncestors, !IsInitialBlockDownload());"
+      },
+      {
+        "sha": "f7961a6b80a316fddb2b2742d9335c882c2a540a",
+        "filename": "src/txmempool.cpp",
+        "status": "modified",
+        "additions": 73,
+        "deletions": 15,
+        "changes": 88,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/72abd2ce3c5ad8157d3a993693df1919a6ad79c3/src/txmempool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/72abd2ce3c5ad8157d3a993693df1919a6ad79c3/src/txmempool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.cpp?ref=72abd2ce3c5ad8157d3a993693df1919a6ad79c3",
+        "patch": "@@ -38,6 +38,11 @@ CTxMemPoolEntry::CTxMemPoolEntry(const CTransaction& _tx, const CAmount& _nFee,\n     assert(inChainInputValue <= nValueIn);\n \n     feeDelta = 0;\n+\n+    nCountWithAncestors = 1;\n+    nSizeWithAncestors = nTxSize;\n+    nModFeesWithAncestors = nFee;\n+    nSigOpCountWithAncestors = sigOpCount;\n }\n \n CTxMemPoolEntry::CTxMemPoolEntry(const CTxMemPoolEntry& other)\n@@ -58,6 +63,7 @@ CTxMemPoolEntry::GetPriority(unsigned int currentHeight) const\n void CTxMemPoolEntry::UpdateFeeDelta(int64_t newFeeDelta)\n {\n     nModFeesWithDescendants += newFeeDelta - feeDelta;\n+    nModFeesWithAncestors += newFeeDelta - feeDelta;\n     feeDelta = newFeeDelta;\n }\n \n@@ -99,6 +105,8 @@ void CTxMemPool::UpdateForDescendants(txiter updateIt, cacheMap &cachedDescendan\n             modifyFee += cit->GetModifiedFee();\n             modifyCount++;\n             cachedDescendants[updateIt].insert(cit);\n+            // Update ancestor state for each descendant\n+            mapTx.modify(cit, update_ancestor_state(updateIt->GetTxSize(), updateIt->GetModifiedFee(), 1, updateIt->GetSigOpCount()));\n         }\n     }\n     mapTx.modify(updateIt, update_descendant_state(modifySize, modifyFee, modifyCount));\n@@ -108,6 +116,7 @@ void CTxMemPool::UpdateForDescendants(txiter updateIt, cacheMap &cachedDescendan\n // which has been re-added to the mempool.\n // for each entry, look for descendants that are outside hashesToUpdate, and\n // add fee/size information for such descendants to the parent.\n+// for each such descendant, also update the ancestor state to include the parent.\n void CTxMemPool::UpdateTransactionsFromBlock(const std::vector<uint256> &vHashesToUpdate)\n {\n     LOCK(cs);\n@@ -228,6 +237,20 @@ void CTxMemPool::UpdateAncestorsOf(bool add, txiter it, setEntries &setAncestors\n     }\n }\n \n+void CTxMemPool::UpdateEntryForAncestors(txiter it, const setEntries &setAncestors)\n+{\n+    int64_t updateCount = setAncestors.size();\n+    int64_t updateSize = 0;\n+    CAmount updateFee = 0;\n+    int updateSigOps = 0;\n+    BOOST_FOREACH(txiter ancestorIt, setAncestors) {\n+        updateSize += ancestorIt->GetTxSize();\n+        updateFee += ancestorIt->GetModifiedFee();\n+        updateSigOps += ancestorIt->GetSigOpCount();\n+    }\n+    mapTx.modify(it, update_ancestor_state(updateSize, updateFee, updateCount, updateSigOps));\n+}\n+\n void CTxMemPool::UpdateChildrenForRemoval(txiter it)\n {\n     const setEntries &setMemPoolChildren = GetMemPoolChildren(it);\n@@ -236,11 +259,30 @@ void CTxMemPool::UpdateChildrenForRemoval(txiter it)\n     }\n }\n \n-void CTxMemPool::UpdateForRemoveFromMempool(const setEntries &entriesToRemove)\n+void CTxMemPool::UpdateForRemoveFromMempool(const setEntries &entriesToRemove, bool updateDescendants)\n {\n     // For each entry, walk back all ancestors and decrement size associated with this\n     // transaction\n     const uint64_t nNoLimit = std::numeric_limits<uint64_t>::max();\n+    if (updateDescendants) {\n+        // updateDescendants should be true whenever we're not recursively\n+        // removing a tx and all its descendants, eg when a transaction is\n+        // confirmed in a block.\n+        // Here we only update statistics and not data in mapLinks (which\n+        // we need to preserve until we're finished with all operations that\n+        // need to traverse the mempool).\n+        BOOST_FOREACH(txiter removeIt, entriesToRemove) {\n+            setEntries setDescendants;\n+            CalculateDescendants(removeIt, setDescendants);\n+            setDescendants.erase(removeIt); // don't update state for self\n+            int64_t modifySize = -((int64_t)removeIt->GetTxSize());\n+            CAmount modifyFee = -removeIt->GetModifiedFee();\n+            int modifySigOps = -removeIt->GetSigOpCount();\n+            BOOST_FOREACH(txiter dit, setDescendants) {\n+                mapTx.modify(dit, update_ancestor_state(modifySize, modifyFee, -1, modifySigOps));\n+            }\n+        }\n+    }\n     BOOST_FOREACH(txiter removeIt, entriesToRemove) {\n         setEntries setAncestors;\n         const CTxMemPoolEntry &entry = *removeIt;\n@@ -264,10 +306,7 @@ void CTxMemPool::UpdateForRemoveFromMempool(const setEntries &entriesToRemove)\n         // transactions as the set of things to update for removal.\n         CalculateMemPoolAncestors(entry, setAncestors, nNoLimit, nNoLimit, nNoLimit, nNoLimit, dummy, false);\n         // Note that UpdateAncestorsOf severs the child links that point to\n-        // removeIt in the entries for the parents of removeIt.  This is\n-        // fine since we don't need to use the mempool children of any entries\n-        // to walk back over our ancestors (but we do need the mempool\n-        // parents!)\n+        // removeIt in the entries for the parents of removeIt.\n         UpdateAncestorsOf(false, removeIt, setAncestors);\n     }\n     // After updating all the ancestor sizes, we can now sever the link between each\n@@ -278,7 +317,7 @@ void CTxMemPool::UpdateForRemoveFromMempool(const setEntries &entriesToRemove)\n     }\n }\n \n-void CTxMemPoolEntry::UpdateState(int64_t modifySize, CAmount modifyFee, int64_t modifyCount)\n+void CTxMemPoolEntry::UpdateDescendantState(int64_t modifySize, CAmount modifyFee, int64_t modifyCount)\n {\n     nSizeWithDescendants += modifySize;\n     assert(int64_t(nSizeWithDescendants) > 0);\n@@ -287,6 +326,17 @@ void CTxMemPoolEntry::UpdateState(int64_t modifySize, CAmount modifyFee, int64_t\n     assert(int64_t(nCountWithDescendants) > 0);\n }\n \n+void CTxMemPoolEntry::UpdateAncestorState(int64_t modifySize, CAmount modifyFee, int64_t modifyCount, int modifySigOps)\n+{\n+    nSizeWithAncestors += modifySize;\n+    assert(int64_t(nSizeWithAncestors) > 0);\n+    nModFeesWithAncestors += modifyFee;\n+    nCountWithAncestors += modifyCount;\n+    assert(int64_t(nCountWithAncestors) > 0);\n+    nSigOpCountWithAncestors += modifySigOps;\n+    assert(int(nSigOpCountWithAncestors) >= 0);\n+}\n+\n CTxMemPool::CTxMemPool(const CFeeRate& _minReasonableRelayFee) :\n     nTransactionsUpdated(0)\n {\n@@ -377,6 +427,7 @@ bool CTxMemPool::addUnchecked(const uint256& hash, const CTxMemPoolEntry &entry,\n         }\n     }\n     UpdateAncestorsOf(true, newit, setAncestors);\n+    UpdateEntryForAncestors(newit, setAncestors);\n \n     nTransactionsUpdated++;\n     totalTxSize += entry.GetTxSize();\n@@ -459,7 +510,7 @@ void CTxMemPool::removeRecursive(const CTransaction &origTx, std::list<CTransact\n         BOOST_FOREACH(txiter it, setAllRemoves) {\n             removed.push_back(it->GetTx());\n         }\n-        RemoveStaged(setAllRemoves);\n+        RemoveStaged(setAllRemoves, false);\n     }\n }\n \n@@ -532,7 +583,7 @@ void CTxMemPool::removeForBlock(const std::vector<CTransaction>& vtx, unsigned i\n         if (it != mapTx.end()) {\n             setEntries stage;\n             stage.insert(it);\n-            RemoveStaged(stage);\n+            RemoveStaged(stage, true);\n         }\n         removeConflicts(tx, conflicts);\n         ClearPrioritisation(tx.GetHash());\n@@ -590,14 +641,19 @@ void CTxMemPool::check(const CCoinsViewCache *pcoins) const\n         innerUsage += memusage::DynamicUsage(links.parents) + memusage::DynamicUsage(links.children);\n         bool fDependsWait = false;\n         setEntries setParentCheck;\n+        int64_t parentSizes = 0;\n+        unsigned int parentSigOpCount = 0;\n         BOOST_FOREACH(const CTxIn &txin, tx.vin) {\n             // Check that every mempool transaction's inputs refer to available coins, or other mempool tx's.\n             indexed_transaction_set::const_iterator it2 = mapTx.find(txin.prevout.hash);\n             if (it2 != mapTx.end()) {\n                 const CTransaction& tx2 = it2->GetTx();\n                 assert(tx2.vout.size() > txin.prevout.n && !tx2.vout[txin.prevout.n].IsNull());\n                 fDependsWait = true;\n-                setParentCheck.insert(it2);\n+                if (setParentCheck.insert(it2).second) {\n+                    parentSizes += it2->GetTxSize();\n+                    parentSigOpCount += it2->GetSigOpCount();\n+                }\n             } else {\n                 const CCoins* coins = pcoins->AccessCoins(txin.prevout.hash);\n                 assert(coins && coins->IsAvailable(txin.prevout.n));\n@@ -610,17 +666,19 @@ void CTxMemPool::check(const CCoinsViewCache *pcoins) const\n             i++;\n         }\n         assert(setParentCheck == GetMemPoolParents(it));\n+        // Also check to make sure ancestor size/sigops are >= sum with immediate\n+        // parents.\n+        assert(it->GetSizeWithAncestors() >= parentSizes + it->GetTxSize());\n+        assert(it->GetSigOpCountWithAncestors() >= parentSigOpCount + it->GetSigOpCount());\n         // Check children against mapNextTx\n         CTxMemPool::setEntries setChildrenCheck;\n         std::map<COutPoint, CInPoint>::const_iterator iter = mapNextTx.lower_bound(COutPoint(it->GetTx().GetHash(), 0));\n         int64_t childSizes = 0;\n-        CAmount childModFee = 0;\n         for (; iter != mapNextTx.end() && iter->first.hash == it->GetTx().GetHash(); ++iter) {\n             txiter childit = mapTx.find(iter->second.ptx->GetHash());\n             assert(childit != mapTx.end()); // mapNextTx points to in-mempool transactions\n             if (setChildrenCheck.insert(childit).second) {\n                 childSizes += childit->GetTxSize();\n-                childModFee += childit->GetModifiedFee();\n             }\n         }\n         assert(setChildrenCheck == GetMemPoolChildren(it));\n@@ -812,9 +870,9 @@ size_t CTxMemPool::DynamicMemoryUsage() const {\n     return memusage::MallocUsage(sizeof(CTxMemPoolEntry) + 12 * sizeof(void*)) * mapTx.size() + memusage::DynamicUsage(mapNextTx) + memusage::DynamicUsage(mapDeltas) + memusage::DynamicUsage(mapLinks) + cachedInnerUsage;\n }\n \n-void CTxMemPool::RemoveStaged(setEntries &stage) {\n+void CTxMemPool::RemoveStaged(setEntries &stage, bool updateDescendants) {\n     AssertLockHeld(cs);\n-    UpdateForRemoveFromMempool(stage);\n+    UpdateForRemoveFromMempool(stage, updateDescendants);\n     BOOST_FOREACH(const txiter& it, stage) {\n         removeUnchecked(it);\n     }\n@@ -832,7 +890,7 @@ int CTxMemPool::Expire(int64_t time) {\n     BOOST_FOREACH(txiter removeit, toremove) {\n         CalculateDescendants(removeit, stage);\n     }\n-    RemoveStaged(stage);\n+    RemoveStaged(stage, false);\n     return stage.size();\n }\n \n@@ -941,7 +999,7 @@ void CTxMemPool::TrimToSize(size_t sizelimit, std::vector<uint256>* pvNoSpendsRe\n             BOOST_FOREACH(txiter it, stage)\n                 txn.push_back(it->GetTx());\n         }\n-        RemoveStaged(stage);\n+        RemoveStaged(stage, false);\n         if (pvNoSpendsRemaining) {\n             BOOST_FOREACH(const CTransaction& tx, txn) {\n                 BOOST_FOREACH(const CTxIn& txin, tx.vin) {"
+      },
+      {
+        "sha": "0db3d5bd27ed2540fb16d24273143680b4a54443",
+        "filename": "src/txmempool.h",
+        "status": "modified",
+        "additions": 43,
+        "deletions": 6,
+        "changes": 49,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/72abd2ce3c5ad8157d3a993693df1919a6ad79c3/src/txmempool.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/72abd2ce3c5ad8157d3a993693df1919a6ad79c3/src/txmempool.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.h?ref=72abd2ce3c5ad8157d3a993693df1919a6ad79c3",
+        "patch": "@@ -80,6 +80,12 @@ class CTxMemPoolEntry\n     uint64_t nSizeWithDescendants;  //! ... and size\n     CAmount nModFeesWithDescendants;  //! ... and total fees (all including us)\n \n+    // Analogous statistics for ancestor transactions\n+    uint64_t nCountWithAncestors;\n+    uint64_t nSizeWithAncestors;\n+    CAmount nModFeesWithAncestors;\n+    unsigned int nSigOpCountWithAncestors;\n+\n public:\n     CTxMemPoolEntry(const CTransaction& _tx, const CAmount& _nFee,\n                     int64_t _nTime, double _entryPriority, unsigned int _entryHeight,\n@@ -103,7 +109,9 @@ class CTxMemPoolEntry\n     size_t DynamicMemoryUsage() const { return nUsageSize; }\n \n     // Adjusts the descendant state, if this entry is not dirty.\n-    void UpdateState(int64_t modifySize, CAmount modifyFee, int64_t modifyCount);\n+    void UpdateDescendantState(int64_t modifySize, CAmount modifyFee, int64_t modifyCount);\n+    // Adjusts the ancestor state\n+    void UpdateAncestorState(int64_t modifySize, CAmount modifyFee, int64_t modifyCount, int modifySigOps);\n     // Updates the fee delta used for mining priority score, and the\n     // modified fees with descendants.\n     void UpdateFeeDelta(int64_t feeDelta);\n@@ -113,6 +121,11 @@ class CTxMemPoolEntry\n     CAmount GetModFeesWithDescendants() const { return nModFeesWithDescendants; }\n \n     bool GetSpendsCoinbase() const { return spendsCoinbase; }\n+\n+    uint64_t GetCountWithAncestors() const { return nCountWithAncestors; }\n+    uint64_t GetSizeWithAncestors() const { return nSizeWithAncestors; }\n+    CAmount GetModFeesWithAncestors() const { return nModFeesWithAncestors; }\n+    unsigned int GetSigOpCountWithAncestors() const { return nSigOpCountWithAncestors; }\n };\n \n // Helpers for modifying CTxMemPool::mapTx, which is a boost multi_index.\n@@ -123,12 +136,28 @@ struct update_descendant_state\n     {}\n \n     void operator() (CTxMemPoolEntry &e)\n-        { e.UpdateState(modifySize, modifyFee, modifyCount); }\n+        { e.UpdateDescendantState(modifySize, modifyFee, modifyCount); }\n+\n+    private:\n+        int64_t modifySize;\n+        CAmount modifyFee;\n+        int64_t modifyCount;\n+};\n+\n+struct update_ancestor_state\n+{\n+    update_ancestor_state(int64_t _modifySize, CAmount _modifyFee, int64_t _modifyCount, int _modifySigOps) :\n+        modifySize(_modifySize), modifyFee(_modifyFee), modifyCount(_modifyCount), modifySigOps(_modifySigOps)\n+    {}\n+\n+    void operator() (CTxMemPoolEntry &e)\n+        { e.UpdateAncestorState(modifySize, modifyFee, modifyCount, modifySigOps); }\n \n     private:\n         int64_t modifySize;\n         CAmount modifyFee;\n         int64_t modifyCount;\n+        int modifySigOps;\n };\n \n struct update_fee_delta\n@@ -440,8 +469,12 @@ class CTxMemPool\n public:\n     /** Remove a set of transactions from the mempool.\n      *  If a transaction is in this set, then all in-mempool descendants must\n-     *  also be in the set.*/\n-    void RemoveStaged(setEntries &stage);\n+     *  also be in the set, unless this transaction is being removed for being\n+     *  in a block.\n+     *  Set updateDescendants to true when removing a tx that was in a block, so\n+     *  that any in-mempool descendants have their ancestor state updated.\n+     */\n+    void RemoveStaged(setEntries &stage, bool updateDescendants);\n \n     /** When adding transactions from a disconnected block back to the mempool,\n      *  new mempool entries may have children in the mempool (which is generally\n@@ -551,8 +584,12 @@ class CTxMemPool\n             const std::set<uint256> &setExclude);\n     /** Update ancestors of hash to add/remove it as a descendant transaction. */\n     void UpdateAncestorsOf(bool add, txiter hash, setEntries &setAncestors);\n-    /** For each transaction being removed, update ancestors and any direct children. */\n-    void UpdateForRemoveFromMempool(const setEntries &entriesToRemove);\n+    /** Set ancestor state for an entry */\n+    void UpdateEntryForAncestors(txiter it, const setEntries &setAncestors);\n+    /** For each transaction being removed, update ancestors and any direct children.\n+      * If updateDescendants is true, then also update in-mempool descendants'\n+      * ancestor state. */\n+    void UpdateForRemoveFromMempool(const setEntries &entriesToRemove, bool updateDescendants);\n     /** Sever link between specified transaction and direct children. */\n     void UpdateChildrenForRemoval(txiter entry);\n "
+      }
+    ]
+  },
+  {
+    "sha": "e2eeb5dda790cf301aa669704a25fb35f67400e7",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplMmVlYjVkZGE3OTBjZjMwMWFhNjY5NzA0YTI1ZmIzNWY2NzQwMGU3",
+    "commit": {
+      "author": {
+        "name": "Suhas Daftuar",
+        "email": "sdaftuar@gmail.com",
+        "date": "2015-10-19T19:15:12Z"
+      },
+      "committer": {
+        "name": "Suhas Daftuar",
+        "email": "sdaftuar@gmail.com",
+        "date": "2016-03-14T16:13:34Z"
+      },
+      "message": "Add ancestor feerate index to mempool",
+      "tree": {
+        "sha": "aeac40ffcbe1d93d5822b92f3bb5363d5758c6ed",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/aeac40ffcbe1d93d5822b92f3bb5363d5758c6ed"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/e2eeb5dda790cf301aa669704a25fb35f67400e7",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e2eeb5dda790cf301aa669704a25fb35f67400e7",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/e2eeb5dda790cf301aa669704a25fb35f67400e7",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e2eeb5dda790cf301aa669704a25fb35f67400e7/comments",
+    "author": {
+      "login": "sdaftuar",
+      "id": 7463573,
+      "node_id": "MDQ6VXNlcjc0NjM1NzM=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7463573?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sdaftuar",
+      "html_url": "https://github.com/sdaftuar",
+      "followers_url": "https://api.github.com/users/sdaftuar/followers",
+      "following_url": "https://api.github.com/users/sdaftuar/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sdaftuar/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sdaftuar/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sdaftuar/subscriptions",
+      "organizations_url": "https://api.github.com/users/sdaftuar/orgs",
+      "repos_url": "https://api.github.com/users/sdaftuar/repos",
+      "events_url": "https://api.github.com/users/sdaftuar/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sdaftuar/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sdaftuar",
+      "id": 7463573,
+      "node_id": "MDQ6VXNlcjc0NjM1NzM=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7463573?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sdaftuar",
+      "html_url": "https://github.com/sdaftuar",
+      "followers_url": "https://api.github.com/users/sdaftuar/followers",
+      "following_url": "https://api.github.com/users/sdaftuar/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sdaftuar/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sdaftuar/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sdaftuar/subscriptions",
+      "organizations_url": "https://api.github.com/users/sdaftuar/orgs",
+      "repos_url": "https://api.github.com/users/sdaftuar/repos",
+      "events_url": "https://api.github.com/users/sdaftuar/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sdaftuar/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "72abd2ce3c5ad8157d3a993693df1919a6ad79c3",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/72abd2ce3c5ad8157d3a993693df1919a6ad79c3",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/72abd2ce3c5ad8157d3a993693df1919a6ad79c3"
+      }
+    ],
+    "stats": {
+      "total": 140,
+      "additions": 137,
+      "deletions": 3
+    },
+    "files": [
+      {
+        "sha": "c8b43df26ca276953e073a15a893f24df7eaafbd",
+        "filename": "src/test/mempool_tests.cpp",
+        "status": "modified",
+        "additions": 104,
+        "deletions": 0,
+        "changes": 104,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e2eeb5dda790cf301aa669704a25fb35f67400e7/src/test/mempool_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e2eeb5dda790cf301aa669704a25fb35f67400e7/src/test/mempool_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/mempool_tests.cpp?ref=e2eeb5dda790cf301aa669704a25fb35f67400e7",
+        "patch": "@@ -317,6 +317,110 @@ BOOST_AUTO_TEST_CASE(MempoolIndexingTest)\n     CheckSort<mining_score>(pool, sortedOrder);\n }\n \n+BOOST_AUTO_TEST_CASE(MempoolAncestorIndexingTest)\n+{\n+    CTxMemPool pool(CFeeRate(0));\n+    TestMemPoolEntryHelper entry;\n+    entry.hadNoDependencies = true;\n+\n+    /* 3rd highest fee */\n+    CMutableTransaction tx1 = CMutableTransaction();\n+    tx1.vout.resize(1);\n+    tx1.vout[0].scriptPubKey = CScript() << OP_11 << OP_EQUAL;\n+    tx1.vout[0].nValue = 10 * COIN;\n+    pool.addUnchecked(tx1.GetHash(), entry.Fee(10000LL).Priority(10.0).FromTx(tx1));\n+\n+    /* highest fee */\n+    CMutableTransaction tx2 = CMutableTransaction();\n+    tx2.vout.resize(1);\n+    tx2.vout[0].scriptPubKey = CScript() << OP_11 << OP_EQUAL;\n+    tx2.vout[0].nValue = 2 * COIN;\n+    pool.addUnchecked(tx2.GetHash(), entry.Fee(20000LL).Priority(9.0).FromTx(tx2));\n+    uint64_t tx2Size = ::GetSerializeSize(tx2, SER_NETWORK, PROTOCOL_VERSION);\n+\n+    /* lowest fee */\n+    CMutableTransaction tx3 = CMutableTransaction();\n+    tx3.vout.resize(1);\n+    tx3.vout[0].scriptPubKey = CScript() << OP_11 << OP_EQUAL;\n+    tx3.vout[0].nValue = 5 * COIN;\n+    pool.addUnchecked(tx3.GetHash(), entry.Fee(0LL).Priority(100.0).FromTx(tx3));\n+\n+    /* 2nd highest fee */\n+    CMutableTransaction tx4 = CMutableTransaction();\n+    tx4.vout.resize(1);\n+    tx4.vout[0].scriptPubKey = CScript() << OP_11 << OP_EQUAL;\n+    tx4.vout[0].nValue = 6 * COIN;\n+    pool.addUnchecked(tx4.GetHash(), entry.Fee(15000LL).Priority(1.0).FromTx(tx4));\n+\n+    /* equal fee rate to tx1, but newer */\n+    CMutableTransaction tx5 = CMutableTransaction();\n+    tx5.vout.resize(1);\n+    tx5.vout[0].scriptPubKey = CScript() << OP_11 << OP_EQUAL;\n+    tx5.vout[0].nValue = 11 * COIN;\n+    pool.addUnchecked(tx5.GetHash(), entry.Fee(10000LL).FromTx(tx5));\n+    BOOST_CHECK_EQUAL(pool.size(), 5);\n+\n+    std::vector<std::string> sortedOrder;\n+    sortedOrder.resize(5);\n+    sortedOrder[0] = tx2.GetHash().ToString(); // 20000\n+    sortedOrder[1] = tx4.GetHash().ToString(); // 15000\n+    // tx1 and tx5 are both 10000\n+    // Ties are broken by hash, not timestamp, so determine which\n+    // hash comes first.\n+    if (tx1.GetHash() < tx5.GetHash()) {\n+        sortedOrder[2] = tx1.GetHash().ToString();\n+        sortedOrder[3] = tx5.GetHash().ToString();\n+    } else {\n+        sortedOrder[2] = tx5.GetHash().ToString();\n+        sortedOrder[3] = tx1.GetHash().ToString();\n+    }\n+    sortedOrder[4] = tx3.GetHash().ToString(); // 0\n+\n+    CheckSort<ancestor_score>(pool, sortedOrder);\n+\n+    /* low fee parent with high fee child */\n+    /* tx6 (0) -> tx7 (high) */\n+    CMutableTransaction tx6 = CMutableTransaction();\n+    tx6.vout.resize(1);\n+    tx6.vout[0].scriptPubKey = CScript() << OP_11 << OP_EQUAL;\n+    tx6.vout[0].nValue = 20 * COIN;\n+    uint64_t tx6Size = ::GetSerializeSize(tx6, SER_NETWORK, PROTOCOL_VERSION);\n+\n+    pool.addUnchecked(tx6.GetHash(), entry.Fee(0LL).FromTx(tx6));\n+    BOOST_CHECK_EQUAL(pool.size(), 6);\n+    sortedOrder.push_back(tx6.GetHash().ToString());\n+    CheckSort<ancestor_score>(pool, sortedOrder);\n+\n+    CMutableTransaction tx7 = CMutableTransaction();\n+    tx7.vin.resize(1);\n+    tx7.vin[0].prevout = COutPoint(tx6.GetHash(), 0);\n+    tx7.vin[0].scriptSig = CScript() << OP_11;\n+    tx7.vout.resize(1);\n+    tx7.vout[0].scriptPubKey = CScript() << OP_11 << OP_EQUAL;\n+    tx7.vout[0].nValue = 10 * COIN;\n+    uint64_t tx7Size = ::GetSerializeSize(tx7, SER_NETWORK, PROTOCOL_VERSION);\n+\n+    /* set the fee to just below tx2's feerate when including ancestor */\n+    CAmount fee = (20000/tx2Size)*(tx7Size + tx6Size) - 1;\n+\n+    //CTxMemPoolEntry entry7(tx7, fee, 2, 10.0, 1, true);\n+    pool.addUnchecked(tx7.GetHash(), entry.Fee(fee).FromTx(tx7));\n+    BOOST_CHECK_EQUAL(pool.size(), 7);\n+    sortedOrder.insert(sortedOrder.begin()+1, tx7.GetHash().ToString());\n+    CheckSort<ancestor_score>(pool, sortedOrder);\n+\n+    /* after tx6 is mined, tx7 should move up in the sort */\n+    std::vector<CTransaction> vtx;\n+    vtx.push_back(tx6);\n+    std::list<CTransaction> dummy;\n+    pool.removeForBlock(vtx, 1, dummy, false);\n+\n+    sortedOrder.erase(sortedOrder.begin()+1);\n+    sortedOrder.pop_back();\n+    sortedOrder.insert(sortedOrder.begin(), tx7.GetHash().ToString());\n+    CheckSort<ancestor_score>(pool, sortedOrder);\n+}\n+\n \n BOOST_AUTO_TEST_CASE(MempoolSizeLimitTest)\n {"
+      },
+      {
+        "sha": "48fbe56023156170c49985288000c9c1d1a5dac2",
+        "filename": "src/txmempool.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e2eeb5dda790cf301aa669704a25fb35f67400e7/src/txmempool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e2eeb5dda790cf301aa669704a25fb35f67400e7/src/txmempool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.cpp?ref=e2eeb5dda790cf301aa669704a25fb35f67400e7",
+        "patch": "@@ -866,8 +866,8 @@ bool CCoinsViewMemPool::HaveCoins(const uint256 &txid) const {\n \n size_t CTxMemPool::DynamicMemoryUsage() const {\n     LOCK(cs);\n-    // Estimate the overhead of mapTx to be 12 pointers + an allocation, as no exact formula for boost::multi_index_contained is implemented.\n-    return memusage::MallocUsage(sizeof(CTxMemPoolEntry) + 12 * sizeof(void*)) * mapTx.size() + memusage::DynamicUsage(mapNextTx) + memusage::DynamicUsage(mapDeltas) + memusage::DynamicUsage(mapLinks) + cachedInnerUsage;\n+    // Estimate the overhead of mapTx to be 15 pointers + an allocation, as no exact formula for boost::multi_index_contained is implemented.\n+    return memusage::MallocUsage(sizeof(CTxMemPoolEntry) + 15 * sizeof(void*)) * mapTx.size() + memusage::DynamicUsage(mapNextTx) + memusage::DynamicUsage(mapDeltas) + memusage::DynamicUsage(mapLinks) + cachedInnerUsage;\n }\n \n void CTxMemPool::RemoveStaged(setEntries &stage, bool updateDescendants) {"
+      },
+      {
+        "sha": "3f80a6ec245da986002dd5b1162f912b6de0e748",
+        "filename": "src/txmempool.h",
+        "status": "modified",
+        "additions": 31,
+        "deletions": 1,
+        "changes": 32,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e2eeb5dda790cf301aa669704a25fb35f67400e7/src/txmempool.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e2eeb5dda790cf301aa669704a25fb35f67400e7/src/txmempool.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.h?ref=e2eeb5dda790cf301aa669704a25fb35f67400e7",
+        "patch": "@@ -244,10 +244,34 @@ class CompareTxMemPoolEntryByEntryTime\n     }\n };\n \n+class CompareTxMemPoolEntryByAncestorFee\n+{\n+public:\n+    bool operator()(const CTxMemPoolEntry& a, const CTxMemPoolEntry& b)\n+    {\n+        double aFees = a.GetModFeesWithAncestors();\n+        double aSize = a.GetSizeWithAncestors();\n+\n+        double bFees = b.GetModFeesWithAncestors();\n+        double bSize = b.GetSizeWithAncestors();\n+\n+        // Avoid division by rewriting (a/b > c/d) as (a*d > c*b).\n+        double f1 = aFees * bSize;\n+        double f2 = aSize * bFees;\n+\n+        if (f1 == f2) {\n+            return a.GetTx().GetHash() < b.GetTx().GetHash();\n+        }\n+\n+        return f1 > f2;\n+    }\n+};\n+\n // Multi_index tag names\n struct descendant_score {};\n struct entry_time {};\n struct mining_score {};\n+struct ancestor_score {};\n \n class CBlockPolicyEstimator;\n \n@@ -380,12 +404,18 @@ class CTxMemPool\n                 boost::multi_index::tag<entry_time>,\n                 boost::multi_index::identity<CTxMemPoolEntry>,\n                 CompareTxMemPoolEntryByEntryTime\n-                >,\n+            >,\n             // sorted by score (for mining prioritization)\n             boost::multi_index::ordered_unique<\n                 boost::multi_index::tag<mining_score>,\n                 boost::multi_index::identity<CTxMemPoolEntry>,\n                 CompareTxMemPoolEntryByScore\n+            >,\n+            // sorted by fee rate with ancestors\n+            boost::multi_index::ordered_non_unique<\n+                boost::multi_index::tag<ancestor_score>,\n+                boost::multi_index::identity<CTxMemPoolEntry>,\n+                CompareTxMemPoolEntryByAncestorFee\n             >\n         >\n     > indexed_transaction_set;"
+      }
+    ]
+  },
+  {
+    "sha": "ce019bf90fe89c1256a89c489795987ef0b8a18f",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjZTAxOWJmOTBmZTg5YzEyNTZhODljNDg5Nzk1OTg3ZWYwYjhhMThm",
+    "commit": {
+      "author": {
+        "name": "Suhas Daftuar",
+        "email": "sdaftuar@gmail.com",
+        "date": "2016-03-08T20:49:26Z"
+      },
+      "committer": {
+        "name": "Suhas Daftuar",
+        "email": "sdaftuar@gmail.com",
+        "date": "2016-03-14T16:13:34Z"
+      },
+      "message": "Check all ancestor state in CTxMemPool::check()",
+      "tree": {
+        "sha": "da061f7c09b4508fd94d1737dae11c5b97921fa5",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/da061f7c09b4508fd94d1737dae11c5b97921fa5"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/ce019bf90fe89c1256a89c489795987ef0b8a18f",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ce019bf90fe89c1256a89c489795987ef0b8a18f",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/ce019bf90fe89c1256a89c489795987ef0b8a18f",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ce019bf90fe89c1256a89c489795987ef0b8a18f/comments",
+    "author": {
+      "login": "sdaftuar",
+      "id": 7463573,
+      "node_id": "MDQ6VXNlcjc0NjM1NzM=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7463573?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sdaftuar",
+      "html_url": "https://github.com/sdaftuar",
+      "followers_url": "https://api.github.com/users/sdaftuar/followers",
+      "following_url": "https://api.github.com/users/sdaftuar/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sdaftuar/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sdaftuar/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sdaftuar/subscriptions",
+      "organizations_url": "https://api.github.com/users/sdaftuar/orgs",
+      "repos_url": "https://api.github.com/users/sdaftuar/repos",
+      "events_url": "https://api.github.com/users/sdaftuar/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sdaftuar/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sdaftuar",
+      "id": 7463573,
+      "node_id": "MDQ6VXNlcjc0NjM1NzM=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7463573?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sdaftuar",
+      "html_url": "https://github.com/sdaftuar",
+      "followers_url": "https://api.github.com/users/sdaftuar/followers",
+      "following_url": "https://api.github.com/users/sdaftuar/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sdaftuar/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sdaftuar/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sdaftuar/subscriptions",
+      "organizations_url": "https://api.github.com/users/sdaftuar/orgs",
+      "repos_url": "https://api.github.com/users/sdaftuar/repos",
+      "events_url": "https://api.github.com/users/sdaftuar/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sdaftuar/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "e2eeb5dda790cf301aa669704a25fb35f67400e7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e2eeb5dda790cf301aa669704a25fb35f67400e7",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/e2eeb5dda790cf301aa669704a25fb35f67400e7"
+      }
+    ],
+    "stats": {
+      "total": 29,
+      "additions": 23,
+      "deletions": 6
+    },
+    "files": [
+      {
+        "sha": "ae851621c16c226a50f212b6e7c38b5841fe15ac",
+        "filename": "src/txmempool.cpp",
+        "status": "modified",
+        "additions": 22,
+        "deletions": 5,
+        "changes": 27,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ce019bf90fe89c1256a89c489795987ef0b8a18f/src/txmempool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ce019bf90fe89c1256a89c489795987ef0b8a18f/src/txmempool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.cpp?ref=ce019bf90fe89c1256a89c489795987ef0b8a18f",
+        "patch": "@@ -160,7 +160,7 @@ void CTxMemPool::UpdateTransactionsFromBlock(const std::vector<uint256> &vHashes\n     }\n }\n \n-bool CTxMemPool::CalculateMemPoolAncestors(const CTxMemPoolEntry &entry, setEntries &setAncestors, uint64_t limitAncestorCount, uint64_t limitAncestorSize, uint64_t limitDescendantCount, uint64_t limitDescendantSize, std::string &errString, bool fSearchForParents /* = true */)\n+bool CTxMemPool::CalculateMemPoolAncestors(const CTxMemPoolEntry &entry, setEntries &setAncestors, uint64_t limitAncestorCount, uint64_t limitAncestorSize, uint64_t limitDescendantCount, uint64_t limitDescendantSize, std::string &errString, bool fSearchForParents /* = true */) const\n {\n     setEntries parentHashes;\n     const CTransaction &tx = entry.GetTx();\n@@ -666,10 +666,27 @@ void CTxMemPool::check(const CCoinsViewCache *pcoins) const\n             i++;\n         }\n         assert(setParentCheck == GetMemPoolParents(it));\n-        // Also check to make sure ancestor size/sigops are >= sum with immediate\n-        // parents.\n-        assert(it->GetSizeWithAncestors() >= parentSizes + it->GetTxSize());\n-        assert(it->GetSigOpCountWithAncestors() >= parentSigOpCount + it->GetSigOpCount());\n+        // Verify ancestor state is correct.\n+        setEntries setAncestors;\n+        uint64_t nNoLimit = std::numeric_limits<uint64_t>::max();\n+        std::string dummy;\n+        CalculateMemPoolAncestors(*it, setAncestors, nNoLimit, nNoLimit, nNoLimit, nNoLimit, dummy);\n+        uint64_t nCountCheck = setAncestors.size() + 1;\n+        uint64_t nSizeCheck = it->GetTxSize();\n+        CAmount nFeesCheck = it->GetModifiedFee();\n+        unsigned int nSigOpCheck = it->GetSigOpCount();\n+\n+        BOOST_FOREACH(txiter ancestorIt, setAncestors) {\n+            nSizeCheck += ancestorIt->GetTxSize();\n+            nFeesCheck += ancestorIt->GetModifiedFee();\n+            nSigOpCheck += ancestorIt->GetSigOpCount();\n+        }\n+\n+        assert(it->GetCountWithAncestors() == nCountCheck);\n+        assert(it->GetSizeWithAncestors() == nSizeCheck);\n+        assert(it->GetSigOpCountWithAncestors() == nSigOpCheck);\n+        assert(it->GetModFeesWithAncestors() == nFeesCheck);\n+\n         // Check children against mapNextTx\n         CTxMemPool::setEntries setChildrenCheck;\n         std::map<COutPoint, CInPoint>::const_iterator iter = mapNextTx.lower_bound(COutPoint(it->GetTx().GetHash(), 0));"
+      },
+      {
+        "sha": "a82d17c2f8b0c0692be293757d83aadd43488c9e",
+        "filename": "src/txmempool.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ce019bf90fe89c1256a89c489795987ef0b8a18f/src/txmempool.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ce019bf90fe89c1256a89c489795987ef0b8a18f/src/txmempool.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.h?ref=ce019bf90fe89c1256a89c489795987ef0b8a18f",
+        "patch": "@@ -527,7 +527,7 @@ class CTxMemPool\n      *  fSearchForParents = whether to search a tx's vin for in-mempool parents, or\n      *    look up parents from mapLinks. Must be true for entries not in the mempool\n      */\n-    bool CalculateMemPoolAncestors(const CTxMemPoolEntry &entry, setEntries &setAncestors, uint64_t limitAncestorCount, uint64_t limitAncestorSize, uint64_t limitDescendantCount, uint64_t limitDescendantSize, std::string &errString, bool fSearchForParents = true);\n+    bool CalculateMemPoolAncestors(const CTxMemPoolEntry &entry, setEntries &setAncestors, uint64_t limitAncestorCount, uint64_t limitAncestorSize, uint64_t limitDescendantCount, uint64_t limitDescendantSize, std::string &errString, bool fSearchForParents = true) const;\n \n     /** Populate setDescendants with all in-mempool descendants of hash.\n      *  Assumes that setDescendants includes all in-mempool descendants of anything"
+      }
+    ]
+  }
+]

@@ -1,0 +1,86 @@
+[
+  {
+    "sha": "4c5a6ddc66617d3b6cbb03300144cb6162743108",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0YzVhNmRkYzY2NjE3ZDNiNmNiYjAzMzAwMTQ0Y2I2MTYyNzQzMTA4",
+    "commit": {
+      "author": {
+        "name": "Lenny Maiorani",
+        "email": "ldm5180@gmail.com",
+        "date": "2017-11-20T14:41:21Z"
+      },
+      "committer": {
+        "name": "Lenny Maiorani",
+        "email": "ldm5180@gmail.com",
+        "date": "2017-11-20T14:46:28Z"
+      },
+      "message": "[refactor] Remove magic numbers from HMAC SHA256\n\nProblem:\n- Magic numbers are used to determine sizes, but are error prone.\n\nSolution:\n- Change `OUTPUT_SIZE` to be `constexpr` so that it can be used in\n  array sizes.\n- Use arrays so the size is carried with the variable instead of\n  external computation.\n- Cleanup initialization and further setting of `rkey` which can now\n  be simplified because it is a `std::array` instead of a C-array.",
+      "tree": {
+        "sha": "ab3d94e4a82763eda3e62a57298c96519037d1bf",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/ab3d94e4a82763eda3e62a57298c96519037d1bf"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/4c5a6ddc66617d3b6cbb03300144cb6162743108",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4c5a6ddc66617d3b6cbb03300144cb6162743108",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/4c5a6ddc66617d3b6cbb03300144cb6162743108",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4c5a6ddc66617d3b6cbb03300144cb6162743108/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "7293d064133aeafd9f0ae0bdbb2ed74a44d91ecc",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7293d064133aeafd9f0ae0bdbb2ed74a44d91ecc",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/7293d064133aeafd9f0ae0bdbb2ed74a44d91ecc"
+      }
+    ],
+    "stats": {
+      "total": 33,
+      "additions": 17,
+      "deletions": 16
+    },
+    "files": [
+      {
+        "sha": "5648da2ee7fbf0ff0a2728eb6bb103f858a9e743",
+        "filename": "src/crypto/hmac_sha256.cpp",
+        "status": "modified",
+        "additions": 15,
+        "deletions": 14,
+        "changes": 29,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4c5a6ddc66617d3b6cbb03300144cb6162743108/src/crypto/hmac_sha256.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4c5a6ddc66617d3b6cbb03300144cb6162743108/src/crypto/hmac_sha256.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/crypto/hmac_sha256.cpp?ref=4c5a6ddc66617d3b6cbb03300144cb6162743108",
+        "patch": "@@ -4,31 +4,32 @@\n \n #include <crypto/hmac_sha256.h>\n \n-#include <string.h>\n+#include <algorithm>\n+#include <array>\n+#include <cstring>\n \n CHMAC_SHA256::CHMAC_SHA256(const unsigned char* key, size_t keylen)\n {\n-    unsigned char rkey[64];\n-    if (keylen <= 64) {\n-        memcpy(rkey, key, keylen);\n-        memset(rkey + keylen, 0, 64 - keylen);\n+    std::array<unsigned char, OUTPUT_SIZE * 2> rkey{};\n+    if (keylen <= rkey.size()) {\n+        std::memcpy(rkey.data(), key, keylen);\n     } else {\n-        CSHA256().Write(key, keylen).Finalize(rkey);\n-        memset(rkey + 32, 0, 32);\n+        CSHA256().Write(key, keylen).Finalize(rkey.data());\n+        std::fill(rkey.begin() + OUTPUT_SIZE, rkey.end(), 0);\n     }\n \n-    for (int n = 0; n < 64; n++)\n+    for (auto n = 0u; n < rkey.size(); n++)\n         rkey[n] ^= 0x5c;\n-    outer.Write(rkey, 64);\n+    outer.Write(rkey.data(), rkey.size());\n \n-    for (int n = 0; n < 64; n++)\n+    for (auto n = 0u; n < rkey.size(); n++)\n         rkey[n] ^= 0x5c ^ 0x36;\n-    inner.Write(rkey, 64);\n+    inner.Write(rkey.data(), rkey.size());\n }\n \n void CHMAC_SHA256::Finalize(unsigned char hash[OUTPUT_SIZE])\n {\n-    unsigned char temp[32];\n-    inner.Finalize(temp);\n-    outer.Write(temp, 32).Finalize(hash);\n+    std::array<unsigned char, OUTPUT_SIZE> temp{};\n+    inner.Finalize(temp.data());\n+    outer.Write(temp.data(), temp.size()).Finalize(hash);\n }"
+      },
+      {
+        "sha": "2ac2ae63725018de3ba88842ff87dc9781ad9dde",
+        "filename": "src/crypto/hmac_sha256.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4c5a6ddc66617d3b6cbb03300144cb6162743108/src/crypto/hmac_sha256.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4c5a6ddc66617d3b6cbb03300144cb6162743108/src/crypto/hmac_sha256.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/crypto/hmac_sha256.h?ref=4c5a6ddc66617d3b6cbb03300144cb6162743108",
+        "patch": "@@ -18,7 +18,7 @@ class CHMAC_SHA256\n     CSHA256 inner;\n \n public:\n-    static const size_t OUTPUT_SIZE = 32;\n+    static constexpr const size_t OUTPUT_SIZE = CSHA256::OUTPUT_SIZE;\n \n     CHMAC_SHA256(const unsigned char* key, size_t keylen);\n     CHMAC_SHA256& Write(const unsigned char* data, size_t len)"
+      },
+      {
+        "sha": "cea280d81387660c09df13a46a0d48cc8ad0c50e",
+        "filename": "src/crypto/sha256.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4c5a6ddc66617d3b6cbb03300144cb6162743108/src/crypto/sha256.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4c5a6ddc66617d3b6cbb03300144cb6162743108/src/crypto/sha256.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/crypto/sha256.h?ref=4c5a6ddc66617d3b6cbb03300144cb6162743108",
+        "patch": "@@ -18,7 +18,7 @@ class CSHA256\n     uint64_t bytes;\n \n public:\n-    static const size_t OUTPUT_SIZE = 32;\n+    static constexpr const size_t OUTPUT_SIZE = 32;\n \n     CSHA256();\n     CSHA256& Write(const unsigned char* data, size_t len);"
+      }
+    ]
+  }
+]

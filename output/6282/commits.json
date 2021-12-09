@@ -1,0 +1,74 @@
+[
+  {
+    "sha": "0ce30eaa36295447c6e7f8d16a05798c746fe28a",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowY2UzMGVhYTM2Mjk1NDQ3YzZlN2Y4ZDE2YTA1Nzk4Yzc0NmZlMjhh",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2015-06-15T05:46:51Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2015-06-16T13:03:50Z"
+      },
+      "message": "fix crash on shutdown when e.g. changing -txindex and abort action\n\n- fixes #3136\n- the problem is related to Boost path and a static initialized internal\n  pointer\n- using a std::string in CDBEnv::EnvShutdown() prevents the problem\n- this removes the boost::filesystem::path path field from CDBEnv",
+      "tree": {
+        "sha": "372350193cf3b73ffc39cf44e7b2a5cfd7f7550f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/372350193cf3b73ffc39cf44e7b2a5cfd7f7550f"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/0ce30eaa36295447c6e7f8d16a05798c746fe28a",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0ce30eaa36295447c6e7f8d16a05798c746fe28a",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/0ce30eaa36295447c6e7f8d16a05798c746fe28a",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0ce30eaa36295447c6e7f8d16a05798c746fe28a/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "754aae51488c810f3a3cf6651c88849a209ca545",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/754aae51488c810f3a3cf6651c88849a209ca545",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/754aae51488c810f3a3cf6651c88849a209ca545"
+      }
+    ],
+    "stats": {
+      "total": 16,
+      "additions": 9,
+      "deletions": 7
+    },
+    "files": [
+      {
+        "sha": "e5bc653c33413b59d6e0d36e21077b7d925f45c7",
+        "filename": "src/wallet/db.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 6,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0ce30eaa36295447c6e7f8d16a05798c746fe28a/src/wallet/db.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0ce30eaa36295447c6e7f8d16a05798c746fe28a/src/wallet/db.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/db.cpp?ref=0ce30eaa36295447c6e7f8d16a05798c746fe28a",
+        "patch": "@@ -43,7 +43,7 @@ void CDBEnv::EnvShutdown()\n     if (ret != 0)\n         LogPrintf(\"CDBEnv::EnvShutdown: Error %d shutting down database environment: %s\\n\", ret, DbEnv::strerror(ret));\n     if (!fMockDb)\n-        DbEnv(0).remove(path.string().c_str(), 0);\n+        DbEnv(0).remove(strPath.c_str(), 0);\n }\n \n void CDBEnv::Reset()\n@@ -78,10 +78,10 @@ bool CDBEnv::Open(const boost::filesystem::path& pathIn)\n \n     boost::this_thread::interruption_point();\n \n-    path = pathIn;\n-    boost::filesystem::path pathLogDir = path / \"database\";\n+    strPath = pathIn.string();\n+    boost::filesystem::path pathLogDir = pathIn / \"database\";\n     TryCreateDirectory(pathLogDir);\n-    boost::filesystem::path pathErrorFile = path / \"db.log\";\n+    boost::filesystem::path pathErrorFile = pathIn / \"db.log\";\n     LogPrintf(\"CDBEnv::Open: LogDir=%s ErrorFile=%s\\n\", pathLogDir.string(), pathErrorFile.string());\n \n     unsigned int nEnvFlags = 0;\n@@ -98,7 +98,7 @@ bool CDBEnv::Open(const boost::filesystem::path& pathIn)\n     dbenv->set_flags(DB_AUTO_COMMIT, 1);\n     dbenv->set_flags(DB_TXN_WRITE_NOSYNC, 1);\n     dbenv->log_set_config(DB_LOG_AUTO_REMOVE, 1);\n-    int ret = dbenv->open(path.string().c_str(),\n+    int ret = dbenv->open(strPath.c_str(),\n                          DB_CREATE |\n                              DB_INIT_LOCK |\n                              DB_INIT_LOG |\n@@ -455,7 +455,7 @@ void CDBEnv::Flush(bool fShutdown)\n                 dbenv->log_archive(&listp, DB_ARCH_REMOVE);\n                 Close();\n                 if (!fMockDb)\n-                    boost::filesystem::remove_all(path / \"database\");\n+                    boost::filesystem::remove_all(boost::filesystem::path(strPath) / \"database\");\n             }\n         }\n     }"
+      },
+      {
+        "sha": "64071caa3a21efd2b7de4bf79a0cf3e579d781a2",
+        "filename": "src/wallet/db.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 1,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0ce30eaa36295447c6e7f8d16a05798c746fe28a/src/wallet/db.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0ce30eaa36295447c6e7f8d16a05798c746fe28a/src/wallet/db.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/db.h?ref=0ce30eaa36295447c6e7f8d16a05798c746fe28a",
+        "patch": "@@ -27,7 +27,9 @@ class CDBEnv\n private:\n     bool fDbEnvInit;\n     bool fMockDb;\n-    boost::filesystem::path path;\n+    // Don't change into boost::filesystem::path, as that can result in\n+    // shutdown problems/crashes caused by a static initialized internal pointer.\n+    std::string strPath;\n \n     void EnvShutdown();\n "
+      }
+    ]
+  }
+]

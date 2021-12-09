@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "0ac426b87c865c969e2d7a34d846fedd4a0dc94f",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowYWM0MjZiODdjODY1Yzk2OWUyZDdhMzRkODQ2ZmVkZDRhMGRjOTRm",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-04-26T08:36:34Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2015-05-14T13:38:15Z"
+      },
+      "message": "extend proxy handling and processing\n\n- rework the proxy handling in init to cover more cases and work more\n  thoroughly",
+      "tree": {
+        "sha": "4d7e59ec213df81c924a0f1664a1c2018d45b58d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/4d7e59ec213df81c924a0f1664a1c2018d45b58d"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/0ac426b87c865c969e2d7a34d846fedd4a0dc94f",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0ac426b87c865c969e2d7a34d846fedd4a0dc94f",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/0ac426b87c865c969e2d7a34d846fedd4a0dc94f",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0ac426b87c865c969e2d7a34d846fedd4a0dc94f/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "a538126a8cefb4608d7d21f868c3fe7f3e42c00a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a538126a8cefb4608d7d21f868c3fe7f3e42c00a",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/a538126a8cefb4608d7d21f868c3fe7f3e42c00a"
+      }
+    ],
+    "stats": {
+      "total": 66,
+      "additions": 40,
+      "deletions": 26
+    },
+    "files": [
+      {
+        "sha": "de4a974858d78211974c6d4b3dd1febc48a4c42b",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 40,
+        "deletions": 26,
+        "changes": 66,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0ac426b87c865c969e2d7a34d846fedd4a0dc94f/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0ac426b87c865c969e2d7a34d846fedd4a0dc94f/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=0ac426b87c865c969e2d7a34d846fedd4a0dc94f",
+        "patch": "@@ -561,6 +561,30 @@ bool InitSanityCheck(void)\n     return true;\n }\n \n+/** Initialize proxy servers\n+ *  Check proxies and (if they are valid) set them to be used by the client\n+ */\n+bool ProxyInit(Network net, const std::string& strArg, bool fIsDefault)\n+{\n+    // if -no{proxy/onion} was NOT specified\n+    if (GetArg(strArg, \"0\") != \"0\") {\n+        proxyType addrProxy = proxyType(CService(mapArgs[strArg], (unsigned short)9050), GetBoolArg(\"-proxyrandomize\", true));\n+\n+        // try to set address as proxy\n+        if (!SetProxy(net, addrProxy))\n+            return InitError(strprintf(_(\"Invalid proxy address '%s' for: %s\"), mapArgs[strArg], strArg));\n+        // special-case Tor, which needs to be set as reachable manually\n+        if (net == NET_TOR)\n+            SetReachable(NET_TOR);\n+\n+        // everything ok\n+        return true;\n+    }\n+\n+    // prerequisites failed (no error for -proxy)\n+    return fIsDefault;\n+}\n+\n /** Initialize bitcoin.\n  *  @pre Parameters should be parsed and config file should be read.\n  */\n@@ -952,32 +976,22 @@ bool AppInit2(boost::thread_group& threadGroup)\n         }\n     }\n \n-    proxyType addrProxy;\n-    bool fProxy = false;\n-    if (mapArgs.count(\"-proxy\")) {\n-        addrProxy = proxyType(CService(mapArgs[\"-proxy\"], 9050), GetBoolArg(\"-proxyrandomize\", true));\n-        if (!addrProxy.IsValid())\n-            return InitError(strprintf(_(\"Invalid -proxy address: '%s'\"), mapArgs[\"-proxy\"]));\n-\n-        SetProxy(NET_IPV4, addrProxy);\n-        SetProxy(NET_IPV6, addrProxy);\n-        SetNameProxy(addrProxy);\n-        fProxy = true;\n-    }\n-\n-    // -onion can override normal proxy, -noonion disables connecting to .onion entirely\n-    if (!(mapArgs.count(\"-onion\") && mapArgs[\"-onion\"] == \"0\") &&\n-        (fProxy || mapArgs.count(\"-onion\"))) {\n-        proxyType addrOnion;\n-        if (!mapArgs.count(\"-onion\"))\n-            addrOnion = addrProxy;\n-        else\n-            addrOnion = proxyType(CService(mapArgs[\"-onion\"], 9050), GetBoolArg(\"-proxyrandomize\", true));\n-        if (!addrOnion.IsValid())\n-            return InitError(strprintf(_(\"Invalid -onion address: '%s'\"), mapArgs[\"-onion\"]));\n-        SetProxy(NET_TOR, addrOnion);\n-        SetReachable(NET_TOR);\n-    }\n+    // try to enable outgoing IPv4 connections via default proxy\n+    if (!ProxyInit(NET_IPV4, \"-proxy\", true))\n+        return false; // errors with default proxy lead to exit\n+    // try to enable outgoing IPv6 connections via default proxy\n+    if (!ProxyInit(NET_IPV6, \"-proxy\", true))\n+        return false; // errors with default proxy lead to exit\n+    // try to enable outgoing Tor connections via separate proxy (on failure try default proxy)\n+    if (!ProxyInit(NET_TOR, \"-onion\", false))\n+        if (!ProxyInit(NET_TOR, \"-proxy\", true))\n+            return false; // errors with default proxy lead to exit\n+\n+    // if -noproxy was not specified\n+    if (GetArg(\"-proxy\", \"0\") != \"0\")\n+        // setup default name proxy and exit on error\n+        if (!SetNameProxy(CService(mapArgs[\"-proxy\"], (unsigned short)9050)))\n+            return InitError(strprintf(_(\"Invalid name proxy address '%s' for: -proxy\"), mapArgs[\"-proxy\"]));\n \n     // see Step 2: parameter interactions for more information about these\n     fListen = GetBoolArg(\"-listen\", DEFAULT_LISTEN);"
+      }
+    ]
+  }
+]

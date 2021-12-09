@@ -1,0 +1,1508 @@
+[
+  {
+    "sha": "541a1dd9e664ac0b3929abeac42190ac8e88fc21",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1NDFhMWRkOWU2NjRhYzBiMzkyOWFiZWFjNDIxOTBhYzhlODhmYzIx",
+    "commit": {
+      "author": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-13T09:00:10Z"
+      },
+      "committer": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-22T22:38:23Z"
+      },
+      "message": "Refactor: AcceptConnection",
+      "tree": {
+        "sha": "c8677b928ba29bcfd769d0645b805192487b64b8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/c8677b928ba29bcfd769d0645b805192487b64b8"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/541a1dd9e664ac0b3929abeac42190ac8e88fc21",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/541a1dd9e664ac0b3929abeac42190ac8e88fc21",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/541a1dd9e664ac0b3929abeac42190ac8e88fc21",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/541a1dd9e664ac0b3929abeac42190ac8e88fc21/comments",
+    "author": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "49793fbb097e9f00149a054adeddad07f0444c12",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/49793fbb097e9f00149a054adeddad07f0444c12",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/49793fbb097e9f00149a054adeddad07f0444c12"
+      }
+    ],
+    "stats": {
+      "total": 120,
+      "additions": 62,
+      "deletions": 58
+    },
+    "files": [
+      {
+        "sha": "8f1db2695e5230bddaa9869085cdff5719e4741f",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 62,
+        "deletions": 58,
+        "changes": 120,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/541a1dd9e664ac0b3929abeac42190ac8e88fc21/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/541a1dd9e664ac0b3929abeac42190ac8e88fc21/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=541a1dd9e664ac0b3929abeac42190ac8e88fc21",
+        "patch": "@@ -776,6 +776,67 @@ void SocketSendData(CNode *pnode)\n \n static list<CNode*> vNodesDisconnected;\n \n+static void AcceptConnection(const ListenSocket& hListenSocket) {\n+    struct sockaddr_storage sockaddr;\n+    socklen_t len = sizeof(sockaddr);\n+    SOCKET hSocket = accept(hListenSocket.socket, (struct sockaddr*)&sockaddr, &len);\n+    CAddress addr;\n+    int nInbound = 0;\n+    int nMaxInbound = nMaxConnections - MAX_OUTBOUND_CONNECTIONS;\n+\n+    if (hSocket != INVALID_SOCKET)\n+        if (!addr.SetSockAddr((const struct sockaddr*)&sockaddr))\n+            LogPrintf(\"Warning: Unknown socket family\\n\");\n+\n+    bool whitelisted = hListenSocket.whitelisted || CNode::IsWhitelistedRange(addr);\n+    {\n+        LOCK(cs_vNodes);\n+        BOOST_FOREACH(CNode* pnode, vNodes)\n+            if (pnode->fInbound)\n+                nInbound++;\n+    }\n+\n+    if (hSocket == INVALID_SOCKET)\n+    {\n+        int nErr = WSAGetLastError();\n+        if (nErr != WSAEWOULDBLOCK)\n+            LogPrintf(\"socket error accept failed: %s\\n\", NetworkErrorString(nErr));\n+    }\n+    else if (!IsSelectableSocket(hSocket))\n+    {\n+        LogPrintf(\"connection from %s dropped: non-selectable socket\\n\", addr.ToString());\n+        CloseSocket(hSocket);\n+    }\n+    else if (nInbound >= nMaxInbound)\n+    {\n+        LogPrint(\"net\", \"connection from %s dropped (full)\\n\", addr.ToString());\n+        CloseSocket(hSocket);\n+    }\n+    else if (!whitelisted && (nInbound >= (nMaxInbound - nWhiteConnections)))\n+    {\n+        LogPrint(\"net\", \"connection from %s dropped (non-whitelisted)\\n\", addr.ToString());\n+        CloseSocket(hSocket);\n+    }\n+    else if (CNode::IsBanned(addr) && !whitelisted)\n+    {\n+        LogPrintf(\"connection from %s dropped (banned)\\n\", addr.ToString());\n+        CloseSocket(hSocket);\n+    }\n+    else\n+    {\n+        CNode* pnode = new CNode(hSocket, addr, \"\", true);\n+        pnode->AddRef();\n+        pnode->fWhitelisted = whitelisted;\n+\n+        LogPrint(\"net\", \"connection from %s accepted\\n\", addr.ToString());\n+\n+        {\n+            LOCK(cs_vNodes);\n+            vNodes.push_back(pnode);\n+        }\n+    }\n+}\n+\n void ThreadSocketHandler()\n {\n     unsigned int nPrevNodeCount = 0;\n@@ -933,64 +994,7 @@ void ThreadSocketHandler()\n         {\n             if (hListenSocket.socket != INVALID_SOCKET && FD_ISSET(hListenSocket.socket, &fdsetRecv))\n             {\n-                struct sockaddr_storage sockaddr;\n-                socklen_t len = sizeof(sockaddr);\n-                SOCKET hSocket = accept(hListenSocket.socket, (struct sockaddr*)&sockaddr, &len);\n-                CAddress addr;\n-                int nInbound = 0;\n-                int nMaxInbound = nMaxConnections - MAX_OUTBOUND_CONNECTIONS;\n-\n-                if (hSocket != INVALID_SOCKET)\n-                    if (!addr.SetSockAddr((const struct sockaddr*)&sockaddr))\n-                        LogPrintf(\"Warning: Unknown socket family\\n\");\n-\n-                bool whitelisted = hListenSocket.whitelisted || CNode::IsWhitelistedRange(addr);\n-                {\n-                    LOCK(cs_vNodes);\n-                    BOOST_FOREACH(CNode* pnode, vNodes)\n-                        if (pnode->fInbound)\n-                            nInbound++;\n-                }\n-\n-                if (hSocket == INVALID_SOCKET)\n-                {\n-                    int nErr = WSAGetLastError();\n-                    if (nErr != WSAEWOULDBLOCK)\n-                        LogPrintf(\"socket error accept failed: %s\\n\", NetworkErrorString(nErr));\n-                }\n-                else if (!IsSelectableSocket(hSocket))\n-                {\n-                    LogPrintf(\"connection from %s dropped: non-selectable socket\\n\", addr.ToString());\n-                    CloseSocket(hSocket);\n-                }\n-                else if (nInbound >= nMaxInbound)\n-                {\n-                    LogPrint(\"net\", \"connection from %s dropped (full)\\n\", addr.ToString());\n-                    CloseSocket(hSocket);\n-                }\n-                else if (!whitelisted && (nInbound >= (nMaxInbound - nWhiteConnections)))\n-                {\n-                    LogPrint(\"net\", \"connection from %s dropped (non-whitelisted)\\n\", addr.ToString());\n-                    CloseSocket(hSocket);\n-                }\n-                else if (CNode::IsBanned(addr) && !whitelisted)\n-                {\n-                    LogPrintf(\"connection from %s dropped (banned)\\n\", addr.ToString());\n-                    CloseSocket(hSocket);\n-                }\n-                else\n-                {\n-                    CNode* pnode = new CNode(hSocket, addr, \"\", true);\n-                    pnode->AddRef();\n-                    pnode->fWhitelisted = whitelisted;\n-\n-                    LogPrint(\"net\", \"connection from %s accepted\\n\", addr.ToString());\n-\n-                    {\n-                        LOCK(cs_vNodes);\n-                        vNodes.push_back(pnode);\n-                    }\n-                }\n+                AcceptConnection(hListenSocket);\n             }\n         }\n "
+      }
+    ]
+  },
+  {
+    "sha": "1ef481761477e26651dc56b4378b146cd5c416db",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxZWY0ODE3NjE0NzdlMjY2NTFkYzU2YjQzNzhiMTQ2Y2Q1YzQxNmRi",
+    "commit": {
+      "author": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-13T09:16:46Z"
+      },
+      "committer": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-22T22:38:23Z"
+      },
+      "message": "Refactor: Bail early in AcceptConnection",
+      "tree": {
+        "sha": "db1df3a748cbb90d3c06efc7bfc3f2496f2688fa",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/db1df3a748cbb90d3c06efc7bfc3f2496f2688fa"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/1ef481761477e26651dc56b4378b146cd5c416db",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1ef481761477e26651dc56b4378b146cd5c416db",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/1ef481761477e26651dc56b4378b146cd5c416db",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1ef481761477e26651dc56b4378b146cd5c416db/comments",
+    "author": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "541a1dd9e664ac0b3929abeac42190ac8e88fc21",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/541a1dd9e664ac0b3929abeac42190ac8e88fc21",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/541a1dd9e664ac0b3929abeac42190ac8e88fc21"
+      }
+    ],
+    "stats": {
+      "total": 35,
+      "additions": 21,
+      "deletions": 14
+    },
+    "files": [
+      {
+        "sha": "6214c754c3f0a77c56ef362b2c2ef6e71a656aeb",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 21,
+        "deletions": 14,
+        "changes": 35,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1ef481761477e26651dc56b4378b146cd5c416db/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1ef481761477e26651dc56b4378b146cd5c416db/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=1ef481761477e26651dc56b4378b146cd5c416db",
+        "patch": "@@ -801,39 +801,46 @@ static void AcceptConnection(const ListenSocket& hListenSocket) {\n         int nErr = WSAGetLastError();\n         if (nErr != WSAEWOULDBLOCK)\n             LogPrintf(\"socket error accept failed: %s\\n\", NetworkErrorString(nErr));\n+        return;\n     }\n-    else if (!IsSelectableSocket(hSocket))\n+\n+    if (!IsSelectableSocket(hSocket))\n     {\n         LogPrintf(\"connection from %s dropped: non-selectable socket\\n\", addr.ToString());\n         CloseSocket(hSocket);\n+        return;\n     }\n-    else if (nInbound >= nMaxInbound)\n+\n+    if (nInbound >= nMaxInbound)\n     {\n         LogPrint(\"net\", \"connection from %s dropped (full)\\n\", addr.ToString());\n         CloseSocket(hSocket);\n+        return;\n     }\n-    else if (!whitelisted && (nInbound >= (nMaxInbound - nWhiteConnections)))\n+\n+    if (!whitelisted && (nInbound >= (nMaxInbound - nWhiteConnections)))\n     {\n         LogPrint(\"net\", \"connection from %s dropped (non-whitelisted)\\n\", addr.ToString());\n         CloseSocket(hSocket);\n+        return;\n     }\n-    else if (CNode::IsBanned(addr) && !whitelisted)\n+\n+    if (CNode::IsBanned(addr) && !whitelisted)\n     {\n         LogPrintf(\"connection from %s dropped (banned)\\n\", addr.ToString());\n         CloseSocket(hSocket);\n+        return;\n     }\n-    else\n-    {\n-        CNode* pnode = new CNode(hSocket, addr, \"\", true);\n-        pnode->AddRef();\n-        pnode->fWhitelisted = whitelisted;\n \n-        LogPrint(\"net\", \"connection from %s accepted\\n\", addr.ToString());\n+    CNode* pnode = new CNode(hSocket, addr, \"\", true);\n+    pnode->AddRef();\n+    pnode->fWhitelisted = whitelisted;\n \n-        {\n-            LOCK(cs_vNodes);\n-            vNodes.push_back(pnode);\n-        }\n+    LogPrint(\"net\", \"connection from %s accepted\\n\", addr.ToString());\n+\n+    {\n+        LOCK(cs_vNodes);\n+        vNodes.push_back(pnode);\n     }\n }\n "
+      }
+    ]
+  },
+  {
+    "sha": "ae037b707ce164087790f149c048871c66e14cfd",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphZTAzN2I3MDdjZTE2NDA4Nzc5MGYxNDljMDQ4ODcxYzY2ZTE0Y2Zk",
+    "commit": {
+      "author": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-13T09:19:17Z"
+      },
+      "committer": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-22T22:38:23Z"
+      },
+      "message": "Refactor: Move failure conditions to the top of AcceptConnection",
+      "tree": {
+        "sha": "83ec6a96f200bf98bc2a939634db1170ba9e81d2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/83ec6a96f200bf98bc2a939634db1170ba9e81d2"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/ae037b707ce164087790f149c048871c66e14cfd",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ae037b707ce164087790f149c048871c66e14cfd",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/ae037b707ce164087790f149c048871c66e14cfd",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ae037b707ce164087790f149c048871c66e14cfd/comments",
+    "author": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "1ef481761477e26651dc56b4378b146cd5c416db",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1ef481761477e26651dc56b4378b146cd5c416db",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/1ef481761477e26651dc56b4378b146cd5c416db"
+      }
+    ],
+    "stats": {
+      "total": 12,
+      "additions": 6,
+      "deletions": 6
+    },
+    "files": [
+      {
+        "sha": "248aedfa12be30be24df0607c7f19345d89dc3fa",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 6,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ae037b707ce164087790f149c048871c66e14cfd/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ae037b707ce164087790f149c048871c66e14cfd/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=ae037b707ce164087790f149c048871c66e14cfd",
+        "patch": "@@ -811,23 +811,23 @@ static void AcceptConnection(const ListenSocket& hListenSocket) {\n         return;\n     }\n \n-    if (nInbound >= nMaxInbound)\n+    if (CNode::IsBanned(addr) && !whitelisted)\n     {\n-        LogPrint(\"net\", \"connection from %s dropped (full)\\n\", addr.ToString());\n+        LogPrintf(\"connection from %s dropped (banned)\\n\", addr.ToString());\n         CloseSocket(hSocket);\n         return;\n     }\n \n-    if (!whitelisted && (nInbound >= (nMaxInbound - nWhiteConnections)))\n+    if (nInbound >= nMaxInbound)\n     {\n-        LogPrint(\"net\", \"connection from %s dropped (non-whitelisted)\\n\", addr.ToString());\n+        LogPrint(\"net\", \"connection from %s dropped (full)\\n\", addr.ToString());\n         CloseSocket(hSocket);\n         return;\n     }\n \n-    if (CNode::IsBanned(addr) && !whitelisted)\n+    if (!whitelisted && (nInbound >= (nMaxInbound - nWhiteConnections)))\n     {\n-        LogPrintf(\"connection from %s dropped (banned)\\n\", addr.ToString());\n+        LogPrint(\"net\", \"connection from %s dropped (non-whitelisted)\\n\", addr.ToString());\n         CloseSocket(hSocket);\n         return;\n     }"
+      }
+    ]
+  },
+  {
+    "sha": "4bac60161029de6d71ef1e51e7af803ce6fb8405",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0YmFjNjAxNjEwMjlkZTZkNzFlZjFlNTFlN2FmODAzY2U2ZmI4NDA1",
+    "commit": {
+      "author": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-13T09:31:46Z"
+      },
+      "committer": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-22T22:38:23Z"
+      },
+      "message": "Record nMinPingUsecTime",
+      "tree": {
+        "sha": "2d8ff260f263ea341c9d6fef7eb564c355144d4c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/2d8ff260f263ea341c9d6fef7eb564c355144d4c"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/4bac60161029de6d71ef1e51e7af803ce6fb8405",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4bac60161029de6d71ef1e51e7af803ce6fb8405",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/4bac60161029de6d71ef1e51e7af803ce6fb8405",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4bac60161029de6d71ef1e51e7af803ce6fb8405/comments",
+    "author": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "ae037b707ce164087790f149c048871c66e14cfd",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ae037b707ce164087790f149c048871c66e14cfd",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/ae037b707ce164087790f149c048871c66e14cfd"
+      }
+    ],
+    "stats": {
+      "total": 3,
+      "additions": 3,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "35fbec666594c6bf564442bd36d83d348395cbba",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4bac60161029de6d71ef1e51e7af803ce6fb8405/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4bac60161029de6d71ef1e51e7af803ce6fb8405/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=4bac60161029de6d71ef1e51e7af803ce6fb8405",
+        "patch": "@@ -4522,6 +4522,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv,\n                     if (pingUsecTime > 0) {\n                         // Successful ping time measurement, replace previous\n                         pfrom->nPingUsecTime = pingUsecTime;\n+                        pfrom->nMinPingUsecTime = std::min(pfrom->nMinPingUsecTime, pingUsecTime);\n                     } else {\n                         // This should never happen\n                         sProblem = \"Timing mishap\";"
+      },
+      {
+        "sha": "de2955732337adfb5907158725f42b34d5d2f4fb",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4bac60161029de6d71ef1e51e7af803ce6fb8405/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4bac60161029de6d71ef1e51e7af803ce6fb8405/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=4bac60161029de6d71ef1e51e7af803ce6fb8405",
+        "patch": "@@ -395,6 +395,8 @@ class CNode\n     int64_t nPingUsecStart;\n     // Last measured round-trip time.\n     int64_t nPingUsecTime;\n+    // Best measured round-trip time.\n+    int64_t nMinPingUsecTime;\n     // Whether a ping is requested.\n     bool fPingQueued;\n "
+      }
+    ]
+  },
+  {
+    "sha": "2c701537c8fc7f4cfb0163ec1f49662120e61eb7",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyYzcwMTUzN2M4ZmM3ZjRjZmIwMTYzZWMxZjQ5NjYyMTIwZTYxZWI3",
+    "commit": {
+      "author": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-13T09:58:58Z"
+      },
+      "committer": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-22T22:38:24Z"
+      },
+      "message": "AttemptToEvictConnection",
+      "tree": {
+        "sha": "8a214908600caeecd4d27ecd0ea9691e34bed0f7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/8a214908600caeecd4d27ecd0ea9691e34bed0f7"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/2c701537c8fc7f4cfb0163ec1f49662120e61eb7",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2c701537c8fc7f4cfb0163ec1f49662120e61eb7",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/2c701537c8fc7f4cfb0163ec1f49662120e61eb7",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2c701537c8fc7f4cfb0163ec1f49662120e61eb7/comments",
+    "author": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "4bac60161029de6d71ef1e51e7af803ce6fb8405",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4bac60161029de6d71ef1e51e7af803ce6fb8405",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/4bac60161029de6d71ef1e51e7af803ce6fb8405"
+      }
+    ],
+    "stats": {
+      "total": 116,
+      "additions": 106,
+      "deletions": 10
+    },
+    "files": [
+      {
+        "sha": "0fab0f82afbca1dfc59e40284530065cef485b97",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 106,
+        "deletions": 10,
+        "changes": 116,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/2c701537c8fc7f4cfb0163ec1f49662120e61eb7/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/2c701537c8fc7f4cfb0163ec1f49662120e61eb7/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=2c701537c8fc7f4cfb0163ec1f49662120e61eb7",
+        "patch": "@@ -776,6 +776,106 @@ void SocketSendData(CNode *pnode)\n \n static list<CNode*> vNodesDisconnected;\n \n+static bool ReverseCompareNodeMinPingTime(CNode *a, CNode *b)\n+{\n+    return a->nMinPingUsecTime > b->nMinPingUsecTime;\n+}\n+\n+static bool ReverseCompareNodeTimeConnected(CNode *a, CNode *b)\n+{\n+    return a->nTimeConnected > b->nTimeConnected;\n+}\n+\n+class CompareNetGroupKeyed\n+{\n+    std::vector<unsigned char> vchSecretKey;\n+public:\n+    CompareNetGroupKeyed()\n+    {\n+        vchSecretKey.resize(32, 0);\n+        GetRandBytes(vchSecretKey.data(), vchSecretKey.size());\n+    }\n+\n+    bool operator()(CNode *a, CNode *b)\n+    {\n+        std::vector<unsigned char> vchGroupA, vchGroupB;\n+        CSHA256 hashA, hashB;\n+        std::vector<unsigned char> vchA(32), vchB(32);\n+\n+        vchGroupA = a->addr.GetGroup();\n+        vchGroupB = b->addr.GetGroup();\n+\n+        hashA.Write(begin_ptr(vchGroupA), vchGroupA.size());\n+        hashB.Write(begin_ptr(vchGroupB), vchGroupB.size());\n+\n+        hashA.Write(begin_ptr(vchSecretKey), vchSecretKey.size());\n+        hashB.Write(begin_ptr(vchSecretKey), vchSecretKey.size());\n+\n+        hashA.Finalize(begin_ptr(vchA));\n+        hashB.Finalize(begin_ptr(vchB));\n+\n+        return vchA < vchB;\n+    }\n+};\n+\n+static bool AttemptToEvictConnection() {\n+    std::vector<CNode*> vEvictionCandidates;\n+    {\n+        LOCK(cs_vNodes);\n+\n+        BOOST_FOREACH(CNode *node, vNodes) {\n+            if (node->fWhitelisted)\n+                continue;\n+            if (!node->fInbound)\n+                continue;\n+            if (node->fDisconnect)\n+                continue;\n+            if (node->addr.IsLocal())\n+                continue;\n+            vEvictionCandidates.push_back(node);\n+        }\n+    }\n+\n+    // Protect connections with certain characteristics\n+    static CompareNetGroupKeyed comparerNetGroupKeyed;\n+    std::sort(vEvictionCandidates.begin(), vEvictionCandidates.end(), comparerNetGroupKeyed);\n+    vEvictionCandidates.erase(vEvictionCandidates.end() - std::min(4, static_cast<int>(vEvictionCandidates.size())), vEvictionCandidates.end());\n+\n+    std::sort(vEvictionCandidates.begin(), vEvictionCandidates.end(), ReverseCompareNodeMinPingTime);\n+    vEvictionCandidates.erase(vEvictionCandidates.end() - std::min(8, static_cast<int>(vEvictionCandidates.size())), vEvictionCandidates.end());\n+\n+    std::sort(vEvictionCandidates.begin(), vEvictionCandidates.end(), ReverseCompareNodeTimeConnected);\n+    vEvictionCandidates.erase(vEvictionCandidates.end() - std::min(64, static_cast<int>(vEvictionCandidates.size())), vEvictionCandidates.end());\n+\n+    if (vEvictionCandidates.empty())\n+        return false;\n+\n+    // Identify CNetAddr with the most connections\n+    CNetAddr naMostConnections;\n+    unsigned int nMostConnections = 0;\n+    std::map<CNetAddr, std::vector<CNode*> > mapAddrCounts;\n+    BOOST_FOREACH(CNode *node, vEvictionCandidates) {\n+        mapAddrCounts[node->addr].push_back(node);\n+\n+        if (mapAddrCounts[node->addr].size() > nMostConnections) {\n+            nMostConnections = mapAddrCounts[node->addr].size();\n+            naMostConnections = node->addr;\n+        }\n+    }\n+\n+    // Reduce to the CNetAddr with the most connections\n+    vEvictionCandidates = mapAddrCounts[naMostConnections];\n+\n+    if (vEvictionCandidates.size() <= 1)\n+        return false;\n+\n+    // Disconnect the most recent connection from the CNetAddr with the most connections\n+    std::sort(vEvictionCandidates.begin(), vEvictionCandidates.end(), ReverseCompareNodeTimeConnected);\n+    vEvictionCandidates[0]->fDisconnect = true;\n+\n+    return true;\n+}\n+\n static void AcceptConnection(const ListenSocket& hListenSocket) {\n     struct sockaddr_storage sockaddr;\n     socklen_t len = sizeof(sockaddr);\n@@ -820,16 +920,12 @@ static void AcceptConnection(const ListenSocket& hListenSocket) {\n \n     if (nInbound >= nMaxInbound)\n     {\n-        LogPrint(\"net\", \"connection from %s dropped (full)\\n\", addr.ToString());\n-        CloseSocket(hSocket);\n-        return;\n-    }\n-\n-    if (!whitelisted && (nInbound >= (nMaxInbound - nWhiteConnections)))\n-    {\n-        LogPrint(\"net\", \"connection from %s dropped (non-whitelisted)\\n\", addr.ToString());\n-        CloseSocket(hSocket);\n-        return;\n+        if (!AttemptToEvictConnection()) {\n+            // No connection to evict, disconnect the new connection\n+            LogPrint(\"net\", \"failed to find an eviction candidate - connection dropped (full)\\n\");\n+            CloseSocket(hSocket);\n+            return;\n+        }\n     }\n \n     CNode* pnode = new CNode(hSocket, addr, \"\", true);"
+      }
+    ]
+  },
+  {
+    "sha": "b105ba398b20789eb482e45f26ae1761800b81be",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiMTA1YmEzOThiMjA3ODllYjQ4MmU0NWYyNmFlMTc2MTgwMGI4MWJl",
+    "commit": {
+      "author": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-14T00:22:35Z"
+      },
+      "committer": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-22T22:38:24Z"
+      },
+      "message": "Prefer to disconnect peers in favor of whitelisted peers",
+      "tree": {
+        "sha": "117cca0214e0f9ab7a6cf757755475b1bc53e6f9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/117cca0214e0f9ab7a6cf757755475b1bc53e6f9"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/b105ba398b20789eb482e45f26ae1761800b81be",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b105ba398b20789eb482e45f26ae1761800b81be",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/b105ba398b20789eb482e45f26ae1761800b81be",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b105ba398b20789eb482e45f26ae1761800b81be/comments",
+    "author": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "2c701537c8fc7f4cfb0163ec1f49662120e61eb7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2c701537c8fc7f4cfb0163ec1f49662120e61eb7",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/2c701537c8fc7f4cfb0163ec1f49662120e61eb7"
+      }
+    ],
+    "stats": {
+      "total": 9,
+      "additions": 6,
+      "deletions": 3
+    },
+    "files": [
+      {
+        "sha": "77dde994458569f3bce7551eae3fd68854df4699",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 3,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b105ba398b20789eb482e45f26ae1761800b81be/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b105ba398b20789eb482e45f26ae1761800b81be/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=b105ba398b20789eb482e45f26ae1761800b81be",
+        "patch": "@@ -818,7 +818,7 @@ class CompareNetGroupKeyed\n     }\n };\n \n-static bool AttemptToEvictConnection() {\n+static bool AttemptToEvictConnection(bool fPreferNewConnection) {\n     std::vector<CNode*> vEvictionCandidates;\n     {\n         LOCK(cs_vNodes);\n@@ -866,8 +866,11 @@ static bool AttemptToEvictConnection() {\n     // Reduce to the CNetAddr with the most connections\n     vEvictionCandidates = mapAddrCounts[naMostConnections];\n \n+    // Do not disconnect peers who have only 1 evictable connection\n     if (vEvictionCandidates.size() <= 1)\n-        return false;\n+        // unless we prefer the new connection (for whitelisted peers)\n+        if (!fPreferNewConnection)\n+            return false;\n \n     // Disconnect the most recent connection from the CNetAddr with the most connections\n     std::sort(vEvictionCandidates.begin(), vEvictionCandidates.end(), ReverseCompareNodeTimeConnected);\n@@ -920,7 +923,7 @@ static void AcceptConnection(const ListenSocket& hListenSocket) {\n \n     if (nInbound >= nMaxInbound)\n     {\n-        if (!AttemptToEvictConnection()) {\n+        if (!AttemptToEvictConnection(whitelisted)) {\n             // No connection to evict, disconnect the new connection\n             LogPrint(\"net\", \"failed to find an eviction candidate - connection dropped (full)\\n\");\n             CloseSocket(hSocket);"
+      }
+    ]
+  },
+  {
+    "sha": "a8f6e45249e815414cc99e7b594a8a7ab7ab9247",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphOGY2ZTQ1MjQ5ZTgxNTQxNGNjOTllN2I1OTRhOGE3YWI3YWI5MjQ3",
+    "commit": {
+      "author": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-14T00:32:57Z"
+      },
+      "committer": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-22T22:38:24Z"
+      },
+      "message": "Remove redundant whiteconnections option",
+      "tree": {
+        "sha": "4e64a78c1aa4be6c0940eea111b975484765244b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/4e64a78c1aa4be6c0940eea111b975484765244b"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a8f6e45249e815414cc99e7b594a8a7ab7ab9247",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a8f6e45249e815414cc99e7b594a8a7ab7ab9247",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a8f6e45249e815414cc99e7b594a8a7ab7ab9247",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a8f6e45249e815414cc99e7b594a8a7ab7ab9247/comments",
+    "author": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "b105ba398b20789eb482e45f26ae1761800b81be",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b105ba398b20789eb482e45f26ae1761800b81be",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b105ba398b20789eb482e45f26ae1761800b81be"
+      }
+    ],
+    "stats": {
+      "total": 41,
+      "additions": 0,
+      "deletions": 41
+    },
+    "files": [
+      {
+        "sha": "3aebe4f7be2f76cbb75aedd2cbb734c7256294d7",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 29,
+        "changes": 29,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a8f6e45249e815414cc99e7b594a8a7ab7ab9247/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a8f6e45249e815414cc99e7b594a8a7ab7ab9247/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=a8f6e45249e815414cc99e7b594a8a7ab7ab9247",
+        "patch": "@@ -335,7 +335,6 @@ std::string HelpMessage(HelpMessageMode mode)\n     strUsage += HelpMessageOpt(\"-whitebind=<addr>\", _(\"Bind to given address and whitelist peers connecting to it. Use [host]:port notation for IPv6\"));\n     strUsage += HelpMessageOpt(\"-whitelist=<netmask>\", _(\"Whitelist peers connecting from the given netmask or IP address. Can be specified multiple times.\") +\n         \" \" + _(\"Whitelisted peers cannot be DoS banned and their transactions are always relayed, even if they are already in the mempool, useful e.g. for a gateway\"));\n-    strUsage += HelpMessageOpt(\"-whiteconnections=<n>\", strprintf(_(\"Reserve this many inbound connections for whitelisted peers (default: %d)\"), 0));\n \n #ifdef ENABLE_WALLET\n     strUsage += HelpMessageGroup(_(\"Wallet options:\"));\n@@ -754,25 +753,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)\n     int nBind = std::max((int)mapArgs.count(\"-bind\") + (int)mapArgs.count(\"-whitebind\"), 1);\n     int nUserMaxConnections = GetArg(\"-maxconnections\", DEFAULT_MAX_PEER_CONNECTIONS);\n     nMaxConnections = std::max(nUserMaxConnections, 0);\n-    int nUserWhiteConnections = GetArg(\"-whiteconnections\", 0);\n-    nWhiteConnections = std::max(nUserWhiteConnections, 0);\n-\n-    if ((mapArgs.count(\"-whitelist\")) || (mapArgs.count(\"-whitebind\"))) {\n-        if (!(mapArgs.count(\"-maxconnections\"))) {\n-            // User is using whitelist feature,\n-            // but did not specify -maxconnections parameter.\n-            // Silently increase the default to compensate,\n-            // so that the whitelist connection reservation feature\n-            // does not inadvertently reduce the default\n-            // inbound connection capacity of the network.\n-            nMaxConnections += nWhiteConnections;\n-        }\n-    } else {\n-        // User not using whitelist feature.\n-        // Silently disable connection reservation,\n-        // for the same reason as above.\n-        nWhiteConnections = 0;\n-    }\n \n     // Trim requested connection counts, to fit into system limitations\n     nMaxConnections = std::max(std::min(nMaxConnections, (int)(FD_SETSIZE - nBind - MIN_CORE_FILEDESCRIPTORS)), 0);\n@@ -784,13 +764,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)\n     if (nMaxConnections < nUserMaxConnections)\n         InitWarning(strprintf(_(\"Reducing -maxconnections from %d to %d, because of system limitations.\"), nUserMaxConnections, nMaxConnections));\n \n-    // Connection capacity is prioritized in this order:\n-    // outbound connections (hardcoded to 8),\n-    // then whitelisted connections,\n-    // then non-whitelisted connections get whatever's left (if any).\n-    if ((nWhiteConnections > 0) && (nWhiteConnections >= (nMaxConnections - 8)))\n-        InitWarning(strprintf(_(\"All non-whitelisted incoming connections will be dropped, because -whiteconnections is %d and -maxconnections is only %d.\"), nWhiteConnections, nMaxConnections));\n-\n     // ********************************************************* Step 3: parameter-to-internal-flags\n \n     fDebug = !mapMultiArgs[\"-debug\"].empty();\n@@ -968,8 +941,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)\n     LogPrintf(\"Using data directory %s\\n\", strDataDir);\n     LogPrintf(\"Using config file %s\\n\", GetConfigFile().string());\n     LogPrintf(\"Using at most %i connections (%i file descriptors available)\\n\", nMaxConnections, nFD);\n-    if (nWhiteConnections > 0)\n-        LogPrintf(\"Reserving %i of these connections for whitelisted inbound peers\\n\", nWhiteConnections);\n     std::ostringstream strErrors;\n \n     LogPrintf(\"Using %u threads for script verification\\n\", nScriptCheckThreads);"
+      },
+      {
+        "sha": "9cfb9d71dba85164a295430e6f2e221f66e50ebc",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 1,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a8f6e45249e815414cc99e7b594a8a7ab7ab9247/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a8f6e45249e815414cc99e7b594a8a7ab7ab9247/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=a8f6e45249e815414cc99e7b594a8a7ab7ab9247",
+        "patch": "@@ -81,7 +81,6 @@ uint64_t nLocalHostNonce = 0;\n static std::vector<ListenSocket> vhListenSocket;\n CAddrMan addrman;\n int nMaxConnections = DEFAULT_MAX_PEER_CONNECTIONS;\n-int nWhiteConnections = 0;\n bool fAddressesInitialized = false;\n std::string strSubVersion;\n "
+      },
+      {
+        "sha": "f370bf1ff4a00c0c7c074d0f9d034ca3b7f0f165",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 11,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a8f6e45249e815414cc99e7b594a8a7ab7ab9247/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a8f6e45249e815414cc99e7b594a8a7ab7ab9247/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=a8f6e45249e815414cc99e7b594a8a7ab7ab9247",
+        "patch": "@@ -143,19 +143,8 @@ extern uint64_t nLocalServices;\n extern uint64_t nLocalHostNonce;\n extern CAddrMan addrman;\n \n-// The allocation of connections against the maximum allowed (nMaxConnections)\n-// is prioritized as follows:\n-// 1st: Outbound connections (MAX_OUTBOUND_CONNECTIONS)\n-// 2nd: Inbound connections from whitelisted peers (nWhiteConnections)\n-// 3rd: Inbound connections from non-whitelisted peers\n-// Thus, the number of connection slots for the general public to use is:\n-// nMaxConnections - (MAX_OUTBOUND_CONNECTIONS + nWhiteConnections)\n-// Any additional inbound connections beyond limits will be immediately closed\n-\n /** Maximum number of connections to simultaneously allow (aka connection slots) */\n extern int nMaxConnections;\n-/** Number of connection slots to reserve for inbound from whitelisted peers */\n-extern int nWhiteConnections;\n \n extern std::vector<CNode*> vNodes;\n extern CCriticalSection cs_vNodes;"
+      }
+    ]
+  },
+  {
+    "sha": "df239374224e6585d5b6ba37a39282d0fc647173",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkZjIzOTM3NDIyNGU2NTg1ZDViNmJhMzdhMzkyODJkMGZjNjQ3MTcz",
+    "commit": {
+      "author": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-20T23:47:49Z"
+      },
+      "committer": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-22T22:38:24Z"
+      },
+      "message": "Add comments to AttemptToEvictConnection",
+      "tree": {
+        "sha": "55d7c556f35241f91699566427c024575962ca26",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/55d7c556f35241f91699566427c024575962ca26"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/df239374224e6585d5b6ba37a39282d0fc647173",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/df239374224e6585d5b6ba37a39282d0fc647173",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/df239374224e6585d5b6ba37a39282d0fc647173",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/df239374224e6585d5b6ba37a39282d0fc647173/comments",
+    "author": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "a8f6e45249e815414cc99e7b594a8a7ab7ab9247",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a8f6e45249e815414cc99e7b594a8a7ab7ab9247",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/a8f6e45249e815414cc99e7b594a8a7ab7ab9247"
+      }
+    ],
+    "stats": {
+      "total": 7,
+      "additions": 7,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "d8d2783c4b58ef1ab37611e9fbb87e9dbea9c846",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 0,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/df239374224e6585d5b6ba37a39282d0fc647173/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/df239374224e6585d5b6ba37a39282d0fc647173/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=df239374224e6585d5b6ba37a39282d0fc647173",
+        "patch": "@@ -836,13 +836,20 @@ static bool AttemptToEvictConnection(bool fPreferNewConnection) {\n     }\n \n     // Protect connections with certain characteristics\n+\n+    // Deterministically select 4 peers to protect by netgroup.\n+    // An attacker cannot predict which netgroups will be protected.\n     static CompareNetGroupKeyed comparerNetGroupKeyed;\n     std::sort(vEvictionCandidates.begin(), vEvictionCandidates.end(), comparerNetGroupKeyed);\n     vEvictionCandidates.erase(vEvictionCandidates.end() - std::min(4, static_cast<int>(vEvictionCandidates.size())), vEvictionCandidates.end());\n \n+    // Protect the 8 nodes with the best ping times.\n+    // An attacker cannot manipulate this metric without physically moving nodes closer to the target.\n     std::sort(vEvictionCandidates.begin(), vEvictionCandidates.end(), ReverseCompareNodeMinPingTime);\n     vEvictionCandidates.erase(vEvictionCandidates.end() - std::min(8, static_cast<int>(vEvictionCandidates.size())), vEvictionCandidates.end());\n \n+    // Protect the 64 nodes which have been connected the longest.\n+    // This replicates the existing implicit behavior.\n     std::sort(vEvictionCandidates.begin(), vEvictionCandidates.end(), ReverseCompareNodeTimeConnected);\n     vEvictionCandidates.erase(vEvictionCandidates.end() - std::min(64, static_cast<int>(vEvictionCandidates.size())), vEvictionCandidates.end());\n "
+      }
+    ]
+  },
+  {
+    "sha": "1317cd1928afbae14fedb39c8d23589a32fe2951",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxMzE3Y2QxOTI4YWZiYWUxNGZlZGIzOWM4ZDIzNTg5YTMyZmUyOTUx",
+    "commit": {
+      "author": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-21T00:29:04Z"
+      },
+      "committer": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-22T22:38:24Z"
+      },
+      "message": "RAII wrapper for CNode*",
+      "tree": {
+        "sha": "d118302220f1907d931c0ede0bff57e50769cd57",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/d118302220f1907d931c0ede0bff57e50769cd57"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/1317cd1928afbae14fedb39c8d23589a32fe2951",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1317cd1928afbae14fedb39c8d23589a32fe2951",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/1317cd1928afbae14fedb39c8d23589a32fe2951",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1317cd1928afbae14fedb39c8d23589a32fe2951/comments",
+    "author": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "df239374224e6585d5b6ba37a39282d0fc647173",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/df239374224e6585d5b6ba37a39282d0fc647173",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/df239374224e6585d5b6ba37a39282d0fc647173"
+      }
+    ],
+    "stats": {
+      "total": 25,
+      "additions": 18,
+      "deletions": 7
+    },
+    "files": [
+      {
+        "sha": "709c6524304a0eb2f72a449d1fcb77a45ba9af5c",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 18,
+        "deletions": 7,
+        "changes": 25,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1317cd1928afbae14fedb39c8d23589a32fe2951/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1317cd1928afbae14fedb39c8d23589a32fe2951/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=1317cd1928afbae14fedb39c8d23589a32fe2951",
+        "patch": "@@ -775,12 +775,23 @@ void SocketSendData(CNode *pnode)\n \n static list<CNode*> vNodesDisconnected;\n \n-static bool ReverseCompareNodeMinPingTime(CNode *a, CNode *b)\n+class CNodeRef {\n+public:\n+    CNodeRef(CNode *pnode) : _pnode(pnode)  {_pnode->AddRef();}\n+    ~CNodeRef() {_pnode->Release();}\n+\n+    CNode& operator *() const {return *_pnode;};\n+    CNode* operator ->() const {return _pnode;};\n+private:\n+    CNode *_pnode;\n+};\n+\n+static bool ReverseCompareNodeMinPingTime(const CNodeRef &a, const CNodeRef &b)\n {\n     return a->nMinPingUsecTime > b->nMinPingUsecTime;\n }\n \n-static bool ReverseCompareNodeTimeConnected(CNode *a, CNode *b)\n+static bool ReverseCompareNodeTimeConnected(const CNodeRef &a, const CNodeRef &b)\n {\n     return a->nTimeConnected > b->nTimeConnected;\n }\n@@ -795,7 +806,7 @@ class CompareNetGroupKeyed\n         GetRandBytes(vchSecretKey.data(), vchSecretKey.size());\n     }\n \n-    bool operator()(CNode *a, CNode *b)\n+    bool operator()(const CNodeRef &a, const CNodeRef &b)\n     {\n         std::vector<unsigned char> vchGroupA, vchGroupB;\n         CSHA256 hashA, hashB;\n@@ -818,7 +829,7 @@ class CompareNetGroupKeyed\n };\n \n static bool AttemptToEvictConnection(bool fPreferNewConnection) {\n-    std::vector<CNode*> vEvictionCandidates;\n+    std::vector<CNodeRef> vEvictionCandidates;\n     {\n         LOCK(cs_vNodes);\n \n@@ -831,7 +842,7 @@ static bool AttemptToEvictConnection(bool fPreferNewConnection) {\n                 continue;\n             if (node->addr.IsLocal())\n                 continue;\n-            vEvictionCandidates.push_back(node);\n+            vEvictionCandidates.push_back(CNodeRef(node));\n         }\n     }\n \n@@ -859,8 +870,8 @@ static bool AttemptToEvictConnection(bool fPreferNewConnection) {\n     // Identify CNetAddr with the most connections\n     CNetAddr naMostConnections;\n     unsigned int nMostConnections = 0;\n-    std::map<CNetAddr, std::vector<CNode*> > mapAddrCounts;\n-    BOOST_FOREACH(CNode *node, vEvictionCandidates) {\n+    std::map<CNetAddr, std::vector<CNodeRef> > mapAddrCounts;\n+    BOOST_FOREACH(const CNodeRef &node, vEvictionCandidates) {\n         mapAddrCounts[node->addr].push_back(node);\n \n         if (mapAddrCounts[node->addr].size() > nMostConnections) {"
+      }
+    ]
+  },
+  {
+    "sha": "17f3533c8484f02732fff5cf004d251c0df50eb8",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxN2YzNTMzYzg0ODRmMDI3MzJmZmY1Y2YwMDRkMjUxYzBkZjUwZWI4",
+    "commit": {
+      "author": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-22T01:42:05Z"
+      },
+      "committer": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-22T22:38:24Z"
+      },
+      "message": "Better support for nodes with non-standard nMaxConnections",
+      "tree": {
+        "sha": "880b188bf54056f929bbd1066dde6bbff91015c5",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/880b188bf54056f929bbd1066dde6bbff91015c5"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/17f3533c8484f02732fff5cf004d251c0df50eb8",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/17f3533c8484f02732fff5cf004d251c0df50eb8",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/17f3533c8484f02732fff5cf004d251c0df50eb8",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/17f3533c8484f02732fff5cf004d251c0df50eb8/comments",
+    "author": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "1317cd1928afbae14fedb39c8d23589a32fe2951",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1317cd1928afbae14fedb39c8d23589a32fe2951",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/1317cd1928afbae14fedb39c8d23589a32fe2951"
+      }
+    ],
+    "stats": {
+      "total": 2,
+      "additions": 1,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "4d08f63e32f412b21cd78a4918daf3b2de4aef79",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/17f3533c8484f02732fff5cf004d251c0df50eb8/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/17f3533c8484f02732fff5cf004d251c0df50eb8/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=17f3533c8484f02732fff5cf004d251c0df50eb8",
+        "patch": "@@ -862,7 +862,7 @@ static bool AttemptToEvictConnection(bool fPreferNewConnection) {\n     // Protect the 64 nodes which have been connected the longest.\n     // This replicates the existing implicit behavior.\n     std::sort(vEvictionCandidates.begin(), vEvictionCandidates.end(), ReverseCompareNodeTimeConnected);\n-    vEvictionCandidates.erase(vEvictionCandidates.end() - std::min(64, static_cast<int>(vEvictionCandidates.size())), vEvictionCandidates.end());\n+    vEvictionCandidates.erase(vEvictionCandidates.end() - std::min(static_cast<int>(vEvictionCandidates.size() / 2), static_cast<int>(vEvictionCandidates.size())), vEvictionCandidates.end());\n \n     if (vEvictionCandidates.empty())\n         return false;"
+      }
+    ]
+  },
+  {
+    "sha": "dc81dd02a1d5f47ca45f74577e0696dfba6fa15c",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkYzgxZGQwMmExZDVmNDdjYTQ1Zjc0NTc3ZTA2OTZkZmJhNmZhMTVj",
+    "commit": {
+      "author": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-22T22:15:39Z"
+      },
+      "committer": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-22T22:38:24Z"
+      },
+      "message": "Return false early if vEvictionCandidates is empty",
+      "tree": {
+        "sha": "5da7ab8cadd3c501d2ca8c74f0d53267ee184c20",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/5da7ab8cadd3c501d2ca8c74f0d53267ee184c20"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/dc81dd02a1d5f47ca45f74577e0696dfba6fa15c",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/dc81dd02a1d5f47ca45f74577e0696dfba6fa15c",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/dc81dd02a1d5f47ca45f74577e0696dfba6fa15c",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/dc81dd02a1d5f47ca45f74577e0696dfba6fa15c/comments",
+    "author": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "17f3533c8484f02732fff5cf004d251c0df50eb8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/17f3533c8484f02732fff5cf004d251c0df50eb8",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/17f3533c8484f02732fff5cf004d251c0df50eb8"
+      }
+    ],
+    "stats": {
+      "total": 11,
+      "additions": 8,
+      "deletions": 3
+    },
+    "files": [
+      {
+        "sha": "4f4c7b81c4e4497d4369a693ac1e8bf90fd10615",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 3,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/dc81dd02a1d5f47ca45f74577e0696dfba6fa15c/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/dc81dd02a1d5f47ca45f74577e0696dfba6fa15c/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=dc81dd02a1d5f47ca45f74577e0696dfba6fa15c",
+        "patch": "@@ -846,6 +846,8 @@ static bool AttemptToEvictConnection(bool fPreferNewConnection) {\n         }\n     }\n \n+    if (vEvictionCandidates.empty()) return false;\n+\n     // Protect connections with certain characteristics\n \n     // Deterministically select 4 peers to protect by netgroup.\n@@ -854,18 +856,21 @@ static bool AttemptToEvictConnection(bool fPreferNewConnection) {\n     std::sort(vEvictionCandidates.begin(), vEvictionCandidates.end(), comparerNetGroupKeyed);\n     vEvictionCandidates.erase(vEvictionCandidates.end() - std::min(4, static_cast<int>(vEvictionCandidates.size())), vEvictionCandidates.end());\n \n+    if (vEvictionCandidates.empty()) return false;\n+\n     // Protect the 8 nodes with the best ping times.\n     // An attacker cannot manipulate this metric without physically moving nodes closer to the target.\n     std::sort(vEvictionCandidates.begin(), vEvictionCandidates.end(), ReverseCompareNodeMinPingTime);\n     vEvictionCandidates.erase(vEvictionCandidates.end() - std::min(8, static_cast<int>(vEvictionCandidates.size())), vEvictionCandidates.end());\n \n+    if (vEvictionCandidates.empty()) return false;\n+\n     // Protect the 64 nodes which have been connected the longest.\n     // This replicates the existing implicit behavior.\n     std::sort(vEvictionCandidates.begin(), vEvictionCandidates.end(), ReverseCompareNodeTimeConnected);\n-    vEvictionCandidates.erase(vEvictionCandidates.end() - std::min(static_cast<int>(vEvictionCandidates.size() / 2), static_cast<int>(vEvictionCandidates.size())), vEvictionCandidates.end());\n+    vEvictionCandidates.erase(vEvictionCandidates.end() - static_cast<int>(vEvictionCandidates.size() / 2), vEvictionCandidates.end());\n \n-    if (vEvictionCandidates.empty())\n-        return false;\n+    if (vEvictionCandidates.empty()) return false;\n \n     // Identify CNetAddr with the most connections\n     CNetAddr naMostConnections;"
+      }
+    ]
+  },
+  {
+    "sha": "69ee1aab00b9189865dfca6fb5c33c61a3c3ea67",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2OWVlMWFhYjAwYjkxODk4NjVkZmNhNmZiNWMzM2M2MWEzYzNlYTY3",
+    "commit": {
+      "author": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-25T22:33:29Z"
+      },
+      "committer": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-25T22:33:29Z"
+      },
+      "message": "CNodeRef copy constructor and assignment operator",
+      "tree": {
+        "sha": "bb01c3191c1b86126dc2e11cb45a23a54ae13914",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/bb01c3191c1b86126dc2e11cb45a23a54ae13914"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/69ee1aab00b9189865dfca6fb5c33c61a3c3ea67",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/69ee1aab00b9189865dfca6fb5c33c61a3c3ea67",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/69ee1aab00b9189865dfca6fb5c33c61a3c3ea67",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/69ee1aab00b9189865dfca6fb5c33c61a3c3ea67/comments",
+    "author": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "dc81dd02a1d5f47ca45f74577e0696dfba6fa15c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/dc81dd02a1d5f47ca45f74577e0696dfba6fa15c",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/dc81dd02a1d5f47ca45f74577e0696dfba6fa15c"
+      }
+    ],
+    "stats": {
+      "total": 16,
+      "additions": 16,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "cb5a24f0a4ce6901edeaf3acefd09293dd36e029",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 0,
+        "changes": 16,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/69ee1aab00b9189865dfca6fb5c33c61a3c3ea67/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/69ee1aab00b9189865dfca6fb5c33c61a3c3ea67/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=69ee1aab00b9189865dfca6fb5c33c61a3c3ea67",
+        "patch": "@@ -782,6 +782,22 @@ class CNodeRef {\n \n     CNode& operator *() const {return *_pnode;};\n     CNode* operator ->() const {return _pnode;};\n+\n+    CNodeRef& operator =(const CNodeRef& other)\n+    {\n+        if (this != &other) {\n+            _pnode->Release();\n+            _pnode = other._pnode;\n+            _pnode->AddRef();\n+        }\n+        return *this;\n+    }\n+\n+    CNodeRef(const CNodeRef& other):\n+        _pnode(other._pnode)\n+    {\n+        _pnode->AddRef();\n+    }\n private:\n     CNode *_pnode;\n };"
+      }
+    ]
+  },
+  {
+    "sha": "fed30940ef22f242b9dada2dc4f7c5348faf8922",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmZWQzMDk0MGVmMjJmMjQyYjlkYWRhMmRjNGY3YzUzNDhmYWY4OTIy",
+    "commit": {
+      "author": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-25T23:30:02Z"
+      },
+      "committer": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-25T23:30:02Z"
+      },
+      "message": "Acquire cs_vNodes before changing refrence counts",
+      "tree": {
+        "sha": "c397e6d31f3ab7dc4b723bb4cc9dc6fd6f7512ea",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/c397e6d31f3ab7dc4b723bb4cc9dc6fd6f7512ea"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/fed30940ef22f242b9dada2dc4f7c5348faf8922",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fed30940ef22f242b9dada2dc4f7c5348faf8922",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/fed30940ef22f242b9dada2dc4f7c5348faf8922",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fed30940ef22f242b9dada2dc4f7c5348faf8922/comments",
+    "author": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "69ee1aab00b9189865dfca6fb5c33c61a3c3ea67",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/69ee1aab00b9189865dfca6fb5c33c61a3c3ea67",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/69ee1aab00b9189865dfca6fb5c33c61a3c3ea67"
+      }
+    ],
+    "stats": {
+      "total": 14,
+      "additions": 12,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "e1b0e83e992bfe37db22e942abfa6c9db544d6d5",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 12,
+        "deletions": 2,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fed30940ef22f242b9dada2dc4f7c5348faf8922/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fed30940ef22f242b9dada2dc4f7c5348faf8922/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=fed30940ef22f242b9dada2dc4f7c5348faf8922",
+        "patch": "@@ -777,15 +777,24 @@ static list<CNode*> vNodesDisconnected;\n \n class CNodeRef {\n public:\n-    CNodeRef(CNode *pnode) : _pnode(pnode)  {_pnode->AddRef();}\n-    ~CNodeRef() {_pnode->Release();}\n+    CNodeRef(CNode *pnode) : _pnode(pnode) {\n+        LOCK(cs_vNodes);\n+        _pnode->AddRef();\n+    }\n+\n+    ~CNodeRef() {\n+        LOCK(cs_vNodes);\n+        _pnode->Release();\n+    }\n \n     CNode& operator *() const {return *_pnode;};\n     CNode* operator ->() const {return _pnode;};\n \n     CNodeRef& operator =(const CNodeRef& other)\n     {\n         if (this != &other) {\n+            LOCK(cs_vNodes);\n+\n             _pnode->Release();\n             _pnode = other._pnode;\n             _pnode->AddRef();\n@@ -796,6 +805,7 @@ class CNodeRef {\n     CNodeRef(const CNodeRef& other):\n         _pnode(other._pnode)\n     {\n+        LOCK(cs_vNodes);\n         _pnode->AddRef();\n     }\n private:"
+      }
+    ]
+  },
+  {
+    "sha": "000c18aaceeebdcaf65508fcdc3d00397971dcae",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowMDBjMThhYWNlZWViZGNhZjY1NTA4ZmNkYzNkMDAzOTc5NzFkY2Fl",
+    "commit": {
+      "author": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-25T23:31:13Z"
+      },
+      "committer": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-25T23:31:13Z"
+      },
+      "message": "Fix comment",
+      "tree": {
+        "sha": "fd59febebcce3aa0ba7cb550aa5e5765b782e264",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/fd59febebcce3aa0ba7cb550aa5e5765b782e264"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/000c18aaceeebdcaf65508fcdc3d00397971dcae",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/000c18aaceeebdcaf65508fcdc3d00397971dcae",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/000c18aaceeebdcaf65508fcdc3d00397971dcae",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/000c18aaceeebdcaf65508fcdc3d00397971dcae/comments",
+    "author": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "fed30940ef22f242b9dada2dc4f7c5348faf8922",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fed30940ef22f242b9dada2dc4f7c5348faf8922",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/fed30940ef22f242b9dada2dc4f7c5348faf8922"
+      }
+    ],
+    "stats": {
+      "total": 2,
+      "additions": 1,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "d266b2f21fd3fe391a3954153e3f300300a9ddc1",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/000c18aaceeebdcaf65508fcdc3d00397971dcae/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/000c18aaceeebdcaf65508fcdc3d00397971dcae/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=000c18aaceeebdcaf65508fcdc3d00397971dcae",
+        "patch": "@@ -891,7 +891,7 @@ static bool AttemptToEvictConnection(bool fPreferNewConnection) {\n \n     if (vEvictionCandidates.empty()) return false;\n \n-    // Protect the 64 nodes which have been connected the longest.\n+    // Protect the half of the remaining nodes which have been connected the longest.\n     // This replicates the existing implicit behavior.\n     std::sort(vEvictionCandidates.begin(), vEvictionCandidates.end(), ReverseCompareNodeTimeConnected);\n     vEvictionCandidates.erase(vEvictionCandidates.end() - static_cast<int>(vEvictionCandidates.size() / 2), vEvictionCandidates.end());"
+      }
+    ]
+  },
+  {
+    "sha": "027de94e1fba5484aed2393afd89edbaaffdb0eb",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowMjdkZTk0ZTFmYmE1NDg0YWVkMjM5M2FmZDg5ZWRiYWFmZmRiMGVi",
+    "commit": {
+      "author": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-26T00:06:15Z"
+      },
+      "committer": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2015-08-31T05:09:14Z"
+      },
+      "message": "Use network group instead of CNetAddr in final pass to select node to disconnect",
+      "tree": {
+        "sha": "f6feda479eed58f628c375b1834101b7a805f895",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f6feda479eed58f628c375b1834101b7a805f895"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/027de94e1fba5484aed2393afd89edbaaffdb0eb",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unknown_key",
+        "signature": "-----BEGIN PGP SIGNATURE-----\nVersion: GnuPG v1\n\niQEcBAABAgAGBQJV4+GBAAoJEHfoBoKoPbQO6cMH+gMJvZkwobFoe0W4KaJdF0tv\n3AtjqLXXJKgsHJrWV5tkZyT5DnoQW1lhUcb9A2xdE3gpJtWaUp2k3cfgno6szakF\npja2iJHrnr9N74lWRA4Hh83DZLDmJeYIuczIlTvkjebBdxkTXyWuM7Zfn0XvIl9s\njGgVRyYYkpYR2XlLM3+kQikDd8Suj+5IBuBdaZpX0HdYiyS2CWxbe9H+aDR+rMVq\neddUxryNGXM11mnO8YpmDG90XGA2/xz6TgKarQYALXFsF20Fi2JnPZ6U7igkR/au\n49dSAYkJgXQLCZpsZ3b9KTU8aF658njOJX/kFh/mvy6fNM9BdOLISm/kDizZ3Vs=\n=tFij\n-----END PGP SIGNATURE-----",
+        "payload": "tree f6feda479eed58f628c375b1834101b7a805f895\nparent 000c18aaceeebdcaf65508fcdc3d00397971dcae\nauthor Patrick Strateman <patrick.strateman@gmail.com> 1440547575 -0700\ncommitter Patrick Strateman <patrick.strateman@gmail.com> 1440997754 -0700\n\nUse network group instead of CNetAddr in final pass to select node to disconnect\n"
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/027de94e1fba5484aed2393afd89edbaaffdb0eb",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/027de94e1fba5484aed2393afd89edbaaffdb0eb",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/027de94e1fba5484aed2393afd89edbaaffdb0eb/comments",
+    "author": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "000c18aaceeebdcaf65508fcdc3d00397971dcae",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/000c18aaceeebdcaf65508fcdc3d00397971dcae",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/000c18aaceeebdcaf65508fcdc3d00397971dcae"
+      }
+    ],
+    "stats": {
+      "total": 20,
+      "additions": 10,
+      "deletions": 10
+    },
+    "files": [
+      {
+        "sha": "9264d68656a81322e88b463e7bfae1a42ee97f5b",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 10,
+        "deletions": 10,
+        "changes": 20,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/027de94e1fba5484aed2393afd89edbaaffdb0eb/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/027de94e1fba5484aed2393afd89edbaaffdb0eb/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=027de94e1fba5484aed2393afd89edbaaffdb0eb",
+        "patch": "@@ -898,29 +898,29 @@ static bool AttemptToEvictConnection(bool fPreferNewConnection) {\n \n     if (vEvictionCandidates.empty()) return false;\n \n-    // Identify CNetAddr with the most connections\n-    CNetAddr naMostConnections;\n+    // Identify the network group with the most connections\n+    std::vector<unsigned char> naMostConnections;\n     unsigned int nMostConnections = 0;\n-    std::map<CNetAddr, std::vector<CNodeRef> > mapAddrCounts;\n+    std::map<std::vector<unsigned char>, std::vector<CNodeRef> > mapAddrCounts;\n     BOOST_FOREACH(const CNodeRef &node, vEvictionCandidates) {\n-        mapAddrCounts[node->addr].push_back(node);\n+        mapAddrCounts[node->addr.GetGroup()].push_back(node);\n \n-        if (mapAddrCounts[node->addr].size() > nMostConnections) {\n-            nMostConnections = mapAddrCounts[node->addr].size();\n-            naMostConnections = node->addr;\n+        if (mapAddrCounts[node->addr.GetGroup()].size() > nMostConnections) {\n+            nMostConnections = mapAddrCounts[node->addr.GetGroup()].size();\n+            naMostConnections = node->addr.GetGroup();\n         }\n     }\n \n-    // Reduce to the CNetAddr with the most connections\n+    // Reduce to the network group with the most connections\n     vEvictionCandidates = mapAddrCounts[naMostConnections];\n \n-    // Do not disconnect peers who have only 1 evictable connection\n+    // Do not disconnect peers if there is only 1 connection from their network group\n     if (vEvictionCandidates.size() <= 1)\n         // unless we prefer the new connection (for whitelisted peers)\n         if (!fPreferNewConnection)\n             return false;\n \n-    // Disconnect the most recent connection from the CNetAddr with the most connections\n+    // Disconnect the most recent connection from the network group with the most connections\n     std::sort(vEvictionCandidates.begin(), vEvictionCandidates.end(), ReverseCompareNodeTimeConnected);\n     vEvictionCandidates[0]->fDisconnect = true;\n "
+      }
+    ]
+  }
+]

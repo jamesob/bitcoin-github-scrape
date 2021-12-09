@@ -1,0 +1,650 @@
+[
+  {
+    "sha": "4d78bd93b5bdf886e743022e80f4edb8a982cf0d",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0ZDc4YmQ5M2I1YmRmODg2ZTc0MzAyMmU4MGY0ZWRiOGE5ODJjZjBk",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2018-10-13T01:22:22Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2018-10-26T17:21:05Z"
+      },
+      "message": "Add support for inferring descriptors from scripts",
+      "tree": {
+        "sha": "ea0b49240ffaca4a5ca1dd1cbbbdd1f157301c13",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/ea0b49240ffaca4a5ca1dd1cbbbdd1f157301c13"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/4d78bd93b5bdf886e743022e80f4edb8a982cf0d",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4d78bd93b5bdf886e743022e80f4edb8a982cf0d",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/4d78bd93b5bdf886e743022e80f4edb8a982cf0d",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4d78bd93b5bdf886e743022e80f4edb8a982cf0d/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "f4e4ea1ceecfb978584bd4f43cb6826e44ba86a3",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f4e4ea1ceecfb978584bd4f43cb6826e44ba86a3",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/f4e4ea1ceecfb978584bd4f43cb6826e44ba86a3"
+      }
+    ],
+    "stats": {
+      "total": 96,
+      "additions": 95,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "c4980240926ae6b3b7b556fd6f295a46810f2f32",
+        "filename": "src/script/descriptor.cpp",
+        "status": "modified",
+        "additions": 79,
+        "deletions": 0,
+        "changes": 79,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4d78bd93b5bdf886e743022e80f4edb8a982cf0d/src/script/descriptor.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4d78bd93b5bdf886e743022e80f4edb8a982cf0d/src/script/descriptor.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/descriptor.cpp?ref=4d78bd93b5bdf886e743022e80f4edb8a982cf0d",
+        "patch": "@@ -625,6 +625,80 @@ std::unique_ptr<Descriptor> ParseScript(Span<const char>& sp, ParseScriptContext\n     return nullptr;\n }\n \n+std::unique_ptr<PubkeyProvider> InferPubkey(const CPubKey& pubkey, ParseScriptContext, const SigningProvider& provider)\n+{\n+    std::unique_ptr<PubkeyProvider> key_provider = MakeUnique<ConstPubkeyProvider>(pubkey);\n+    KeyOriginInfo info;\n+    if (provider.GetKeyOrigin(pubkey.GetID(), info)) {\n+        return MakeUnique<OriginPubkeyProvider>(std::move(info), std::move(key_provider));\n+    }\n+    return key_provider;\n+}\n+\n+std::unique_ptr<Descriptor> InferScript(const CScript& script, ParseScriptContext ctx, const SigningProvider& provider)\n+{\n+    std::vector<std::vector<unsigned char>> data;\n+    txnouttype txntype = Solver(script, data);\n+\n+    if (txntype == TX_PUBKEY) {\n+        CPubKey pubkey(data[0].begin(), data[0].end());\n+        if (pubkey.IsValid()) {\n+            return MakeUnique<SingleKeyDescriptor>(InferPubkey(pubkey, ctx, provider), P2PKGetScript, \"pk\");\n+        }\n+    }\n+    if (txntype == TX_PUBKEYHASH) {\n+        uint160 hash(data[0]);\n+        CKeyID keyid(hash);\n+        CPubKey pubkey;\n+        if (provider.GetPubKey(keyid, pubkey)) {\n+            return MakeUnique<SingleKeyDescriptor>(InferPubkey(pubkey, ctx, provider), P2PKHGetScript, \"pkh\");\n+        }\n+    }\n+    if (txntype == TX_WITNESS_V0_KEYHASH && ctx != ParseScriptContext::P2WSH) {\n+        uint160 hash(data[0]);\n+        CKeyID keyid(hash);\n+        CPubKey pubkey;\n+        if (provider.GetPubKey(keyid, pubkey)) {\n+            return MakeUnique<SingleKeyDescriptor>(InferPubkey(pubkey, ctx, provider), P2WPKHGetScript, \"wpkh\");\n+        }\n+    }\n+    if (txntype == TX_MULTISIG) {\n+        std::vector<std::unique_ptr<PubkeyProvider>> providers;\n+        for (size_t i = 1; i + 1 < data.size(); ++i) {\n+            CPubKey pubkey(data[i].begin(), data[i].end());\n+            providers.push_back(InferPubkey(pubkey, ctx, provider));\n+        }\n+        return MakeUnique<MultisigDescriptor>((int)data[0][0], std::move(providers));\n+    }\n+    if (txntype == TX_SCRIPTHASH && ctx == ParseScriptContext::TOP) {\n+        uint160 hash(data[0]);\n+        CScriptID scriptid(hash);\n+        CScript subscript;\n+        if (provider.GetCScript(scriptid, subscript)) {\n+            auto sub = InferScript(subscript, ParseScriptContext::P2SH, provider);\n+            if (sub) return MakeUnique<ConvertorDescriptor>(std::move(sub), ConvertP2SH, \"sh\");\n+        }\n+    }\n+    if (txntype == TX_WITNESS_V0_SCRIPTHASH && ctx != ParseScriptContext::P2WSH) {\n+        CScriptID scriptid;\n+        CRIPEMD160().Write(data[0].data(), data[0].size()).Finalize(scriptid.begin());\n+        CScript subscript;\n+        if (provider.GetCScript(scriptid, subscript)) {\n+            auto sub = InferScript(subscript, ParseScriptContext::P2WSH, provider);\n+            if (sub) return MakeUnique<ConvertorDescriptor>(std::move(sub), ConvertP2WSH, \"wsh\");\n+        }\n+    }\n+\n+    CTxDestination dest;\n+    if (ExtractDestination(script, dest)) {\n+        if (GetScriptForDestination(dest) == script) {\n+            return MakeUnique<AddressDescriptor>(std::move(dest));\n+        }\n+    }\n+\n+    return MakeUnique<RawDescriptor>(script);\n+}\n+\n } // namespace\n \n std::unique_ptr<Descriptor> Parse(const std::string& descriptor, FlatSigningProvider& out)\n@@ -634,3 +708,8 @@ std::unique_ptr<Descriptor> Parse(const std::string& descriptor, FlatSigningProv\n     if (sp.size() == 0 && ret) return ret;\n     return nullptr;\n }\n+\n+std::unique_ptr<Descriptor> InferDescriptor(const CScript& script, const SigningProvider& provider)\n+{\n+    return InferScript(script, ParseScriptContext::TOP, provider);\n+}"
+      },
+      {
+        "sha": "e44a6ef3c3b5879e9a90989de3cb5a097961a247",
+        "filename": "src/script/descriptor.h",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 1,
+        "changes": 17,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4d78bd93b5bdf886e743022e80f4edb8a982cf0d/src/script/descriptor.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4d78bd93b5bdf886e743022e80f4edb8a982cf0d/src/script/descriptor.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/descriptor.h?ref=4d78bd93b5bdf886e743022e80f4edb8a982cf0d",
+        "patch": "@@ -51,5 +51,20 @@ struct Descriptor {\n /** Parse a descriptor string. Included private keys are put in out. Returns nullptr if parsing fails. */\n std::unique_ptr<Descriptor> Parse(const std::string& descriptor, FlatSigningProvider& out);\n \n-#endif // BITCOIN_SCRIPT_DESCRIPTOR_H\n+/** Find a descriptor for the specified script, using information from provider where possible.\n+ *\n+ * A non-ranged descriptor which only generates the specified script will be returned in all\n+ * circumstances.\n+ *\n+ * For public keys with key origin information, this information will be preserved in the returned\n+ * descriptor.\n+ *\n+ * - If all information for solving `script` is present in `provider`, a descriptor will be returned\n+ *   which is `IsSolvable()` and encapsulates said information.\n+ * - Failing that, if `script` corresponds to a known address type, an \"addr()\" descriptor will be\n+ *   returned (which is not `IsSolvable()`).\n+ * - Failing that, a \"raw()\" descriptor is returned.\n+ */\n+std::unique_ptr<Descriptor> InferDescriptor(const CScript& script, const SigningProvider& provider);\n \n+#endif // BITCOIN_SCRIPT_DESCRIPTOR_H"
+      }
+    ]
+  },
+  {
+    "sha": "225bf3e3b0a89a285da451cd589be148324039ab",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyMjViZjNlM2IwYTg5YTI4NWRhNDUxY2Q1ODliZTE0ODMyNDAzOWFi",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2018-10-13T01:27:00Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2018-10-26T17:21:05Z"
+      },
+      "message": "Add Descriptor::IsSolvable() to distinguish addr/raw from others",
+      "tree": {
+        "sha": "6718332c2f3be44a8e30122770fea7d6b5faa960",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/6718332c2f3be44a8e30122770fea7d6b5faa960"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/225bf3e3b0a89a285da451cd589be148324039ab",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/225bf3e3b0a89a285da451cd589be148324039ab",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/225bf3e3b0a89a285da451cd589be148324039ab",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/225bf3e3b0a89a285da451cd589be148324039ab/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "4d78bd93b5bdf886e743022e80f4edb8a982cf0d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4d78bd93b5bdf886e743022e80f4edb8a982cf0d",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/4d78bd93b5bdf886e743022e80f4edb8a982cf0d"
+      }
+    ],
+    "stats": {
+      "total": 11,
+      "additions": 11,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "e3f9381da0aeebdbf4f4d315f1389be5f835a462",
+        "filename": "src/script/descriptor.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 0,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/225bf3e3b0a89a285da451cd589be148324039ab/src/script/descriptor.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/225bf3e3b0a89a285da451cd589be148324039ab/src/script/descriptor.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/descriptor.cpp?ref=225bf3e3b0a89a285da451cd589be148324039ab",
+        "patch": "@@ -211,6 +211,7 @@ class AddressDescriptor final : public Descriptor\n     AddressDescriptor(CTxDestination destination) : m_destination(std::move(destination)) {}\n \n     bool IsRange() const override { return false; }\n+    bool IsSolvable() const override { return false; }\n     std::string ToString() const override { return \"addr(\" + EncodeDestination(m_destination) + \")\"; }\n     bool ToPrivateString(const SigningProvider& arg, std::string& out) const override { out = ToString(); return true; }\n     bool Expand(int pos, const SigningProvider& arg, std::vector<CScript>& output_scripts, FlatSigningProvider& out) const override\n@@ -229,6 +230,7 @@ class RawDescriptor final : public Descriptor\n     RawDescriptor(CScript script) : m_script(std::move(script)) {}\n \n     bool IsRange() const override { return false; }\n+    bool IsSolvable() const override { return false; }\n     std::string ToString() const override { return \"raw(\" + HexStr(m_script.begin(), m_script.end()) + \")\"; }\n     bool ToPrivateString(const SigningProvider& arg, std::string& out) const override { out = ToString(); return true; }\n     bool Expand(int pos, const SigningProvider& arg, std::vector<CScript>& output_scripts, FlatSigningProvider& out) const override\n@@ -249,6 +251,7 @@ class SingleKeyDescriptor final : public Descriptor\n     SingleKeyDescriptor(std::unique_ptr<PubkeyProvider> prov, const std::function<CScript(const CPubKey&)>& fn, const std::string& name) : m_script_fn(fn), m_fn_name(name), m_provider(std::move(prov)) {}\n \n     bool IsRange() const override { return m_provider->IsRange(); }\n+    bool IsSolvable() const override { return true; }\n     std::string ToString() const override { return m_fn_name + \"(\" + m_provider->ToString() + \")\"; }\n     bool ToPrivateString(const SigningProvider& arg, std::string& out) const override\n     {\n@@ -290,6 +293,8 @@ class MultisigDescriptor : public Descriptor\n         return false;\n     }\n \n+    bool IsSolvable() const override { return true; }\n+\n     std::string ToString() const override\n     {\n         std::string ret = strprintf(\"multi(%i\", m_threshold);\n@@ -343,6 +348,7 @@ class ConvertorDescriptor : public Descriptor\n     ConvertorDescriptor(std::unique_ptr<Descriptor> descriptor, const std::function<CScript(const CScript&)>& fn, const std::string& name) : m_convert_fn(fn), m_fn_name(name), m_descriptor(std::move(descriptor)) {}\n \n     bool IsRange() const override { return m_descriptor->IsRange(); }\n+    bool IsSolvable() const override { return m_descriptor->IsSolvable(); }\n     std::string ToString() const override { return m_fn_name + \"(\" + m_descriptor->ToString() + \")\"; }\n     bool ToPrivateString(const SigningProvider& arg, std::string& out) const override\n     {\n@@ -377,6 +383,7 @@ class ComboDescriptor final : public Descriptor\n     ComboDescriptor(std::unique_ptr<PubkeyProvider> provider) : m_provider(std::move(provider)) {}\n \n     bool IsRange() const override { return m_provider->IsRange(); }\n+    bool IsSolvable() const override { return true; }\n     std::string ToString() const override { return \"combo(\" + m_provider->ToString() + \")\"; }\n     bool ToPrivateString(const SigningProvider& arg, std::string& out) const override\n     {"
+      },
+      {
+        "sha": "0111972f85dae673c16a51df852647905a062e9d",
+        "filename": "src/script/descriptor.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 0,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/225bf3e3b0a89a285da451cd589be148324039ab/src/script/descriptor.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/225bf3e3b0a89a285da451cd589be148324039ab/src/script/descriptor.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/descriptor.h?ref=225bf3e3b0a89a285da451cd589be148324039ab",
+        "patch": "@@ -32,6 +32,10 @@ struct Descriptor {\n     /** Whether the expansion of this descriptor depends on the position. */\n     virtual bool IsRange() const = 0;\n \n+    /** Whether this descriptor has all information about signing ignoring lack of private keys.\n+     *  This is true for all descriptors except ones that use `raw` or `addr` constructions. */\n+    virtual bool IsSolvable() const = 0;\n+\n     /** Convert the descriptor back to a string, undoing parsing. */\n     virtual std::string ToString() const = 0;\n "
+      }
+    ]
+  },
+  {
+    "sha": "9b2a25b13f81a45ff59a6a4adde595404a6c062a",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5YjJhMjViMTNmODFhNDVmZjU5YTZhNGFkZGU1OTU0MDRhNmMwNjJh",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2018-10-13T17:45:15Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2018-10-26T17:21:05Z"
+      },
+      "message": "Add tests for InferDescriptor and Descriptor::IsSolvable",
+      "tree": {
+        "sha": "f2035f603310c78274f872bd15245ecbe4ef6c56",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f2035f603310c78274f872bd15245ecbe4ef6c56"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/9b2a25b13f81a45ff59a6a4adde595404a6c062a",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9b2a25b13f81a45ff59a6a4adde595404a6c062a",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/9b2a25b13f81a45ff59a6a4adde595404a6c062a",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9b2a25b13f81a45ff59a6a4adde595404a6c062a/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "225bf3e3b0a89a285da451cd589be148324039ab",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/225bf3e3b0a89a285da451cd589be148324039ab",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/225bf3e3b0a89a285da451cd589be148324039ab"
+      }
+    ],
+    "stats": {
+      "total": 17,
+      "additions": 17,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "3cbf402764ac314bc4970a7bf4a4b94845c63b2a",
+        "filename": "src/script/sign.h",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 0,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9b2a25b13f81a45ff59a6a4adde595404a6c062a/src/script/sign.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9b2a25b13f81a45ff59a6a4adde595404a6c062a/src/script/sign.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/sign.h?ref=9b2a25b13f81a45ff59a6a4adde595404a6c062a",
+        "patch": "@@ -24,6 +24,11 @@ struct KeyOriginInfo\n {\n     unsigned char fingerprint[4];\n     std::vector<uint32_t> path;\n+\n+    friend bool operator==(const KeyOriginInfo& a, const KeyOriginInfo& b)\n+    {\n+        return std::equal(std::begin(a.fingerprint), std::end(a.fingerprint), std::begin(b.fingerprint)) && a.path == b.path;\n+    }\n };\n \n /** An interface to be implemented by keystores that support signing. */"
+      },
+      {
+        "sha": "7e9d14a8ef79b2c1afd712a5238e4f455fe24526",
+        "filename": "src/test/descriptor_tests.cpp",
+        "status": "modified",
+        "additions": 12,
+        "deletions": 0,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9b2a25b13f81a45ff59a6a4adde595404a6c062a/src/test/descriptor_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9b2a25b13f81a45ff59a6a4adde595404a6c062a/src/test/descriptor_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/descriptor_tests.cpp?ref=9b2a25b13f81a45ff59a6a4adde595404a6c062a",
+        "patch": "@@ -102,7 +102,19 @@ void Check(const std::string& prv, const std::string& pub, int flags, const std:\n                     spend.vout.resize(1);\n                     BOOST_CHECK_MESSAGE(SignSignature(Merge(keys_priv, script_provider), spks[n], spend, 0, 1, SIGHASH_ALL), prv);\n                 }\n+\n+                /* Infer a descriptor from the generated script, and verify its solvability and that it roundtrips. */\n+                auto inferred = InferDescriptor(spks[n], script_provider);\n+                BOOST_CHECK_EQUAL(inferred->IsSolvable(), !(flags & UNSOLVABLE));\n+                std::vector<CScript> spks_inferred;\n+                FlatSigningProvider provider_inferred;\n+                BOOST_CHECK(inferred->Expand(0, provider_inferred, spks_inferred, provider_inferred));\n+                BOOST_CHECK_EQUAL(spks_inferred.size(), 1);\n+                BOOST_CHECK(spks_inferred[0] == spks[n]);\n+                BOOST_CHECK_EQUAL(IsSolvable(provider_inferred, spks_inferred[0]), !(flags & UNSOLVABLE));\n+                BOOST_CHECK(provider_inferred.origins == script_provider.origins);\n             }\n+\n             // Test whether the observed key path is present in the 'paths' variable (which contains expected, unobserved paths),\n             // and then remove it from that set.\n             for (const auto& origin : script_provider.origins) {"
+      }
+    ]
+  },
+  {
+    "sha": "16203d5df755fe8fc0c5ddc026714d87b504ff24",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxNjIwM2Q1ZGY3NTVmZThmYzBjNWRkYzAyNjcxNGQ4N2I1MDRmZjI0",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2018-10-13T20:32:18Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2018-11-14T22:21:42Z"
+      },
+      "message": "Add descriptors to listunspent and getaddressinfo + tests",
+      "tree": {
+        "sha": "591c83b845b3d00db185126defa80fedbeba044e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/591c83b845b3d00db185126defa80fedbeba044e"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/16203d5df755fe8fc0c5ddc026714d87b504ff24",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/16203d5df755fe8fc0c5ddc026714d87b504ff24",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/16203d5df755fe8fc0c5ddc026714d87b504ff24",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/16203d5df755fe8fc0c5ddc026714d87b504ff24/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "9b2a25b13f81a45ff59a6a4adde595404a6c062a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9b2a25b13f81a45ff59a6a4adde595404a6c062a",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/9b2a25b13f81a45ff59a6a4adde595404a6c062a"
+      }
+    ],
+    "stats": {
+      "total": 69,
+      "additions": 69,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "46259535acd3e043c1a0aa11e0958f5e059298f6",
+        "filename": "src/wallet/rpcwallet.cpp",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 0,
+        "changes": 13,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/16203d5df755fe8fc0c5ddc026714d87b504ff24/src/wallet/rpcwallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/16203d5df755fe8fc0c5ddc026714d87b504ff24/src/wallet/rpcwallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/rpcwallet.cpp?ref=16203d5df755fe8fc0c5ddc026714d87b504ff24",
+        "patch": "@@ -20,6 +20,7 @@\n #include <rpc/rawtransaction.h>\n #include <rpc/server.h>\n #include <rpc/util.h>\n+#include <script/descriptor.h>\n #include <script/sign.h>\n #include <shutdown.h>\n #include <timedata.h>\n@@ -2623,6 +2624,7 @@ static UniValue listunspent(const JSONRPCRequest& request)\n             \"    \\\"redeemScript\\\" : n        (string) The redeemScript if scriptPubKey is P2SH\\n\"\n             \"    \\\"spendable\\\" : xxx,        (bool) Whether we have the private keys to spend this output\\n\"\n             \"    \\\"solvable\\\" : xxx,         (bool) Whether we know how to spend this output, ignoring the lack of keys\\n\"\n+            \"    \\\"desc\\\" : xxx,             (string, only when solvable) A descriptor for spending this output\\n\"\n             \"    \\\"safe\\\" : xxx              (bool) Whether this output is considered safe to spend. Unconfirmed transactions\\n\"\n             \"                              from outside keys and unconfirmed replacement transactions are considered unsafe\\n\"\n             \"                              and are not eligible for spending by fundrawtransaction and sendtoaddress.\\n\"\n@@ -2740,6 +2742,10 @@ static UniValue listunspent(const JSONRPCRequest& request)\n         entry.pushKV(\"confirmations\", out.nDepth);\n         entry.pushKV(\"spendable\", out.fSpendable);\n         entry.pushKV(\"solvable\", out.fSolvable);\n+        if (out.fSolvable) {\n+            auto descriptor = InferDescriptor(scriptPubKey, *pwallet);\n+            entry.pushKV(\"desc\", descriptor->ToString());\n+        }\n         entry.pushKV(\"safe\", out.fSafe);\n         results.push_back(entry);\n     }\n@@ -3456,6 +3462,8 @@ UniValue getaddressinfo(const JSONRPCRequest& request)\n             \"  \\\"scriptPubKey\\\" : \\\"hex\\\",       (string) The hex-encoded scriptPubKey generated by the address\\n\"\n             \"  \\\"ismine\\\" : true|false,        (boolean) If the address is yours or not\\n\"\n             \"  \\\"iswatchonly\\\" : true|false,   (boolean) If the address is watchonly\\n\"\n+            \"  \\\"solvable\\\" : true|false,      (boolean) Whether we know how to spend coins sent to this address, ignoring the possible lack of private keys\\n\"\n+            \"  \\\"desc\\\" : \\\"desc\\\",            (string, optional) A descriptor for spending coins sent to this address (only when solvable)\\n\"\n             \"  \\\"isscript\\\" : true|false,      (boolean) If the key is a script\\n\"\n             \"  \\\"iswitness\\\" : true|false,     (boolean) If the address is a witness address\\n\"\n             \"  \\\"witness_version\\\" : version   (numeric, optional) The version number of the witness program\\n\"\n@@ -3508,6 +3516,11 @@ UniValue getaddressinfo(const JSONRPCRequest& request)\n \n     isminetype mine = IsMine(*pwallet, dest);\n     ret.pushKV(\"ismine\", bool(mine & ISMINE_SPENDABLE));\n+    bool solvable = IsSolvable(*pwallet, scriptPubKey);\n+    ret.pushKV(\"solvable\", solvable);\n+    if (solvable) {\n+       ret.pushKV(\"desc\", InferDescriptor(scriptPubKey, *pwallet)->ToString());\n+    }\n     ret.pushKV(\"iswatchonly\", bool(mine & ISMINE_WATCH_ONLY));\n     UniValue detail = DescribeWalletAddress(pwallet, dest);\n     ret.pushKVs(detail);"
+      },
+      {
+        "sha": "bafa556aadd719e4d814126639037d3a4b4d8ade",
+        "filename": "test/functional/wallet_address_types.py",
+        "status": "modified",
+        "additions": 56,
+        "deletions": 0,
+        "changes": 56,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/16203d5df755fe8fc0c5ddc026714d87b504ff24/test/functional/wallet_address_types.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/16203d5df755fe8fc0c5ddc026714d87b504ff24/test/functional/wallet_address_types.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/wallet_address_types.py?ref=16203d5df755fe8fc0c5ddc026714d87b504ff24",
+        "patch": "@@ -99,6 +99,8 @@ def test_address(self, node, address, multisig, typ):\n         \"\"\"Run sanity checks on an address.\"\"\"\n         info = self.nodes[node].getaddressinfo(address)\n         assert(self.nodes[node].validateaddress(address)['isvalid'])\n+        assert_equal(info.get('solvable'), True)\n+\n         if not multisig and typ == 'legacy':\n             # P2PKH\n             assert(not info['isscript'])\n@@ -146,6 +148,47 @@ def test_address(self, node, address, multisig, typ):\n             # Unknown type\n             assert(False)\n \n+    def test_desc(self, node, address, multisig, typ, utxo):\n+        \"\"\"Run sanity checks on a descriptor reported by getaddressinfo.\"\"\"\n+        info = self.nodes[node].getaddressinfo(address)\n+        assert('desc' in info)\n+        assert_equal(info['desc'], utxo['desc'])\n+        assert(self.nodes[node].validateaddress(address)['isvalid'])\n+\n+        # Use a ridiculously roundabout way to find the key origin info through\n+        # the PSBT logic. However, this does test consistency between the PSBT reported\n+        # fingerprints/paths and the descriptor logic.\n+        psbt = self.nodes[node].createpsbt([{'txid':utxo['txid'], 'vout':utxo['vout']}],[{address:0.00010000}])\n+        psbt = self.nodes[node].walletprocesspsbt(psbt, False, \"ALL\", True)\n+        decode = self.nodes[node].decodepsbt(psbt['psbt'])\n+        key_descs = {}\n+        for deriv in decode['inputs'][0]['bip32_derivs']:\n+            assert_equal(len(deriv['master_fingerprint']), 8)\n+            assert_equal(deriv['path'][0], 'm')\n+            key_descs[deriv['pubkey']] = '[' + deriv['master_fingerprint'] + deriv['path'][1:] + ']' + deriv['pubkey']\n+\n+        if not multisig and typ == 'legacy':\n+            # P2PKH\n+            assert_equal(info['desc'], \"pkh(%s)\" % key_descs[info['pubkey']])\n+        elif not multisig and typ == 'p2sh-segwit':\n+            # P2SH-P2WPKH\n+            assert_equal(info['desc'], \"sh(wpkh(%s))\" % key_descs[info['pubkey']])\n+        elif not multisig and typ == 'bech32':\n+            # P2WPKH\n+            assert_equal(info['desc'], \"wpkh(%s)\" % key_descs[info['pubkey']])\n+        elif typ == 'legacy':\n+            # P2SH-multisig\n+            assert_equal(info['desc'], \"sh(multi(2,%s,%s))\" % (key_descs[info['pubkeys'][0]], key_descs[info['pubkeys'][1]]))\n+        elif typ == 'p2sh-segwit':\n+            # P2SH-P2WSH-multisig\n+            assert_equal(info['desc'], \"sh(wsh(multi(2,%s,%s)))\" % (key_descs[info['embedded']['pubkeys'][0]], key_descs[info['embedded']['pubkeys'][1]]))\n+        elif typ == 'bech32':\n+            # P2WSH-multisig\n+            assert_equal(info['desc'], \"wsh(multi(2,%s,%s))\" % (key_descs[info['pubkeys'][0]], key_descs[info['pubkeys'][1]]))\n+        else:\n+            # Unknown type\n+            assert(False)\n+\n     def test_change_output_type(self, node_sender, destinations, expected_type):\n         txid = self.nodes[node_sender].sendmany(dummy=\"\", amounts=dict.fromkeys(destinations, 0.001))\n         raw_tx = self.nodes[node_sender].getrawtransaction(txid)\n@@ -198,6 +241,7 @@ def run_test(self):\n             self.log.debug(\"Old balances are {}\".format(old_balances))\n             to_send = (old_balances[from_node] / 101).quantize(Decimal(\"0.00000001\"))\n             sends = {}\n+            addresses = {}\n \n             self.log.debug(\"Prepare sends\")\n             for n, to_node in enumerate(range(from_node, from_node + 4)):\n@@ -228,6 +272,7 @@ def run_test(self):\n \n                 # Output entry\n                 sends[address] = to_send * 10 * (1 + n)\n+                addresses[to_node] = (address, typ)\n \n             self.log.debug(\"Sending: {}\".format(sends))\n             self.nodes[from_node].sendmany(\"\", sends)\n@@ -244,6 +289,17 @@ def run_test(self):\n             self.nodes[5].generate(1)\n             sync_blocks(self.nodes)\n \n+            # Verify that the receiving wallet contains a UTXO with the expected address, and expected descriptor\n+            for n, to_node in enumerate(range(from_node, from_node + 4)):\n+                to_node %= 4\n+                found = False\n+                for utxo in self.nodes[to_node].listunspent():\n+                    if utxo['address'] == addresses[to_node][0]:\n+                        found = True\n+                        self.test_desc(to_node, addresses[to_node][0], multisig, addresses[to_node][1], utxo)\n+                        break\n+                assert found\n+\n             new_balances = self.get_balances()\n             self.log.debug(\"Check new balances: {}\".format(new_balances))\n             # We don't know what fee was set, so we can only check bounds on the balance of the sending node"
+      }
+    ]
+  },
+  {
+    "sha": "b65326b562cde20aab709a953e396997a6cacbd6",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiNjUzMjZiNTYyY2RlMjBhYWI3MDlhOTUzZTM5Njk5N2E2Y2FjYmQ2",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2018-10-19T01:40:25Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2018-11-14T22:21:42Z"
+      },
+      "message": "Add matching descriptors to scantxoutset output + tests",
+      "tree": {
+        "sha": "22ce102d33d27ebd4cbed59efd62049bfb1a4928",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/22ce102d33d27ebd4cbed59efd62049bfb1a4928"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/b65326b562cde20aab709a953e396997a6cacbd6",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b65326b562cde20aab709a953e396997a6cacbd6",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/b65326b562cde20aab709a953e396997a6cacbd6",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b65326b562cde20aab709a953e396997a6cacbd6/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "16203d5df755fe8fc0c5ddc026714d87b504ff24",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/16203d5df755fe8fc0c5ddc026714d87b504ff24",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/16203d5df755fe8fc0c5ddc026714d87b504ff24"
+      }
+    ],
+    "stats": {
+      "total": 17,
+      "additions": 16,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "b6c11b73b4f717f77223ec8c76352954a971d40d",
+        "filename": "src/rpc/blockchain.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 1,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b65326b562cde20aab709a953e396997a6cacbd6/src/rpc/blockchain.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b65326b562cde20aab709a953e396997a6cacbd6/src/rpc/blockchain.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/blockchain.cpp?ref=b65326b562cde20aab709a953e396997a6cacbd6",
+        "patch": "@@ -2074,6 +2074,7 @@ UniValue scantxoutset(const JSONRPCRequest& request)\n             \"    \\\"txid\\\" : \\\"transactionid\\\",     (string) The transaction id\\n\"\n             \"    \\\"vout\\\": n,                    (numeric) the vout value\\n\"\n             \"    \\\"scriptPubKey\\\" : \\\"script\\\",    (string) the script key\\n\"\n+            \"    \\\"desc\\\" : \\\"descriptor\\\",        (string) A specialized descriptor for the matched scriptPubKey\\n\"\n             \"    \\\"amount\\\" : x.xxx,             (numeric) The total amount in \" + CURRENCY_UNIT + \" of the unspent output\\n\"\n             \"    \\\"height\\\" : n,                 (numeric) Height of the unspent transaction output\\n\"\n             \"   }\\n\"\n@@ -2108,6 +2109,7 @@ UniValue scantxoutset(const JSONRPCRequest& request)\n             throw JSONRPCError(RPC_INVALID_PARAMETER, \"Scan already in progress, use action \\\"abort\\\" or \\\"status\\\"\");\n         }\n         std::set<CScript> needles;\n+        std::map<CScript, std::string> descriptors;\n         CAmount total_in = 0;\n \n         // loop through the scan objects\n@@ -2140,7 +2142,11 @@ UniValue scantxoutset(const JSONRPCRequest& request)\n                 if (!desc->Expand(i, provider, scripts, provider)) {\n                     throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, strprintf(\"Cannot derive script without private keys: '%s'\", desc_str));\n                 }\n-                needles.insert(scripts.begin(), scripts.end());\n+                for (const auto& script : scripts) {\n+                    std::string inferred = InferDescriptor(script, provider)->ToString();\n+                    needles.emplace(script);\n+                    descriptors.emplace(std::move(script), std::move(inferred));\n+                }\n             }\n         }\n \n@@ -2173,6 +2179,7 @@ UniValue scantxoutset(const JSONRPCRequest& request)\n             unspent.pushKV(\"txid\", outpoint.hash.GetHex());\n             unspent.pushKV(\"vout\", (int32_t)outpoint.n);\n             unspent.pushKV(\"scriptPubKey\", HexStr(txo.scriptPubKey.begin(), txo.scriptPubKey.end()));\n+            unspent.pushKV(\"desc\", descriptors[txo.scriptPubKey]);\n             unspent.pushKV(\"amount\", ValueFromAmount(txo.nValue));\n             unspent.pushKV(\"height\", (int32_t)coin.nHeight);\n "
+      },
+      {
+        "sha": "11b4db6ec51c34f5a61d1fbdeddf216fa31d188a",
+        "filename": "test/functional/rpc_scantxoutset.py",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 0,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b65326b562cde20aab709a953e396997a6cacbd6/test/functional/rpc_scantxoutset.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b65326b562cde20aab709a953e396997a6cacbd6/test/functional/rpc_scantxoutset.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/rpc_scantxoutset.py?ref=b65326b562cde20aab709a953e396997a6cacbd6",
+        "patch": "@@ -10,6 +10,9 @@\n import shutil\n import os\n \n+def descriptors(out):\n+    return sorted(u['desc'] for u in out['unspents'])\n+\n class ScantxoutsetTest(BitcoinTestFramework):\n     def set_test_params(self):\n         self.num_nodes = 1\n@@ -93,5 +96,10 @@ def run_test(self):\n         assert_equal(self.nodes[0].scantxoutset(\"start\", [ {\"desc\": \"combo(tpubD6NzVbkrYhZ4WaWSyoBvQwbpLkojyoTZPRsgXELWz3Popb3qkjcJyJUGLnL4qHHoQvao8ESaAstxYSnhyswJ76uZPStJRJCTKvosUCJZL5B/1/1/*)\", \"range\": 1499}])['total_amount'], Decimal(\"12.288\"))\n         assert_equal(self.nodes[0].scantxoutset(\"start\", [ {\"desc\": \"combo(tpubD6NzVbkrYhZ4WaWSyoBvQwbpLkojyoTZPRsgXELWz3Popb3qkjcJyJUGLnL4qHHoQvao8ESaAstxYSnhyswJ76uZPStJRJCTKvosUCJZL5B/1/1/*)\", \"range\": 1500}])['total_amount'], Decimal(\"28.672\"))\n \n+        # Test the reported descriptors for a few matches\n+        assert_equal(descriptors(self.nodes[0].scantxoutset(\"start\", [ {\"desc\": \"combo(tprv8ZgxMBicQKsPd7Uf69XL1XwhmjHopUGep8GuEiJDZmbQz6o58LninorQAfcKZWARbtRtfnLcJ5MQ2AtHcQJCCRUcMRvmDUjyEmNUWwx8UbK/0h/0'/*)\", \"range\": 1499}])), [\"pkh([0c5f9a1e/0'/0'/0]026dbd8b2315f296d36e6b6920b1579ca75569464875c7ebe869b536a7d9503c8c)\", \"pkh([0c5f9a1e/0'/0'/1]033e6f25d76c00bedb3a8993c7d5739ee806397f0529b1b31dda31ef890f19a60c)\"])\n+        assert_equal(descriptors(self.nodes[0].scantxoutset(\"start\", [ \"combo(tprv8ZgxMBicQKsPd7Uf69XL1XwhmjHopUGep8GuEiJDZmbQz6o58LninorQAfcKZWARbtRtfnLcJ5MQ2AtHcQJCCRUcMRvmDUjyEmNUWwx8UbK/1/1/0)\"])), [\"pkh([0c5f9a1e/1/1/0]03e1c5b6e650966971d7e71ef2674f80222752740fc1dfd63bbbd220d2da9bd0fb)\"])\n+        assert_equal(descriptors(self.nodes[0].scantxoutset(\"start\", [ {\"desc\": \"combo(tpubD6NzVbkrYhZ4WaWSyoBvQwbpLkojyoTZPRsgXELWz3Popb3qkjcJyJUGLnL4qHHoQvao8ESaAstxYSnhyswJ76uZPStJRJCTKvosUCJZL5B/1/1/*)\", \"range\": 1500}])), ['pkh([0c5f9a1e/1/1/0]03e1c5b6e650966971d7e71ef2674f80222752740fc1dfd63bbbd220d2da9bd0fb)', 'pkh([0c5f9a1e/1/1/1500]03832901c250025da2aebae2bfb38d5c703a57ab66ad477f9c578bfbcd78abca6f)', 'pkh([0c5f9a1e/1/1/1]030d820fc9e8211c4169be8530efbc632775d8286167afd178caaf1089b77daba7)'])\n+\n if __name__ == '__main__':\n     ScantxoutsetTest().main()"
+      }
+    ]
+  },
+  {
+    "sha": "109699dd33c72539fc33619f7836b8088f63182c",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxMDk2OTlkZDMzYzcyNTM5ZmMzMzYxOWY3ODM2YjgwODhmNjMxODJj",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2018-10-19T00:38:00Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2018-11-14T22:21:42Z"
+      },
+      "message": "Add release notes",
+      "tree": {
+        "sha": "7fbd814dfb745db3995153f7638675520975cf43",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/7fbd814dfb745db3995153f7638675520975cf43"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/109699dd33c72539fc33619f7836b8088f63182c",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/109699dd33c72539fc33619f7836b8088f63182c",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/109699dd33c72539fc33619f7836b8088f63182c",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/109699dd33c72539fc33619f7836b8088f63182c/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "b65326b562cde20aab709a953e396997a6cacbd6",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b65326b562cde20aab709a953e396997a6cacbd6",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b65326b562cde20aab709a953e396997a6cacbd6"
+      }
+    ],
+    "stats": {
+      "total": 5,
+      "additions": 5,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "bb8c0a623eede8ea09aa93c8a79284e6151bf432",
+        "filename": "doc/release-notes-14477.md",
+        "status": "added",
+        "additions": 5,
+        "deletions": 0,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/109699dd33c72539fc33619f7836b8088f63182c/doc/release-notes-14477.md",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/109699dd33c72539fc33619f7836b8088f63182c/doc/release-notes-14477.md",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/doc/release-notes-14477.md?ref=109699dd33c72539fc33619f7836b8088f63182c",
+        "patch": "@@ -0,0 +1,5 @@\n+Miscellaneous RPC changes\n+------------\n+\n+- `getaddressinfo` now reports `solvable`, a boolean indicating whether all information necessary for signing is present in the wallet (ignoring private keys).\n+- `getaddressinfo`, `listunspent`, and `scantxoutset` have a new output field `desc`, an output descriptor that encapsulates all signing information and key paths for the address (only available when `solvable` is true for `getaddressinfo` and `listunspent`)."
+      }
+    ]
+  }
+]

@@ -1,0 +1,100 @@
+[
+  {
+    "sha": "69bc566316588159838ea3c2780659dd13e687fe",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2OWJjNTY2MzE2NTg4MTU5ODM4ZWEzYzI3ODA2NTlkZDEzZTY4N2Zl",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2020-03-17T19:23:38Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2020-03-17T19:23:38Z"
+      },
+      "message": "Avoid strncopy for CMessageHeader::pchCommand",
+      "tree": {
+        "sha": "d4021d1e4e51888af913d38fcac0eda448366fad",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/d4021d1e4e51888af913d38fcac0eda448366fad"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/69bc566316588159838ea3c2780659dd13e687fe",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/69bc566316588159838ea3c2780659dd13e687fe",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/69bc566316588159838ea3c2780659dd13e687fe",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/69bc566316588159838ea3c2780659dd13e687fe/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "39497d1f3268d3aa75a41d07a5a5442a463265c6",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/39497d1f3268d3aa75a41d07a5a5442a463265c6",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/39497d1f3268d3aa75a41d07a5a5442a463265c6"
+      }
+    ],
+    "stats": {
+      "total": 8,
+      "additions": 6,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "b289fc84bffa9c49d7296c2b2bb28724233b1952",
+        "filename": "src/protocol.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 2,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/69bc566316588159838ea3c2780659dd13e687fe/src/protocol.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/69bc566316588159838ea3c2780659dd13e687fe/src/protocol.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/protocol.cpp?ref=69bc566316588159838ea3c2780659dd13e687fe",
+        "patch": "@@ -85,8 +85,12 @@ CMessageHeader::CMessageHeader(const MessageStartChars& pchMessageStartIn)\n CMessageHeader::CMessageHeader(const MessageStartChars& pchMessageStartIn, const char* pszCommand, unsigned int nMessageSizeIn)\n {\n     memcpy(pchMessageStart, pchMessageStartIn, MESSAGE_START_SIZE);\n-    memset(pchCommand, 0, sizeof(pchCommand));\n-    strncpy(pchCommand, pszCommand, COMMAND_SIZE);\n+    // Copy pszCommand to pchCommand field with zero padding\n+    bool in_padding = false;\n+    for (size_t pos = 0; pos < COMMAND_SIZE; ++pos) {\n+        pchCommand[pos] = in_padding ? 0 : pszCommand[pos];\n+        in_padding = (pchCommand[pos] == 0);\n+    }\n     nMessageSize = nMessageSizeIn;\n     memset(pchChecksum, 0, CHECKSUM_SIZE);\n }"
+      }
+    ]
+  }
+]

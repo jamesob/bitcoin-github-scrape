@@ -1,0 +1,86 @@
+[
+  {
+    "sha": "f49f2631856a4a233a957ce8361ffab3b08561cc",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmNDlmMjYzMTg1NmE0YTIzM2E5NTdjZTgzNjFmZmFiM2IwODU2MWNj",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-10-10T03:41:36Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-10-10T03:41:36Z"
+      },
+      "message": "Add -reindex, to perform in-place reindexing of blockchain data files\n\nCaveat: a new genesis block is added to blkNNNN.dat with each run,\nthanks to LoadBlockIndex() creating one, when it creates a blank block index.",
+      "tree": {
+        "sha": "542f0d958a548f2c82961e24de23d1dbcc95ea07",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/542f0d958a548f2c82961e24de23d1dbcc95ea07"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/f49f2631856a4a233a957ce8361ffab3b08561cc",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f49f2631856a4a233a957ce8361ffab3b08561cc",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/f49f2631856a4a233a957ce8361ffab3b08561cc",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f49f2631856a4a233a957ce8361ffab3b08561cc/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "eb49457ff279721cc3cef10fe68fd75b4aa71833",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/eb49457ff279721cc3cef10fe68fd75b4aa71833",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/eb49457ff279721cc3cef10fe68fd75b4aa71833"
+      }
+    ],
+    "stats": {
+      "total": 85,
+      "additions": 75,
+      "deletions": 10
+    },
+    "files": [
+      {
+        "sha": "412db1710a9e60c8e77532aa0c73dd48c4342d42",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 0,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f49f2631856a4a233a957ce8361ffab3b08561cc/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f49f2631856a4a233a957ce8361ffab3b08561cc/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=f49f2631856a4a233a957ce8361ffab3b08561cc",
+        "patch": "@@ -283,6 +283,7 @@ std::string HelpMessage()\n         \"  -checkblocks=<n>       \" + _(\"How many blocks to check at startup (default: 2500, 0 = all)\") + \"\\n\" +\n         \"  -checklevel=<n>        \" + _(\"How thorough the block verification is (0-6, default: 1)\") + \"\\n\" +\n         \"  -loadblock=<file>      \" + _(\"Imports blocks from external blk000?.dat file\") + \"\\n\" +\n+        \"  -reindex               \" + _(\"Rebuild blockchain index from current blk000?.dat files\") + \"\\n\" +\n \n         \"\\n\" + _(\"Block creation options:\") + \"\\n\" +\n         \"  -blockminsize=<n>      \"   + _(\"Set minimum block size in bytes (default: 0)\") + \"\\n\" +\n@@ -638,6 +639,9 @@ bool AppInit2()\n         return InitError(msg);\n     }\n \n+    if (GetBoolArg(\"-reindex\"))\n+        ReindexBlockchainPrep();\n+\n     if (GetBoolArg(\"-loadblockindextest\"))\n     {\n         CTxDB txdb(\"r\");\n@@ -776,6 +780,9 @@ bool AppInit2()\n \n     // ********************************************************* Step 9: import blocks\n \n+    if (GetBoolArg(\"-reindex\"))\n+        ReindexBlockchain();\n+\n     if (mapArgs.count(\"-loadblock\"))\n     {\n         uiInterface.InitMessage(_(\"Importing blockchain data file.\"));"
+      },
+      {
+        "sha": "ef2beccc13f5f68ec555d4088af109734637358a",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 39,
+        "deletions": 7,
+        "changes": 46,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f49f2631856a4a233a957ce8361ffab3b08561cc/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f49f2631856a4a233a957ce8361ffab3b08561cc/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=f49f2631856a4a233a957ce8361ffab3b08561cc",
+        "patch": "@@ -1853,7 +1853,7 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot) const\n     return true;\n }\n \n-bool CBlock::AcceptBlock()\n+bool CBlock::AcceptBlock(CDiskBlockPos *dbp)\n {\n     // Check for duplicate\n     uint256 hash = GetHash();\n@@ -1909,10 +1909,17 @@ bool CBlock::AcceptBlock()\n     // Write block to history file\n     if (!CheckDiskSpace(::GetSerializeSize(*this, SER_DISK, CLIENT_VERSION)))\n         return error(\"AcceptBlock() : out of disk space\");\n+\n     unsigned int nFile = -1;\n     unsigned int nBlockPos = 0;\n-    if (!WriteToDisk(nFile, nBlockPos))\n-        return error(\"AcceptBlock() : WriteToDisk failed\");\n+    if (dbp) {\n+        nFile = dbp->nFile;\n+        nBlockPos = dbp->nPos;\n+    } else {\n+        if (!WriteToDisk(nFile, nBlockPos))\n+            return error(\"AcceptBlock() : WriteToDisk failed\");\n+    }\n+\n     if (!AddToBlockIndex(nFile, nBlockPos))\n         return error(\"AcceptBlock() : AddToBlockIndex failed\");\n \n@@ -1941,7 +1948,7 @@ bool CBlockIndex::IsSuperMajority(int minVersion, const CBlockIndex* pstart, uns\n     return (nFound >= nRequired);\n }\n \n-bool ProcessBlock(CNode* pfrom, CBlock* pblock)\n+bool ProcessBlock(CNode* pfrom, CBlock* pblock, CDiskBlockPos *dbp)\n {\n     // Check for duplicate\n     uint256 hash = pblock->GetHash();\n@@ -1996,7 +2003,7 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)\n     }\n \n     // Store to disk\n-    if (!pblock->AcceptBlock())\n+    if (!pblock->AcceptBlock(dbp))\n         return error(\"ProcessBlock() : AcceptBlock FAILED\");\n \n     // Recursively process any orphan blocks that depended on this one\n@@ -2245,7 +2252,7 @@ void PrintBlockTree()\n     }\n }\n \n-bool LoadExternalBlockFile(FILE* fileIn)\n+bool LoadExternalBlockFile(FILE* fileIn, CDiskBlockPos *dbp)\n {\n     int64 nStart = GetTimeMillis();\n \n@@ -2288,7 +2295,9 @@ bool LoadExternalBlockFile(FILE* fileIn)\n                 {\n                     CBlock block;\n                     blkdat >> block;\n-                    if (ProcessBlock(NULL,&block))\n+                    if (dbp)\n+                        dbp->nPos = nPos + 4;\n+                    if (ProcessBlock(NULL, &block, dbp))\n                     {\n                         nLoaded++;\n                         nPos += 4 + nSize;\n@@ -2305,6 +2314,29 @@ bool LoadExternalBlockFile(FILE* fileIn)\n     return nLoaded > 0;\n }\n \n+void ReindexBlockchain()\n+{\n+    int nFile = 1;\n+    while (1) {\n+        printf(\"Reindexing blk%04d.dat...\\n\", nFile);\n+\n+        filesystem::path pathBlockFile = BlockFilePath(nFile);\n+        FILE *file = fopen(pathBlockFile.string().c_str(), \"rb\");\n+        if (!file)\n+            break;\n+\n+        CDiskBlockPos dbp(nFile);\n+        LoadExternalBlockFile(file, &dbp);\n+        nFile++;\n+    }\n+}\n+\n+void ReindexBlockchainPrep()\n+{\n+    printf(\"Removing blkindex.dat, in preparation for -reindex\\n\");\n+    bitdb.RemoveDb(\"blkindex.dat\");\n+}\n+\n \n \n "
+      },
+      {
+        "sha": "ca86e9520d542b42d298790bc3d2b4fe24374ddb",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 29,
+        "deletions": 3,
+        "changes": 32,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f49f2631856a4a233a957ce8361ffab3b08561cc/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f49f2631856a4a233a957ce8361ffab3b08561cc/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=f49f2631856a4a233a957ce8361ffab3b08561cc",
+        "patch": "@@ -79,11 +79,12 @@ static const uint64 nMinDiskSpace = 52428800;\n class CReserveKey;\n class CTxDB;\n class CTxIndex;\n+class CDiskBlockPos;\n \n void RegisterWallet(CWallet* pwalletIn);\n void UnregisterWallet(CWallet* pwalletIn);\n void SyncWithWallets(const CTransaction& tx, const CBlock* pblock = NULL, bool fUpdate = false);\n-bool ProcessBlock(CNode* pfrom, CBlock* pblock);\n+bool ProcessBlock(CNode* pfrom, CBlock* pblock, CDiskBlockPos *dbp = NULL);\n bool CheckDiskSpace(uint64 nAdditionalBytes=0);\n FILE* OpenBlockFile(unsigned int nFile, unsigned int nBlockPos, const char* pszMode=\"rb\");\n FILE* AppendBlockFile(unsigned int& nFileRet);\n@@ -92,7 +93,9 @@ void PrintBlockTree();\n CBlockIndex* FindBlockByHeight(int nHeight);\n bool ProcessMessages(CNode* pfrom);\n bool SendMessages(CNode* pto, bool fSendTrickle);\n-bool LoadExternalBlockFile(FILE* fileIn);\n+bool LoadExternalBlockFile(FILE* fileIn, CDiskBlockPos *dbp = NULL);\n+void ReindexBlockchain();\n+void ReindexBlockchainPrep();\n void GenerateBitcoins(bool fGenerate, CWallet* pwallet);\n CBlock* CreateNewBlock(CReserveKey& reservekey);\n void IncrementExtraNonce(CBlock* pblock, CBlockIndex* pindexPrev, unsigned int& nExtraNonce);\n@@ -117,6 +120,29 @@ bool GetTransaction(const uint256 &hash, CTransaction &tx, uint256 &hashBlock);\n \n bool GetWalletFile(CWallet* pwallet, std::string &strWalletFileOut);\n \n+class CDiskBlockPos\n+{\n+public:\n+    int nFile;\n+    unsigned int nPos;\n+\n+    CDiskBlockPos(int nFile_) {\n+        nFile = nFile_;\n+        nPos = 0;\n+    }\n+\n+    friend bool operator==(const CDiskBlockPos &a, const CDiskBlockPos &b) {\n+        return (a.nFile == b.nFile && a.nPos == b.nPos);\n+    }\n+\n+    friend bool operator!=(const CDiskBlockPos &a, const CDiskBlockPos &b) {\n+        return !(a == b);\n+    }\n+\n+    void SetNull() { nFile = -1; nPos = 0; }\n+    bool IsNull() const { return (nFile == -1); }\n+};\n+\n /** Position on disk for a particular transaction. */\n class CDiskTxPos\n {\n@@ -977,7 +1003,7 @@ class CBlock\n     bool SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew);\n     bool AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos);\n     bool CheckBlock(bool fCheckPOW=true, bool fCheckMerkleRoot=true) const;\n-    bool AcceptBlock();\n+    bool AcceptBlock(CDiskBlockPos *dbp = NULL);\n \n private:\n     bool SetBestChainInner(CTxDB& txdb, CBlockIndex *pindexNew);"
+      }
+    ]
+  }
+]

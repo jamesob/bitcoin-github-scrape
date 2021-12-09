@@ -1,0 +1,98 @@
+[
+  {
+    "sha": "980bfe6ef8bf03633d98f4d51e925c1aa4349421",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5ODBiZmU2ZWY4YmYwMzYzM2Q5OGY0ZDUxZTkyNWMxYWE0MzQ5NDIx",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2013-06-23T06:05:25Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2013-06-23T06:05:25Z"
+      },
+      "message": "Log reason for non-standard transaction rejection",
+      "tree": {
+        "sha": "99249d423182ee44f4a8075aec337267498855d2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/99249d423182ee44f4a8075aec337267498855d2"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/980bfe6ef8bf03633d98f4d51e925c1aa4349421",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/980bfe6ef8bf03633d98f4d51e925c1aa4349421",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/980bfe6ef8bf03633d98f4d51e925c1aa4349421",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/980bfe6ef8bf03633d98f4d51e925c1aa4349421/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "b4a8a326c067a350b5a5ff0e565555b57ffb3a2e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b4a8a326c067a350b5a5ff0e565555b57ffb3a2e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b4a8a326c067a350b5a5ff0e565555b57ffb3a2e"
+      }
+    ],
+    "stats": {
+      "total": 56,
+      "additions": 38,
+      "deletions": 18
+    },
+    "files": [
+      {
+        "sha": "3879b78ad400e59c0007c5240dc7179e397ee441",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 27,
+        "deletions": 10,
+        "changes": 37,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/980bfe6ef8bf03633d98f4d51e925c1aa4349421/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/980bfe6ef8bf03633d98f4d51e925c1aa4349421/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=980bfe6ef8bf03633d98f4d51e925c1aa4349421",
+        "patch": "@@ -457,38 +457,53 @@ unsigned int LimitOrphanTxSize(unsigned int nMaxOrphans)\n \n \n \n-bool IsStandardTx(const CTransaction& tx)\n+bool IsStandardTx(const CTransaction& tx, string& reason)\n {\n-    if (tx.nVersion > CTransaction::CURRENT_VERSION)\n+    if (tx.nVersion > CTransaction::CURRENT_VERSION) {\n+        reason = \"version\";\n         return false;\n+    }\n \n-    if (!IsFinalTx(tx))\n+    if (!IsFinalTx(tx)) {\n+        reason = \"non-final\";\n         return false;\n+    }\n \n     // Extremely large transactions with lots of inputs can cost the network\n     // almost as much to process as they cost the sender in fees, because\n     // computing signature hashes is O(ninputs*txsize). Limiting transactions\n     // to MAX_STANDARD_TX_SIZE mitigates CPU exhaustion attacks.\n     unsigned int sz = tx.GetSerializeSize(SER_NETWORK, CTransaction::CURRENT_VERSION);\n-    if (sz >= MAX_STANDARD_TX_SIZE)\n+    if (sz >= MAX_STANDARD_TX_SIZE) {\n+        reason = \"tx-size\";\n         return false;\n+    }\n \n     BOOST_FOREACH(const CTxIn& txin, tx.vin)\n     {\n         // Biggest 'standard' txin is a 3-signature 3-of-3 CHECKMULTISIG\n         // pay-to-script-hash, which is 3 ~80-byte signatures, 3\n         // ~65-byte public keys, plus a few script ops.\n-        if (txin.scriptSig.size() > 500)\n+        if (txin.scriptSig.size() > 500) {\n+            reason = \"scriptsig-size\";\n             return false;\n-        if (!txin.scriptSig.IsPushOnly())\n+        }\n+        if (!txin.scriptSig.IsPushOnly()) {\n+            reason = \"scriptsig-not-pushonly\";\n             return false;\n+        }\n     }\n     BOOST_FOREACH(const CTxOut& txout, tx.vout) {\n-        if (!::IsStandard(txout.scriptPubKey))\n+        if (!::IsStandard(txout.scriptPubKey)) {\n+            reason = \"scriptpubkey\";\n             return false;\n-        if (txout.IsDust(CTransaction::nMinRelayTxFee))\n+        }\n+        if (txout.IsDust(CTransaction::nMinRelayTxFee)) {\n+            reason = \"dust\";\n             return false;\n+        }\n     }\n+\n     return true;\n }\n \n@@ -782,8 +797,10 @@ bool CTxMemPool::accept(CValidationState &state, CTransaction &tx, bool fLimitFr\n         return error(\"CTxMemPool::accept() : not accepting nLockTime beyond 2038 yet\");\n \n     // Rather not work on nonstandard transactions (unless -testnet)\n-    if (!TestNet() && !IsStandardTx(tx))\n-        return error(\"CTxMemPool::accept() : nonstandard transaction type\");\n+    string reason;\n+    if (!TestNet() && !IsStandardTx(tx, reason))\n+        return error(\"CTxMemPool::accept() : nonstandard transaction: %s\",\n+                     reason.c_str());\n \n     // is it already in the memory pool?\n     uint256 hash = tx.GetHash();"
+      },
+      {
+        "sha": "b9879d10974cee4dfadd298edbe444686c7594d0",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/980bfe6ef8bf03633d98f4d51e925c1aa4349421/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/980bfe6ef8bf03633d98f4d51e925c1aa4349421/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=980bfe6ef8bf03633d98f4d51e925c1aa4349421",
+        "patch": "@@ -324,7 +324,7 @@ bool CheckTransaction(const CTransaction& tx, CValidationState& state);\n /** Check for standard transaction types\n     @return True if all outputs (scriptPubKeys) use only standard transaction forms\n */\n-bool IsStandardTx(const CTransaction& tx);\n+bool IsStandardTx(const CTransaction& tx, std::string& reason);\n \n bool IsFinalTx(const CTransaction &tx, int nBlockHeight = 0, int64 nBlockTime = 0);\n "
+      },
+      {
+        "sha": "3c666d284278114af10eca914342d5c642fb3f80",
+        "filename": "src/test/script_P2SH_tests.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 3,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/980bfe6ef8bf03633d98f4d51e925c1aa4349421/src/test/script_P2SH_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/980bfe6ef8bf03633d98f4d51e925c1aa4349421/src/test/script_P2SH_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/script_P2SH_tests.cpp?ref=980bfe6ef8bf03633d98f4d51e925c1aa4349421",
+        "patch": "@@ -74,6 +74,7 @@ BOOST_AUTO_TEST_CASE(sign)\n     }\n \n     CTransaction txFrom;  // Funding transaction:\n+    string reason;\n     txFrom.vout.resize(8);\n     for (int i = 0; i < 4; i++)\n     {\n@@ -82,7 +83,7 @@ BOOST_AUTO_TEST_CASE(sign)\n         txFrom.vout[i+4].scriptPubKey = standardScripts[i];\n         txFrom.vout[i+4].nValue = COIN;\n     }\n-    BOOST_CHECK(IsStandardTx(txFrom));\n+    BOOST_CHECK(IsStandardTx(txFrom, reason));\n \n     CTransaction txTo[8]; // Spending transactions\n     for (int i = 0; i < 8; i++)\n@@ -167,13 +168,14 @@ BOOST_AUTO_TEST_CASE(set)\n     }\n \n     CTransaction txFrom;  // Funding transaction:\n+    string reason;\n     txFrom.vout.resize(4);\n     for (int i = 0; i < 4; i++)\n     {\n         txFrom.vout[i].scriptPubKey = outer[i];\n         txFrom.vout[i].nValue = CENT;\n     }\n-    BOOST_CHECK(IsStandardTx(txFrom));\n+    BOOST_CHECK(IsStandardTx(txFrom, reason));\n \n     CTransaction txTo[4]; // Spending transactions\n     for (int i = 0; i < 4; i++)\n@@ -189,7 +191,7 @@ BOOST_AUTO_TEST_CASE(set)\n     for (int i = 0; i < 4; i++)\n     {\n         BOOST_CHECK_MESSAGE(SignSignature(keystore, txFrom, txTo[i], 0), strprintf(\"SignSignature %d\", i));\n-        BOOST_CHECK_MESSAGE(IsStandardTx(txTo[i]), strprintf(\"txTo[%d].IsStandard\", i));\n+        BOOST_CHECK_MESSAGE(IsStandardTx(txTo[i], reason), strprintf(\"txTo[%d].IsStandard\", i));\n     }\n }\n "
+      },
+      {
+        "sha": "0c7475b4f28c277f894dc707b0b3b65496958a9c",
+        "filename": "src/test/transaction_tests.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 4,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/980bfe6ef8bf03633d98f4d51e925c1aa4349421/src/test/transaction_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/980bfe6ef8bf03633d98f4d51e925c1aa4349421/src/test/transaction_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/transaction_tests.cpp?ref=980bfe6ef8bf03633d98f4d51e925c1aa4349421",
+        "patch": "@@ -260,16 +260,17 @@ BOOST_AUTO_TEST_CASE(test_IsStandard)\n     key.MakeNewKey(true);\n     t.vout[0].scriptPubKey.SetDestination(key.GetPubKey().GetID());\n \n-    BOOST_CHECK(IsStandardTx(t));\n+    string reason;\n+    BOOST_CHECK(IsStandardTx(t, reason));\n \n     t.vout[0].nValue = 5011; // dust\n-    BOOST_CHECK(!IsStandardTx(t));\n+    BOOST_CHECK(!IsStandardTx(t, reason));\n \n     t.vout[0].nValue = 6011; // not dust\n-    BOOST_CHECK(IsStandardTx(t));\n+    BOOST_CHECK(IsStandardTx(t, reason));\n \n     t.vout[0].scriptPubKey = CScript() << OP_1;\n-    BOOST_CHECK(!IsStandardTx(t));\n+    BOOST_CHECK(!IsStandardTx(t, reason));\n }\n \n BOOST_AUTO_TEST_SUITE_END()"
+      }
+    ]
+  }
+]

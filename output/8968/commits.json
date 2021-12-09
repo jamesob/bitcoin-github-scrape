@@ -1,0 +1,100 @@
+[
+  {
+    "sha": "72ca7d924e3896838d2709d95f4c8cca670af8cf",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3MmNhN2Q5MjRlMzg5NjgzOGQyNzA5ZDk1ZjRjOGNjYTY3MGFmOGNm",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2016-09-30T21:12:00Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2016-10-18T19:24:59Z"
+      },
+      "message": "Don't hold cs_main when calling ProcessNewBlock from a cmpctblock",
+      "tree": {
+        "sha": "f9816dfc8c59e9aa0e891da6fc9fab0241405b9a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f9816dfc8c59e9aa0e891da6fc9fab0241405b9a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/72ca7d924e3896838d2709d95f4c8cca670af8cf",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/72ca7d924e3896838d2709d95f4c8cca670af8cf",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/72ca7d924e3896838d2709d95f4c8cca670af8cf",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/72ca7d924e3896838d2709d95f4c8cca670af8cf/comments",
+    "author": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "df7519cbc1a9613a557bf84ad3c124795155f287",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/df7519cbc1a9613a557bf84ad3c124795155f287",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/df7519cbc1a9613a557bf84ad3c124795155f287"
+      }
+    ],
+    "stats": {
+      "total": 47,
+      "additions": 26,
+      "deletions": 21
+    },
+    "files": [
+      {
+        "sha": "4199cb30e8397921de4107cc9e1341059af08421",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 26,
+        "deletions": 21,
+        "changes": 47,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/72ca7d924e3896838d2709d95f4c8cca670af8cf/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/72ca7d924e3896838d2709d95f4c8cca670af8cf/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=72ca7d924e3896838d2709d95f4c8cca670af8cf",
+        "patch": "@@ -5787,29 +5787,34 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv,\n         BlockTransactions resp;\n         vRecv >> resp;\n \n-        LOCK(cs_main);\n+        CBlock block;\n+        bool fBlockRead = false;\n+        {\n+            LOCK(cs_main);\n \n-        map<uint256, pair<NodeId, list<QueuedBlock>::iterator> >::iterator it = mapBlocksInFlight.find(resp.blockhash);\n-        if (it == mapBlocksInFlight.end() || !it->second.second->partialBlock ||\n-                it->second.first != pfrom->GetId()) {\n-            LogPrint(\"net\", \"Peer %d sent us block transactions for block we weren't expecting\\n\", pfrom->id);\n-            return true;\n-        }\n+            map<uint256, pair<NodeId, list<QueuedBlock>::iterator> >::iterator it = mapBlocksInFlight.find(resp.blockhash);\n+            if (it == mapBlocksInFlight.end() || !it->second.second->partialBlock ||\n+                    it->second.first != pfrom->GetId()) {\n+                LogPrint(\"net\", \"Peer %d sent us block transactions for block we weren't expecting\\n\", pfrom->id);\n+                return true;\n+            }\n \n-        PartiallyDownloadedBlock& partialBlock = *it->second.second->partialBlock;\n-        CBlock block;\n-        ReadStatus status = partialBlock.FillBlock(block, resp.txn);\n-        if (status == READ_STATUS_INVALID) {\n-            MarkBlockAsReceived(resp.blockhash); // Reset in-flight state in case of whitelist\n-            Misbehaving(pfrom->GetId(), 100);\n-            LogPrintf(\"Peer %d sent us invalid compact block/non-matching block transactions\\n\", pfrom->id);\n-            return true;\n-        } else if (status == READ_STATUS_FAILED) {\n-            // Might have collided, fall back to getdata now :(\n-            std::vector<CInv> invs;\n-            invs.push_back(CInv(MSG_BLOCK | GetFetchFlags(pfrom, chainActive.Tip(), chainparams.GetConsensus()), resp.blockhash));\n-            pfrom->PushMessage(NetMsgType::GETDATA, invs);\n-        } else {\n+            PartiallyDownloadedBlock& partialBlock = *it->second.second->partialBlock;\n+            ReadStatus status = partialBlock.FillBlock(block, resp.txn);\n+            if (status == READ_STATUS_INVALID) {\n+                MarkBlockAsReceived(resp.blockhash); // Reset in-flight state in case of whitelist\n+                Misbehaving(pfrom->GetId(), 100);\n+                LogPrintf(\"Peer %d sent us invalid compact block/non-matching block transactions\\n\", pfrom->id);\n+                return true;\n+            } else if (status == READ_STATUS_FAILED) {\n+                // Might have collided, fall back to getdata now :(\n+                std::vector<CInv> invs;\n+                invs.push_back(CInv(MSG_BLOCK | GetFetchFlags(pfrom, chainActive.Tip(), chainparams.GetConsensus()), resp.blockhash));\n+                pfrom->PushMessage(NetMsgType::GETDATA, invs);\n+            } else\n+                fBlockRead = true;\n+        } // Don't hold cs_main when we call into ProcessNewBlock\n+        if (fBlockRead) {\n             CValidationState state;\n             ProcessNewBlock(state, chainparams, pfrom, &block, false, NULL, &connman);\n             int nDoS;"
+      }
+    ]
+  }
+]

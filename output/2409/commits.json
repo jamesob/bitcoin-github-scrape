@@ -1,0 +1,653 @@
+[
+  {
+    "sha": "607dbfdeaf7ec053d959c47c125d60c0b7e7216a",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2MDdkYmZkZWFmN2VjMDUzZDk1OWM0N2MxMjVkNjBjMGI3ZTcyMTZh",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-11-16T00:41:12Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "sipa@ulyssis.org",
+        "date": "2013-03-29T22:56:25Z"
+      },
+      "message": "P2P: parse network datastream into header/data components in socket thread\n\nReplaces CNode::vRecv buffer with a vector of CNetMessage's.  This simplifies\nProcessMessages() and eliminates several redundant data copies.\n\nOverview:\n\n* socket thread now parses incoming message datastream into\n  header/data components, as encapsulated by CNetMessage\n* socket thread adds each CNetMessage to a vector inside CNode\n* message thread (ProcessMessages) iterates through CNode's CNetMessage vector\n\nMessage parsing is made more strict:\n\n* Socket is disconnected, if message larger than MAX_SIZE\n  or if CMessageHeader deserialization fails (latter is impossible?).\n  Previously, code would simply eat garbage data all day long.\n* Socket is disconnected, if we fail to find pchMessageStart.\n  We do not search through garbage, to find pchMessageStart.  Each\n  message must begin precisely after the last message ends.\n\nProcessMessages() always processes a complete message, and is more efficient:\n\n* buffer is always precisely sized, using CDataStream::resize(),\n  rather than progressively sized in 64k chunks.  More efficient\n  for large messages like \"block\".\n* whole-buffer memory copy eliminated (vRecv -> vMsg)\n* other buffer-shifting memory copies eliminated (vRecv.insert, vRecv.erase)",
+      "tree": {
+        "sha": "4a77135cba3d16f4bddea919f2621dfcc7428796",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/4a77135cba3d16f4bddea919f2621dfcc7428796"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/607dbfdeaf7ec053d959c47c125d60c0b7e7216a",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/607dbfdeaf7ec053d959c47c125d60c0b7e7216a",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/607dbfdeaf7ec053d959c47c125d60c0b7e7216a",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/607dbfdeaf7ec053d959c47c125d60c0b7e7216a/comments",
+    "author": null,
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "ea83336f4eceecbc046e465509b792dd203327bc",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ea83336f4eceecbc046e465509b792dd203327bc",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/ea83336f4eceecbc046e465509b792dd203327bc"
+      }
+    ],
+    "stats": {
+      "total": 231,
+      "additions": 176,
+      "deletions": 55
+    },
+    "files": [
+      {
+        "sha": "3406144595377c39146dd3b051883b60da1b2de1",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 27,
+        "deletions": 38,
+        "changes": 65,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/607dbfdeaf7ec053d959c47c125d60c0b7e7216a/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/607dbfdeaf7ec053d959c47c125d60c0b7e7216a/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=607dbfdeaf7ec053d959c47c125d60c0b7e7216a",
+        "patch": "@@ -3168,7 +3168,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n \n     else if (strCommand == \"verack\")\n     {\n-        pfrom->vRecv.SetVersion(min(pfrom->nVersion, PROTOCOL_VERSION));\n+        pfrom->SetRecvVersion(min(pfrom->nVersion, PROTOCOL_VERSION));\n     }\n \n \n@@ -3705,13 +3705,13 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n     return true;\n }\n \n+// requires LOCK(cs_vRecvMsg)\n bool ProcessMessages(CNode* pfrom)\n {\n-    CDataStream& vRecv = pfrom->vRecv;\n-    if (vRecv.empty())\n+    if (pfrom->vRecvMsg.empty())\n         return true;\n     //if (fDebug)\n-    //    printf(\"ProcessMessages(%u bytes)\\n\", vRecv.size());\n+    //    printf(\"ProcessMessages(%zu messages)\\n\", pfrom->vRecvMsg.size());\n \n     //\n     // Message format\n@@ -3722,32 +3722,32 @@ bool ProcessMessages(CNode* pfrom)\n     //  (x) data\n     //\n \n-    loop\n+    unsigned int nMsgPos = 0;\n+    for (; nMsgPos < pfrom->vRecvMsg.size(); nMsgPos++)\n     {\n         // Don't bother if send buffer is too full to respond anyway\n         if (pfrom->vSend.size() >= SendBufferSize())\n             break;\n \n-        // Scan for message start\n-        CDataStream::iterator pstart = search(vRecv.begin(), vRecv.end(), BEGIN(pchMessageStart), END(pchMessageStart));\n-        int nHeaderSize = vRecv.GetSerializeSize(CMessageHeader());\n-        if (vRecv.end() - pstart < nHeaderSize)\n-        {\n-            if ((int)vRecv.size() > nHeaderSize)\n-            {\n-                printf(\"\\n\\nPROCESSMESSAGE MESSAGESTART NOT FOUND\\n\\n\");\n-                vRecv.erase(vRecv.begin(), vRecv.end() - nHeaderSize);\n-            }\n+        // get next message; end, if an incomplete message is found\n+        CNetMessage& msg = pfrom->vRecvMsg[nMsgPos];\n+\n+        //if (fDebug)\n+        //    printf(\"ProcessMessages(message %u msgsz, %zu bytes, complete:%s)\\n\",\n+        //            msg.hdr.nMessageSize, msg.vRecv.size(),\n+        //            msg.complete() ? \"Y\" : \"N\");\n+\n+        if (!msg.complete())\n             break;\n+\n+        // Scan for message start\n+        if (memcmp(msg.hdr.pchMessageStart, pchMessageStart, sizeof(pchMessageStart)) != 0) {\n+            printf(\"\\n\\nPROCESSMESSAGE: INVALID MESSAGESTART\\n\\n\");\n+            return false;\n         }\n-        if (pstart - vRecv.begin() > 0)\n-            printf(\"\\n\\nPROCESSMESSAGE SKIPPED %\"PRIpdd\" BYTES\\n\\n\", pstart - vRecv.begin());\n-        vRecv.erase(vRecv.begin(), pstart);\n \n         // Read header\n-        vector<char> vHeaderSave(vRecv.begin(), vRecv.begin() + nHeaderSize);\n-        CMessageHeader hdr;\n-        vRecv >> hdr;\n+        CMessageHeader& hdr = msg.hdr;\n         if (!hdr.IsValid())\n         {\n             printf(\"\\n\\nPROCESSMESSAGE: ERRORS IN HEADER %s\\n\\n\\n\", hdr.GetCommand().c_str());\n@@ -3757,19 +3757,9 @@ bool ProcessMessages(CNode* pfrom)\n \n         // Message size\n         unsigned int nMessageSize = hdr.nMessageSize;\n-        if (nMessageSize > MAX_SIZE)\n-        {\n-            printf(\"ProcessMessages(%s, %u bytes) : nMessageSize > MAX_SIZE\\n\", strCommand.c_str(), nMessageSize);\n-            continue;\n-        }\n-        if (nMessageSize > vRecv.size())\n-        {\n-            // Rewind and wait for rest of message\n-            vRecv.insert(vRecv.begin(), vHeaderSave.begin(), vHeaderSave.end());\n-            break;\n-        }\n \n         // Checksum\n+        CDataStream& vRecv = msg.vRecv;\n         uint256 hash = Hash(vRecv.begin(), vRecv.begin() + nMessageSize);\n         unsigned int nChecksum = 0;\n         memcpy(&nChecksum, &hash, sizeof(nChecksum));\n@@ -3780,17 +3770,13 @@ bool ProcessMessages(CNode* pfrom)\n             continue;\n         }\n \n-        // Copy message to its own buffer\n-        CDataStream vMsg(vRecv.begin(), vRecv.begin() + nMessageSize, vRecv.nType, vRecv.nVersion);\n-        vRecv.ignore(nMessageSize);\n-\n         // Process message\n         bool fRet = false;\n         try\n         {\n             {\n                 LOCK(cs_main);\n-                fRet = ProcessMessage(pfrom, strCommand, vMsg);\n+                fRet = ProcessMessage(pfrom, strCommand, vRecv);\n             }\n             if (fShutdown)\n                 return true;\n@@ -3822,7 +3808,10 @@ bool ProcessMessages(CNode* pfrom)\n             printf(\"ProcessMessage(%s, %u bytes) FAILED\\n\", strCommand.c_str(), nMessageSize);\n     }\n \n-    vRecv.Compact();\n+    // remove processed messages; one incomplete message may remain\n+    if (nMsgPos > 0)\n+        pfrom->vRecvMsg.erase(pfrom->vRecvMsg.begin(),\n+                              pfrom->vRecvMsg.begin() + nMsgPos);\n     return true;\n }\n "
+      },
+      {
+        "sha": "0e558228d73961df25d98c5c9ee47ec720a54d66",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 83,
+        "deletions": 13,
+        "changes": 96,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/607dbfdeaf7ec053d959c47c125d60c0b7e7216a/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/607dbfdeaf7ec053d959c47c125d60c0b7e7216a/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=607dbfdeaf7ec053d959c47c125d60c0b7e7216a",
+        "patch": "@@ -536,7 +536,7 @@ void CNode::CloseSocketDisconnect()\n         printf(\"disconnecting node %s\\n\", addrName.c_str());\n         closesocket(hSocket);\n         hSocket = INVALID_SOCKET;\n-        vRecv.clear();\n+        vRecvMsg.clear();\n     }\n }\n \n@@ -628,6 +628,78 @@ void CNode::copyStats(CNodeStats &stats)\n }\n #undef X\n \n+// requires LOCK(cs_vRecvMsg)\n+bool CNode::ReceiveMsgBytes(const char *pch, unsigned int nBytes)\n+{\n+    while (nBytes > 0) {\n+\n+        // get current incomplete message, or create a new one\n+        if (vRecvMsg.size() == 0 ||\n+            vRecvMsg.back().complete())\n+            vRecvMsg.push_back(CNetMessage(SER_NETWORK, nRecvVersion));\n+\n+        CNetMessage& msg = vRecvMsg.back();\n+\n+        // absorb network data\n+        int handled;\n+        if (!msg.in_data)\n+            handled = msg.readHeader(pch, nBytes);\n+        else\n+            handled = msg.readData(pch, nBytes);\n+\n+        if (handled < 0)\n+                return false;\n+\n+        pch += handled;\n+        nBytes -= handled;\n+    }\n+\n+    return true;\n+}\n+\n+int CNetMessage::readHeader(const char *pch, unsigned int nBytes)\n+{\n+    // copy data to temporary parsing buffer\n+    unsigned int nRemaining = 24 - nHdrPos;\n+    unsigned int nCopy = std::min(nRemaining, nBytes);\n+\n+    memcpy(&hdrbuf[nHdrPos], pch, nCopy);\n+    nHdrPos += nCopy;\n+\n+    // if header incomplete, exit\n+    if (nHdrPos < 24)\n+        return nCopy;\n+\n+    // deserialize to CMessageHeader\n+    try {\n+        hdrbuf >> hdr;\n+    }\n+    catch (std::exception &e) {\n+        return -1;\n+    }\n+\n+    // reject messages larger than MAX_SIZE\n+    if (hdr.nMessageSize > MAX_SIZE)\n+            return -1;\n+\n+    // switch state to reading message data\n+    in_data = true;\n+    vRecv.resize(hdr.nMessageSize);\n+\n+    return nCopy;\n+}\n+\n+int CNetMessage::readData(const char *pch, unsigned int nBytes)\n+{\n+    unsigned int nRemaining = hdr.nMessageSize - nDataPos;\n+    unsigned int nCopy = std::min(nRemaining, nBytes);\n+\n+    memcpy(&vRecv[nDataPos], pch, nCopy);\n+    nDataPos += nCopy;\n+\n+    return nCopy;\n+}\n+\n \n \n \n@@ -676,7 +748,7 @@ void ThreadSocketHandler2(void* parg)\n             BOOST_FOREACH(CNode* pnode, vNodesCopy)\n             {\n                 if (pnode->fDisconnect ||\n-                    (pnode->GetRefCount() <= 0 && pnode->vRecv.empty() && pnode->vSend.empty()))\n+                    (pnode->GetRefCount() <= 0 && pnode->vRecvMsg.empty() && pnode->vSend.empty()))\n                 {\n                     // remove from vNodes\n                     vNodes.erase(remove(vNodes.begin(), vNodes.end(), pnode), vNodes.end());\n@@ -708,7 +780,7 @@ void ThreadSocketHandler2(void* parg)\n                         TRY_LOCK(pnode->cs_vSend, lockSend);\n                         if (lockSend)\n                         {\n-                            TRY_LOCK(pnode->cs_vRecv, lockRecv);\n+                            TRY_LOCK(pnode->cs_vRecvMsg, lockRecv);\n                             if (lockRecv)\n                             {\n                                 TRY_LOCK(pnode->cs_inventory, lockInv);\n@@ -873,15 +945,12 @@ void ThreadSocketHandler2(void* parg)\n                 continue;\n             if (FD_ISSET(pnode->hSocket, &fdsetRecv) || FD_ISSET(pnode->hSocket, &fdsetError))\n             {\n-                TRY_LOCK(pnode->cs_vRecv, lockRecv);\n+                TRY_LOCK(pnode->cs_vRecvMsg, lockRecv);\n                 if (lockRecv)\n                 {\n-                    CDataStream& vRecv = pnode->vRecv;\n-                    unsigned int nPos = vRecv.size();\n-\n-                    if (nPos > ReceiveBufferSize()) {\n+                    if (pnode->GetTotalRecvSize() > ReceiveFloodSize()) {\n                         if (!pnode->fDisconnect)\n-                            printf(\"socket recv flood control disconnect (%\"PRIszu\" bytes)\\n\", vRecv.size());\n+                            printf(\"socket recv flood control disconnect (%u bytes)\\n\", pnode->GetTotalRecvSize());\n                         pnode->CloseSocketDisconnect();\n                     }\n                     else {\n@@ -890,8 +959,8 @@ void ThreadSocketHandler2(void* parg)\n                         int nBytes = recv(pnode->hSocket, pchBuf, sizeof(pchBuf), MSG_DONTWAIT);\n                         if (nBytes > 0)\n                         {\n-                            vRecv.resize(nPos + nBytes);\n-                            memcpy(&vRecv[nPos], pchBuf, nBytes);\n+                            if (!pnode->ReceiveMsgBytes(pchBuf, nBytes))\n+                                pnode->CloseSocketDisconnect();\n                             pnode->nLastRecv = GetTime();\n                         }\n                         else if (nBytes == 0)\n@@ -1693,9 +1762,10 @@ void ThreadMessageHandler2(void* parg)\n         {\n             // Receive messages\n             {\n-                TRY_LOCK(pnode->cs_vRecv, lockRecv);\n+                TRY_LOCK(pnode->cs_vRecvMsg, lockRecv);\n                 if (lockRecv)\n-                    ProcessMessages(pnode);\n+                    if (!ProcessMessages(pnode))\n+                        pnode->CloseSocketDisconnect();\n             }\n             if (fShutdown)\n                 return;"
+      },
+      {
+        "sha": "78f8e72fb03a56d9d749e31f46574a0786696f89",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 66,
+        "deletions": 4,
+        "changes": 70,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/607dbfdeaf7ec053d959c47c125d60c0b7e7216a/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/607dbfdeaf7ec053d959c47c125d60c0b7e7216a/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=607dbfdeaf7ec053d959c47c125d60c0b7e7216a",
+        "patch": "@@ -27,7 +27,7 @@ extern int nBestHeight;\n \n \n \n-inline unsigned int ReceiveBufferSize() { return 1000*GetArg(\"-maxreceivebuffer\", 5*1000); }\n+inline unsigned int ReceiveFloodSize() { return 1000*GetArg(\"-maxreceivebuffer\", 5*1000); }\n inline unsigned int SendBufferSize() { return 1000*GetArg(\"-maxsendbuffer\", 1*1000); }\n \n void AddOneShot(std::string strDest);\n@@ -126,6 +126,44 @@ class CNodeStats\n \n \n \n+class CNetMessage {\n+public:\n+    bool in_data;                   // parsing header (false) or data (true)\n+\n+    CDataStream hdrbuf;             // partially received header\n+    CMessageHeader hdr;             // complete header\n+    unsigned int nHdrPos;\n+\n+    CDataStream vRecv;              // received message data\n+    unsigned int nDataPos;\n+\n+    CNetMessage(int nTypeIn, int nVersionIn) : hdrbuf(nTypeIn, nVersionIn), vRecv(nTypeIn, nVersionIn) {\n+        hdrbuf.resize(24);\n+        in_data = false;\n+        nHdrPos = 0;\n+        nDataPos = 0;\n+    }\n+\n+    bool complete() const\n+    {\n+        if (!in_data)\n+            return false;\n+        return (hdr.nMessageSize == nDataPos);\n+    }\n+\n+    void SetVersion(int nVersionIn)\n+    {\n+        hdrbuf.SetVersion(nVersionIn);\n+        vRecv.SetVersion(nVersionIn);\n+    }\n+\n+    int readHeader(const char *pch, unsigned int nBytes);\n+    int readData(const char *pch, unsigned int nBytes);\n+};\n+\n+\n+\n+\n \n /** Information about a peer */\n class CNode\n@@ -135,9 +173,12 @@ class CNode\n     uint64 nServices;\n     SOCKET hSocket;\n     CDataStream vSend;\n-    CDataStream vRecv;\n     CCriticalSection cs_vSend;\n-    CCriticalSection cs_vRecv;\n+\n+    std::vector<CNetMessage> vRecvMsg;\n+    CCriticalSection cs_vRecvMsg;\n+    int nRecvVersion;\n+\n     int64 nLastSend;\n     int64 nLastRecv;\n     int64 nLastSendEmpty;\n@@ -191,10 +232,11 @@ class CNode\n     CCriticalSection cs_inventory;\n     std::multimap<int64, CInv> mapAskFor;\n \n-    CNode(SOCKET hSocketIn, CAddress addrIn, std::string addrNameIn = \"\", bool fInboundIn=false) : vSend(SER_NETWORK, MIN_PROTO_VERSION), vRecv(SER_NETWORK, MIN_PROTO_VERSION)\n+    CNode(SOCKET hSocketIn, CAddress addrIn, std::string addrNameIn = \"\", bool fInboundIn=false) : vSend(SER_NETWORK, MIN_PROTO_VERSION)\n     {\n         nServices = 0;\n         hSocket = hSocketIn;\n+        nRecvVersion = MIN_PROTO_VERSION;\n         nLastSend = 0;\n         nLastRecv = 0;\n         nLastSendEmpty = GetTime();\n@@ -250,6 +292,26 @@ class CNode\n         return std::max(nRefCount, 0) + (GetTime() < nReleaseTime ? 1 : 0);\n     }\n \n+    // requires LOCK(cs_vRecvMsg)\n+    unsigned int GetTotalRecvSize()\n+    {\n+        unsigned int total = 0;\n+        for (unsigned int i = 0; i < vRecvMsg.size(); i++)\n+            total += vRecvMsg[i].vRecv.size();\n+        return total;\n+    }\n+\n+    // requires LOCK(cs_vRecvMsg)\n+    bool ReceiveMsgBytes(const char *pch, unsigned int nBytes);\n+\n+    // requires LOCK(cs_vRecvMsg)\n+    void SetRecvVersion(int nVersionIn)\n+    {\n+        nRecvVersion = nVersionIn;\n+        for (unsigned int i = 0; i < vRecvMsg.size(); i++)\n+            vRecvMsg[i].SetVersion(nVersionIn);\n+    }\n+\n     CNode* AddRef(int64 nTimeout=0)\n     {\n         if (nTimeout != 0)"
+      }
+    ]
+  },
+  {
+    "sha": "bc2f5aa72cfb3f456280a6d34c5d425bf24b009c",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiYzJmNWFhNzJjZmIzZjQ1NjI4MGE2ZDM0YzVkNDI1YmYyNGIwMDlj",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-11-15T23:04:52Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "sipa@ulyssis.org",
+        "date": "2013-03-29T22:56:25Z"
+      },
+      "message": "P2P, cosmetic: break out buffer send(2) code into separate function",
+      "tree": {
+        "sha": "513ed640d79d1062dc3d710f00e7e7a1beb6e3ac",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/513ed640d79d1062dc3d710f00e7e7a1beb6e3ac"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/bc2f5aa72cfb3f456280a6d34c5d425bf24b009c",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/bc2f5aa72cfb3f456280a6d34c5d425bf24b009c",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/bc2f5aa72cfb3f456280a6d34c5d425bf24b009c",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/bc2f5aa72cfb3f456280a6d34c5d425bf24b009c/comments",
+    "author": null,
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "607dbfdeaf7ec053d959c47c125d60c0b7e7216a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/607dbfdeaf7ec053d959c47c125d60c0b7e7216a",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/607dbfdeaf7ec053d959c47c125d60c0b7e7216a"
+      }
+    ],
+    "stats": {
+      "total": 47,
+      "additions": 25,
+      "deletions": 22
+    },
+    "files": [
+      {
+        "sha": "96719367ceec49cf54962b6631a1abdaf8702c97",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 25,
+        "deletions": 22,
+        "changes": 47,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/bc2f5aa72cfb3f456280a6d34c5d425bf24b009c/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/bc2f5aa72cfb3f456280a6d34c5d425bf24b009c/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=bc2f5aa72cfb3f456280a6d34c5d425bf24b009c",
+        "patch": "@@ -708,6 +708,30 @@ int CNetMessage::readData(const char *pch, unsigned int nBytes)\n \n \n \n+// requires LOCK(cs_vSend)\n+void SocketSendData(CNode *pnode)\n+{\n+    CDataStream& vSend = pnode->vSend;\n+    if (vSend.empty())\n+        return;\n+\n+    int nBytes = send(pnode->hSocket, &vSend[0], vSend.size(), MSG_NOSIGNAL | MSG_DONTWAIT);\n+    if (nBytes > 0)\n+    {\n+        vSend.erase(vSend.begin(), vSend.begin() + nBytes);\n+        pnode->nLastSend = GetTime();\n+    }\n+    else if (nBytes < 0)\n+    {\n+        // error\n+        int nErr = WSAGetLastError();\n+        if (nErr != WSAEWOULDBLOCK && nErr != WSAEMSGSIZE && nErr != WSAEINTR && nErr != WSAEINPROGRESS)\n+        {\n+            printf(\"socket send error %d\\n\", nErr);\n+            pnode->CloseSocketDisconnect();\n+        }\n+    }\n+}\n \n void ThreadSocketHandler(void* parg)\n {\n@@ -994,28 +1018,7 @@ void ThreadSocketHandler2(void* parg)\n             {\n                 TRY_LOCK(pnode->cs_vSend, lockSend);\n                 if (lockSend)\n-                {\n-                    CDataStream& vSend = pnode->vSend;\n-                    if (!vSend.empty())\n-                    {\n-                        int nBytes = send(pnode->hSocket, &vSend[0], vSend.size(), MSG_NOSIGNAL | MSG_DONTWAIT);\n-                        if (nBytes > 0)\n-                        {\n-                            vSend.erase(vSend.begin(), vSend.begin() + nBytes);\n-                            pnode->nLastSend = GetTime();\n-                        }\n-                        else if (nBytes < 0)\n-                        {\n-                            // error\n-                            int nErr = WSAGetLastError();\n-                            if (nErr != WSAEWOULDBLOCK && nErr != WSAEMSGSIZE && nErr != WSAEINTR && nErr != WSAEINPROGRESS)\n-                            {\n-                                printf(\"socket send error %d\\n\", nErr);\n-                                pnode->CloseSocketDisconnect();\n-                            }\n-                        }\n-                    }\n-                }\n+                    SocketSendData(pnode);\n             }\n \n             //"
+      }
+    ]
+  },
+  {
+    "sha": "b9ff2970b9fbb24e2fffc449b4ef478d019633d8",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiOWZmMjk3MGI5ZmJiMjRlMmZmZmM0NDliNGVmNDc4ZDAxOTYzM2Q4",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-11-15T23:20:26Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "sipa@ulyssis.org",
+        "date": "2013-03-29T22:56:25Z"
+      },
+      "message": "P2P: improve RX/TX flow control\n\n1) \"optimistic write\": Push each message to kernel socket buffer immediately.\n\n2) If there is write data at select time, that implies send() blocked\n   during optimistic write.  Drain write queue, before receiving\n   any more messages.\n\nThis avoids needlessly queueing received data, if the remote peer\nis not themselves receiving data.\n\nResult: write buffer (and thus memory usage) is kept small, DoS\npotential is slightly lower, and TCP flow control signalling is\nproperly utilized.\n\nThe kernel will queue data into the socket buffer, then signal the\nremote peer to stop sending data, until we resume reading again.",
+      "tree": {
+        "sha": "fbcd6be3b8d3f6ae43b7a3516a4b053211e3aa62",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/fbcd6be3b8d3f6ae43b7a3516a4b053211e3aa62"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/b9ff2970b9fbb24e2fffc449b4ef478d019633d8",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b9ff2970b9fbb24e2fffc449b4ef478d019633d8",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/b9ff2970b9fbb24e2fffc449b4ef478d019633d8",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b9ff2970b9fbb24e2fffc449b4ef478d019633d8/comments",
+    "author": null,
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "bc2f5aa72cfb3f456280a6d34c5d425bf24b009c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/bc2f5aa72cfb3f456280a6d34c5d425bf24b009c",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/bc2f5aa72cfb3f456280a6d34c5d425bf24b009c"
+      }
+    ],
+    "stats": {
+      "total": 21,
+      "additions": 15,
+      "deletions": 6
+    },
+    "files": [
+      {
+        "sha": "eafb3356426f7ca7e98b515e64c5c68458089d1e",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 10,
+        "deletions": 6,
+        "changes": 16,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b9ff2970b9fbb24e2fffc449b4ef478d019633d8/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b9ff2970b9fbb24e2fffc449b4ef478d019633d8/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=b9ff2970b9fbb24e2fffc449b4ef478d019633d8",
+        "patch": "@@ -855,14 +855,18 @@ void ThreadSocketHandler2(void* parg)\n             {\n                 if (pnode->hSocket == INVALID_SOCKET)\n                     continue;\n-                FD_SET(pnode->hSocket, &fdsetRecv);\n-                FD_SET(pnode->hSocket, &fdsetError);\n-                hSocketMax = max(hSocketMax, pnode->hSocket);\n-                have_fds = true;\n                 {\n                     TRY_LOCK(pnode->cs_vSend, lockSend);\n-                    if (lockSend && !pnode->vSend.empty())\n-                        FD_SET(pnode->hSocket, &fdsetSend);\n+                    if (lockSend) {\n+                        // do not read, if draining write queue\n+                        if (!pnode->vSend.empty())\n+                            FD_SET(pnode->hSocket, &fdsetSend);\n+                        else\n+                            FD_SET(pnode->hSocket, &fdsetRecv);\n+                        FD_SET(pnode->hSocket, &fdsetError);\n+                        hSocketMax = max(hSocketMax, pnode->hSocket);\n+                        have_fds = true;\n+                    }\n                 }\n             }\n         }"
+      },
+      {
+        "sha": "03d32526bc5d01c7b23cbbd290ad57ac50913335",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 0,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b9ff2970b9fbb24e2fffc449b4ef478d019633d8/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b9ff2970b9fbb24e2fffc449b4ef478d019633d8/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=b9ff2970b9fbb24e2fffc449b4ef478d019633d8",
+        "patch": "@@ -42,6 +42,7 @@ unsigned short GetListenPort();\n bool BindListenPort(const CService &bindAddr, std::string& strError=REF(std::string()));\n void StartNode(void* parg);\n bool StopNode();\n+void SocketSendData(CNode *pnode);\n \n enum\n {\n@@ -437,6 +438,10 @@ class CNode\n             printf(\"(%d bytes)\\n\", nSize);\n         }\n \n+        // If write queue empty, attempt \"optimistic write\"\n+        if (nHeaderStart == 0)\n+            SocketSendData(this);\n+\n         nHeaderStart = -1;\n         nMessageStart = -1;\n         LEAVE_CRITICAL_SECTION(cs_vSend);"
+      }
+    ]
+  },
+  {
+    "sha": "967f24590b43f0f84148f669d886b40fe45aa978",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5NjdmMjQ1OTBiNDNmMGY4NDE0OGY2NjlkODg2YjQwZmU0NWFhOTc4",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2013-03-01T00:41:28Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "sipa@ulyssis.org",
+        "date": "2013-03-29T22:56:26Z"
+      },
+      "message": "Some fixes to CNetMessage processing\n\n* Change CNode::vRecvMsg to be a deque instead of a vector (less copying)\n* Make sure to acquire cs_vRecvMsg in CNode::CloseSocketDisconnect (as it\n  may be called without that lock).",
+      "tree": {
+        "sha": "5e0116b462a5433907d5400456d0006e14d332ee",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/5e0116b462a5433907d5400456d0006e14d332ee"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/967f24590b43f0f84148f669d886b40fe45aa978",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/967f24590b43f0f84148f669d886b40fe45aa978",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/967f24590b43f0f84148f669d886b40fe45aa978",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/967f24590b43f0f84148f669d886b40fe45aa978/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "b9ff2970b9fbb24e2fffc449b4ef478d019633d8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b9ff2970b9fbb24e2fffc449b4ef478d019633d8",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b9ff2970b9fbb24e2fffc449b4ef478d019633d8"
+      }
+    ],
+    "stats": {
+      "total": 49,
+      "additions": 28,
+      "deletions": 21
+    },
+    "files": [
+      {
+        "sha": "0c80f23df9a3c252e58c1a0e2159c1465ae35096",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 14,
+        "deletions": 14,
+        "changes": 28,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/967f24590b43f0f84148f669d886b40fe45aa978/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/967f24590b43f0f84148f669d886b40fe45aa978/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=967f24590b43f0f84148f669d886b40fe45aa978",
+        "patch": "@@ -3708,8 +3708,6 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n // requires LOCK(cs_vRecvMsg)\n bool ProcessMessages(CNode* pfrom)\n {\n-    if (pfrom->vRecvMsg.empty())\n-        return true;\n     //if (fDebug)\n     //    printf(\"ProcessMessages(%zu messages)\\n\", pfrom->vRecvMsg.size());\n \n@@ -3721,29 +3719,34 @@ bool ProcessMessages(CNode* pfrom)\n     //  (4) checksum\n     //  (x) data\n     //\n+    bool fOk = true;\n \n-    unsigned int nMsgPos = 0;\n-    for (; nMsgPos < pfrom->vRecvMsg.size(); nMsgPos++)\n-    {\n+    std::deque<CNetMessage>::iterator it = pfrom->vRecvMsg.begin();\n+    while (it != pfrom->vRecvMsg.end()) {\n         // Don't bother if send buffer is too full to respond anyway\n         if (pfrom->vSend.size() >= SendBufferSize())\n             break;\n \n-        // get next message; end, if an incomplete message is found\n-        CNetMessage& msg = pfrom->vRecvMsg[nMsgPos];\n+        // get next message\n+        CNetMessage& msg = *it;\n \n         //if (fDebug)\n         //    printf(\"ProcessMessages(message %u msgsz, %zu bytes, complete:%s)\\n\",\n         //            msg.hdr.nMessageSize, msg.vRecv.size(),\n         //            msg.complete() ? \"Y\" : \"N\");\n \n+        // end, if an incomplete message is found\n         if (!msg.complete())\n             break;\n \n+        // at this point, any failure means we can delete the current message\n+        it++;\n+\n         // Scan for message start\n         if (memcmp(msg.hdr.pchMessageStart, pchMessageStart, sizeof(pchMessageStart)) != 0) {\n             printf(\"\\n\\nPROCESSMESSAGE: INVALID MESSAGESTART\\n\\n\");\n-            return false;\n+            fOk = false;\n+            break;\n         }\n \n         // Read header\n@@ -3779,7 +3782,7 @@ bool ProcessMessages(CNode* pfrom)\n                 fRet = ProcessMessage(pfrom, strCommand, vRecv);\n             }\n             if (fShutdown)\n-                return true;\n+                break;\n         }\n         catch (std::ios_base::failure& e)\n         {\n@@ -3808,11 +3811,8 @@ bool ProcessMessages(CNode* pfrom)\n             printf(\"ProcessMessage(%s, %u bytes) FAILED\\n\", strCommand.c_str(), nMessageSize);\n     }\n \n-    // remove processed messages; one incomplete message may remain\n-    if (nMsgPos > 0)\n-        pfrom->vRecvMsg.erase(pfrom->vRecvMsg.begin(),\n-                              pfrom->vRecvMsg.begin() + nMsgPos);\n-    return true;\n+    pfrom->vRecvMsg.erase(pfrom->vRecvMsg.begin(), it);\n+    return fOk;\n }\n \n "
+      },
+      {
+        "sha": "1016d5d9f003c2a426a57137ec8ef58173428332",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 2,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/967f24590b43f0f84148f669d886b40fe45aa978/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/967f24590b43f0f84148f669d886b40fe45aa978/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=967f24590b43f0f84148f669d886b40fe45aa978",
+        "patch": "@@ -536,7 +536,11 @@ void CNode::CloseSocketDisconnect()\n         printf(\"disconnecting node %s\\n\", addrName.c_str());\n         closesocket(hSocket);\n         hSocket = INVALID_SOCKET;\n-        vRecvMsg.clear();\n+\n+        // in case this fails, we'll empty the recv buffer when the CNode is deleted\n+        TRY_LOCK(cs_vRecvMsg, lockRecv);\n+        if (lockRecv)\n+            vRecvMsg.clear();\n     }\n }\n \n@@ -634,7 +638,7 @@ bool CNode::ReceiveMsgBytes(const char *pch, unsigned int nBytes)\n     while (nBytes > 0) {\n \n         // get current incomplete message, or create a new one\n-        if (vRecvMsg.size() == 0 ||\n+        if (vRecvMsg.empty() ||\n             vRecvMsg.back().complete())\n             vRecvMsg.push_back(CNetMessage(SER_NETWORK, nRecvVersion));\n \n@@ -1767,6 +1771,9 @@ void ThreadMessageHandler2(void* parg)\n             pnodeTrickle = vNodesCopy[GetRand(vNodesCopy.size())];\n         BOOST_FOREACH(CNode* pnode, vNodesCopy)\n         {\n+            if (pnode->fDisconnect)\n+                continue;\n+\n             // Receive messages\n             {\n                 TRY_LOCK(pnode->cs_vRecvMsg, lockRecv);"
+      },
+      {
+        "sha": "d779265b79292ef665ca8377004d3fd18ebcbffd",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 5,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/967f24590b43f0f84148f669d886b40fe45aa978/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/967f24590b43f0f84148f669d886b40fe45aa978/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=967f24590b43f0f84148f669d886b40fe45aa978",
+        "patch": "@@ -176,7 +176,7 @@ class CNode\n     CDataStream vSend;\n     CCriticalSection cs_vSend;\n \n-    std::vector<CNetMessage> vRecvMsg;\n+    std::deque<CNetMessage> vRecvMsg;\n     CCriticalSection cs_vRecvMsg;\n     int nRecvVersion;\n \n@@ -297,8 +297,8 @@ class CNode\n     unsigned int GetTotalRecvSize()\n     {\n         unsigned int total = 0;\n-        for (unsigned int i = 0; i < vRecvMsg.size(); i++)\n-            total += vRecvMsg[i].vRecv.size();\n+        BOOST_FOREACH(const CNetMessage &msg, vRecvMsg) \n+            total += msg.vRecv.size() + 24;\n         return total;\n     }\n \n@@ -309,8 +309,8 @@ class CNode\n     void SetRecvVersion(int nVersionIn)\n     {\n         nRecvVersion = nVersionIn;\n-        for (unsigned int i = 0; i < vRecvMsg.size(); i++)\n-            vRecvMsg[i].SetVersion(nVersionIn);\n+        BOOST_FOREACH(CNetMessage &msg, vRecvMsg)\n+            msg.SetVersion(nVersionIn);\n     }\n \n     CNode* AddRef(int64 nTimeout=0)"
+      }
+    ]
+  },
+  {
+    "sha": "41b052ad87633d5a8a989c512c8710b875f2ba88",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0MWIwNTJhZDg3NjMzZDVhOGE5ODljNTEyYzg3MTBiODc1ZjJiYTg4",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2013-03-24T15:52:24Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "sipa@ulyssis.org",
+        "date": "2013-03-29T22:56:26Z"
+      },
+      "message": "Use per-message send buffer, rather than per connection",
+      "tree": {
+        "sha": "0337b36bb1ced74a3f1400d840c191f9c738dd3d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/0337b36bb1ced74a3f1400d840c191f9c738dd3d"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/41b052ad87633d5a8a989c512c8710b875f2ba88",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/41b052ad87633d5a8a989c512c8710b875f2ba88",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/41b052ad87633d5a8a989c512c8710b875f2ba88",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/41b052ad87633d5a8a989c512c8710b875f2ba88/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "967f24590b43f0f84148f669d886b40fe45aa978",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/967f24590b43f0f84148f669d886b40fe45aa978",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/967f24590b43f0f84148f669d886b40fe45aa978"
+      }
+    ],
+    "stats": {
+      "total": 148,
+      "additions": 86,
+      "deletions": 62
+    },
+    "files": [
+      {
+        "sha": "77061fabd68fa50ed8e9fdce687e9d005985eb5f",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 5,
+        "changes": 13,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/41b052ad87633d5a8a989c512c8710b875f2ba88/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/41b052ad87633d5a8a989c512c8710b875f2ba88/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=41b052ad87633d5a8a989c512c8710b875f2ba88",
+        "patch": "@@ -3104,7 +3104,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n \n         // Change version\n         pfrom->PushMessage(\"verack\");\n-        pfrom->vSend.SetVersion(min(pfrom->nVersion, PROTOCOL_VERSION));\n+        pfrom->ssSend.SetVersion(min(pfrom->nVersion, PROTOCOL_VERSION));\n \n         if (!pfrom->fInbound)\n         {\n@@ -3722,9 +3722,9 @@ bool ProcessMessages(CNode* pfrom)\n     bool fOk = true;\n \n     std::deque<CNetMessage>::iterator it = pfrom->vRecvMsg.begin();\n-    while (it != pfrom->vRecvMsg.end()) {\n+    while (!pfrom->fDisconnect && it != pfrom->vRecvMsg.end()) {\n         // Don't bother if send buffer is too full to respond anyway\n-        if (pfrom->vSend.size() >= SendBufferSize())\n+        if (pfrom->nSendSize >= SendBufferSize())\n             break;\n \n         // get next message\n@@ -3811,7 +3811,10 @@ bool ProcessMessages(CNode* pfrom)\n             printf(\"ProcessMessage(%s, %u bytes) FAILED\\n\", strCommand.c_str(), nMessageSize);\n     }\n \n-    pfrom->vRecvMsg.erase(pfrom->vRecvMsg.begin(), it);\n+    // In case the connection got shut down, its receive buffer was wiped\n+    if (!pfrom->fDisconnect)\n+        pfrom->vRecvMsg.erase(pfrom->vRecvMsg.begin(), it);\n+\n     return fOk;\n }\n \n@@ -3826,7 +3829,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)\n \n         // Keep-alive ping. We send a nonce of zero because we don't use it anywhere\n         // right now.\n-        if (pto->nLastSend && GetTime() - pto->nLastSend > 30 * 60 && pto->vSend.empty()) {\n+        if (pto->nLastSend && GetTime() - pto->nLastSend > 30 * 60 && pto->vSendMsg.empty()) {\n             uint64 nonce = 0;\n             if (pto->nVersion > BIP0031_VERSION)\n                 pto->PushMessage(\"ping\", nonce);"
+      },
+      {
+        "sha": "9ee6cb423caa6562700c79791376bbc7e83114b6",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 38,
+        "deletions": 21,
+        "changes": 59,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/41b052ad87633d5a8a989c512c8710b875f2ba88/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/41b052ad87633d5a8a989c512c8710b875f2ba88/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=41b052ad87633d5a8a989c512c8710b875f2ba88",
+        "patch": "@@ -715,26 +715,43 @@ int CNetMessage::readData(const char *pch, unsigned int nBytes)\n // requires LOCK(cs_vSend)\n void SocketSendData(CNode *pnode)\n {\n-    CDataStream& vSend = pnode->vSend;\n-    if (vSend.empty())\n-        return;\n-\n-    int nBytes = send(pnode->hSocket, &vSend[0], vSend.size(), MSG_NOSIGNAL | MSG_DONTWAIT);\n-    if (nBytes > 0)\n-    {\n-        vSend.erase(vSend.begin(), vSend.begin() + nBytes);\n-        pnode->nLastSend = GetTime();\n-    }\n-    else if (nBytes < 0)\n-    {\n-        // error\n-        int nErr = WSAGetLastError();\n-        if (nErr != WSAEWOULDBLOCK && nErr != WSAEMSGSIZE && nErr != WSAEINTR && nErr != WSAEINPROGRESS)\n-        {\n-            printf(\"socket send error %d\\n\", nErr);\n-            pnode->CloseSocketDisconnect();\n+    std::deque<CSerializeData>::iterator it = pnode->vSendMsg.begin();\n+\n+    while (it != pnode->vSendMsg.end()) {\n+        const CSerializeData &data = *it;\n+        assert(data.size() > pnode->nSendOffset);\n+        int nBytes = send(pnode->hSocket, &data[pnode->nSendOffset], data.size() - pnode->nSendOffset, MSG_NOSIGNAL | MSG_DONTWAIT);\n+        if (nBytes > 0) {\n+            pnode->nLastSend = GetTime();\n+            pnode->nSendOffset += nBytes;\n+            if (pnode->nSendOffset == data.size()) {\n+                pnode->nSendOffset = 0;\n+                pnode->nSendSize -= data.size();\n+                it++;\n+            } else {\n+                // could not send full message; stop sending more\n+                break;\n+            }\n+        } else {\n+            if (nBytes < 0) {\n+                // error\n+                int nErr = WSAGetLastError();\n+                if (nErr != WSAEWOULDBLOCK && nErr != WSAEMSGSIZE && nErr != WSAEINTR && nErr != WSAEINPROGRESS)\n+                {\n+                    printf(\"socket send error %d\\n\", nErr);\n+                    pnode->CloseSocketDisconnect();\n+                }\n+            }\n+            // couldn't send anything at all\n+            break;\n         }\n     }\n+\n+    if (it == pnode->vSendMsg.end()) {\n+        assert(pnode->nSendOffset == 0);\n+        assert(pnode->nSendSize == 0);\n+    }\n+    pnode->vSendMsg.erase(pnode->vSendMsg.begin(), it);\n }\n \n void ThreadSocketHandler(void* parg)\n@@ -776,7 +793,7 @@ void ThreadSocketHandler2(void* parg)\n             BOOST_FOREACH(CNode* pnode, vNodesCopy)\n             {\n                 if (pnode->fDisconnect ||\n-                    (pnode->GetRefCount() <= 0 && pnode->vRecvMsg.empty() && pnode->vSend.empty()))\n+                    (pnode->GetRefCount() <= 0 && pnode->vRecvMsg.empty() && pnode->nSendSize == 0 && pnode->ssSend.empty()))\n                 {\n                     // remove from vNodes\n                     vNodes.erase(remove(vNodes.begin(), vNodes.end(), pnode), vNodes.end());\n@@ -863,7 +880,7 @@ void ThreadSocketHandler2(void* parg)\n                     TRY_LOCK(pnode->cs_vSend, lockSend);\n                     if (lockSend) {\n                         // do not read, if draining write queue\n-                        if (!pnode->vSend.empty())\n+                        if (!pnode->vSendMsg.empty())\n                             FD_SET(pnode->hSocket, &fdsetSend);\n                         else\n                             FD_SET(pnode->hSocket, &fdsetRecv);\n@@ -1032,7 +1049,7 @@ void ThreadSocketHandler2(void* parg)\n             //\n             // Inactivity checking\n             //\n-            if (pnode->vSend.empty())\n+            if (pnode->vSendMsg.empty())\n                 pnode->nLastSendEmpty = GetTime();\n             if (GetTime() - pnode->nTimeConnected > 60)\n             {"
+      },
+      {
+        "sha": "9805e39f18bcb51af42c472730d3790fea812b92",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 31,
+        "deletions": 34,
+        "changes": 65,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/41b052ad87633d5a8a989c512c8710b875f2ba88/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/41b052ad87633d5a8a989c512c8710b875f2ba88/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=41b052ad87633d5a8a989c512c8710b875f2ba88",
+        "patch": "@@ -173,7 +173,10 @@ class CNode\n     // socket\n     uint64 nServices;\n     SOCKET hSocket;\n-    CDataStream vSend;\n+    CDataStream ssSend;\n+    size_t nSendSize; // total size of all vSendMsg entries\n+    size_t nSendOffset; // offset inside the first vSendMsg already sent\n+    std::deque<CSerializeData> vSendMsg;\n     CCriticalSection cs_vSend;\n \n     std::deque<CNetMessage> vRecvMsg;\n@@ -184,8 +187,6 @@ class CNode\n     int64 nLastRecv;\n     int64 nLastSendEmpty;\n     int64 nTimeConnected;\n-    int nHeaderStart;\n-    unsigned int nMessageStart;\n     CAddress addr;\n     std::string addrName;\n     CService addrLocal;\n@@ -233,7 +234,7 @@ class CNode\n     CCriticalSection cs_inventory;\n     std::multimap<int64, CInv> mapAskFor;\n \n-    CNode(SOCKET hSocketIn, CAddress addrIn, std::string addrNameIn = \"\", bool fInboundIn=false) : vSend(SER_NETWORK, MIN_PROTO_VERSION)\n+    CNode(SOCKET hSocketIn, CAddress addrIn, std::string addrNameIn = \"\", bool fInboundIn=false) : ssSend(SER_NETWORK, MIN_PROTO_VERSION)\n     {\n         nServices = 0;\n         hSocket = hSocketIn;\n@@ -242,8 +243,6 @@ class CNode\n         nLastRecv = 0;\n         nLastSendEmpty = GetTime();\n         nTimeConnected = GetTime();\n-        nHeaderStart = -1;\n-        nMessageStart = -1;\n         addr = addrIn;\n         addrName = addrNameIn == \"\" ? addr.ToStringIPPort() : addrNameIn;\n         nVersion = 0;\n@@ -256,6 +255,8 @@ class CNode\n         fDisconnect = false;\n         nRefCount = 0;\n         nReleaseTime = 0;\n+        nSendSize = 0;\n+        nSendOffset = 0;\n         hashContinue = 0;\n         pindexLastGetBlocksBegin = 0;\n         hashLastGetBlocksEnd = 0;\n@@ -387,23 +388,17 @@ class CNode\n     void BeginMessage(const char* pszCommand) EXCLUSIVE_LOCK_FUNCTION(cs_vSend)\n     {\n         ENTER_CRITICAL_SECTION(cs_vSend);\n-        if (nHeaderStart != -1)\n-            AbortMessage();\n-        nHeaderStart = vSend.size();\n-        vSend << CMessageHeader(pszCommand, 0);\n-        nMessageStart = vSend.size();\n+        assert(ssSend.size() == 0);\n+        ssSend << CMessageHeader(pszCommand, 0);\n         if (fDebug)\n             printf(\"sending: %s \", pszCommand);\n     }\n \n     // TODO: Document the precondition of this function.  Is cs_vSend locked?\n     void AbortMessage() UNLOCK_FUNCTION(cs_vSend)\n     {\n-        if (nHeaderStart < 0)\n-            return;\n-        vSend.resize(nHeaderStart);\n-        nHeaderStart = -1;\n-        nMessageStart = -1;\n+        ssSend.clear();\n+\n         LEAVE_CRITICAL_SECTION(cs_vSend);\n \n         if (fDebug)\n@@ -420,30 +415,32 @@ class CNode\n             return;\n         }\n \n-        if (nHeaderStart < 0)\n+        if (ssSend.size() == 0)\n             return;\n \n         // Set the size\n-        unsigned int nSize = vSend.size() - nMessageStart;\n-        memcpy((char*)&vSend[nHeaderStart] + CMessageHeader::MESSAGE_SIZE_OFFSET, &nSize, sizeof(nSize));\n+        unsigned int nSize = ssSend.size() - CMessageHeader::HEADER_SIZE;\n+        memcpy((char*)&ssSend[CMessageHeader::MESSAGE_SIZE_OFFSET], &nSize, sizeof(nSize));\n \n         // Set the checksum\n-        uint256 hash = Hash(vSend.begin() + nMessageStart, vSend.end());\n+        uint256 hash = Hash(ssSend.begin() + CMessageHeader::HEADER_SIZE, ssSend.end());\n         unsigned int nChecksum = 0;\n         memcpy(&nChecksum, &hash, sizeof(nChecksum));\n-        assert(nMessageStart - nHeaderStart >= CMessageHeader::CHECKSUM_OFFSET + sizeof(nChecksum));\n-        memcpy((char*)&vSend[nHeaderStart] + CMessageHeader::CHECKSUM_OFFSET, &nChecksum, sizeof(nChecksum));\n+        assert(ssSend.size () >= CMessageHeader::CHECKSUM_OFFSET + sizeof(nChecksum));\n+        memcpy((char*)&ssSend[CMessageHeader::CHECKSUM_OFFSET], &nChecksum, sizeof(nChecksum));\n \n         if (fDebug) {\n             printf(\"(%d bytes)\\n\", nSize);\n         }\n \n+        std::deque<CSerializeData>::iterator it = vSendMsg.insert(vSendMsg.end(), CSerializeData());\n+        ssSend.GetAndClear(*it);\n+        nSendSize += (*it).size();\n+\n         // If write queue empty, attempt \"optimistic write\"\n-        if (nHeaderStart == 0)\n+        if (it == vSendMsg.begin())\n             SocketSendData(this);\n \n-        nHeaderStart = -1;\n-        nMessageStart = -1;\n         LEAVE_CRITICAL_SECTION(cs_vSend);\n     }\n \n@@ -470,7 +467,7 @@ class CNode\n         try\n         {\n             BeginMessage(pszCommand);\n-            vSend << a1;\n+            ssSend << a1;\n             EndMessage();\n         }\n         catch (...)\n@@ -486,7 +483,7 @@ class CNode\n         try\n         {\n             BeginMessage(pszCommand);\n-            vSend << a1 << a2;\n+            ssSend << a1 << a2;\n             EndMessage();\n         }\n         catch (...)\n@@ -502,7 +499,7 @@ class CNode\n         try\n         {\n             BeginMessage(pszCommand);\n-            vSend << a1 << a2 << a3;\n+            ssSend << a1 << a2 << a3;\n             EndMessage();\n         }\n         catch (...)\n@@ -518,7 +515,7 @@ class CNode\n         try\n         {\n             BeginMessage(pszCommand);\n-            vSend << a1 << a2 << a3 << a4;\n+            ssSend << a1 << a2 << a3 << a4;\n             EndMessage();\n         }\n         catch (...)\n@@ -534,7 +531,7 @@ class CNode\n         try\n         {\n             BeginMessage(pszCommand);\n-            vSend << a1 << a2 << a3 << a4 << a5;\n+            ssSend << a1 << a2 << a3 << a4 << a5;\n             EndMessage();\n         }\n         catch (...)\n@@ -550,7 +547,7 @@ class CNode\n         try\n         {\n             BeginMessage(pszCommand);\n-            vSend << a1 << a2 << a3 << a4 << a5 << a6;\n+            ssSend << a1 << a2 << a3 << a4 << a5 << a6;\n             EndMessage();\n         }\n         catch (...)\n@@ -566,7 +563,7 @@ class CNode\n         try\n         {\n             BeginMessage(pszCommand);\n-            vSend << a1 << a2 << a3 << a4 << a5 << a6 << a7;\n+            ssSend << a1 << a2 << a3 << a4 << a5 << a6 << a7;\n             EndMessage();\n         }\n         catch (...)\n@@ -582,7 +579,7 @@ class CNode\n         try\n         {\n             BeginMessage(pszCommand);\n-            vSend << a1 << a2 << a3 << a4 << a5 << a6 << a7 << a8;\n+            ssSend << a1 << a2 << a3 << a4 << a5 << a6 << a7 << a8;\n             EndMessage();\n         }\n         catch (...)\n@@ -598,7 +595,7 @@ class CNode\n         try\n         {\n             BeginMessage(pszCommand);\n-            vSend << a1 << a2 << a3 << a4 << a5 << a6 << a7 << a8 << a9;\n+            ssSend << a1 << a2 << a3 << a4 << a5 << a6 << a7 << a8 << a9;\n             EndMessage();\n         }\n         catch (...)"
+      },
+      {
+        "sha": "49984250701f9de1f7b9ac9c8a5d6712864421a8",
+        "filename": "src/protocol.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 1,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/41b052ad87633d5a8a989c512c8710b875f2ba88/src/protocol.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/41b052ad87633d5a8a989c512c8710b875f2ba88/src/protocol.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/protocol.h?ref=41b052ad87633d5a8a989c512c8710b875f2ba88",
+        "patch": "@@ -56,7 +56,8 @@ class CMessageHeader\n             CHECKSUM_SIZE=sizeof(int),\n \n             MESSAGE_SIZE_OFFSET=MESSAGE_START_SIZE+COMMAND_SIZE,\n-            CHECKSUM_OFFSET=MESSAGE_SIZE_OFFSET+MESSAGE_SIZE_SIZE\n+            CHECKSUM_OFFSET=MESSAGE_SIZE_OFFSET+MESSAGE_SIZE_SIZE,\n+            HEADER_SIZE=MESSAGE_START_SIZE+COMMAND_SIZE+MESSAGE_SIZE_SIZE+CHECKSUM_SIZE\n         };\n         char pchMessageStart[MESSAGE_START_SIZE];\n         char pchCommand[COMMAND_SIZE];"
+      },
+      {
+        "sha": "e3d9939bcceb3751c179c87a03d14f8120f5e7a7",
+        "filename": "src/serialize.h",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 1,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/41b052ad87633d5a8a989c512c8710b875f2ba88/src/serialize.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/41b052ad87633d5a8a989c512c8710b875f2ba88/src/serialize.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/serialize.h?ref=41b052ad87633d5a8a989c512c8710b875f2ba88",
+        "patch": "@@ -789,6 +789,7 @@ struct ser_streamplaceholder\n \n \n \n+typedef std::vector<char, zero_after_free_allocator<char> > CSerializeData;\n \n /** Double ended buffer combining vector and stream-like interfaces.\n  *\n@@ -798,7 +799,7 @@ struct ser_streamplaceholder\n class CDataStream\n {\n protected:\n-    typedef std::vector<char, zero_after_free_allocator<char> > vector_type;\n+    typedef CSerializeData vector_type;\n     vector_type vch;\n     unsigned int nReadPos;\n     short state;\n@@ -1095,6 +1096,11 @@ class CDataStream\n         ::Unserialize(*this, obj, nType, nVersion);\n         return (*this);\n     }\n+\n+    void GetAndClear(CSerializeData &data) {\n+        vch.swap(data);\n+        CSerializeData().swap(vch);\n+    }\n };\n \n "
+      }
+    ]
+  },
+  {
+    "sha": "c7f039b674b43b741f20bf7521eb8a68426f4275",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjN2YwMzliNjc0YjQzYjc0MWYyMGJmNzUyMWViOGE2ODQyNmY0Mjc1",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2013-03-29T22:49:38Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2013-03-30T17:14:54Z"
+      },
+      "message": "Process getdata invs separately until send buffer overflows\n\nThere exists a per-message-processed send buffer overflow protection,\nwhere processing is halted when the send buffer is larger than the\nallowed maximum.\n\nThis protection does not apply to individual items, however, and\ngetdata has the potential for causing large amounts of data to be\nsent. In case several hundreds of blocks are requested in one getdata,\nthe send buffer can easily grow 50 megabytes above the send buffer\nlimit.\n\nThis commit breaks up the processing of getdata requests, remembering\nthem inside a CNode when too many are requested at once.",
+      "tree": {
+        "sha": "433fb59877457ddd5c51863c15ccda529e886368",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/433fb59877457ddd5c51863c15ccda529e886368"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/c7f039b674b43b741f20bf7521eb8a68426f4275",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c7f039b674b43b741f20bf7521eb8a68426f4275",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/c7f039b674b43b741f20bf7521eb8a68426f4275",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c7f039b674b43b741f20bf7521eb8a68426f4275/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "41b052ad87633d5a8a989c512c8710b875f2ba88",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/41b052ad87633d5a8a989c512c8710b875f2ba88",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/41b052ad87633d5a8a989c512c8710b875f2ba88"
+      }
+    ],
+    "stats": {
+      "total": 211,
+      "additions": 117,
+      "deletions": 94
+    },
+    "files": [
+      {
+        "sha": "b29091b4fe2e3ca51e2a6327efdf12ca5de133ea",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 116,
+        "deletions": 94,
+        "changes": 210,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c7f039b674b43b741f20bf7521eb8a68426f4275/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c7f039b674b43b741f20bf7521eb8a68426f4275/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=c7f039b674b43b741f20bf7521eb8a68426f4275",
+        "patch": "@@ -3029,6 +3029,115 @@ bool static AlreadyHave(const CInv& inv)\n unsigned char pchMessageStart[4] = { 0xf9, 0xbe, 0xb4, 0xd9 };\n \n \n+void static ProcessGetData(CNode* pfrom)\n+{\n+    std::deque<CInv>::iterator it = pfrom->vRecvGetData.begin();\n+\n+    vector<CInv> vNotFound;\n+\n+    while (it != pfrom->vRecvGetData.end()) {\n+        // Don't bother if send buffer is too full to respond anyway\n+        if (pfrom->nSendSize >= SendBufferSize())\n+            break;\n+\n+        const CInv &inv = *it;\n+        {\n+            if (fShutdown)\n+                break;\n+            it++;\n+\n+            if (inv.type == MSG_BLOCK || inv.type == MSG_FILTERED_BLOCK)\n+            {\n+                // Send block from disk\n+                map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(inv.hash);\n+                if (mi != mapBlockIndex.end())\n+                {\n+                    CBlock block;\n+                    block.ReadFromDisk((*mi).second);\n+                    if (inv.type == MSG_BLOCK)\n+                        pfrom->PushMessage(\"block\", block);\n+                    else // MSG_FILTERED_BLOCK)\n+                    {\n+                        LOCK(pfrom->cs_filter);\n+                        if (pfrom->pfilter)\n+                        {\n+                            CMerkleBlock merkleBlock(block, *pfrom->pfilter);\n+                            pfrom->PushMessage(\"merkleblock\", merkleBlock);\n+                            // CMerkleBlock just contains hashes, so also push any transactions in the block the client did not see\n+                            // This avoids hurting performance by pointlessly requiring a round-trip\n+                            // Note that there is currently no way for a node to request any single transactions we didnt send here -\n+                            // they must either disconnect and retry or request the full block.\n+                            // Thus, the protocol spec specified allows for us to provide duplicate txn here,\n+                            // however we MUST always provide at least what the remote peer needs\n+                            typedef std::pair<unsigned int, uint256> PairType;\n+                            BOOST_FOREACH(PairType& pair, merkleBlock.vMatchedTxn)\n+                                if (!pfrom->setInventoryKnown.count(CInv(MSG_TX, pair.second)))\n+                                    pfrom->PushMessage(\"tx\", block.vtx[pair.first]);\n+                        }\n+                        // else\n+                            // no response\n+                    }\n+\n+                    // Trigger them to send a getblocks request for the next batch of inventory\n+                    if (inv.hash == pfrom->hashContinue)\n+                    {\n+                        // Bypass PushInventory, this must send even if redundant,\n+                        // and we want it right after the last block so they don't\n+                        // wait for other stuff first.\n+                        vector<CInv> vInv;\n+                        vInv.push_back(CInv(MSG_BLOCK, hashBestChain));\n+                        pfrom->PushMessage(\"inv\", vInv);\n+                        pfrom->hashContinue = 0;\n+                    }\n+                }\n+            }\n+            else if (inv.IsKnownType())\n+            {\n+                // Send stream from relay memory\n+                bool pushed = false;\n+                {\n+                    LOCK(cs_mapRelay);\n+                    map<CInv, CDataStream>::iterator mi = mapRelay.find(inv);\n+                    if (mi != mapRelay.end()) {\n+                        pfrom->PushMessage(inv.GetCommand(), (*mi).second);\n+                        pushed = true;\n+                    }\n+                }\n+                if (!pushed && inv.type == MSG_TX) {\n+                    LOCK(mempool.cs);\n+                    if (mempool.exists(inv.hash)) {\n+                        CTransaction tx = mempool.lookup(inv.hash);\n+                        CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);\n+                        ss.reserve(1000);\n+                        ss << tx;\n+                        pfrom->PushMessage(\"tx\", ss);\n+                        pushed = true;\n+                    }\n+                }\n+                if (!pushed) {\n+                    vNotFound.push_back(inv);\n+                }\n+            }\n+\n+            // Track requests for our stuff.\n+            Inventory(inv.hash);\n+        }\n+    }\n+\n+    pfrom->vRecvGetData.erase(pfrom->vRecvGetData.begin(), it);\n+\n+    if (!vNotFound.empty()) {\n+        // Let the peer know that we didn't find what it asked for, so it doesn't\n+        // have to wait around forever. Currently only SPV clients actually care\n+        // about this message: it's needed when they are recursively walking the\n+        // dependencies of relevant unconfirmed transactions. SPV clients want to\n+        // do that because they want to know about (and store and rebroadcast and\n+        // risk analyze) the dependencies of transactions relevant to them, without\n+        // having to download the entire memory pool.\n+        pfrom->PushMessage(\"notfound\", vNotFound);\n+    }\n+}\n+\n bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n {\n     RandAddSeedPerfmon();\n@@ -3302,101 +3411,11 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n         if (fDebugNet || (vInv.size() != 1))\n             printf(\"received getdata (%\"PRIszu\" invsz)\\n\", vInv.size());\n \n-        vector<CInv> vNotFound;\n-        BOOST_FOREACH(const CInv& inv, vInv)\n-        {\n-            if (fShutdown)\n-                return true;\n-            if (fDebugNet || (vInv.size() == 1))\n-                printf(\"received getdata for: %s\\n\", inv.ToString().c_str());\n-\n-            if (inv.type == MSG_BLOCK || inv.type == MSG_FILTERED_BLOCK)\n-            {\n-                // Send block from disk\n-                map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(inv.hash);\n-                if (mi != mapBlockIndex.end())\n-                {\n-                    CBlock block;\n-                    block.ReadFromDisk((*mi).second);\n-                    if (inv.type == MSG_BLOCK)\n-                        pfrom->PushMessage(\"block\", block);\n-                    else // MSG_FILTERED_BLOCK)\n-                    {\n-                        LOCK(pfrom->cs_filter);\n-                        if (pfrom->pfilter)\n-                        {\n-                            CMerkleBlock merkleBlock(block, *pfrom->pfilter);\n-                            pfrom->PushMessage(\"merkleblock\", merkleBlock);\n-                            // CMerkleBlock just contains hashes, so also push any transactions in the block the client did not see\n-                            // This avoids hurting performance by pointlessly requiring a round-trip\n-                            // Note that there is currently no way for a node to request any single transactions we didnt send here -\n-                            // they must either disconnect and retry or request the full block.\n-                            // Thus, the protocol spec specified allows for us to provide duplicate txn here,\n-                            // however we MUST always provide at least what the remote peer needs\n-                            typedef std::pair<unsigned int, uint256> PairType;\n-                            BOOST_FOREACH(PairType& pair, merkleBlock.vMatchedTxn)\n-                                if (!pfrom->setInventoryKnown.count(CInv(MSG_TX, pair.second)))\n-                                    pfrom->PushMessage(\"tx\", block.vtx[pair.first]);\n-                        }\n-                        // else\n-                            // no response\n-                    }\n+        if ((fDebugNet && vInv.size() > 0) || (vInv.size() == 1))\n+            printf(\"received getdata for: %s\\n\", vInv[0].ToString().c_str());\n \n-                    // Trigger them to send a getblocks request for the next batch of inventory\n-                    if (inv.hash == pfrom->hashContinue)\n-                    {\n-                        // Bypass PushInventory, this must send even if redundant,\n-                        // and we want it right after the last block so they don't\n-                        // wait for other stuff first.\n-                        vector<CInv> vInv;\n-                        vInv.push_back(CInv(MSG_BLOCK, hashBestChain));\n-                        pfrom->PushMessage(\"inv\", vInv);\n-                        pfrom->hashContinue = 0;\n-                    }\n-                }\n-            }\n-            else if (inv.IsKnownType())\n-            {\n-                // Send stream from relay memory\n-                bool pushed = false;\n-                {\n-                    LOCK(cs_mapRelay);\n-                    map<CInv, CDataStream>::iterator mi = mapRelay.find(inv);\n-                    if (mi != mapRelay.end()) {\n-                        pfrom->PushMessage(inv.GetCommand(), (*mi).second);\n-                        pushed = true;\n-                    }\n-                }\n-                if (!pushed && inv.type == MSG_TX) {\n-                    LOCK(mempool.cs);\n-                    if (mempool.exists(inv.hash)) {\n-                        CTransaction tx = mempool.lookup(inv.hash);\n-                        CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);\n-                        ss.reserve(1000);\n-                        ss << tx;\n-                        pfrom->PushMessage(\"tx\", ss);\n-                        pushed = true;\n-                    }\n-                }\n-                if (!pushed) {\n-                    vNotFound.push_back(inv);\n-                }\n-            }\n-\n-            // Track requests for our stuff.\n-            Inventory(inv.hash);\n-\n-            if (!vNotFound.empty()) {\n-                // Let the peer know that we didn't find what it asked for, so it doesn't\n-                // have to wait around forever. Currently only SPV clients actually care\n-                // about this message: it's needed when they are recursively walking the\n-                // dependencies of relevant unconfirmed transactions. SPV clients want to\n-                // do that because they want to know about (and store and rebroadcast and\n-                // risk analyze) the dependencies of transactions relevant to them, without\n-                // having to download the entire memory pool.\n-                pfrom->PushMessage(\"notfound\", vNotFound);\n-            }\n-        }\n+        pfrom->vRecvGetData.insert(pfrom->vRecvGetData.end(), vInv.begin(), vInv.end());\n+        ProcessGetData(pfrom);\n     }\n \n \n@@ -3721,6 +3740,9 @@ bool ProcessMessages(CNode* pfrom)\n     //\n     bool fOk = true;\n \n+    if (!pfrom->vRecvGetData.empty())\n+        ProcessGetData(pfrom);\n+\n     std::deque<CNetMessage>::iterator it = pfrom->vRecvMsg.begin();\n     while (!pfrom->fDisconnect && it != pfrom->vRecvMsg.end()) {\n         // Don't bother if send buffer is too full to respond anyway"
+      },
+      {
+        "sha": "368e4cd4bbcab0f2b6af15d4b557bc68423f90de",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c7f039b674b43b741f20bf7521eb8a68426f4275/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c7f039b674b43b741f20bf7521eb8a68426f4275/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=c7f039b674b43b741f20bf7521eb8a68426f4275",
+        "patch": "@@ -179,6 +179,7 @@ class CNode\n     std::deque<CSerializeData> vSendMsg;\n     CCriticalSection cs_vSend;\n \n+    std::deque<CInv> vRecvGetData;\n     std::deque<CNetMessage> vRecvMsg;\n     CCriticalSection cs_vRecvMsg;\n     int nRecvVersion;"
+      }
+    ]
+  }
+]

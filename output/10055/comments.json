@@ -1,0 +1,113 @@
+[
+  {
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/issues/comments/288548839",
+    "html_url": "https://github.com/bitcoin/bitcoin/pull/10055#issuecomment-288548839",
+    "issue_url": "https://api.github.com/repos/bitcoin/bitcoin/issues/10055",
+    "id": 288548839,
+    "node_id": "MDEyOklzc3VlQ29tbWVudDI4ODU0ODgzOQ==",
+    "user": {
+      "login": "MarcoFalke",
+      "id": 6399679,
+      "node_id": "MDQ6VXNlcjYzOTk2Nzk=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/6399679?u=0691974eedcc2ab5366cc1080fb1c030e87244c2&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/MarcoFalke",
+      "html_url": "https://github.com/MarcoFalke",
+      "followers_url": "https://api.github.com/users/MarcoFalke/followers",
+      "following_url": "https://api.github.com/users/MarcoFalke/following{/other_user}",
+      "gists_url": "https://api.github.com/users/MarcoFalke/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/MarcoFalke/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/MarcoFalke/subscriptions",
+      "organizations_url": "https://api.github.com/users/MarcoFalke/orgs",
+      "repos_url": "https://api.github.com/users/MarcoFalke/repos",
+      "events_url": "https://api.github.com/users/MarcoFalke/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/MarcoFalke/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "created_at": "2017-03-22T21:41:27Z",
+    "updated_at": "2017-03-22T21:41:27Z",
+    "author_association": "MEMBER",
+    "body": "I think it is good to keep python 3.4 as minimum version for now. Especially, since we plan to run the functional tests on `make check`.",
+    "reactions": {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/issues/comments/288548839/reactions",
+      "total_count": 0,
+      "+1": 0,
+      "-1": 0,
+      "laugh": 0,
+      "hooray": 0,
+      "confused": 0,
+      "heart": 0,
+      "rocket": 0,
+      "eyes": 0
+    },
+    "performed_via_github_app": null
+  },
+  {
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/107524282",
+    "pull_request_review_id": 28502946,
+    "id": 107524282,
+    "node_id": "MDI0OlB1bGxSZXF1ZXN0UmV2aWV3Q29tbWVudDEwNzUyNDI4Mg==",
+    "diff_hunk": "@@ -307,26 +308,63 @@ def initialize_chain_clean(test_dir, num_nodes):\n     for i in range(num_nodes):\n         datadir=initialize_datadir(test_dir, i)\n \n+def start_nodes(num_nodes, dirname, extra_args=None, rpchost=None, timewait=None, binary=None):\n+    \"\"\"Start multiple bitcoinds and return RPC connections to them.\n+\n+    This function uses an asyncio event loop to start the bitcoind nodes in parallel to speed\n+    up test execution.\"\"\"\n+    if extra_args is None: extra_args = [ None for _ in range(num_nodes) ]\n+    if binary is None: binary = [ None for _ in range(num_nodes) ]\n+    rpcs = []\n+    if num_nodes > 0:\n+        try:\n+            loop = asyncio.get_event_loop()\n+            tasks = [asyncio.ensure_future(start_node_async(i, dirname, extra_args[i], rpchost, timewait=timewait, binary=binary[i])) for i in range(num_nodes)]\n+            loop.run_until_complete(asyncio.wait(tasks))\n+            rpcs = [task.result() for task in tasks]\n+        except: # If one node failed to start, stop the others\n+            stop_nodes(rpcs)\n+            raise\n+    return rpcs\n \n def start_node(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None, stderr=None):\n-    \"\"\"\n-    Start a bitcoind and return RPC connection to it\n-    \"\"\"\n+    \"\"\"Start a single bitcoind node and return an RPC connection to it.\"\"\"\n+    loop = asyncio.get_event_loop()\n+    task = asyncio.ensure_future(start_node_async(i, dirname, extra_args, rpchost, timewait, binary, stderr))\n+    loop.run_until_complete(task)\n+    return task.result()\n+\n+async def start_node_async(i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None, stderr=None):\n+    \"\"\"An asynchronous co-routine that starts a bitcoind node and returns an RPC connection to it.\"\"\"\n     datadir = os.path.join(dirname, \"node\"+str(i))\n     if binary is None:\n         binary = os.getenv(\"BITCOIND\", \"bitcoind\")\n     args = [ binary, \"-datadir=\"+datadir, \"-server\", \"-keypool=1\", \"-discover=0\", \"-rest\", \"-logtimemicros\", \"-debug\", \"-mocktime=\"+str(get_mocktime()) ]\n     if extra_args is not None: args.extend(extra_args)\n     bitcoind_processes[i] = subprocess.Popen(args, stderr=stderr)\n-    logger.debug(\"initialize_chain: bitcoind started, waiting for RPC to come up\")\n+    logger.debug(\"initialize_chain: bitcoind %d started, waiting for RPC to come up\" % i)\n     url = rpc_url(i, rpchost)\n-    wait_for_bitcoind_start(bitcoind_processes[i], url, i)\n-    logger.debug(\"initialize_chain: RPC successfully started\")\n+\n+    while True:\n+        if bitcoind_processes[i].poll() is not None:",
+    "path": "test/functional/test_framework/util.py",
+    "position": 56,
+    "original_position": 56,
+    "commit_id": "7a27d9f5a98f2b85366d889d75102c5c28292188",
+    "original_commit_id": "3c42fa6bf85c1c5d4c6c8406eeb8b88015feae09",
+    "user": {
+      "login": "ryanofsky",
+      "id": 7133040,
+      "node_id": "MDQ6VXNlcjcxMzMwNDA=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7133040?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ryanofsky",
+      "html_url": "https://github.com/ryanofsky",
+      "followers_url": "https://api.github.com/users/ryanofsky/followers",
+      "following_url": "https://api.github.com/users/ryanofsky/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ryanofsky/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ryanofsky/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ryanofsky/subscriptions",
+      "organizations_url": "https://api.github.com/users/ryanofsky/orgs",
+      "repos_url": "https://api.github.com/users/ryanofsky/repos",
+      "events_url": "https://api.github.com/users/ryanofsky/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ryanofsky/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "body": "This whole block of code except the sleep is duplicated from wait_for_bitcoind_start. It would be good to factor out the common code into a function to avoid duplication.",
+    "created_at": "2017-03-22T20:32:36Z",
+    "updated_at": "2017-03-22T20:56:13Z",
+    "html_url": "https://github.com/bitcoin/bitcoin/pull/10055#discussion_r107524282",
+    "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/10055",
+    "author_association": "CONTRIBUTOR",
+    "_links": {
+      "self": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/107524282"
+      },
+      "html": {
+        "href": "https://github.com/bitcoin/bitcoin/pull/10055#discussion_r107524282"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/10055"
+      }
+    },
+    "reactions": {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/107524282/reactions",
+      "total_count": 0,
+      "+1": 0,
+      "-1": 0,
+      "laugh": 0,
+      "hooray": 0,
+      "confused": 0,
+      "heart": 0,
+      "rocket": 0,
+      "eyes": 0
+    },
+    "start_line": null,
+    "original_start_line": null,
+    "start_side": null,
+    "line": 349,
+    "original_line": 349,
+    "side": "RIGHT"
+  }
+]

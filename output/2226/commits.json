@@ -1,0 +1,86 @@
+[
+  {
+    "sha": "0a5342e2c00706a37d85a967f71de8acd213bc13",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowYTUzNDJlMmMwMDcwNmEzN2Q4NWE5NjdmNzFkZThhY2QyMTNiYzEz",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-01-27T21:13:03Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-01-27T21:13:03Z"
+      },
+      "message": "distinguish reindexing from importing\n\n- a reindex is not considered to be also an import anymore (we already\n  seperate these 2 states in the GUI and I think it makes sense in the\n  core, too)",
+      "tree": {
+        "sha": "0d4e96a24d6b303ea5db0c0feb232164aaa812d0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/0d4e96a24d6b303ea5db0c0feb232164aaa812d0"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/0a5342e2c00706a37d85a967f71de8acd213bc13",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0a5342e2c00706a37d85a967f71de8acd213bc13",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/0a5342e2c00706a37d85a967f71de8acd213bc13",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0a5342e2c00706a37d85a967f71de8acd213bc13/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "0d3d6094faf0da252c581d58454ecc4be91aacb9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0d3d6094faf0da252c581d58454ecc4be91aacb9",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/0d3d6094faf0da252c581d58454ecc4be91aacb9"
+      }
+    ],
+    "stats": {
+      "total": 14,
+      "additions": 7,
+      "deletions": 7
+    },
+    "files": [
+      {
+        "sha": "7db5dfedf835b77a0484855c3654866bac82f4c7",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 1,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0a5342e2c00706a37d85a967f71de8acd213bc13/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0a5342e2c00706a37d85a967f71de8acd213bc13/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=0a5342e2c00706a37d85a967f71de8acd213bc13",
+        "patch": "@@ -350,7 +350,6 @@ void ThreadImport(void *data) {\n \n     // -reindex\n     if (fReindex) {\n-        CImportingNow imp;\n         int nFile = 0;\n         while (!fRequestShutdown) {\n             CDiskBlockPos pos(nFile, 0);"
+      },
+      {
+        "sha": "ac36c5f66ef0f028b175001bd91428992315c101",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 4,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0a5342e2c00706a37d85a967f71de8acd213bc13/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0a5342e2c00706a37d85a967f71de8acd213bc13/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=0a5342e2c00706a37d85a967f71de8acd213bc13",
+        "patch": "@@ -1169,7 +1169,7 @@ int GetNumBlocksOfPeers()\n \n bool IsInitialBlockDownload()\n {\n-    if (pindexBest == NULL || nBestHeight < Checkpoints::GetTotalBlocksEstimate() || fReindex || fImporting)\n+    if (pindexBest == NULL || fImporting || fReindex || nBestHeight < Checkpoints::GetTotalBlocksEstimate())\n         return true;\n     static int64 nLastUpdate;\n     static CBlockIndex* pindexLastBest;\n@@ -3104,7 +3104,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n \n         // Ask the first connected node for block updates\n         static int nAskedForBlocks = 0;\n-        if (!pfrom->fClient && !pfrom->fOneShot && !fImporting && !fReindex &&\n+        if (!pfrom->fClient && !pfrom->fOneShot && (!fImporting || !fReindex) &&\n             (pfrom->nStartingHeight > (nBestHeight - 144)) &&\n             (pfrom->nVersion < NOBLKS_VERSION_START ||\n              pfrom->nVersion >= NOBLKS_VERSION_END) &&\n@@ -3241,7 +3241,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n                 printf(\"  got inventory: %s  %s\\n\", inv.ToString().c_str(), fAlreadyHave ? \"have\" : \"new\");\n \n             if (!fAlreadyHave) {\n-                if (!fImporting && !fReindex)\n+                if (!fImporting || !fReindex)\n                     pfrom->AskFor(inv);\n             } else if (inv.type == MSG_BLOCK && mapOrphanBlocks.count(inv.hash)) {\n                 pfrom->PushGetBlocks(pindexBest, GetOrphanRoot(mapOrphanBlocks[inv.hash]));\n@@ -3508,7 +3508,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n     }\n \n \n-    else if (strCommand == \"block\" && !fImporting && !fReindex) // Ignore blocks received while importing\n+    else if (strCommand == \"block\" && (!fImporting || !fReindex)) // Ignore blocks received while importing or reindexing\n     {\n         CBlock block;\n         vRecv >> block;"
+      },
+      {
+        "sha": "415ef7540dd88af1e025a8731d1f5b54ea3d2946",
+        "filename": "src/qt/clientmodel.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 2,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0a5342e2c00706a37d85a967f71de8acd213bc13/src/qt/clientmodel.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0a5342e2c00706a37d85a967f71de8acd213bc13/src/qt/clientmodel.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/clientmodel.cpp?ref=0a5342e2c00706a37d85a967f71de8acd213bc13",
+        "patch": "@@ -102,10 +102,11 @@ bool ClientModel::inInitialBlockDownload() const\n \n enum BlockSource ClientModel::getBlockSource() const\n {\n-    if (fReindex)\n-        return BLOCK_SOURCE_REINDEX;\n     if (fImporting)\n         return BLOCK_SOURCE_DISK;\n+    else if (fReindex)\n+        return BLOCK_SOURCE_REINDEX;\n+\n     return BLOCK_SOURCE_NETWORK;\n }\n "
+      }
+    ]
+  }
+]

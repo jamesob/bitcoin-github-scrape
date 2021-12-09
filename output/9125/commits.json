@@ -1,0 +1,862 @@
+[
+  {
+    "sha": "0e85204a1001397f11bad94f1c9c2cb11f8fb4af",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowZTg1MjA0YTEwMDEzOTdmMTFiYWQ5NGYxYzljMmNiMTFmOGZiNGFm",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-11-10T18:54:14Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-11-20T01:50:35Z"
+      },
+      "message": "Add serialization for unique_ptr and shared_ptr",
+      "tree": {
+        "sha": "448b470a935a78d117f43a47ba8e73abc80c036d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/448b470a935a78d117f43a47ba8e73abc80c036d"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/0e85204a1001397f11bad94f1c9c2cb11f8fb4af",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0e85204a1001397f11bad94f1c9c2cb11f8fb4af",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/0e85204a1001397f11bad94f1c9c2cb11f8fb4af",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0e85204a1001397f11bad94f1c9c2cb11f8fb4af/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "44adf683ad232db8ce0cb89b3e236a1f5944cfb0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/44adf683ad232db8ce0cb89b3e236a1f5944cfb0",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/44adf683ad232db8ce0cb89b3e236a1f5944cfb0"
+      }
+    ],
+    "stats": {
+      "total": 59,
+      "additions": 59,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "e28ca548c081880611416717366202293a297f06",
+        "filename": "src/serialize.h",
+        "status": "modified",
+        "additions": 59,
+        "deletions": 0,
+        "changes": 59,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0e85204a1001397f11bad94f1c9c2cb11f8fb4af/src/serialize.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0e85204a1001397f11bad94f1c9c2cb11f8fb4af/src/serialize.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/serialize.h?ref=0e85204a1001397f11bad94f1c9c2cb11f8fb4af",
+        "patch": "@@ -13,6 +13,7 @@\n #include <ios>\n #include <limits>\n #include <map>\n+#include <memory>\n #include <set>\n #include <stdint.h>\n #include <string>\n@@ -24,6 +25,20 @@\n \n static const unsigned int MAX_SIZE = 0x02000000;\n \n+/**\n+ * Dummy data type to identify deserializing constructors.\n+ *\n+ * By convention, a constructor of a type T with signature\n+ *\n+ *   template <typename Stream> T::T(deserialize_type, Stream& s)\n+ *\n+ * is a deserializing constructor, which builds the type by\n+ * deserializing it from s. If T contains const fields, this\n+ * is likely the only way to do so.\n+ */\n+struct deserialize_type {};\n+constexpr deserialize_type deserialize {};\n+\n /**\n  * Used to bypass the rule against non-const reference to temporary\n  * where it makes sense with wrappers such as CFlatData or CTxDB\n@@ -521,7 +536,17 @@ template<typename Stream, typename K, typename T, typename Pred, typename A> voi\n template<typename Stream, typename K, typename Pred, typename A> void Serialize(Stream& os, const std::set<K, Pred, A>& m);\n template<typename Stream, typename K, typename Pred, typename A> void Unserialize(Stream& is, std::set<K, Pred, A>& m);\n \n+/**\n+ * shared_ptr\n+ */\n+template<typename Stream, typename T> void Serialize(Stream& os, const std::shared_ptr<const T>& p);\n+template<typename Stream, typename T> void Unserialize(Stream& os, std::shared_ptr<const T>& p);\n \n+/**\n+ * unique_ptr\n+ */\n+template<typename Stream, typename T> void Serialize(Stream& os, const std::unique_ptr<const T>& p);\n+template<typename Stream, typename T> void Unserialize(Stream& os, std::unique_ptr<const T>& p);\n \n \n \n@@ -775,6 +800,40 @@ void Unserialize(Stream& is, std::set<K, Pred, A>& m)\n \n \n \n+/**\n+ * unique_ptr\n+ */\n+template<typename Stream, typename T> void\n+Serialize(Stream& os, const std::unique_ptr<const T>& p)\n+{\n+    Serialize(os, *p);\n+}\n+\n+template<typename Stream, typename T>\n+void Unserialize(Stream& is, std::unique_ptr<const T>& p)\n+{\n+    p.reset(new T(deserialize, is));\n+}\n+\n+\n+\n+/**\n+ * shared_ptr\n+ */\n+template<typename Stream, typename T> void\n+Serialize(Stream& os, const std::shared_ptr<const T>& p)\n+{\n+    Serialize(os, *p);\n+}\n+\n+template<typename Stream, typename T>\n+void Unserialize(Stream& is, std::shared_ptr<const T>& p)\n+{\n+    p = std::make_shared<const T>(deserialize, is);\n+}\n+\n+\n+\n /**\n  * Support for ADD_SERIALIZE_METHODS and READWRITE macro\n  */"
+      }
+    ]
+  },
+  {
+    "sha": "da60506fc80f6a78f1b271a9a53b956b49b37234",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkYTYwNTA2ZmM4MGY2YTc4ZjFiMjcxYTlhNTNiOTU2YjQ5YjM3MjM0",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-11-10T23:53:43Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-11-20T01:50:40Z"
+      },
+      "message": "Add deserializing constructors to CTransaction and CMutableTransaction",
+      "tree": {
+        "sha": "89b7747f91e62b50cada241342694a6430b0051f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/89b7747f91e62b50cada241342694a6430b0051f"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/da60506fc80f6a78f1b271a9a53b956b49b37234",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/da60506fc80f6a78f1b271a9a53b956b49b37234",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/da60506fc80f6a78f1b271a9a53b956b49b37234",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/da60506fc80f6a78f1b271a9a53b956b49b37234/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "0e85204a1001397f11bad94f1c9c2cb11f8fb4af",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0e85204a1001397f11bad94f1c9c2cb11f8fb4af",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/0e85204a1001397f11bad94f1c9c2cb11f8fb4af"
+      }
+    ],
+    "stats": {
+      "total": 13,
+      "additions": 13,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "91f4d29488b16e4b1457c9a4e23dc8501de4e770",
+        "filename": "src/primitives/transaction.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 0,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/da60506fc80f6a78f1b271a9a53b956b49b37234/src/primitives/transaction.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/da60506fc80f6a78f1b271a9a53b956b49b37234/src/primitives/transaction.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/primitives/transaction.cpp?ref=da60506fc80f6a78f1b271a9a53b956b49b37234",
+        "patch": "@@ -78,6 +78,10 @@ CTransaction::CTransaction(const CMutableTransaction &tx) : nVersion(tx.nVersion\n     UpdateHash();\n }\n \n+CTransaction::CTransaction(CMutableTransaction &&tx) : nVersion(tx.nVersion), vin(std::move(tx.vin)), vout(std::move(tx.vout)), wit(std::move(tx.wit)), nLockTime(tx.nLockTime) {\n+    UpdateHash();\n+}\n+\n CTransaction& CTransaction::operator=(const CTransaction &tx) {\n     *const_cast<int*>(&nVersion) = tx.nVersion;\n     *const_cast<std::vector<CTxIn>*>(&vin) = tx.vin;"
+      },
+      {
+        "sha": "015a89ff107faaf475f3496c2495139e161206f8",
+        "filename": "src/primitives/transaction.h",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 0,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/da60506fc80f6a78f1b271a9a53b956b49b37234/src/primitives/transaction.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/da60506fc80f6a78f1b271a9a53b956b49b37234/src/primitives/transaction.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/primitives/transaction.h?ref=da60506fc80f6a78f1b271a9a53b956b49b37234",
+        "patch": "@@ -379,6 +379,7 @@ class CTransaction\n \n     /** Convert a CMutableTransaction into a CTransaction. */\n     CTransaction(const CMutableTransaction &tx);\n+    CTransaction(CMutableTransaction &&tx);\n \n     CTransaction& operator=(const CTransaction& tx);\n \n@@ -392,6 +393,9 @@ class CTransaction\n         }\n     }\n \n+    template <typename Stream>\n+    CTransaction(deserialize_type, Stream& s) : CTransaction(CMutableTransaction(deserialize, s)) {}\n+\n     bool IsNull() const {\n         return vin.empty() && vout.empty();\n     }\n@@ -460,6 +464,11 @@ struct CMutableTransaction\n         SerializeTransaction(*this, s, ser_action);\n     }\n \n+    template <typename Stream>\n+    CMutableTransaction(deserialize_type, Stream& s) {\n+        Unserialize(s);\n+    }\n+\n     /** Compute the hash of this CMutableTransaction. This is computed on the\n      * fly, as opposed to GetHash() in CTransaction, which uses a cached result.\n      */"
+      }
+    ]
+  },
+  {
+    "sha": "1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxNjYyYjQzN2IzM2I3ZWM1YTE3MjNmNmFlNjE4N2QzYmRkMDZmNTkz",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-11-11T01:26:00Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-11-20T01:51:09Z"
+      },
+      "message": "Make CBlock::vtx a vector of shared_ptr<CTransaction>",
+      "tree": {
+        "sha": "00b734409ca0ff817c36c000deae676df3cf16e2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/00b734409ca0ff817c36c000deae676df3cf16e2"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "da60506fc80f6a78f1b271a9a53b956b49b37234",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/da60506fc80f6a78f1b271a9a53b956b49b37234",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/da60506fc80f6a78f1b271a9a53b956b49b37234"
+      }
+    ],
+    "stats": {
+      "total": 310,
+      "additions": 161,
+      "deletions": 149
+    },
+    "files": [
+      {
+        "sha": "fac52474ec7f82d4c0b07dde7b9a78e298d964c0",
+        "filename": "src/blockencodings.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 7,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/blockencodings.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/blockencodings.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/blockencodings.cpp?ref=1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+        "patch": "@@ -24,7 +24,7 @@ CBlockHeaderAndShortTxIDs::CBlockHeaderAndShortTxIDs(const CBlock& block, bool f\n     //TODO: Use our mempool prior to block acceptance to predictively fill more than just the coinbase\n     prefilledtxn[0] = {0, block.vtx[0]};\n     for (size_t i = 1; i < block.vtx.size(); i++) {\n-        const CTransaction& tx = block.vtx[i];\n+        const CTransaction& tx = *block.vtx[i];\n         shorttxids[i - 1] = GetShortID(fUseWTXID ? tx.GetWitnessHash() : tx.GetHash());\n     }\n }\n@@ -59,7 +59,7 @@ ReadStatus PartiallyDownloadedBlock::InitData(const CBlockHeaderAndShortTxIDs& c\n \n     int32_t lastprefilledindex = -1;\n     for (size_t i = 0; i < cmpctblock.prefilledtxn.size(); i++) {\n-        if (cmpctblock.prefilledtxn[i].tx.IsNull())\n+        if (cmpctblock.prefilledtxn[i].tx->IsNull())\n             return READ_STATUS_INVALID;\n \n         lastprefilledindex += cmpctblock.prefilledtxn[i].index + 1; //index is a uint16_t, so cant overflow here\n@@ -71,7 +71,7 @@ ReadStatus PartiallyDownloadedBlock::InitData(const CBlockHeaderAndShortTxIDs& c\n             // have neither a prefilled txn or a shorttxid!\n             return READ_STATUS_INVALID;\n         }\n-        txn_available[lastprefilledindex] = std::make_shared<CTransaction>(cmpctblock.prefilledtxn[i].tx);\n+        txn_available[lastprefilledindex] = cmpctblock.prefilledtxn[i].tx;\n     }\n     prefilled_count = cmpctblock.prefilledtxn.size();\n \n@@ -142,7 +142,7 @@ bool PartiallyDownloadedBlock::IsTxAvailable(size_t index) const {\n     return txn_available[index] ? true : false;\n }\n \n-ReadStatus PartiallyDownloadedBlock::FillBlock(CBlock& block, const std::vector<CTransaction>& vtx_missing) const {\n+ReadStatus PartiallyDownloadedBlock::FillBlock(CBlock& block, const std::vector<std::shared_ptr<const CTransaction>>& vtx_missing) const {\n     assert(!header.IsNull());\n     block = header;\n     block.vtx.resize(txn_available.size());\n@@ -154,7 +154,7 @@ ReadStatus PartiallyDownloadedBlock::FillBlock(CBlock& block, const std::vector<\n                 return READ_STATUS_INVALID;\n             block.vtx[i] = vtx_missing[tx_missing_offset++];\n         } else\n-            block.vtx[i] = *txn_available[i];\n+            block.vtx[i] = txn_available[i];\n     }\n     if (vtx_missing.size() != tx_missing_offset)\n         return READ_STATUS_INVALID;\n@@ -172,8 +172,8 @@ ReadStatus PartiallyDownloadedBlock::FillBlock(CBlock& block, const std::vector<\n \n     LogPrint(\"cmpctblock\", \"Successfully reconstructed block %s with %lu txn prefilled, %lu txn from mempool and %lu txn requested\\n\", header.GetHash().ToString(), prefilled_count, mempool_count, vtx_missing.size());\n     if (vtx_missing.size() < 5) {\n-        for(const CTransaction& tx : vtx_missing)\n-            LogPrint(\"cmpctblock\", \"Reconstructed block %s required tx %s\\n\", header.GetHash().ToString(), tx.GetHash().ToString());\n+        for (const auto& tx : vtx_missing)\n+            LogPrint(\"cmpctblock\", \"Reconstructed block %s required tx %s\\n\", header.GetHash().ToString(), tx->GetHash().ToString());\n     }\n \n     return READ_STATUS_OK;"
+      },
+      {
+        "sha": "ffe189a940ba2a792cd70a384cbd7f8e01e6a226",
+        "filename": "src/blockencodings.h",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 5,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/blockencodings.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/blockencodings.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/blockencodings.h?ref=1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+        "patch": "@@ -14,9 +14,9 @@ class CTxMemPool;\n // Dumb helper to handle CTransaction compression at serialize-time\n struct TransactionCompressor {\n private:\n-    CTransaction& tx;\n+    std::shared_ptr<const CTransaction>& tx;\n public:\n-    TransactionCompressor(CTransaction& txIn) : tx(txIn) {}\n+    TransactionCompressor(std::shared_ptr<const CTransaction>& txIn) : tx(txIn) {}\n \n     ADD_SERIALIZE_METHODS;\n \n@@ -72,7 +72,7 @@ class BlockTransactions {\n public:\n     // A BlockTransactions message\n     uint256 blockhash;\n-    std::vector<CTransaction> txn;\n+    std::vector<std::shared_ptr<const CTransaction>> txn;\n \n     BlockTransactions() {}\n     BlockTransactions(const BlockTransactionsRequest& req) :\n@@ -104,7 +104,7 @@ struct PrefilledTransaction {\n     // Used as an offset since last prefilled tx in CBlockHeaderAndShortTxIDs,\n     // as a proper transaction-in-block-index in PartiallyDownloadedBlock\n     uint16_t index;\n-    CTransaction tx;\n+    std::shared_ptr<const CTransaction> tx;\n \n     ADD_SERIALIZE_METHODS;\n \n@@ -202,7 +202,7 @@ class PartiallyDownloadedBlock {\n \n     ReadStatus InitData(const CBlockHeaderAndShortTxIDs& cmpctblock);\n     bool IsTxAvailable(size_t index) const;\n-    ReadStatus FillBlock(CBlock& block, const std::vector<CTransaction>& vtx_missing) const;\n+    ReadStatus FillBlock(CBlock& block, const std::vector<std::shared_ptr<const CTransaction>>& vtx_missing) const;\n };\n \n #endif"
+      },
+      {
+        "sha": "77eb586b67ece51192ac3aca57e75f9184e416bb",
+        "filename": "src/chainparams.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/chainparams.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/chainparams.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/chainparams.cpp?ref=1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+        "patch": "@@ -31,7 +31,7 @@ static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesi\n     genesis.nBits    = nBits;\n     genesis.nNonce   = nNonce;\n     genesis.nVersion = nVersion;\n-    genesis.vtx.push_back(txNew);\n+    genesis.vtx.push_back(std::make_shared<const CTransaction>(std::move(txNew)));\n     genesis.hashPrevBlock.SetNull();\n     genesis.hashMerkleRoot = BlockMerkleRoot(genesis);\n     return genesis;"
+      },
+      {
+        "sha": "6fa96ddf45fb19ccaacba2bc5e96f6ee3e9def56",
+        "filename": "src/consensus/merkle.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 3,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/consensus/merkle.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/consensus/merkle.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/consensus/merkle.cpp?ref=1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+        "patch": "@@ -160,7 +160,7 @@ uint256 BlockMerkleRoot(const CBlock& block, bool* mutated)\n     std::vector<uint256> leaves;\n     leaves.resize(block.vtx.size());\n     for (size_t s = 0; s < block.vtx.size(); s++) {\n-        leaves[s] = block.vtx[s].GetHash();\n+        leaves[s] = block.vtx[s]->GetHash();\n     }\n     return ComputeMerkleRoot(leaves, mutated);\n }\n@@ -171,7 +171,7 @@ uint256 BlockWitnessMerkleRoot(const CBlock& block, bool* mutated)\n     leaves.resize(block.vtx.size());\n     leaves[0].SetNull(); // The witness hash of the coinbase is 0.\n     for (size_t s = 1; s < block.vtx.size(); s++) {\n-        leaves[s] = block.vtx[s].GetWitnessHash();\n+        leaves[s] = block.vtx[s]->GetWitnessHash();\n     }\n     return ComputeMerkleRoot(leaves, mutated);\n }\n@@ -181,7 +181,7 @@ std::vector<uint256> BlockMerkleBranch(const CBlock& block, uint32_t position)\n     std::vector<uint256> leaves;\n     leaves.resize(block.vtx.size());\n     for (size_t s = 0; s < block.vtx.size(); s++) {\n-        leaves[s] = block.vtx[s].GetHash();\n+        leaves[s] = block.vtx[s]->GetHash();\n     }\n     return ComputeMerkleBranch(leaves, position);\n }"
+      },
+      {
+        "sha": "0dcc24c40c82212bb932c1a0a3a08baaef3dce38",
+        "filename": "src/core_memusage.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/core_memusage.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/core_memusage.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/core_memusage.h?ref=1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+        "patch": "@@ -69,8 +69,8 @@ static inline size_t RecursiveDynamicUsage(const CMutableTransaction& tx) {\n \n static inline size_t RecursiveDynamicUsage(const CBlock& block) {\n     size_t mem = memusage::DynamicUsage(block.vtx);\n-    for (std::vector<CTransaction>::const_iterator it = block.vtx.begin(); it != block.vtx.end(); it++) {\n-        mem += RecursiveDynamicUsage(*it);\n+    for (const auto& tx : block.vtx) {\n+        mem += memusage::DynamicUsage(tx) + RecursiveDynamicUsage(*tx);\n     }\n     return mem;\n }"
+      },
+      {
+        "sha": "7b84ab7ba1a89bf676f5e4daa4a44870b949653d",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 45,
+        "deletions": 42,
+        "changes": 87,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+        "patch": "@@ -1682,9 +1682,9 @@ bool GetTransaction(const uint256 &hash, CTransaction &txOut, const Consensus::P\n     if (pindexSlow) {\n         CBlock block;\n         if (ReadBlockFromDisk(block, pindexSlow, consensusParams)) {\n-            BOOST_FOREACH(const CTransaction &tx, block.vtx) {\n-                if (tx.GetHash() == hash) {\n-                    txOut = tx;\n+            for (const auto& tx : block.vtx) {\n+                if (tx->GetHash() == hash) {\n+                    txOut = *tx;\n                     hashBlock = pindexSlow->GetBlockHash();\n                     return true;\n                 }\n@@ -2223,7 +2223,7 @@ bool DisconnectBlock(const CBlock& block, CValidationState& state, const CBlockI\n \n     // undo transactions in reverse order\n     for (int i = block.vtx.size() - 1; i >= 0; i--) {\n-        const CTransaction &tx = block.vtx[i];\n+        const CTransaction &tx = *(block.vtx[i]);\n         uint256 hash = tx.GetHash();\n \n         // Check that all outputs are available and match the outputs in the block itself\n@@ -2417,8 +2417,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin\n     fEnforceBIP30 = fEnforceBIP30 && (!pindexBIP34height || !(pindexBIP34height->GetBlockHash() == chainparams.GetConsensus().BIP34Hash));\n \n     if (fEnforceBIP30) {\n-        BOOST_FOREACH(const CTransaction& tx, block.vtx) {\n-            const CCoins* coins = view.AccessCoins(tx.GetHash());\n+        for (const auto& tx : block.vtx) {\n+            const CCoins* coins = view.AccessCoins(tx->GetHash());\n             if (coins && !coins->IsPruned())\n                 return state.DoS(100, error(\"ConnectBlock(): tried to overwrite transaction\"),\n                                  REJECT_INVALID, \"bad-txns-BIP30\");\n@@ -2474,7 +2474,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin\n     txdata.reserve(block.vtx.size()); // Required so that pointers to individual PrecomputedTransactionData don't get invalidated\n     for (unsigned int i = 0; i < block.vtx.size(); i++)\n     {\n-        const CTransaction &tx = block.vtx[i];\n+        const CTransaction &tx = *(block.vtx[i]);\n \n         nInputs += tx.vin.size();\n \n@@ -2544,10 +2544,10 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin\n     LogPrint(\"bench\", \"      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs]\\n\", (unsigned)block.vtx.size(), 0.001 * (nTime3 - nTime2), 0.001 * (nTime3 - nTime2) / block.vtx.size(), nInputs <= 1 ? 0 : 0.001 * (nTime3 - nTime2) / (nInputs-1), nTimeConnect * 0.000001);\n \n     CAmount blockReward = nFees + GetBlockSubsidy(pindex->nHeight, chainparams.GetConsensus());\n-    if (block.vtx[0].GetValueOut() > blockReward)\n+    if (block.vtx[0]->GetValueOut() > blockReward)\n         return state.DoS(100,\n                          error(\"ConnectBlock(): coinbase pays too much (actual=%d vs limit=%d)\",\n-                               block.vtx[0].GetValueOut(), blockReward),\n+                               block.vtx[0]->GetValueOut(), blockReward),\n                                REJECT_INVALID, \"bad-cb-amount\");\n \n     if (!control.Wait())\n@@ -2590,7 +2590,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin\n     // Watch for changes to the previous coinbase transaction.\n     static uint256 hashPrevBestCoinBase;\n     GetMainSignals().UpdatedTransaction(hashPrevBestCoinBase);\n-    hashPrevBestCoinBase = block.vtx[0].GetHash();\n+    hashPrevBestCoinBase = block.vtx[0]->GetHash();\n \n     // Erase orphan transactions include or precluded by this block\n     if (vOrphanErase.size()) {\n@@ -2807,7 +2807,8 @@ bool static DisconnectTip(CValidationState& state, const CChainParams& chainpara\n     if (!fBare) {\n         // Resurrect mempool transactions from the disconnected block.\n         std::vector<uint256> vHashUpdate;\n-        BOOST_FOREACH(const CTransaction &tx, block.vtx) {\n+        for (const auto& it : block.vtx) {\n+            const CTransaction& tx = *it;\n             // ignore validation errors in resurrected transactions\n             CValidationState stateDummy;\n             if (tx.IsCoinBase() || !AcceptToMemoryPool(mempool, stateDummy, tx, false, NULL, true)) {\n@@ -2828,8 +2829,8 @@ bool static DisconnectTip(CValidationState& state, const CChainParams& chainpara\n     UpdateTip(pindexDelete->pprev, chainparams);\n     // Let wallets know transactions went from 1-confirmed to\n     // 0-confirmed or conflicted:\n-    BOOST_FOREACH(const CTransaction &tx, block.vtx) {\n-        GetMainSignals().SyncTransaction(tx, pindexDelete->pprev, CMainSignals::SYNC_TRANSACTION_NOT_IN_BLOCK);\n+    for (const auto& tx : block.vtx) {\n+        GetMainSignals().SyncTransaction(*tx, pindexDelete->pprev, CMainSignals::SYNC_TRANSACTION_NOT_IN_BLOCK);\n     }\n     return true;\n }\n@@ -2844,7 +2845,7 @@ static int64_t nTimePostConnect = 0;\n  * Connect a new block to chainActive. pblock is either NULL or a pointer to a CBlock\n  * corresponding to pindexNew, to bypass loading it again from disk.\n  */\n-bool static ConnectTip(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexNew, const CBlock* pblock, std::vector<std::shared_ptr<const CTransaction>> &txConflicted, std::vector<std::tuple<CTransaction,CBlockIndex*,int>> &txChanged)\n+bool static ConnectTip(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexNew, const CBlock* pblock, std::vector<std::shared_ptr<const CTransaction>> &txConflicted, std::vector<std::tuple<std::shared_ptr<const CTransaction>,CBlockIndex*,int>> &txChanged)\n {\n     assert(pindexNew->pprev == chainActive.Tip());\n     // Read block from disk.\n@@ -2884,7 +2885,7 @@ bool static ConnectTip(CValidationState& state, const CChainParams& chainparams,\n     // Update chainActive & related variables.\n     UpdateTip(pindexNew, chainparams);\n \n-    for(unsigned int i=0; i < pblock->vtx.size(); i++)\n+    for (unsigned int i=0; i < pblock->vtx.size(); i++)\n         txChanged.emplace_back(pblock->vtx[i], pindexNew, i);\n \n     int64_t nTime6 = GetTimeMicros(); nTimePostConnect += nTime6 - nTime5; nTimeTotal += nTime6 - nTime1;\n@@ -2967,7 +2968,7 @@ static void PruneBlockIndexCandidates() {\n  * Try to make some progress towards making pindexMostWork the active block.\n  * pblock is either NULL or a pointer to a CBlock corresponding to pindexMostWork.\n  */\n-static bool ActivateBestChainStep(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexMostWork, const CBlock* pblock, bool& fInvalidFound, std::vector<std::shared_ptr<const CTransaction>>& txConflicted, std::vector<std::tuple<CTransaction,CBlockIndex*,int>>& txChanged)\n+static bool ActivateBestChainStep(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexMostWork, const CBlock* pblock, bool& fInvalidFound, std::vector<std::shared_ptr<const CTransaction>>& txConflicted, std::vector<std::tuple<std::shared_ptr<const CTransaction>,CBlockIndex*,int>>& txChanged)\n {\n     AssertLockHeld(cs_main);\n     const CBlockIndex *pindexOldTip = chainActive.Tip();\n@@ -3068,7 +3069,7 @@ static void NotifyHeaderTip() {\n bool ActivateBestChain(CValidationState &state, const CChainParams& chainparams, const CBlock *pblock) {\n     CBlockIndex *pindexMostWork = NULL;\n     CBlockIndex *pindexNewTip = NULL;\n-    std::vector<std::tuple<CTransaction,CBlockIndex*,int>> txChanged;\n+    std::vector<std::tuple<std::shared_ptr<const CTransaction>,CBlockIndex*,int>> txChanged;\n     if (pblock)\n         txChanged.reserve(pblock->vtx.size());\n     do {\n@@ -3109,13 +3110,13 @@ bool ActivateBestChain(CValidationState &state, const CChainParams& chainparams,\n \n         // throw all transactions though the signal-interface\n         // while _not_ holding the cs_main lock\n-        for(std::shared_ptr<const CTransaction> tx : txConflicted)\n+        for (const auto& tx : txConflicted)\n         {\n             GetMainSignals().SyncTransaction(*tx, pindexNewTip, CMainSignals::SYNC_TRANSACTION_NOT_IN_BLOCK);\n         }\n         // ... and about transactions that got confirmed:\n-        for(unsigned int i = 0; i < txChanged.size(); i++)\n-            GetMainSignals().SyncTransaction(std::get<0>(txChanged[i]), std::get<1>(txChanged[i]), std::get<2>(txChanged[i]));\n+        for (unsigned int i = 0; i < txChanged.size(); i++)\n+            GetMainSignals().SyncTransaction(*std::get<0>(txChanged[i]), std::get<1>(txChanged[i]), std::get<2>(txChanged[i]));\n \n         // Notify external listeners about the new tip.\n         GetMainSignals().UpdatedBlockTip(pindexNewTip, pindexFork, fInitialDownload);\n@@ -3454,22 +3455,22 @@ bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::P\n         return state.DoS(100, false, REJECT_INVALID, \"bad-blk-length\", false, \"size limits failed\");\n \n     // First transaction must be coinbase, the rest must not be\n-    if (block.vtx.empty() || !block.vtx[0].IsCoinBase())\n+    if (block.vtx.empty() || !block.vtx[0]->IsCoinBase())\n         return state.DoS(100, false, REJECT_INVALID, \"bad-cb-missing\", false, \"first tx is not coinbase\");\n     for (unsigned int i = 1; i < block.vtx.size(); i++)\n-        if (block.vtx[i].IsCoinBase())\n+        if (block.vtx[i]->IsCoinBase())\n             return state.DoS(100, false, REJECT_INVALID, \"bad-cb-multiple\", false, \"more than one coinbase\");\n \n     // Check transactions\n     for (const auto& tx : block.vtx)\n-        if (!CheckTransaction(tx, state, false))\n+        if (!CheckTransaction(*tx, state, false))\n             return state.Invalid(false, state.GetRejectCode(), state.GetRejectReason(),\n-                                 strprintf(\"Transaction check failed (tx hash %s) %s\", tx.GetHash().ToString(), state.GetDebugMessage()));\n+                                 strprintf(\"Transaction check failed (tx hash %s) %s\", tx->GetHash().ToString(), state.GetDebugMessage()));\n \n     unsigned int nSigOps = 0;\n     for (const auto& tx : block.vtx)\n     {\n-        nSigOps += GetLegacySigOpCount(tx);\n+        nSigOps += GetLegacySigOpCount(*tx);\n     }\n     if (nSigOps * WITNESS_SCALE_FACTOR > MAX_BLOCK_SIGOPS_COST)\n         return state.DoS(100, false, REJECT_INVALID, \"bad-blk-sigops\", false, \"out-of-bounds SigOpCount\");\n@@ -3505,8 +3506,8 @@ bool IsWitnessEnabled(const CBlockIndex* pindexPrev, const Consensus::Params& pa\n static int GetWitnessCommitmentIndex(const CBlock& block)\n {\n     int commitpos = -1;\n-    for (size_t o = 0; o < block.vtx[0].vout.size(); o++) {\n-        if (block.vtx[0].vout[o].scriptPubKey.size() >= 38 && block.vtx[0].vout[o].scriptPubKey[0] == OP_RETURN && block.vtx[0].vout[o].scriptPubKey[1] == 0x24 && block.vtx[0].vout[o].scriptPubKey[2] == 0xaa && block.vtx[0].vout[o].scriptPubKey[3] == 0x21 && block.vtx[0].vout[o].scriptPubKey[4] == 0xa9 && block.vtx[0].vout[o].scriptPubKey[5] == 0xed) {\n+    for (size_t o = 0; o < block.vtx[0]->vout.size(); o++) {\n+        if (block.vtx[0]->vout[o].scriptPubKey.size() >= 38 && block.vtx[0]->vout[o].scriptPubKey[0] == OP_RETURN && block.vtx[0]->vout[o].scriptPubKey[1] == 0x24 && block.vtx[0]->vout[o].scriptPubKey[2] == 0xaa && block.vtx[0]->vout[o].scriptPubKey[3] == 0x21 && block.vtx[0]->vout[o].scriptPubKey[4] == 0xa9 && block.vtx[0]->vout[o].scriptPubKey[5] == 0xed) {\n             commitpos = o;\n         }\n     }\n@@ -3517,10 +3518,12 @@ void UpdateUncommittedBlockStructures(CBlock& block, const CBlockIndex* pindexPr\n {\n     int commitpos = GetWitnessCommitmentIndex(block);\n     static const std::vector<unsigned char> nonce(32, 0x00);\n-    if (commitpos != -1 && IsWitnessEnabled(pindexPrev, consensusParams) && block.vtx[0].wit.IsEmpty()) {\n-        block.vtx[0].wit.vtxinwit.resize(1);\n-        block.vtx[0].wit.vtxinwit[0].scriptWitness.stack.resize(1);\n-        block.vtx[0].wit.vtxinwit[0].scriptWitness.stack[0] = nonce;\n+    if (commitpos != -1 && IsWitnessEnabled(pindexPrev, consensusParams) && block.vtx[0]->wit.IsEmpty()) {\n+        CMutableTransaction tx(*block.vtx[0]);\n+        tx.wit.vtxinwit.resize(1);\n+        tx.wit.vtxinwit[0].scriptWitness.stack.resize(1);\n+        tx.wit.vtxinwit[0].scriptWitness.stack[0] = nonce;\n+        block.vtx[0] = std::make_shared<const CTransaction>(std::move(tx));\n     }\n }\n \n@@ -3530,7 +3533,7 @@ std::vector<unsigned char> GenerateCoinbaseCommitment(CBlock& block, const CBloc\n     int commitpos = GetWitnessCommitmentIndex(block);\n     bool fHaveWitness = false;\n     for (size_t t = 1; t < block.vtx.size(); t++) {\n-        if (!block.vtx[t].wit.IsNull()) {\n+        if (!block.vtx[t]->wit.IsNull()) {\n             fHaveWitness = true;\n             break;\n         }\n@@ -3551,8 +3554,8 @@ std::vector<unsigned char> GenerateCoinbaseCommitment(CBlock& block, const CBloc\n             out.scriptPubKey[5] = 0xed;\n             memcpy(&out.scriptPubKey[6], witnessroot.begin(), 32);\n             commitment = std::vector<unsigned char>(out.scriptPubKey.begin(), out.scriptPubKey.end());\n-            const_cast<std::vector<CTxOut>*>(&block.vtx[0].vout)->push_back(out);\n-            block.vtx[0].UpdateHash();\n+            const_cast<std::vector<CTxOut>*>(&block.vtx[0]->vout)->push_back(out);\n+            block.vtx[0]->UpdateHash();\n         }\n     }\n     UpdateUncommittedBlockStructures(block, pindexPrev, consensusParams);\n@@ -3601,7 +3604,7 @@ bool ContextualCheckBlock(const CBlock& block, CValidationState& state, const Co\n \n     // Check that all transactions are finalized\n     for (const auto& tx : block.vtx) {\n-        if (!IsFinalTx(tx, nHeight, nLockTimeCutoff)) {\n+        if (!IsFinalTx(*tx, nHeight, nLockTimeCutoff)) {\n             return state.DoS(10, false, REJECT_INVALID, \"bad-txns-nonfinal\", false, \"non-final transaction\");\n         }\n     }\n@@ -3610,8 +3613,8 @@ bool ContextualCheckBlock(const CBlock& block, CValidationState& state, const Co\n     if (nHeight >= consensusParams.BIP34Height)\n     {\n         CScript expect = CScript() << nHeight;\n-        if (block.vtx[0].vin[0].scriptSig.size() < expect.size() ||\n-            !std::equal(expect.begin(), expect.end(), block.vtx[0].vin[0].scriptSig.begin())) {\n+        if (block.vtx[0]->vin[0].scriptSig.size() < expect.size() ||\n+            !std::equal(expect.begin(), expect.end(), block.vtx[0]->vin[0].scriptSig.begin())) {\n             return state.DoS(100, false, REJECT_INVALID, \"bad-cb-height\", false, \"block height mismatch in coinbase\");\n         }\n     }\n@@ -3633,11 +3636,11 @@ bool ContextualCheckBlock(const CBlock& block, CValidationState& state, const Co\n             // The malleation check is ignored; as the transaction tree itself\n             // already does not permit it, it is impossible to trigger in the\n             // witness tree.\n-            if (block.vtx[0].wit.vtxinwit.size() != 1 || block.vtx[0].wit.vtxinwit[0].scriptWitness.stack.size() != 1 || block.vtx[0].wit.vtxinwit[0].scriptWitness.stack[0].size() != 32) {\n+            if (block.vtx[0]->wit.vtxinwit.size() != 1 || block.vtx[0]->wit.vtxinwit[0].scriptWitness.stack.size() != 1 || block.vtx[0]->wit.vtxinwit[0].scriptWitness.stack[0].size() != 32) {\n                 return state.DoS(100, false, REJECT_INVALID, \"bad-witness-nonce-size\", true, strprintf(\"%s : invalid witness nonce size\", __func__));\n             }\n-            CHash256().Write(hashWitness.begin(), 32).Write(&block.vtx[0].wit.vtxinwit[0].scriptWitness.stack[0][0], 32).Finalize(hashWitness.begin());\n-            if (memcmp(hashWitness.begin(), &block.vtx[0].vout[commitpos].scriptPubKey[6], 32)) {\n+            CHash256().Write(hashWitness.begin(), 32).Write(&block.vtx[0]->wit.vtxinwit[0].scriptWitness.stack[0][0], 32).Finalize(hashWitness.begin());\n+            if (memcmp(hashWitness.begin(), &block.vtx[0]->vout[commitpos].scriptPubKey[6], 32)) {\n                 return state.DoS(100, false, REJECT_INVALID, \"bad-witness-merkle-match\", true, strprintf(\"%s : witness merkle commitment mismatch\", __func__));\n             }\n             fHaveWitness = true;\n@@ -3647,7 +3650,7 @@ bool ContextualCheckBlock(const CBlock& block, CValidationState& state, const Co\n     // No witness data is allowed in blocks that don't commit to witness data, as this would otherwise leave room for spam\n     if (!fHaveWitness) {\n         for (size_t i = 0; i < block.vtx.size(); i++) {\n-            if (!block.vtx[i].wit.IsNull()) {\n+            if (!block.vtx[i]->wit.IsNull()) {\n                 return state.DoS(100, false, REJECT_INVALID, \"unexpected-witness\", true, strprintf(\"%s : unexpected witness data found\", __func__));\n             }\n         }\n@@ -4953,7 +4956,7 @@ void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParam\n                             // however we MUST always provide at least what the remote peer needs\n                             typedef std::pair<unsigned int, uint256> PairType;\n                             BOOST_FOREACH(PairType& pair, merkleBlock.vMatchedTxn)\n-                                connman.PushMessageWithFlag(pfrom, SERIALIZE_TRANSACTION_NO_WITNESS, NetMsgType::TX, block.vtx[pair.first]);\n+                                connman.PushMessageWithFlag(pfrom, SERIALIZE_TRANSACTION_NO_WITNESS, NetMsgType::TX, *block.vtx[pair.first]);\n                         }\n                         // else\n                             // no response"
+      },
+      {
+        "sha": "882717ac56b0e8b449215d6f3ba4977c8b39206b",
+        "filename": "src/merkleblock.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 3,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/merkleblock.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/merkleblock.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/merkleblock.cpp?ref=1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+        "patch": "@@ -23,8 +23,8 @@ CMerkleBlock::CMerkleBlock(const CBlock& block, CBloomFilter& filter)\n \n     for (unsigned int i = 0; i < block.vtx.size(); i++)\n     {\n-        const uint256& hash = block.vtx[i].GetHash();\n-        if (filter.IsRelevantAndUpdate(block.vtx[i]))\n+        const uint256& hash = block.vtx[i]->GetHash();\n+        if (filter.IsRelevantAndUpdate(*block.vtx[i]))\n         {\n             vMatch.push_back(true);\n             vMatchedTxn.push_back(make_pair(i, hash));\n@@ -49,7 +49,7 @@ CMerkleBlock::CMerkleBlock(const CBlock& block, const std::set<uint256>& txids)\n \n     for (unsigned int i = 0; i < block.vtx.size(); i++)\n     {\n-        const uint256& hash = block.vtx[i].GetHash();\n+        const uint256& hash = block.vtx[i]->GetHash();\n         if (txids.count(hash))\n             vMatch.push_back(true);\n         else"
+      },
+      {
+        "sha": "2b65cbc65e9e31c7b799927e7ba3ae548a18f9ab",
+        "filename": "src/miner.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 6,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/miner.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/miner.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/miner.cpp?ref=1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+        "patch": "@@ -134,7 +134,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc\n     pblock = &pblocktemplate->block; // pointer for convenience\n \n     // Add dummy coinbase tx as first transaction\n-    pblock->vtx.push_back(CTransaction());\n+    pblock->vtx.emplace_back();\n     pblocktemplate->vTxFees.push_back(-1); // updated at end\n     pblocktemplate->vTxSigOpsCost.push_back(-1); // updated at end\n \n@@ -178,7 +178,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc\n     coinbaseTx.vout[0].scriptPubKey = scriptPubKeyIn;\n     coinbaseTx.vout[0].nValue = nFees + GetBlockSubsidy(nHeight, chainparams.GetConsensus());\n     coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;\n-    pblock->vtx[0] = coinbaseTx;\n+    pblock->vtx[0] = std::make_shared<const CTransaction>(std::move(coinbaseTx));\n     pblocktemplate->vchCoinbaseCommitment = GenerateCoinbaseCommitment(*pblock, pindexPrev, chainparams.GetConsensus());\n     pblocktemplate->vTxFees[0] = -nFees;\n \n@@ -190,7 +190,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc\n     UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev);\n     pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock, chainparams.GetConsensus());\n     pblock->nNonce         = 0;\n-    pblocktemplate->vTxSigOpsCost[0] = WITNESS_SCALE_FACTOR * GetLegacySigOpCount(pblock->vtx[0]);\n+    pblocktemplate->vTxSigOpsCost[0] = WITNESS_SCALE_FACTOR * GetLegacySigOpCount(*pblock->vtx[0]);\n \n     CValidationState state;\n     if (!TestBlockValidity(state, chainparams, *pblock, pindexPrev, false, false)) {\n@@ -312,7 +312,7 @@ bool BlockAssembler::TestForBlock(CTxMemPool::txiter iter)\n \n void BlockAssembler::AddToBlock(CTxMemPool::txiter iter)\n {\n-    pblock->vtx.push_back(iter->GetTx());\n+    pblock->vtx.emplace_back(iter->GetSharedTx());\n     pblocktemplate->vTxFees.push_back(iter->GetFee());\n     pblocktemplate->vTxSigOpsCost.push_back(iter->GetSigOpCost());\n     if (fNeedSizeAccounting) {\n@@ -601,10 +601,10 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned\n     }\n     ++nExtraNonce;\n     unsigned int nHeight = pindexPrev->nHeight+1; // Height first in coinbase required for block.version=2\n-    CMutableTransaction txCoinbase(pblock->vtx[0]);\n+    CMutableTransaction txCoinbase(*pblock->vtx[0]);\n     txCoinbase.vin[0].scriptSig = (CScript() << nHeight << CScriptNum(nExtraNonce)) + COINBASE_FLAGS;\n     assert(txCoinbase.vin[0].scriptSig.size() <= 100);\n \n-    pblock->vtx[0] = txCoinbase;\n+    pblock->vtx[0] = std::make_shared<const CTransaction>(std::move(txCoinbase));\n     pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);\n }"
+      },
+      {
+        "sha": "95bd2211f91d7bc52cfa3db1c5331e64f92a018d",
+        "filename": "src/primitives/block.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/primitives/block.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/primitives/block.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/primitives/block.cpp?ref=1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+        "patch": "@@ -27,7 +27,7 @@ std::string CBlock::ToString() const\n         vtx.size());\n     for (unsigned int i = 0; i < vtx.size(); i++)\n     {\n-        s << \"  \" << vtx[i].ToString() << \"\\n\";\n+        s << \"  \" << vtx[i]->ToString() << \"\\n\";\n     }\n     return s.str();\n }"
+      },
+      {
+        "sha": "45b4895eba06bffed65d6c621eec284f9e844487",
+        "filename": "src/primitives/block.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/primitives/block.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/primitives/block.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/primitives/block.h?ref=1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+        "patch": "@@ -73,7 +73,7 @@ class CBlock : public CBlockHeader\n {\n public:\n     // network and disk\n-    std::vector<CTransaction> vtx;\n+    std::vector<std::shared_ptr<const CTransaction>> vtx;\n \n     // memory only\n     mutable bool fChecked;"
+      },
+      {
+        "sha": "154107c0dcf337d387118c0be6095cde031e4a62",
+        "filename": "src/rpc/blockchain.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 3,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/rpc/blockchain.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/rpc/blockchain.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/blockchain.cpp?ref=1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+        "patch": "@@ -119,16 +119,16 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool tx\n     result.push_back(Pair(\"versionHex\", strprintf(\"%08x\", block.nVersion)));\n     result.push_back(Pair(\"merkleroot\", block.hashMerkleRoot.GetHex()));\n     UniValue txs(UniValue::VARR);\n-    BOOST_FOREACH(const CTransaction&tx, block.vtx)\n+    for(const auto& tx : block.vtx)\n     {\n         if(txDetails)\n         {\n             UniValue objTx(UniValue::VOBJ);\n-            TxToJSON(tx, uint256(), objTx);\n+            TxToJSON(*tx, uint256(), objTx);\n             txs.push_back(objTx);\n         }\n         else\n-            txs.push_back(tx.GetHash().GetHex());\n+            txs.push_back(tx->GetHash().GetHex());\n     }\n     result.push_back(Pair(\"tx\", txs));\n     result.push_back(Pair(\"time\", block.GetBlockTime()));"
+      },
+      {
+        "sha": "6b0e52a309376e71a642ecb6637ca30938f87501",
+        "filename": "src/rpc/mining.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 2,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/rpc/mining.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/rpc/mining.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/mining.cpp?ref=1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+        "patch": "@@ -557,7 +557,8 @@ UniValue getblocktemplate(const JSONRPCRequest& request)\n     UniValue transactions(UniValue::VARR);\n     map<uint256, int64_t> setTxIndex;\n     int i = 0;\n-    BOOST_FOREACH (CTransaction& tx, pblock->vtx) {\n+    for (const auto& it : pblock->vtx) {\n+        const CTransaction& tx = *it;\n         uint256 txHash = tx.GetHash();\n         setTxIndex[txHash] = i++;\n \n@@ -662,7 +663,7 @@ UniValue getblocktemplate(const JSONRPCRequest& request)\n     result.push_back(Pair(\"previousblockhash\", pblock->hashPrevBlock.GetHex()));\n     result.push_back(Pair(\"transactions\", transactions));\n     result.push_back(Pair(\"coinbaseaux\", aux));\n-    result.push_back(Pair(\"coinbasevalue\", (int64_t)pblock->vtx[0].vout[0].nValue));\n+    result.push_back(Pair(\"coinbasevalue\", (int64_t)pblock->vtx[0]->vout[0].nValue));\n     result.push_back(Pair(\"longpollid\", chainActive.Tip()->GetBlockHash().GetHex() + i64tostr(nTransactionsUpdatedLast)));\n     result.push_back(Pair(\"target\", hashTarget.GetHex()));\n     result.push_back(Pair(\"mintime\", (int64_t)pindexPrev->GetMedianTimePast()+1));"
+      },
+      {
+        "sha": "b9b81600ba767e6aaf8b48c3bba778bf0dfc9d94",
+        "filename": "src/rpc/rawtransaction.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/rpc/rawtransaction.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/rpc/rawtransaction.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/rawtransaction.cpp?ref=1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+        "patch": "@@ -288,8 +288,8 @@ UniValue gettxoutproof(const JSONRPCRequest& request)\n         throw JSONRPCError(RPC_INTERNAL_ERROR, \"Can't read block from disk\");\n \n     unsigned int ntxFound = 0;\n-    BOOST_FOREACH(const CTransaction&tx, block.vtx)\n-        if (setTxids.count(tx.GetHash()))\n+    for (const auto& tx : block.vtx)\n+        if (setTxids.count(tx->GetHash()))\n             ntxFound++;\n     if (ntxFound != setTxids.size())\n         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, \"(Not all) transactions not found in specified block\");"
+      },
+      {
+        "sha": "6899bd632868107835e1b5efef246bc55c90e9ef",
+        "filename": "src/test/blockencodings_tests.cpp",
+        "status": "modified",
+        "additions": 36,
+        "deletions": 25,
+        "changes": 61,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/test/blockencodings_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/test/blockencodings_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/blockencodings_tests.cpp?ref=1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+        "patch": "@@ -26,21 +26,21 @@ static CBlock BuildBlockTestCase() {\n     tx.vout[0].nValue = 42;\n \n     block.vtx.resize(3);\n-    block.vtx[0] = tx;\n+    block.vtx[0] = std::make_shared<const CTransaction>(tx);\n     block.nVersion = 42;\n     block.hashPrevBlock = GetRandHash();\n     block.nBits = 0x207fffff;\n \n     tx.vin[0].prevout.hash = GetRandHash();\n     tx.vin[0].prevout.n = 0;\n-    block.vtx[1] = tx;\n+    block.vtx[1] = std::make_shared<const CTransaction>(tx);\n \n     tx.vin.resize(10);\n     for (size_t i = 0; i < tx.vin.size(); i++) {\n         tx.vin[i].prevout.hash = GetRandHash();\n         tx.vin[i].prevout.n = 0;\n     }\n-    block.vtx[2] = tx;\n+    block.vtx[2] = std::make_shared<const CTransaction>(tx);\n \n     bool mutated;\n     block.hashMerkleRoot = BlockMerkleRoot(block, &mutated);\n@@ -59,8 +59,8 @@ BOOST_AUTO_TEST_CASE(SimpleRoundTripTest)\n     TestMemPoolEntryHelper entry;\n     CBlock block(BuildBlockTestCase());\n \n-    pool.addUnchecked(block.vtx[2].GetHash(), entry.FromTx(block.vtx[2]));\n-    BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[2].GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 0);\n+    pool.addUnchecked(block.vtx[2]->GetHash(), entry.FromTx(*block.vtx[2]));\n+    BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[2]->GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 0);\n \n     // Do a simple ShortTxIDs RT\n     {\n@@ -78,14 +78,14 @@ BOOST_AUTO_TEST_CASE(SimpleRoundTripTest)\n         BOOST_CHECK(!partialBlock.IsTxAvailable(1));\n         BOOST_CHECK( partialBlock.IsTxAvailable(2));\n \n-        BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[2].GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 1);\n+        BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[2]->GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 1);\n \n         std::vector<std::shared_ptr<const CTransaction>> removed;\n-        pool.removeRecursive(block.vtx[2], &removed);\n+        pool.removeRecursive(*block.vtx[2], &removed);\n         BOOST_CHECK_EQUAL(removed.size(), 1);\n \n         CBlock block2;\n-        std::vector<CTransaction> vtx_missing;\n+        std::vector<std::shared_ptr<const CTransaction>> vtx_missing;\n         BOOST_CHECK(partialBlock.FillBlock(block2, vtx_missing) == READ_STATUS_INVALID); // No transactions\n \n         vtx_missing.push_back(block.vtx[2]); // Wrong transaction\n@@ -152,17 +152,19 @@ BOOST_AUTO_TEST_CASE(NonCoinbasePreforwardRTTest)\n     TestMemPoolEntryHelper entry;\n     CBlock block(BuildBlockTestCase());\n \n-    pool.addUnchecked(block.vtx[2].GetHash(), entry.FromTx(block.vtx[2]));\n-    BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[2].GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 0);\n+    pool.addUnchecked(block.vtx[2]->GetHash(), entry.FromTx(*block.vtx[2]));\n+    BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[2]->GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 0);\n+\n+    uint256 txhash;\n \n     // Test with pre-forwarding tx 1, but not coinbase\n     {\n         TestHeaderAndShortIDs shortIDs(block);\n         shortIDs.prefilledtxn.resize(1);\n         shortIDs.prefilledtxn[0] = {1, block.vtx[1]};\n         shortIDs.shorttxids.resize(2);\n-        shortIDs.shorttxids[0] = shortIDs.GetShortID(block.vtx[0].GetHash());\n-        shortIDs.shorttxids[1] = shortIDs.GetShortID(block.vtx[2].GetHash());\n+        shortIDs.shorttxids[0] = shortIDs.GetShortID(block.vtx[0]->GetHash());\n+        shortIDs.shorttxids[1] = shortIDs.GetShortID(block.vtx[2]->GetHash());\n \n         CDataStream stream(SER_NETWORK, PROTOCOL_VERSION);\n         stream << shortIDs;\n@@ -176,10 +178,10 @@ BOOST_AUTO_TEST_CASE(NonCoinbasePreforwardRTTest)\n         BOOST_CHECK( partialBlock.IsTxAvailable(1));\n         BOOST_CHECK( partialBlock.IsTxAvailable(2));\n \n-        BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[2].GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 1);\n+        BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[2]->GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 1);\n \n         CBlock block2;\n-        std::vector<CTransaction> vtx_missing;\n+        std::vector<std::shared_ptr<const CTransaction>> vtx_missing;\n         BOOST_CHECK(partialBlock.FillBlock(block2, vtx_missing) == READ_STATUS_INVALID); // No transactions\n \n         vtx_missing.push_back(block.vtx[1]); // Wrong transaction\n@@ -194,9 +196,13 @@ BOOST_AUTO_TEST_CASE(NonCoinbasePreforwardRTTest)\n         BOOST_CHECK_EQUAL(block.hashMerkleRoot.ToString(), BlockMerkleRoot(block3, &mutated).ToString());\n         BOOST_CHECK(!mutated);\n \n-        BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[2].GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 1);\n+        txhash = block.vtx[2]->GetHash();\n+        block.vtx.clear();\n+        block2.vtx.clear();\n+        block3.vtx.clear();\n+        BOOST_CHECK_EQUAL(pool.mapTx.find(txhash)->GetSharedTx().use_count(), SHARED_TX_OFFSET + 1);\n     }\n-    BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[2].GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 0);\n+    BOOST_CHECK_EQUAL(pool.mapTx.find(txhash)->GetSharedTx().use_count(), SHARED_TX_OFFSET + 0);\n }\n \n BOOST_AUTO_TEST_CASE(SufficientPreforwardRTTest)\n@@ -205,8 +211,10 @@ BOOST_AUTO_TEST_CASE(SufficientPreforwardRTTest)\n     TestMemPoolEntryHelper entry;\n     CBlock block(BuildBlockTestCase());\n \n-    pool.addUnchecked(block.vtx[1].GetHash(), entry.FromTx(block.vtx[1]));\n-    BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[1].GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 0);\n+    pool.addUnchecked(block.vtx[1]->GetHash(), entry.FromTx(*block.vtx[1]));\n+    BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[1]->GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 0);\n+\n+    uint256 txhash;\n \n     // Test with pre-forwarding coinbase + tx 2 with tx 1 in mempool\n     {\n@@ -215,7 +223,7 @@ BOOST_AUTO_TEST_CASE(SufficientPreforwardRTTest)\n         shortIDs.prefilledtxn[0] = {0, block.vtx[0]};\n         shortIDs.prefilledtxn[1] = {1, block.vtx[2]}; // id == 1 as it is 1 after index 1\n         shortIDs.shorttxids.resize(1);\n-        shortIDs.shorttxids[0] = shortIDs.GetShortID(block.vtx[1].GetHash());\n+        shortIDs.shorttxids[0] = shortIDs.GetShortID(block.vtx[1]->GetHash());\n \n         CDataStream stream(SER_NETWORK, PROTOCOL_VERSION);\n         stream << shortIDs;\n@@ -229,19 +237,22 @@ BOOST_AUTO_TEST_CASE(SufficientPreforwardRTTest)\n         BOOST_CHECK( partialBlock.IsTxAvailable(1));\n         BOOST_CHECK( partialBlock.IsTxAvailable(2));\n \n-        BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[1].GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 1);\n+        BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[1]->GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 1);\n \n         CBlock block2;\n-        std::vector<CTransaction> vtx_missing;\n+        std::vector<std::shared_ptr<const CTransaction>> vtx_missing;\n         BOOST_CHECK(partialBlock.FillBlock(block2, vtx_missing) == READ_STATUS_OK);\n         BOOST_CHECK_EQUAL(block.GetHash().ToString(), block2.GetHash().ToString());\n         bool mutated;\n         BOOST_CHECK_EQUAL(block.hashMerkleRoot.ToString(), BlockMerkleRoot(block2, &mutated).ToString());\n         BOOST_CHECK(!mutated);\n \n-        BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[1].GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 1);\n+        txhash = block.vtx[1]->GetHash();\n+        block.vtx.clear();\n+        block2.vtx.clear();\n+        BOOST_CHECK_EQUAL(pool.mapTx.find(txhash)->GetSharedTx().use_count(), SHARED_TX_OFFSET + 1);\n     }\n-    BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[1].GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 0);\n+    BOOST_CHECK_EQUAL(pool.mapTx.find(txhash)->GetSharedTx().use_count(), SHARED_TX_OFFSET + 0);\n }\n \n BOOST_AUTO_TEST_CASE(EmptyBlockRoundTripTest)\n@@ -255,7 +266,7 @@ BOOST_AUTO_TEST_CASE(EmptyBlockRoundTripTest)\n \n     CBlock block;\n     block.vtx.resize(1);\n-    block.vtx[0] = coinbase;\n+    block.vtx[0] = std::make_shared<const CTransaction>(std::move(coinbase));\n     block.nVersion = 42;\n     block.hashPrevBlock = GetRandHash();\n     block.nBits = 0x207fffff;\n@@ -280,7 +291,7 @@ BOOST_AUTO_TEST_CASE(EmptyBlockRoundTripTest)\n         BOOST_CHECK(partialBlock.IsTxAvailable(0));\n \n         CBlock block2;\n-        std::vector<CTransaction> vtx_missing;\n+        std::vector<std::shared_ptr<const CTransaction>> vtx_missing;\n         BOOST_CHECK(partialBlock.FillBlock(block2, vtx_missing) == READ_STATUS_OK);\n         BOOST_CHECK_EQUAL(block.GetHash().ToString(), block2.GetHash().ToString());\n         BOOST_CHECK_EQUAL(block.hashMerkleRoot.ToString(), BlockMerkleRoot(block2, &mutated).ToString());"
+      },
+      {
+        "sha": "4a6a060012154b5229e4e0178657b88afc993561",
+        "filename": "src/test/mempool_tests.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 3,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/test/mempool_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/test/mempool_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/mempool_tests.cpp?ref=1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+        "patch": "@@ -410,8 +410,8 @@ BOOST_AUTO_TEST_CASE(MempoolAncestorIndexingTest)\n     CheckSort<ancestor_score>(pool, sortedOrder);\n \n     /* after tx6 is mined, tx7 should move up in the sort */\n-    std::vector<CTransaction> vtx;\n-    vtx.push_back(tx6);\n+    std::vector<std::shared_ptr<const CTransaction>> vtx;\n+    vtx.push_back(std::make_shared<const CTransaction>(tx6));\n     pool.removeForBlock(vtx, 1, NULL, false);\n \n     sortedOrder.erase(sortedOrder.begin()+1);\n@@ -546,7 +546,7 @@ BOOST_AUTO_TEST_CASE(MempoolSizeLimitTest)\n     pool.addUnchecked(tx5.GetHash(), entry.Fee(1000LL).FromTx(tx5, &pool));\n     pool.addUnchecked(tx7.GetHash(), entry.Fee(9000LL).FromTx(tx7, &pool));\n \n-    std::vector<CTransaction> vtx;\n+    std::vector<std::shared_ptr<const CTransaction>> vtx;\n     SetMockTime(42);\n     SetMockTime(42 + CTxMemPool::ROLLING_FEE_HALFLIFE);\n     BOOST_CHECK_EQUAL(pool.GetMinFee(1).GetFeePerK(), maxFeeRateRemoved.GetFeePerK() + 1000);"
+      },
+      {
+        "sha": "8aea571e127d620b8f957bbc7f5e9a4191a1c8fe",
+        "filename": "src/test/merkle_tests.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 4,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/test/merkle_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/test/merkle_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/merkle_tests.cpp?ref=1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+        "patch": "@@ -15,8 +15,8 @@ static uint256 BlockBuildMerkleTree(const CBlock& block, bool* fMutated, std::ve\n {\n     vMerkleTree.clear();\n     vMerkleTree.reserve(block.vtx.size() * 2 + 16); // Safe upper bound for the number of total nodes.\n-    for (std::vector<CTransaction>::const_iterator it(block.vtx.begin()); it != block.vtx.end(); ++it)\n-        vMerkleTree.push_back(it->GetHash());\n+    for (std::vector<std::shared_ptr<const CTransaction>>::const_iterator it(block.vtx.begin()); it != block.vtx.end(); ++it)\n+        vMerkleTree.push_back((*it)->GetHash());\n     int j = 0;\n     bool mutated = false;\n     for (int nSize = block.vtx.size(); nSize > 1; nSize = (nSize + 1) / 2)\n@@ -86,7 +86,7 @@ BOOST_AUTO_TEST_CASE(merkle_test)\n             for (int j = 0; j < ntx; j++) {\n                 CMutableTransaction mtx;\n                 mtx.nLockTime = j;\n-                block.vtx[j] = mtx;\n+                block.vtx[j] = std::make_shared<const CTransaction>(mtx);\n             }\n             // Compute the root of the block before mutating it.\n             bool unmutatedMutated = false;\n@@ -126,7 +126,7 @@ BOOST_AUTO_TEST_CASE(merkle_test)\n                     std::vector<uint256> newBranch = BlockMerkleBranch(block, mtx);\n                     std::vector<uint256> oldBranch = BlockGetMerkleBranch(block, merkleTree, mtx);\n                     BOOST_CHECK(oldBranch == newBranch);\n-                    BOOST_CHECK(ComputeMerkleRootFromBranch(block.vtx[mtx].GetHash(), newBranch, mtx) == oldRoot);\n+                    BOOST_CHECK(ComputeMerkleRootFromBranch(block.vtx[mtx]->GetHash(), newBranch, mtx) == oldRoot);\n                 }\n             }\n         }"
+      },
+      {
+        "sha": "56dab347fb41cda888a8f0699b5b94e16be87601",
+        "filename": "src/test/miner_tests.cpp",
+        "status": "modified",
+        "additions": 15,
+        "deletions": 18,
+        "changes": 33,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/test/miner_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/test/miner_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/miner_tests.cpp?ref=1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+        "patch": "@@ -77,7 +77,7 @@ bool TestSequenceLocks(const CTransaction &tx, int flags)\n // Implemented as an additional function, rather than a separate test case,\n // to allow reusing the blockchain created in CreateNewBlock_validity.\n // Note that this test assumes blockprioritysize is 0.\n-void TestPackageSelection(const CChainParams& chainparams, CScript scriptPubKey, std::vector<CTransaction *>& txFirst)\n+void TestPackageSelection(const CChainParams& chainparams, CScript scriptPubKey, std::vector<std::shared_ptr<const CTransaction>>& txFirst)\n {\n     // Test the ancestor feerate transaction selection.\n     TestMemPoolEntryHelper entry;\n@@ -108,9 +108,9 @@ void TestPackageSelection(const CChainParams& chainparams, CScript scriptPubKey,\n     mempool.addUnchecked(hashHighFeeTx, entry.Fee(50000).Time(GetTime()).SpendsCoinbase(false).FromTx(tx));\n \n     std::unique_ptr<CBlockTemplate> pblocktemplate = BlockAssembler(chainparams).CreateNewBlock(scriptPubKey);\n-    BOOST_CHECK(pblocktemplate->block.vtx[1].GetHash() == hashParentTx);\n-    BOOST_CHECK(pblocktemplate->block.vtx[2].GetHash() == hashHighFeeTx);\n-    BOOST_CHECK(pblocktemplate->block.vtx[3].GetHash() == hashMediumFeeTx);\n+    BOOST_CHECK(pblocktemplate->block.vtx[1]->GetHash() == hashParentTx);\n+    BOOST_CHECK(pblocktemplate->block.vtx[2]->GetHash() == hashHighFeeTx);\n+    BOOST_CHECK(pblocktemplate->block.vtx[3]->GetHash() == hashMediumFeeTx);\n \n     // Test that a package below the min relay fee doesn't get included\n     tx.vin[0].prevout.hash = hashHighFeeTx;\n@@ -130,8 +130,8 @@ void TestPackageSelection(const CChainParams& chainparams, CScript scriptPubKey,\n     pblocktemplate = BlockAssembler(chainparams).CreateNewBlock(scriptPubKey);\n     // Verify that the free tx and the low fee tx didn't get selected\n     for (size_t i=0; i<pblocktemplate->block.vtx.size(); ++i) {\n-        BOOST_CHECK(pblocktemplate->block.vtx[i].GetHash() != hashFreeTx);\n-        BOOST_CHECK(pblocktemplate->block.vtx[i].GetHash() != hashLowFeeTx);\n+        BOOST_CHECK(pblocktemplate->block.vtx[i]->GetHash() != hashFreeTx);\n+        BOOST_CHECK(pblocktemplate->block.vtx[i]->GetHash() != hashLowFeeTx);\n     }\n \n     // Test that packages above the min relay fee do get included, even if one\n@@ -142,8 +142,8 @@ void TestPackageSelection(const CChainParams& chainparams, CScript scriptPubKey,\n     hashLowFeeTx = tx.GetHash();\n     mempool.addUnchecked(hashLowFeeTx, entry.Fee(feeToUse+2).FromTx(tx));\n     pblocktemplate = BlockAssembler(chainparams).CreateNewBlock(scriptPubKey);\n-    BOOST_CHECK(pblocktemplate->block.vtx[4].GetHash() == hashFreeTx);\n-    BOOST_CHECK(pblocktemplate->block.vtx[5].GetHash() == hashLowFeeTx);\n+    BOOST_CHECK(pblocktemplate->block.vtx[4]->GetHash() == hashFreeTx);\n+    BOOST_CHECK(pblocktemplate->block.vtx[5]->GetHash() == hashLowFeeTx);\n \n     // Test that transaction selection properly updates ancestor fee\n     // calculations as ancestor transactions get included in a block.\n@@ -166,8 +166,8 @@ void TestPackageSelection(const CChainParams& chainparams, CScript scriptPubKey,\n \n     // Verify that this tx isn't selected.\n     for (size_t i=0; i<pblocktemplate->block.vtx.size(); ++i) {\n-        BOOST_CHECK(pblocktemplate->block.vtx[i].GetHash() != hashFreeTx2);\n-        BOOST_CHECK(pblocktemplate->block.vtx[i].GetHash() != hashLowFeeTx2);\n+        BOOST_CHECK(pblocktemplate->block.vtx[i]->GetHash() != hashFreeTx2);\n+        BOOST_CHECK(pblocktemplate->block.vtx[i]->GetHash() != hashLowFeeTx2);\n     }\n \n     // This tx will be mineable, and should cause hashLowFeeTx2 to be selected\n@@ -176,7 +176,7 @@ void TestPackageSelection(const CChainParams& chainparams, CScript scriptPubKey,\n     tx.vout[0].nValue = 100000000 - 10000; // 10k satoshi fee\n     mempool.addUnchecked(tx.GetHash(), entry.Fee(10000).FromTx(tx));\n     pblocktemplate = BlockAssembler(chainparams).CreateNewBlock(scriptPubKey);\n-    BOOST_CHECK(pblocktemplate->block.vtx[8].GetHash() == hashLowFeeTx2);\n+    BOOST_CHECK(pblocktemplate->block.vtx[8]->GetHash() == hashLowFeeTx2);\n }\n \n // NOTE: These tests rely on CreateNewBlock doing its own self-validation!\n@@ -203,23 +203,23 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n     // We can't make transactions until we have inputs\n     // Therefore, load 100 blocks :)\n     int baseheight = 0;\n-    std::vector<CTransaction*>txFirst;\n+    std::vector<std::shared_ptr<const CTransaction>> txFirst;\n     for (unsigned int i = 0; i < sizeof(blockinfo)/sizeof(*blockinfo); ++i)\n     {\n         CBlock *pblock = &pblocktemplate->block; // pointer for convenience\n         pblock->nVersion = 1;\n         pblock->nTime = chainActive.Tip()->GetMedianTimePast()+1;\n-        CMutableTransaction txCoinbase(pblock->vtx[0]);\n+        CMutableTransaction txCoinbase(*pblock->vtx[0]);\n         txCoinbase.nVersion = 1;\n         txCoinbase.vin[0].scriptSig = CScript();\n         txCoinbase.vin[0].scriptSig.push_back(blockinfo[i].extranonce);\n         txCoinbase.vin[0].scriptSig.push_back(chainActive.Height());\n         txCoinbase.vout[0].scriptPubKey = CScript();\n-        pblock->vtx[0] = CTransaction(txCoinbase);\n+        pblock->vtx[0] = std::make_shared<const CTransaction>(std::move(txCoinbase));\n         if (txFirst.size() == 0)\n             baseheight = chainActive.Height();\n         if (txFirst.size() < 4)\n-            txFirst.push_back(new CTransaction(pblock->vtx[0]));\n+            txFirst.push_back(pblock->vtx[0]);\n         pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);\n         pblock->nNonce = blockinfo[i].nonce;\n         BOOST_CHECK(ProcessNewBlock(chainparams, pblock, true, NULL, NULL));\n@@ -485,9 +485,6 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n \n     TestPackageSelection(chainparams, scriptPubKey, txFirst);\n \n-    BOOST_FOREACH(CTransaction *_tx, txFirst)\n-        delete _tx;\n-\n     fCheckpointsEnabled = true;\n }\n "
+      },
+      {
+        "sha": "1552cb4bafbd8cdfebeb63ec01fb10d06142ddc0",
+        "filename": "src/test/pmt_tests.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/test/pmt_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/test/pmt_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/pmt_tests.cpp?ref=1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+        "patch": "@@ -45,14 +45,14 @@ BOOST_AUTO_TEST_CASE(pmt_test1)\n         for (unsigned int j=0; j<nTx; j++) {\n             CMutableTransaction tx;\n             tx.nLockTime = j; // actual transaction data doesn't matter; just make the nLockTime's unique\n-            block.vtx.push_back(CTransaction(tx));\n+            block.vtx.push_back(std::make_shared<const CTransaction>(tx));\n         }\n \n         // calculate actual merkle root and height\n         uint256 merkleRoot1 = BlockMerkleRoot(block);\n         std::vector<uint256> vTxid(nTx, uint256());\n         for (unsigned int j=0; j<nTx; j++)\n-            vTxid[j] = block.vtx[j].GetHash();\n+            vTxid[j] = block.vtx[j]->GetHash();\n         int nHeight = 1, nTx_ = nTx;\n         while (nTx_ > 1) {\n             nTx_ = (nTx_+1)/2;"
+      },
+      {
+        "sha": "08e5e774e134525f1fffa77ed2ad72c14bde4a5f",
+        "filename": "src/test/policyestimator_tests.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 4,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/test/policyestimator_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/test/policyestimator_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/policyestimator_tests.cpp?ref=1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+        "patch": "@@ -45,7 +45,7 @@ BOOST_AUTO_TEST_CASE(BlockPolicyEstimates)\n     CFeeRate baseRate(basefee, GetVirtualTransactionSize(tx));\n \n     // Create a fake block\n-    std::vector<CTransaction> block;\n+    std::vector<std::shared_ptr<const CTransaction>> block;\n     int blocknum = 0;\n \n     // Loop through 200 blocks\n@@ -68,7 +68,7 @@ BOOST_AUTO_TEST_CASE(BlockPolicyEstimates)\n             while (txHashes[9-h].size()) {\n                 std::shared_ptr<const CTransaction> ptx = mpool.get(txHashes[9-h].back());\n                 if (ptx)\n-                    block.push_back(*ptx);\n+                    block.push_back(ptx);\n                 txHashes[9-h].pop_back();\n             }\n         }\n@@ -145,7 +145,7 @@ BOOST_AUTO_TEST_CASE(BlockPolicyEstimates)\n         while(txHashes[j].size()) {\n             std::shared_ptr<const CTransaction> ptx = mpool.get(txHashes[j].back());\n             if (ptx)\n-                block.push_back(*ptx);\n+                block.push_back(ptx);\n             txHashes[j].pop_back();\n         }\n     }\n@@ -165,7 +165,7 @@ BOOST_AUTO_TEST_CASE(BlockPolicyEstimates)\n                 mpool.addUnchecked(hash, entry.Fee(feeV[j]).Time(GetTime()).Priority(0).Height(blocknum).FromTx(tx, &mpool));\n                 std::shared_ptr<const CTransaction> ptx = mpool.get(hash);\n                 if (ptx)\n-                    block.push_back(*ptx);\n+                    block.push_back(ptx);\n \n             }\n         }"
+      },
+      {
+        "sha": "f932cbe23814fdc7df4214231f325056766b2cd6",
+        "filename": "src/test/test_bitcoin.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 4,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/test/test_bitcoin.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/test/test_bitcoin.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/test_bitcoin.cpp?ref=1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+        "patch": "@@ -101,7 +101,7 @@ TestChain100Setup::TestChain100Setup() : TestingSetup(CBaseChainParams::REGTEST)\n     {\n         std::vector<CMutableTransaction> noTxns;\n         CBlock b = CreateAndProcessBlock(noTxns, scriptPubKey);\n-        coinbaseTxns.push_back(b.vtx[0]);\n+        coinbaseTxns.push_back(*b.vtx[0]);\n     }\n }\n \n@@ -119,7 +119,7 @@ TestChain100Setup::CreateAndProcessBlock(const std::vector<CMutableTransaction>&\n     // Replace mempool-selected txns with just coinbase plus passed-in txns:\n     block.vtx.resize(1);\n     BOOST_FOREACH(const CMutableTransaction& tx, txns)\n-        block.vtx.push_back(tx);\n+        block.vtx.push_back(std::make_shared<const CTransaction>(tx));\n     // IncrementExtraNonce creates a valid coinbase and merkleRoot\n     unsigned int extraNonce = 0;\n     IncrementExtraNonce(&block, chainActive.Tip(), extraNonce);\n@@ -137,12 +137,12 @@ TestChain100Setup::~TestChain100Setup()\n }\n \n \n-CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(CMutableTransaction &tx, CTxMemPool *pool) {\n+CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(const CMutableTransaction &tx, CTxMemPool *pool) {\n     CTransaction txn(tx);\n     return FromTx(txn, pool);\n }\n \n-CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(CTransaction &txn, CTxMemPool *pool) {\n+CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(const CTransaction &txn, CTxMemPool *pool) {\n     bool hasNoDependencies = pool ? pool->HasNoInputsOf(txn) : hadNoDependencies;\n     // Hack to assume either its completely dependent on other mempool txs or not at all\n     CAmount inChainValue = hasNoDependencies ? txn.GetValueOut() : 0;"
+      },
+      {
+        "sha": "3dea20445d82a1d1ac6b7322362b957c2561116d",
+        "filename": "src/test/test_bitcoin.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/test/test_bitcoin.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/test/test_bitcoin.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/test_bitcoin.h?ref=1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+        "patch": "@@ -79,8 +79,8 @@ struct TestMemPoolEntryHelper\n         nFee(0), nTime(0), dPriority(0.0), nHeight(1),\n         hadNoDependencies(false), spendsCoinbase(false), sigOpCost(4) { }\n     \n-    CTxMemPoolEntry FromTx(CMutableTransaction &tx, CTxMemPool *pool = NULL);\n-    CTxMemPoolEntry FromTx(CTransaction &tx, CTxMemPool *pool = NULL);\n+    CTxMemPoolEntry FromTx(const CMutableTransaction &tx, CTxMemPool *pool = NULL);\n+    CTxMemPoolEntry FromTx(const CTransaction &tx, CTxMemPool *pool = NULL);\n \n     // Change the default value\n     TestMemPoolEntryHelper &Fee(CAmount _fee) { nFee = _fee; return *this; }"
+      },
+      {
+        "sha": "fff20a609deace10fc24b4b03518bbb142a3a266",
+        "filename": "src/txmempool.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 7,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/txmempool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/txmempool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.cpp?ref=1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+        "patch": "@@ -596,29 +596,29 @@ void CTxMemPool::removeConflicts(const CTransaction &tx, std::vector<std::shared\n /**\n  * Called when a block is connected. Removes from mempool and updates the miner fee estimator.\n  */\n-void CTxMemPool::removeForBlock(const std::vector<CTransaction>& vtx, unsigned int nBlockHeight,\n+void CTxMemPool::removeForBlock(const std::vector<shared_ptr<const CTransaction>>& vtx, unsigned int nBlockHeight,\n                                 std::vector<std::shared_ptr<const CTransaction>>* conflicts, bool fCurrentEstimate)\n {\n     LOCK(cs);\n     std::vector<CTxMemPoolEntry> entries;\n-    BOOST_FOREACH(const CTransaction& tx, vtx)\n+    for (const auto& tx : vtx)\n     {\n-        uint256 hash = tx.GetHash();\n+        uint256 hash = tx->GetHash();\n \n         indexed_transaction_set::iterator i = mapTx.find(hash);\n         if (i != mapTx.end())\n             entries.push_back(*i);\n     }\n-    BOOST_FOREACH(const CTransaction& tx, vtx)\n+    for (const auto& tx : vtx)\n     {\n-        txiter it = mapTx.find(tx.GetHash());\n+        txiter it = mapTx.find(tx->GetHash());\n         if (it != mapTx.end()) {\n             setEntries stage;\n             stage.insert(it);\n             RemoveStaged(stage, true);\n         }\n-        removeConflicts(tx, conflicts);\n-        ClearPrioritisation(tx.GetHash());\n+        removeConflicts(*tx, conflicts);\n+        ClearPrioritisation(tx->GetHash());\n     }\n     // After the txs in the new block have been removed from the mempool, update policy estimates\n     minerPolicyEstimator->processBlock(nBlockHeight, entries, fCurrentEstimate);"
+      },
+      {
+        "sha": "6952cc9006f0da4eceb850b0e063f4d14b35d313",
+        "filename": "src/txmempool.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/txmempool.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/txmempool.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.h?ref=1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+        "patch": "@@ -530,7 +530,7 @@ class CTxMemPool\n     void removeRecursive(const CTransaction &tx, std::vector<std::shared_ptr<const CTransaction>>* removed = NULL);\n     void removeForReorg(const CCoinsViewCache *pcoins, unsigned int nMemPoolHeight, int flags);\n     void removeConflicts(const CTransaction &tx, std::vector<std::shared_ptr<const CTransaction>>* removed = NULL);\n-    void removeForBlock(const std::vector<CTransaction>& vtx, unsigned int nBlockHeight,\n+    void removeForBlock(const std::vector<std::shared_ptr<const CTransaction>>& vtx, unsigned int nBlockHeight,\n                         std::vector<std::shared_ptr<const CTransaction>>* conflicts = NULL, bool fCurrentEstimate = true);\n     void clear();\n     void _clear(); //lock free"
+      },
+      {
+        "sha": "2e512fd57f1251baab358de90e26ae76a9832b19",
+        "filename": "src/wallet/wallet.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/wallet/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1662b437b33b7ec5a1723f6ae6187d3bdd06f593/src/wallet/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.cpp?ref=1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+        "patch": "@@ -1492,7 +1492,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)\n             int posInBlock;\n             for (posInBlock = 0; posInBlock < (int)block.vtx.size(); posInBlock++)\n             {\n-                if (AddToWalletIfInvolvingMe(block.vtx[posInBlock], pindex, posInBlock, fUpdate))\n+                if (AddToWalletIfInvolvingMe(*block.vtx[posInBlock], pindex, posInBlock, fUpdate))\n                     ret++;\n             }\n             pindex = chainActive.Next(pindex);"
+      }
+    ]
+  },
+  {
+    "sha": "b4e4ba475a5679e09f279aaf2a83dcf93c632bdb",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiNGU0YmE0NzVhNTY3OWUwOWYyNzlhYWYyYTgzZGNmOTNjNjMyYmRi",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-11-11T01:34:17Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-11-20T01:53:23Z"
+      },
+      "message": "Introduce convenience type CTransactionRef",
+      "tree": {
+        "sha": "31f4d8edd5134e92bf133ee3dfd52651c14ed21e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/31f4d8edd5134e92bf133ee3dfd52651c14ed21e"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1662b437b33b7ec5a1723f6ae6187d3bdd06f593",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/1662b437b33b7ec5a1723f6ae6187d3bdd06f593"
+      }
+    ],
+    "stats": {
+      "total": 120,
+      "additions": 63,
+      "deletions": 57
+    },
+    "files": [
+      {
+        "sha": "f14ae1c412fe7a96f261cdb1acedd70d393875d7",
+        "filename": "src/blockencodings.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/blockencodings.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/blockencodings.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/blockencodings.cpp?ref=b4e4ba475a5679e09f279aaf2a83dcf93c632bdb",
+        "patch": "@@ -142,7 +142,7 @@ bool PartiallyDownloadedBlock::IsTxAvailable(size_t index) const {\n     return txn_available[index] ? true : false;\n }\n \n-ReadStatus PartiallyDownloadedBlock::FillBlock(CBlock& block, const std::vector<std::shared_ptr<const CTransaction>>& vtx_missing) const {\n+ReadStatus PartiallyDownloadedBlock::FillBlock(CBlock& block, const std::vector<CTransactionRef>& vtx_missing) const {\n     assert(!header.IsNull());\n     block = header;\n     block.vtx.resize(txn_available.size());"
+      },
+      {
+        "sha": "27baf1f8f8263e15b71391e4dd8d1049562cbab4",
+        "filename": "src/blockencodings.h",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 6,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/blockencodings.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/blockencodings.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/blockencodings.h?ref=b4e4ba475a5679e09f279aaf2a83dcf93c632bdb",
+        "patch": "@@ -14,9 +14,9 @@ class CTxMemPool;\n // Dumb helper to handle CTransaction compression at serialize-time\n struct TransactionCompressor {\n private:\n-    std::shared_ptr<const CTransaction>& tx;\n+    CTransactionRef& tx;\n public:\n-    TransactionCompressor(std::shared_ptr<const CTransaction>& txIn) : tx(txIn) {}\n+    TransactionCompressor(CTransactionRef& txIn) : tx(txIn) {}\n \n     ADD_SERIALIZE_METHODS;\n \n@@ -72,7 +72,7 @@ class BlockTransactions {\n public:\n     // A BlockTransactions message\n     uint256 blockhash;\n-    std::vector<std::shared_ptr<const CTransaction>> txn;\n+    std::vector<CTransactionRef> txn;\n \n     BlockTransactions() {}\n     BlockTransactions(const BlockTransactionsRequest& req) :\n@@ -104,7 +104,7 @@ struct PrefilledTransaction {\n     // Used as an offset since last prefilled tx in CBlockHeaderAndShortTxIDs,\n     // as a proper transaction-in-block-index in PartiallyDownloadedBlock\n     uint16_t index;\n-    std::shared_ptr<const CTransaction> tx;\n+    CTransactionRef tx;\n \n     ADD_SERIALIZE_METHODS;\n \n@@ -193,7 +193,7 @@ class CBlockHeaderAndShortTxIDs {\n \n class PartiallyDownloadedBlock {\n protected:\n-    std::vector<std::shared_ptr<const CTransaction> > txn_available;\n+    std::vector<CTransactionRef> txn_available;\n     size_t prefilled_count = 0, mempool_count = 0;\n     CTxMemPool* pool;\n public:\n@@ -202,7 +202,7 @@ class PartiallyDownloadedBlock {\n \n     ReadStatus InitData(const CBlockHeaderAndShortTxIDs& cmpctblock);\n     bool IsTxAvailable(size_t index) const;\n-    ReadStatus FillBlock(CBlock& block, const std::vector<std::shared_ptr<const CTransaction>>& vtx_missing) const;\n+    ReadStatus FillBlock(CBlock& block, const std::vector<CTransactionRef>& vtx_missing) const;\n };\n \n #endif"
+      },
+      {
+        "sha": "3b3c0a5d3e2b0439883090f0ebee0048eb6931e8",
+        "filename": "src/chainparams.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/chainparams.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/chainparams.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/chainparams.cpp?ref=b4e4ba475a5679e09f279aaf2a83dcf93c632bdb",
+        "patch": "@@ -31,7 +31,7 @@ static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesi\n     genesis.nBits    = nBits;\n     genesis.nNonce   = nNonce;\n     genesis.nVersion = nVersion;\n-    genesis.vtx.push_back(std::make_shared<const CTransaction>(std::move(txNew)));\n+    genesis.vtx.push_back(MakeTransactionRef(std::move(txNew)));\n     genesis.hashPrevBlock.SetNull();\n     genesis.hashMerkleRoot = BlockMerkleRoot(genesis);\n     return genesis;"
+      },
+      {
+        "sha": "aeeb31ec400979deeb61d7f716711aaee660d358",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 7,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=b4e4ba475a5679e09f279aaf2a83dcf93c632bdb",
+        "patch": "@@ -233,7 +233,7 @@ namespace {\n     int nPeersWithValidatedDownloads = 0;\n \n     /** Relay map, protected by cs_main. */\n-    typedef std::map<uint256, std::shared_ptr<const CTransaction>> MapRelay;\n+    typedef std::map<uint256, CTransactionRef> MapRelay;\n     MapRelay mapRelay;\n     /** Expiration-time ordered list of (expire time, relay map entry) pairs, protected by cs_main). */\n     std::deque<std::pair<int64_t, MapRelay::iterator>> vRelayExpiration;\n@@ -1639,7 +1639,7 @@ bool GetTransaction(const uint256 &hash, CTransaction &txOut, const Consensus::P\n \n     LOCK(cs_main);\n \n-    std::shared_ptr<const CTransaction> ptx = mempool.get(hash);\n+    CTransactionRef ptx = mempool.get(hash);\n     if (ptx)\n     {\n         txOut = *ptx;\n@@ -2845,7 +2845,7 @@ static int64_t nTimePostConnect = 0;\n  * Connect a new block to chainActive. pblock is either NULL or a pointer to a CBlock\n  * corresponding to pindexNew, to bypass loading it again from disk.\n  */\n-bool static ConnectTip(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexNew, const CBlock* pblock, std::vector<std::shared_ptr<const CTransaction>> &txConflicted, std::vector<std::tuple<std::shared_ptr<const CTransaction>,CBlockIndex*,int>> &txChanged)\n+bool static ConnectTip(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexNew, const CBlock* pblock, std::vector<CTransactionRef> &txConflicted, std::vector<std::tuple<CTransactionRef,CBlockIndex*,int>> &txChanged)\n {\n     assert(pindexNew->pprev == chainActive.Tip());\n     // Read block from disk.\n@@ -2968,7 +2968,7 @@ static void PruneBlockIndexCandidates() {\n  * Try to make some progress towards making pindexMostWork the active block.\n  * pblock is either NULL or a pointer to a CBlock corresponding to pindexMostWork.\n  */\n-static bool ActivateBestChainStep(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexMostWork, const CBlock* pblock, bool& fInvalidFound, std::vector<std::shared_ptr<const CTransaction>>& txConflicted, std::vector<std::tuple<std::shared_ptr<const CTransaction>,CBlockIndex*,int>>& txChanged)\n+static bool ActivateBestChainStep(CValidationState& state, const CChainParams& chainparams, CBlockIndex* pindexMostWork, const CBlock* pblock, bool& fInvalidFound, std::vector<CTransactionRef>& txConflicted, std::vector<std::tuple<CTransactionRef,CBlockIndex*,int>>& txChanged)\n {\n     AssertLockHeld(cs_main);\n     const CBlockIndex *pindexOldTip = chainActive.Tip();\n@@ -3069,7 +3069,7 @@ static void NotifyHeaderTip() {\n bool ActivateBestChain(CValidationState &state, const CChainParams& chainparams, const CBlock *pblock) {\n     CBlockIndex *pindexMostWork = NULL;\n     CBlockIndex *pindexNewTip = NULL;\n-    std::vector<std::tuple<std::shared_ptr<const CTransaction>,CBlockIndex*,int>> txChanged;\n+    std::vector<std::tuple<CTransactionRef,CBlockIndex*,int>> txChanged;\n     if (pblock)\n         txChanged.reserve(pblock->vtx.size());\n     do {\n@@ -3079,7 +3079,7 @@ bool ActivateBestChain(CValidationState &state, const CChainParams& chainparams,\n             break;\n \n         const CBlockIndex *pindexFork;\n-        std::vector<std::shared_ptr<const CTransaction>> txConflicted;\n+        std::vector<CTransactionRef> txConflicted;\n         bool fInitialDownload;\n         {\n             LOCK(cs_main);\n@@ -3523,7 +3523,7 @@ void UpdateUncommittedBlockStructures(CBlock& block, const CBlockIndex* pindexPr\n         tx.wit.vtxinwit.resize(1);\n         tx.wit.vtxinwit[0].scriptWitness.stack.resize(1);\n         tx.wit.vtxinwit[0].scriptWitness.stack[0] = nonce;\n-        block.vtx[0] = std::make_shared<const CTransaction>(std::move(tx));\n+        block.vtx[0] = MakeTransactionRef(std::move(tx));\n     }\n }\n "
+      },
+      {
+        "sha": "c40b12cd8ec119b47a78d4c01fdba5f6470945e1",
+        "filename": "src/miner.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/miner.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/miner.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/miner.cpp?ref=b4e4ba475a5679e09f279aaf2a83dcf93c632bdb",
+        "patch": "@@ -178,7 +178,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc\n     coinbaseTx.vout[0].scriptPubKey = scriptPubKeyIn;\n     coinbaseTx.vout[0].nValue = nFees + GetBlockSubsidy(nHeight, chainparams.GetConsensus());\n     coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;\n-    pblock->vtx[0] = std::make_shared<const CTransaction>(std::move(coinbaseTx));\n+    pblock->vtx[0] = MakeTransactionRef(std::move(coinbaseTx));\n     pblocktemplate->vchCoinbaseCommitment = GenerateCoinbaseCommitment(*pblock, pindexPrev, chainparams.GetConsensus());\n     pblocktemplate->vTxFees[0] = -nFees;\n \n@@ -605,6 +605,6 @@ void IncrementExtraNonce(CBlock* pblock, const CBlockIndex* pindexPrev, unsigned\n     txCoinbase.vin[0].scriptSig = (CScript() << nHeight << CScriptNum(nExtraNonce)) + COINBASE_FLAGS;\n     assert(txCoinbase.vin[0].scriptSig.size() <= 100);\n \n-    pblock->vtx[0] = std::make_shared<const CTransaction>(std::move(txCoinbase));\n+    pblock->vtx[0] = MakeTransactionRef(std::move(txCoinbase));\n     pblock->hashMerkleRoot = BlockMerkleRoot(*pblock);\n }"
+      },
+      {
+        "sha": "b037fc839c9d967845a98c5989e62a70d71641ce",
+        "filename": "src/primitives/block.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/primitives/block.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/primitives/block.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/primitives/block.h?ref=b4e4ba475a5679e09f279aaf2a83dcf93c632bdb",
+        "patch": "@@ -73,7 +73,7 @@ class CBlock : public CBlockHeader\n {\n public:\n     // network and disk\n-    std::vector<std::shared_ptr<const CTransaction>> vtx;\n+    std::vector<CTransactionRef> vtx;\n \n     // memory only\n     mutable bool fChecked;"
+      },
+      {
+        "sha": "0fa85a15195a03c6f53b4dbbe34b786530f5965c",
+        "filename": "src/primitives/transaction.h",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 0,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/primitives/transaction.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/primitives/transaction.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/primitives/transaction.h?ref=b4e4ba475a5679e09f279aaf2a83dcf93c632bdb",
+        "patch": "@@ -475,6 +475,12 @@ struct CMutableTransaction\n     uint256 GetHash() const;\n };\n \n+typedef std::shared_ptr<const CTransaction> CTransactionRef;\n+static inline CTransactionRef MakeTransactionRef() { return std::make_shared<const CTransaction>(); }\n+template <typename Tx> static inline CTransactionRef MakeTransactionRef(Tx&& txIn) { return std::make_shared<const CTransaction>(std::forward<Tx>(txIn)); }\n+static inline CTransactionRef MakeTransactionRef(const CTransactionRef& txIn) { return txIn; }\n+static inline CTransactionRef MakeTransactionRef(CTransactionRef&& txIn) { return std::move(txIn); }\n+\n /** Compute the weight of a transaction, as defined by BIP 141 */\n int64_t GetTransactionWeight(const CTransaction &tx);\n "
+      },
+      {
+        "sha": "b013cda6d7a633b8c4dfd92a9db1bfc52051d74c",
+        "filename": "src/test/blockencodings_tests.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 9,
+        "changes": 18,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/test/blockencodings_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/test/blockencodings_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/blockencodings_tests.cpp?ref=b4e4ba475a5679e09f279aaf2a83dcf93c632bdb",
+        "patch": "@@ -26,21 +26,21 @@ static CBlock BuildBlockTestCase() {\n     tx.vout[0].nValue = 42;\n \n     block.vtx.resize(3);\n-    block.vtx[0] = std::make_shared<const CTransaction>(tx);\n+    block.vtx[0] = MakeTransactionRef(tx);\n     block.nVersion = 42;\n     block.hashPrevBlock = GetRandHash();\n     block.nBits = 0x207fffff;\n \n     tx.vin[0].prevout.hash = GetRandHash();\n     tx.vin[0].prevout.n = 0;\n-    block.vtx[1] = std::make_shared<const CTransaction>(tx);\n+    block.vtx[1] = MakeTransactionRef(tx);\n \n     tx.vin.resize(10);\n     for (size_t i = 0; i < tx.vin.size(); i++) {\n         tx.vin[i].prevout.hash = GetRandHash();\n         tx.vin[i].prevout.n = 0;\n     }\n-    block.vtx[2] = std::make_shared<const CTransaction>(tx);\n+    block.vtx[2] = MakeTransactionRef(tx);\n \n     bool mutated;\n     block.hashMerkleRoot = BlockMerkleRoot(block, &mutated);\n@@ -80,12 +80,12 @@ BOOST_AUTO_TEST_CASE(SimpleRoundTripTest)\n \n         BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[2]->GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 1);\n \n-        std::vector<std::shared_ptr<const CTransaction>> removed;\n+        std::vector<CTransactionRef> removed;\n         pool.removeRecursive(*block.vtx[2], &removed);\n         BOOST_CHECK_EQUAL(removed.size(), 1);\n \n         CBlock block2;\n-        std::vector<std::shared_ptr<const CTransaction>> vtx_missing;\n+        std::vector<CTransactionRef> vtx_missing;\n         BOOST_CHECK(partialBlock.FillBlock(block2, vtx_missing) == READ_STATUS_INVALID); // No transactions\n \n         vtx_missing.push_back(block.vtx[2]); // Wrong transaction\n@@ -181,7 +181,7 @@ BOOST_AUTO_TEST_CASE(NonCoinbasePreforwardRTTest)\n         BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[2]->GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 1);\n \n         CBlock block2;\n-        std::vector<std::shared_ptr<const CTransaction>> vtx_missing;\n+        std::vector<CTransactionRef> vtx_missing;\n         BOOST_CHECK(partialBlock.FillBlock(block2, vtx_missing) == READ_STATUS_INVALID); // No transactions\n \n         vtx_missing.push_back(block.vtx[1]); // Wrong transaction\n@@ -240,7 +240,7 @@ BOOST_AUTO_TEST_CASE(SufficientPreforwardRTTest)\n         BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[1]->GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 1);\n \n         CBlock block2;\n-        std::vector<std::shared_ptr<const CTransaction>> vtx_missing;\n+        std::vector<CTransactionRef> vtx_missing;\n         BOOST_CHECK(partialBlock.FillBlock(block2, vtx_missing) == READ_STATUS_OK);\n         BOOST_CHECK_EQUAL(block.GetHash().ToString(), block2.GetHash().ToString());\n         bool mutated;\n@@ -266,7 +266,7 @@ BOOST_AUTO_TEST_CASE(EmptyBlockRoundTripTest)\n \n     CBlock block;\n     block.vtx.resize(1);\n-    block.vtx[0] = std::make_shared<const CTransaction>(std::move(coinbase));\n+    block.vtx[0] = MakeTransactionRef(std::move(coinbase));\n     block.nVersion = 42;\n     block.hashPrevBlock = GetRandHash();\n     block.nBits = 0x207fffff;\n@@ -291,7 +291,7 @@ BOOST_AUTO_TEST_CASE(EmptyBlockRoundTripTest)\n         BOOST_CHECK(partialBlock.IsTxAvailable(0));\n \n         CBlock block2;\n-        std::vector<std::shared_ptr<const CTransaction>> vtx_missing;\n+        std::vector<CTransactionRef> vtx_missing;\n         BOOST_CHECK(partialBlock.FillBlock(block2, vtx_missing) == READ_STATUS_OK);\n         BOOST_CHECK_EQUAL(block.GetHash().ToString(), block2.GetHash().ToString());\n         BOOST_CHECK_EQUAL(block.hashMerkleRoot.ToString(), BlockMerkleRoot(block2, &mutated).ToString());"
+      },
+      {
+        "sha": "1faf8b6aeb66b6da20b11736da1e3923c4bab123",
+        "filename": "src/test/mempool_tests.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 4,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/test/mempool_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/test/mempool_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/mempool_tests.cpp?ref=b4e4ba475a5679e09f279aaf2a83dcf93c632bdb",
+        "patch": "@@ -55,7 +55,7 @@ BOOST_AUTO_TEST_CASE(MempoolRemoveTest)\n \n \n     CTxMemPool testPool(CFeeRate(0));\n-    std::vector<std::shared_ptr<const CTransaction>> removed;\n+    std::vector<CTransactionRef> removed;\n \n     // Nothing in pool, remove should do nothing:\n     testPool.removeRecursive(txParent, &removed);\n@@ -410,8 +410,8 @@ BOOST_AUTO_TEST_CASE(MempoolAncestorIndexingTest)\n     CheckSort<ancestor_score>(pool, sortedOrder);\n \n     /* after tx6 is mined, tx7 should move up in the sort */\n-    std::vector<std::shared_ptr<const CTransaction>> vtx;\n-    vtx.push_back(std::make_shared<const CTransaction>(tx6));\n+    std::vector<CTransactionRef> vtx;\n+    vtx.push_back(MakeTransactionRef(tx6));\n     pool.removeForBlock(vtx, 1, NULL, false);\n \n     sortedOrder.erase(sortedOrder.begin()+1);\n@@ -546,7 +546,7 @@ BOOST_AUTO_TEST_CASE(MempoolSizeLimitTest)\n     pool.addUnchecked(tx5.GetHash(), entry.Fee(1000LL).FromTx(tx5, &pool));\n     pool.addUnchecked(tx7.GetHash(), entry.Fee(9000LL).FromTx(tx7, &pool));\n \n-    std::vector<std::shared_ptr<const CTransaction>> vtx;\n+    std::vector<CTransactionRef> vtx;\n     SetMockTime(42);\n     SetMockTime(42 + CTxMemPool::ROLLING_FEE_HALFLIFE);\n     BOOST_CHECK_EQUAL(pool.GetMinFee(1).GetFeePerK(), maxFeeRateRemoved.GetFeePerK() + 1000);"
+      },
+      {
+        "sha": "55e6852a159bec80ae2f6830f356df063ca0abc8",
+        "filename": "src/test/merkle_tests.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/test/merkle_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/test/merkle_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/merkle_tests.cpp?ref=b4e4ba475a5679e09f279aaf2a83dcf93c632bdb",
+        "patch": "@@ -15,7 +15,7 @@ static uint256 BlockBuildMerkleTree(const CBlock& block, bool* fMutated, std::ve\n {\n     vMerkleTree.clear();\n     vMerkleTree.reserve(block.vtx.size() * 2 + 16); // Safe upper bound for the number of total nodes.\n-    for (std::vector<std::shared_ptr<const CTransaction>>::const_iterator it(block.vtx.begin()); it != block.vtx.end(); ++it)\n+    for (std::vector<CTransactionRef>::const_iterator it(block.vtx.begin()); it != block.vtx.end(); ++it)\n         vMerkleTree.push_back((*it)->GetHash());\n     int j = 0;\n     bool mutated = false;\n@@ -86,7 +86,7 @@ BOOST_AUTO_TEST_CASE(merkle_test)\n             for (int j = 0; j < ntx; j++) {\n                 CMutableTransaction mtx;\n                 mtx.nLockTime = j;\n-                block.vtx[j] = std::make_shared<const CTransaction>(mtx);\n+                block.vtx[j] = MakeTransactionRef(std::move(mtx));\n             }\n             // Compute the root of the block before mutating it.\n             bool unmutatedMutated = false;"
+      },
+      {
+        "sha": "aea8920936b3736da5816d31fd7ba5ae19b5657a",
+        "filename": "src/test/miner_tests.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 3,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/test/miner_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/test/miner_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/miner_tests.cpp?ref=b4e4ba475a5679e09f279aaf2a83dcf93c632bdb",
+        "patch": "@@ -77,7 +77,7 @@ bool TestSequenceLocks(const CTransaction &tx, int flags)\n // Implemented as an additional function, rather than a separate test case,\n // to allow reusing the blockchain created in CreateNewBlock_validity.\n // Note that this test assumes blockprioritysize is 0.\n-void TestPackageSelection(const CChainParams& chainparams, CScript scriptPubKey, std::vector<std::shared_ptr<const CTransaction>>& txFirst)\n+void TestPackageSelection(const CChainParams& chainparams, CScript scriptPubKey, std::vector<CTransactionRef>& txFirst)\n {\n     // Test the ancestor feerate transaction selection.\n     TestMemPoolEntryHelper entry;\n@@ -203,7 +203,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n     // We can't make transactions until we have inputs\n     // Therefore, load 100 blocks :)\n     int baseheight = 0;\n-    std::vector<std::shared_ptr<const CTransaction>> txFirst;\n+    std::vector<CTransactionRef> txFirst;\n     for (unsigned int i = 0; i < sizeof(blockinfo)/sizeof(*blockinfo); ++i)\n     {\n         CBlock *pblock = &pblocktemplate->block; // pointer for convenience\n@@ -215,7 +215,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n         txCoinbase.vin[0].scriptSig.push_back(blockinfo[i].extranonce);\n         txCoinbase.vin[0].scriptSig.push_back(chainActive.Height());\n         txCoinbase.vout[0].scriptPubKey = CScript();\n-        pblock->vtx[0] = std::make_shared<const CTransaction>(std::move(txCoinbase));\n+        pblock->vtx[0] = MakeTransactionRef(std::move(txCoinbase));\n         if (txFirst.size() == 0)\n             baseheight = chainActive.Height();\n         if (txFirst.size() < 4)"
+      },
+      {
+        "sha": "e6b689bc6ca9e5ba9dd79301ee30edb6539cc304",
+        "filename": "src/test/pmt_tests.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/test/pmt_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/test/pmt_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/pmt_tests.cpp?ref=b4e4ba475a5679e09f279aaf2a83dcf93c632bdb",
+        "patch": "@@ -45,7 +45,7 @@ BOOST_AUTO_TEST_CASE(pmt_test1)\n         for (unsigned int j=0; j<nTx; j++) {\n             CMutableTransaction tx;\n             tx.nLockTime = j; // actual transaction data doesn't matter; just make the nLockTime's unique\n-            block.vtx.push_back(std::make_shared<const CTransaction>(tx));\n+            block.vtx.push_back(MakeTransactionRef(std::move(tx)));\n         }\n \n         // calculate actual merkle root and height"
+      },
+      {
+        "sha": "7dc8f226c93a9a8b41e90c770b7c9b9ec4cddf77",
+        "filename": "src/test/policyestimator_tests.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 4,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/test/policyestimator_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/test/policyestimator_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/policyestimator_tests.cpp?ref=b4e4ba475a5679e09f279aaf2a83dcf93c632bdb",
+        "patch": "@@ -45,7 +45,7 @@ BOOST_AUTO_TEST_CASE(BlockPolicyEstimates)\n     CFeeRate baseRate(basefee, GetVirtualTransactionSize(tx));\n \n     // Create a fake block\n-    std::vector<std::shared_ptr<const CTransaction>> block;\n+    std::vector<CTransactionRef> block;\n     int blocknum = 0;\n \n     // Loop through 200 blocks\n@@ -66,7 +66,7 @@ BOOST_AUTO_TEST_CASE(BlockPolicyEstimates)\n             // 9/10 blocks add 2nd highest and so on until ...\n             // 1/10 blocks add lowest fee transactions\n             while (txHashes[9-h].size()) {\n-                std::shared_ptr<const CTransaction> ptx = mpool.get(txHashes[9-h].back());\n+                CTransactionRef ptx = mpool.get(txHashes[9-h].back());\n                 if (ptx)\n                     block.push_back(ptx);\n                 txHashes[9-h].pop_back();\n@@ -143,7 +143,7 @@ BOOST_AUTO_TEST_CASE(BlockPolicyEstimates)\n     // Estimates should still not be below original\n     for (int j = 0; j < 10; j++) {\n         while(txHashes[j].size()) {\n-            std::shared_ptr<const CTransaction> ptx = mpool.get(txHashes[j].back());\n+            CTransactionRef ptx = mpool.get(txHashes[j].back());\n             if (ptx)\n                 block.push_back(ptx);\n             txHashes[j].pop_back();\n@@ -163,7 +163,7 @@ BOOST_AUTO_TEST_CASE(BlockPolicyEstimates)\n                 tx.vin[0].prevout.n = 10000*blocknum+100*j+k;\n                 uint256 hash = tx.GetHash();\n                 mpool.addUnchecked(hash, entry.Fee(feeV[j]).Time(GetTime()).Priority(0).Height(blocknum).FromTx(tx, &mpool));\n-                std::shared_ptr<const CTransaction> ptx = mpool.get(hash);\n+                CTransactionRef ptx = mpool.get(hash);\n                 if (ptx)\n                     block.push_back(ptx);\n "
+      },
+      {
+        "sha": "6cbe314a7651565b82fb61f480ec1cac39454b0c",
+        "filename": "src/test/test_bitcoin.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/test/test_bitcoin.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/test/test_bitcoin.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/test_bitcoin.cpp?ref=b4e4ba475a5679e09f279aaf2a83dcf93c632bdb",
+        "patch": "@@ -119,7 +119,7 @@ TestChain100Setup::CreateAndProcessBlock(const std::vector<CMutableTransaction>&\n     // Replace mempool-selected txns with just coinbase plus passed-in txns:\n     block.vtx.resize(1);\n     BOOST_FOREACH(const CMutableTransaction& tx, txns)\n-        block.vtx.push_back(std::make_shared<const CTransaction>(tx));\n+        block.vtx.push_back(MakeTransactionRef(tx));\n     // IncrementExtraNonce creates a valid coinbase and merkleRoot\n     unsigned int extraNonce = 0;\n     IncrementExtraNonce(&block, chainActive.Tip(), extraNonce);"
+      },
+      {
+        "sha": "417a88cbef01378e2e9ffde719c289c0cbfd9d0a",
+        "filename": "src/txmempool.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 7,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/txmempool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/txmempool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.cpp?ref=b4e4ba475a5679e09f279aaf2a83dcf93c632bdb",
+        "patch": "@@ -24,7 +24,7 @@ CTxMemPoolEntry::CTxMemPoolEntry(const CTransaction& _tx, const CAmount& _nFee,\n                                  int64_t _nTime, double _entryPriority, unsigned int _entryHeight,\n                                  bool poolHasNoInputsOf, CAmount _inChainInputValue,\n                                  bool _spendsCoinbase, int64_t _sigOpsCost, LockPoints lp):\n-    tx(std::make_shared<CTransaction>(_tx)), nFee(_nFee), nTime(_nTime), entryPriority(_entryPriority), entryHeight(_entryHeight),\n+    tx(MakeTransactionRef(_tx)), nFee(_nFee), nTime(_nTime), entryPriority(_entryPriority), entryHeight(_entryHeight),\n     hadNoDependencies(poolHasNoInputsOf), inChainInputValue(_inChainInputValue),\n     spendsCoinbase(_spendsCoinbase), sigOpCost(_sigOpsCost), lockPoints(lp)\n {\n@@ -503,7 +503,7 @@ void CTxMemPool::CalculateDescendants(txiter entryit, setEntries &setDescendants\n     }\n }\n \n-void CTxMemPool::removeRecursive(const CTransaction &origTx, std::vector<std::shared_ptr<const CTransaction>>* removed)\n+void CTxMemPool::removeRecursive(const CTransaction &origTx, std::vector<CTransactionRef>* removed)\n {\n     // Remove transaction from memory pool\n     {\n@@ -576,7 +576,7 @@ void CTxMemPool::removeForReorg(const CCoinsViewCache *pcoins, unsigned int nMem\n     RemoveStaged(setAllRemoves, false);\n }\n \n-void CTxMemPool::removeConflicts(const CTransaction &tx, std::vector<std::shared_ptr<const CTransaction>>* removed)\n+void CTxMemPool::removeConflicts(const CTransaction &tx, std::vector<CTransactionRef>* removed)\n {\n     // Remove transactions which depend on inputs of tx, recursively\n     LOCK(cs);\n@@ -596,8 +596,8 @@ void CTxMemPool::removeConflicts(const CTransaction &tx, std::vector<std::shared\n /**\n  * Called when a block is connected. Removes from mempool and updates the miner fee estimator.\n  */\n-void CTxMemPool::removeForBlock(const std::vector<shared_ptr<const CTransaction>>& vtx, unsigned int nBlockHeight,\n-                                std::vector<std::shared_ptr<const CTransaction>>* conflicts, bool fCurrentEstimate)\n+void CTxMemPool::removeForBlock(const std::vector<CTransactionRef>& vtx, unsigned int nBlockHeight,\n+                                std::vector<CTransactionRef>* conflicts, bool fCurrentEstimate)\n {\n     LOCK(cs);\n     std::vector<CTxMemPoolEntry> entries;\n@@ -851,7 +851,7 @@ std::vector<TxMempoolInfo> CTxMemPool::infoAll() const\n     return ret;\n }\n \n-std::shared_ptr<const CTransaction> CTxMemPool::get(const uint256& hash) const\n+CTransactionRef CTxMemPool::get(const uint256& hash) const\n {\n     LOCK(cs);\n     indexed_transaction_set::const_iterator i = mapTx.find(hash);\n@@ -978,7 +978,7 @@ bool CCoinsViewMemPool::GetCoins(const uint256 &txid, CCoins &coins) const {\n     // If an entry in the mempool exists, always return that one, as it's guaranteed to never\n     // conflict with the underlying cache, and it cannot have pruned entries (as it contains full)\n     // transactions. First checking the underlying cache risks returning a pruned entry instead.\n-    shared_ptr<const CTransaction> ptx = mempool.get(txid);\n+    CTransactionRef ptx = mempool.get(txid);\n     if (ptx) {\n         coins = CCoins(*ptx, MEMPOOL_HEIGHT);\n         return true;"
+      },
+      {
+        "sha": "29b59363a2eb469b658f3814d335ae113a591c80",
+        "filename": "src/txmempool.h",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 8,
+        "changes": 16,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/txmempool.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b4e4ba475a5679e09f279aaf2a83dcf93c632bdb/src/txmempool.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.h?ref=b4e4ba475a5679e09f279aaf2a83dcf93c632bdb",
+        "patch": "@@ -80,7 +80,7 @@ class CTxMemPool;\n class CTxMemPoolEntry\n {\n private:\n-    std::shared_ptr<const CTransaction> tx;\n+    CTransactionRef tx;\n     CAmount nFee;              //!< Cached to avoid expensive parent-transaction lookups\n     size_t nTxWeight;          //!< ... and avoid recomputing tx weight (also used for GetTxSize())\n     size_t nModSize;           //!< ... and modified size for priority\n@@ -118,7 +118,7 @@ class CTxMemPoolEntry\n     CTxMemPoolEntry(const CTxMemPoolEntry& other);\n \n     const CTransaction& GetTx() const { return *this->tx; }\n-    std::shared_ptr<const CTransaction> GetSharedTx() const { return this->tx; }\n+    CTransactionRef GetSharedTx() const { return this->tx; }\n     /**\n      * Fast calculation of lower bound of current priority as update\n      * from entry priority. Only inputs that were originally in-chain will age.\n@@ -322,7 +322,7 @@ class CBlockPolicyEstimator;\n struct TxMempoolInfo\n {\n     /** The transaction itself */\n-    std::shared_ptr<const CTransaction> tx;\n+    CTransactionRef tx;\n \n     /** Time the transaction entered the mempool. */\n     int64_t nTime;\n@@ -527,11 +527,11 @@ class CTxMemPool\n     bool addUnchecked(const uint256& hash, const CTxMemPoolEntry &entry, bool fCurrentEstimate = true);\n     bool addUnchecked(const uint256& hash, const CTxMemPoolEntry &entry, setEntries &setAncestors, bool fCurrentEstimate = true);\n \n-    void removeRecursive(const CTransaction &tx, std::vector<std::shared_ptr<const CTransaction>>* removed = NULL);\n+    void removeRecursive(const CTransaction &tx, std::vector<CTransactionRef>* removed = NULL);\n     void removeForReorg(const CCoinsViewCache *pcoins, unsigned int nMemPoolHeight, int flags);\n-    void removeConflicts(const CTransaction &tx, std::vector<std::shared_ptr<const CTransaction>>* removed = NULL);\n-    void removeForBlock(const std::vector<std::shared_ptr<const CTransaction>>& vtx, unsigned int nBlockHeight,\n-                        std::vector<std::shared_ptr<const CTransaction>>* conflicts = NULL, bool fCurrentEstimate = true);\n+    void removeConflicts(const CTransaction &tx, std::vector<CTransactionRef>* removed = NULL);\n+    void removeForBlock(const std::vector<CTransactionRef>& vtx, unsigned int nBlockHeight,\n+                        std::vector<CTransactionRef>* conflicts = NULL, bool fCurrentEstimate = true);\n     void clear();\n     void _clear(); //lock free\n     bool CompareDepthAndScore(const uint256& hasha, const uint256& hashb);\n@@ -623,7 +623,7 @@ class CTxMemPool\n         return (mapTx.count(hash) != 0);\n     }\n \n-    std::shared_ptr<const CTransaction> get(const uint256& hash) const;\n+    CTransactionRef get(const uint256& hash) const;\n     TxMempoolInfo info(const uint256& hash) const;\n     std::vector<TxMempoolInfo> infoAll() const;\n "
+      }
+    ]
+  }
+]

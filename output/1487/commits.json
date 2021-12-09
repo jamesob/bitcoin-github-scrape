@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "c71216838b599640b1f430bf51e2f98dc163de4d",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjNzEyMTY4MzhiNTk5NjQwYjFmNDMwYmY1MWUyZjk4ZGMxNjNkZTRk",
+    "commit": {
+      "author": {
+        "name": "Ben Reeves",
+        "email": "zootreeves@gmail.com",
+        "date": "2012-06-20T12:52:43Z"
+      },
+      "committer": {
+        "name": "Ben Reeves",
+        "email": "zootreeves@gmail.com",
+        "date": "2012-06-20T12:52:43Z"
+      },
+      "message": "Added -rpcorigin option for CORS RPC requests",
+      "tree": {
+        "sha": "0042f96e6fd6ea395bd45a959abe59d38e6f60e6",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/0042f96e6fd6ea395bd45a959abe59d38e6f60e6"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/c71216838b599640b1f430bf51e2f98dc163de4d",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c71216838b599640b1f430bf51e2f98dc163de4d",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/c71216838b599640b1f430bf51e2f98dc163de4d",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c71216838b599640b1f430bf51e2f98dc163de4d/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "703db97d80ea21a44ed74c8bbbaf1430c5e0dd37",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/703db97d80ea21a44ed74c8bbbaf1430c5e0dd37",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/703db97d80ea21a44ed74c8bbbaf1430c5e0dd37"
+      }
+    ],
+    "stats": {
+      "total": 72,
+      "additions": 41,
+      "deletions": 31
+    },
+    "files": [
+      {
+        "sha": "7eef780e377631021ed9d16b4170c0bbae5fd95c",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 41,
+        "deletions": 31,
+        "changes": 72,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c71216838b599640b1f430bf51e2f98dc163de4d/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c71216838b599640b1f430bf51e2f98dc163de4d/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=c71216838b599640b1f430bf51e2f98dc163de4d",
+        "patch": "@@ -2390,48 +2390,58 @@ string rfc1123Time()\n     return string(buffer);\n }\n \n+\n+static const char * GetAccessControlOrigin() {\n+    return GetArg(\"-rpcorigin\", strprintf(\"%slocalhost:%d\", GetBoolArg(\"-rpcssl\") ? \"https://\" : \"http://\", GetArg(\"-rpcport\", 8332))).c_str();\n+}\n+\n static string HTTPReply(int nStatus, const string& strMsg, bool keepalive)\n {\n     if (nStatus == 401)\n         return strprintf(\"HTTP/1.0 401 Authorization Required\\r\\n\"\n-            \"Date: %s\\r\\n\"\n-            \"Server: bitcoin-json-rpc/%s\\r\\n\"\n-            \"WWW-Authenticate: Basic realm=\\\"jsonrpc\\\"\\r\\n\"\n-            \"Content-Type: text/html\\r\\n\"\n-            \"Content-Length: 296\\r\\n\"\n-            \"\\r\\n\"\n-            \"<!DOCTYPE HTML PUBLIC \\\"-//W3C//DTD HTML 4.01 Transitional//EN\\\"\\r\\n\"\n-            \"\\\"http://www.w3.org/TR/1999/REC-html401-19991224/loose.dtd\\\">\\r\\n\"\n-            \"<HTML>\\r\\n\"\n-            \"<HEAD>\\r\\n\"\n-            \"<TITLE>Error</TITLE>\\r\\n\"\n-            \"<META HTTP-EQUIV='Content-Type' CONTENT='text/html; charset=ISO-8859-1'>\\r\\n\"\n-            \"</HEAD>\\r\\n\"\n-            \"<BODY><H1>401 Unauthorized.</H1></BODY>\\r\\n\"\n-            \"</HTML>\\r\\n\", rfc1123Time().c_str(), FormatFullVersion().c_str());\n+                         \"Date: %s\\r\\n\"\n+                         \"Server: bitcoin-json-rpc/%s\\r\\n\"\n+                         \"Access-Control-Allow-Origin: %s\\r\\n\"\n+                         \"Access-Control-Allow-Headers: Authorization\\r\\n\"\n+                         \"WWW-Authenticate: Basic realm=\\\"jsonrpc\\\"\\r\\n\"\n+                         \"Content-Type: text/html\\r\\n\"\n+                         \"Content-Length: 296\\r\\n\"\n+                         \"\\r\\n\"\n+                         \"<!DOCTYPE HTML PUBLIC \\\"-//W3C//DTD HTML 4.01 Transitional//EN\\\"\\r\\n\"\n+                         \"\\\"http://www.w3.org/TR/1999/REC-html401-19991224/loose.dtd\\\">\\r\\n\"\n+                         \"<HTML>\\r\\n\"\n+                         \"<HEAD>\\r\\n\"\n+                         \"<TITLE>Error</TITLE>\\r\\n\"\n+                         \"<META HTTP-EQUIV='Content-Type' CONTENT='text/html; charset=ISO-8859-1'>\\r\\n\"\n+                         \"</HEAD>\\r\\n\"\n+                         \"<BODY><H1>401 Unauthorized.</H1></BODY>\\r\\n\"\n+                         \"</HTML>\\r\\n\", rfc1123Time().c_str(), FormatFullVersion().c_str(), GetAccessControlOrigin());\n     const char *cStatus;\n-         if (nStatus == 200) cStatus = \"OK\";\n+    if (nStatus == 200) cStatus = \"OK\";\n     else if (nStatus == 400) cStatus = \"Bad Request\";\n     else if (nStatus == 403) cStatus = \"Forbidden\";\n     else if (nStatus == 404) cStatus = \"Not Found\";\n     else if (nStatus == 500) cStatus = \"Internal Server Error\";\n     else cStatus = \"\";\n     return strprintf(\n-            \"HTTP/1.1 %d %s\\r\\n\"\n-            \"Date: %s\\r\\n\"\n-            \"Connection: %s\\r\\n\"\n-            \"Content-Length: %d\\r\\n\"\n-            \"Content-Type: application/json\\r\\n\"\n-            \"Server: bitcoin-json-rpc/%s\\r\\n\"\n-            \"\\r\\n\"\n-            \"%s\",\n-        nStatus,\n-        cStatus,\n-        rfc1123Time().c_str(),\n-        keepalive ? \"keep-alive\" : \"close\",\n-        strMsg.size(),\n-        FormatFullVersion().c_str(),\n-        strMsg.c_str());\n+                     \"HTTP/1.1 %d %s\\r\\n\"\n+                     \"Date: %s\\r\\n\"\n+                     \"Connection: %s\\r\\n\"\n+                     \"Content-Length: %d\\r\\n\"\n+                     \"Content-Type: application/json\\r\\n\"\n+                     \"Server: bitcoin-json-rpc/%s\\r\\n\"\n+                     \"Access-Control-Allow-Origin: %s\\r\\n\"\n+                     \"Access-Control-Allow-Headers: Authorization\\r\\n\"\n+                     \"\\r\\n\"\n+                     \"%s\",\n+                     nStatus,\n+                     cStatus,\n+                     rfc1123Time().c_str(),\n+                     keepalive ? \"keep-alive\" : \"close\",\n+                     strMsg.size(),\n+                     FormatFullVersion().c_str(),\n+                     GetAccessControlOrigin(),\n+                     strMsg.c_str());\n }\n \n int ReadHTTPStatus(std::basic_istream<char>& stream, int &proto)"
+      }
+    ]
+  }
+]

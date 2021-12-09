@@ -1,0 +1,110 @@
+[
+  {
+    "sha": "1d93a2664768fb8332998aecd6cf533dfc8f7db0",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxZDkzYTI2NjQ3NjhmYjgzMzI5OThhZWNkNmNmNTMzZGZjOGY3ZGIw",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-12-12T08:58:33Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2015-08-10T12:11:51Z"
+      },
+      "message": "[Qt] log cert errors for payment requests and harden test-cases\n\n- extend PaymentRequestPlus::getMerchant to return status of payment\n  request errors related to certificates/PKIs etc.\n- do a real check for errors, which was missing until now, in\n  PaymentServer::processPaymentRequest and also extend our tests in\n  paymentservertests.cpp to not only rely on the content of \"merchant\"\n  passed to getMerchant\n- this explicitly treats insecure payment requests not as errors, as they\n  are allowed as per BIP70",
+      "tree": {
+        "sha": "4dcbdf40da67845201b780bfd76d9d1756f87622",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/4dcbdf40da67845201b780bfd76d9d1756f87622"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/1d93a2664768fb8332998aecd6cf533dfc8f7db0",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1d93a2664768fb8332998aecd6cf533dfc8f7db0",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/1d93a2664768fb8332998aecd6cf533dfc8f7db0",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1d93a2664768fb8332998aecd6cf533dfc8f7db0/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "c0f66ce44abdc44ddbff892720d5b85f6a95436d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c0f66ce44abdc44ddbff892720d5b85f6a95436d",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c0f66ce44abdc44ddbff892720d5b85f6a95436d"
+      }
+    ],
+    "stats": {
+      "total": 66,
+      "additions": 39,
+      "deletions": 27
+    },
+    "files": [
+      {
+        "sha": "0093bb3e98d57c5d6b64457dedd06399a608805c",
+        "filename": "src/qt/paymentrequestplus.cpp",
+        "status": "modified",
+        "additions": 15,
+        "deletions": 17,
+        "changes": 32,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1d93a2664768fb8332998aecd6cf533dfc8f7db0/src/qt/paymentrequestplus.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1d93a2664768fb8332998aecd6cf533dfc8f7db0/src/qt/paymentrequestplus.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentrequestplus.cpp?ref=1d93a2664768fb8332998aecd6cf533dfc8f7db0",
+        "patch": "@@ -57,35 +57,33 @@ bool PaymentRequestPlus::IsInitialized() const\n     return paymentRequest.IsInitialized();\n }\n \n-bool PaymentRequestPlus::getMerchant(X509_STORE* certStore, QString& merchant) const\n+GetMerchantStatus PaymentRequestPlus::getMerchant(X509_STORE* certStore, QString& merchant) const\n {\n     merchant.clear();\n \n     if (!IsInitialized())\n-        return false;\n+        return PR_NOTINITIALIZED;\n \n     // One day we'll support more PKI types, but just\n     // x509 for now:\n     const EVP_MD* digestAlgorithm = NULL;\n     if (paymentRequest.pki_type() == \"x509+sha256\") {\n         digestAlgorithm = EVP_sha256();\n-    }\n-    else if (paymentRequest.pki_type() == \"x509+sha1\") {\n+    } else if (paymentRequest.pki_type() == \"x509+sha1\") {\n         digestAlgorithm = EVP_sha1();\n-    }\n-    else if (paymentRequest.pki_type() == \"none\") {\n+    } else if (paymentRequest.pki_type() == \"none\") {\n+        // This is normal for unauthenticated BIP70 payment requests\n         qWarning() << \"PaymentRequestPlus::getMerchant: Payment request: pki_type == none\";\n-        return false;\n-    }\n-    else {\n+        return PR_UNAUTHENTICATED;\n+    } else {\n         qWarning() << \"PaymentRequestPlus::getMerchant: Payment request: unknown pki_type \" << QString::fromStdString(paymentRequest.pki_type());\n-        return false;\n+        return PR_PKIERROR;\n     }\n \n     payments::X509Certificates certChain;\n     if (!certChain.ParseFromString(paymentRequest.pki_data())) {\n         qWarning() << \"PaymentRequestPlus::getMerchant: Payment request: error parsing pki_data\";\n-        return false;\n+        return PR_PKIERROR;\n     }\n \n     std::vector<X509*> certs;\n@@ -95,12 +93,12 @@ bool PaymentRequestPlus::getMerchant(X509_STORE* certStore, QString& merchant) c\n         QSslCertificate qCert(certData, QSsl::Der);\n         if (currentTime < qCert.effectiveDate() || currentTime > qCert.expiryDate()) {\n             qWarning() << \"PaymentRequestPlus::getMerchant: Payment request: certificate expired or not yet active: \" << qCert;\n-            return false;\n+            return PR_CERTERROR;\n         }\n #if QT_VERSION >= 0x050000\n         if (qCert.isBlacklisted()) {\n             qWarning() << \"PaymentRequestPlus::getMerchant: Payment request: certificate blacklisted: \" << qCert;\n-            return false;\n+            return PR_CERTERROR;\n         }\n #endif\n         const unsigned char *data = (const unsigned char *)certChain.certificate(i).data();\n@@ -109,8 +107,8 @@ bool PaymentRequestPlus::getMerchant(X509_STORE* certStore, QString& merchant) c\n             certs.push_back(cert);\n     }\n     if (certs.empty()) {\n-        qWarning() << \"PaymentRequestPlus::getMerchant: Payment request: empty certificate chain\";\n-        return false;\n+        qWarning() << \"PaymentRequestPlus::getMerchant: Payment request: certificate chain empty\";\n+        return PR_CERTERROR;\n     }\n \n     // The first cert is the signing cert, the rest are untrusted certs that chain\n@@ -126,7 +124,7 @@ bool PaymentRequestPlus::getMerchant(X509_STORE* certStore, QString& merchant) c\n     X509_STORE_CTX *store_ctx = X509_STORE_CTX_new();\n     if (!store_ctx) {\n         qWarning() << \"PaymentRequestPlus::getMerchant: Payment request: error creating X509_STORE_CTX\";\n-        return false;\n+        return PR_CERTERROR;\n     }\n \n     char *website = NULL;\n@@ -190,7 +188,7 @@ bool PaymentRequestPlus::getMerchant(X509_STORE* certStore, QString& merchant) c\n     for (unsigned int i = 0; i < certs.size(); i++)\n         X509_free(certs[i]);\n \n-    return fResult;\n+    return fResult ? PR_AUTHENTICATED : PR_CERTERROR;\n }\n \n QList<std::pair<CScript,CAmount> > PaymentRequestPlus::getPayTo() const"
+      },
+      {
+        "sha": "e94ff7f7365de4779ea5397468ca030c22db6167",
+        "filename": "src/qt/paymentrequestplus.h",
+        "status": "modified",
+        "additions": 12,
+        "deletions": 1,
+        "changes": 13,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1d93a2664768fb8332998aecd6cf533dfc8f7db0/src/qt/paymentrequestplus.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1d93a2664768fb8332998aecd6cf533dfc8f7db0/src/qt/paymentrequestplus.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentrequestplus.h?ref=1d93a2664768fb8332998aecd6cf533dfc8f7db0",
+        "patch": "@@ -15,6 +15,17 @@\n #include <QList>\n #include <QString>\n \n+// Used in getMerchant() to return state\n+enum GetMerchantStatus {\n+    PR_NOTINITIALIZED = 0,\n+    PR_PKIERROR = (1U << 0),\n+    PR_CERTERROR = (1U << 1),\n+    PR_UNAUTHENTICATED = (1U << 2),\n+    PR_AUTHENTICATED = (1U << 3),\n+\n+    PR_ERROR = (PR_NOTINITIALIZED | PR_PKIERROR | PR_CERTERROR)\n+};\n+\n //\n // Wraps dumb protocol buffer paymentRequest\n // with extra methods\n@@ -31,7 +42,7 @@ class PaymentRequestPlus\n     bool IsInitialized() const;\n     // Returns true if merchant's identity is authenticated, and\n     // returns human-readable merchant identity in merchant\n-    bool getMerchant(X509_STORE* certStore, QString& merchant) const;\n+    GetMerchantStatus getMerchant(X509_STORE* certStore, QString& merchant) const;\n \n     // Returns list of outputs, amount\n     QList<std::pair<CScript,CAmount> > getPayTo() const;"
+      },
+      {
+        "sha": "7d1d3c342046688b31240fde292553ae72fb87fa",
+        "filename": "src/qt/paymentserver.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 1,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1d93a2664768fb8332998aecd6cf533dfc8f7db0/src/qt/paymentserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1d93a2664768fb8332998aecd6cf533dfc8f7db0/src/qt/paymentserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.cpp?ref=1d93a2664768fb8332998aecd6cf533dfc8f7db0",
+        "patch": "@@ -555,7 +555,10 @@ bool PaymentServer::processPaymentRequest(const PaymentRequestPlus& request, Sen\n     recipient.paymentRequest = request;\n     recipient.message = GUIUtil::HtmlEscape(request.getDetails().memo());\n \n-    request.getMerchant(PaymentServer::certStore, recipient.authenticatedMerchant);\n+    // Allowed to silently fail! Treat invalid authenticated payment request as valid unauthenticated payment request.\n+    if (request.getMerchant(PaymentServer::certStore, recipient.authenticatedMerchant) & PR_ERROR) {\n+        qDebug() << QString(\"PaymentServer::%1: Invalid authenticated payment request now treated as valid unauthenticated payment request.\").arg(__func__);\n+    }\n \n     QList<std::pair<CScript, CAmount> > sendingTos = request.getPayTo();\n     QStringList addresses;"
+      },
+      {
+        "sha": "b6a45c989b5c01edc06aa8a5d9e98100d48628a1",
+        "filename": "src/qt/test/paymentservertests.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 6,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1d93a2664768fb8332998aecd6cf533dfc8f7db0/src/qt/test/paymentservertests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1d93a2664768fb8332998aecd6cf533dfc8f7db0/src/qt/test/paymentservertests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/test/paymentservertests.cpp?ref=1d93a2664768fb8332998aecd6cf533dfc8f7db0",
+        "patch": "@@ -83,39 +83,39 @@ void PaymentServerTests::paymentServerTests()\n     // caCert1 certificate authority:\n     data = DecodeBase64(paymentrequest1_cert1_BASE64);\n     r = handleRequest(server, data);\n-    r.paymentRequest.getMerchant(caStore, merchant);\n+    QVERIFY(r.paymentRequest.getMerchant(caStore, merchant) & PR_AUTHENTICATED);\n     QCOMPARE(merchant, QString(\"testmerchant.org\"));\n \n     // Signed, but expired, merchant cert in the request:\n     data = DecodeBase64(paymentrequest2_cert1_BASE64);\n     r = handleRequest(server, data);\n-    r.paymentRequest.getMerchant(caStore, merchant);\n+    QVERIFY(r.paymentRequest.getMerchant(caStore, merchant) & PR_ERROR);\n     QCOMPARE(merchant, QString(\"\"));\n \n     // 10-long certificate chain, all intermediates valid:\n     data = DecodeBase64(paymentrequest3_cert1_BASE64);\n     r = handleRequest(server, data);\n-    r.paymentRequest.getMerchant(caStore, merchant);\n+    QVERIFY(r.paymentRequest.getMerchant(caStore, merchant) & PR_AUTHENTICATED);\n     QCOMPARE(merchant, QString(\"testmerchant8.org\"));\n \n     // Long certificate chain, with an expired certificate in the middle:\n     data = DecodeBase64(paymentrequest4_cert1_BASE64);\n     r = handleRequest(server, data);\n-    r.paymentRequest.getMerchant(caStore, merchant);\n+    QVERIFY(r.paymentRequest.getMerchant(caStore, merchant) & PR_ERROR);\n     QCOMPARE(merchant, QString(\"\"));\n \n     // Validly signed, but by a CA not in our root CA list:\n     data = DecodeBase64(paymentrequest5_cert1_BASE64);\n     r = handleRequest(server, data);\n-    r.paymentRequest.getMerchant(caStore, merchant);\n+    QVERIFY(r.paymentRequest.getMerchant(caStore, merchant) & PR_ERROR);\n     QCOMPARE(merchant, QString(\"\"));\n \n     // Try again with no root CA's, verifiedMerchant should be empty:\n     caStore = X509_STORE_new();\n     PaymentServer::LoadRootCAs(caStore);\n     data = DecodeBase64(paymentrequest1_cert1_BASE64);\n     r = handleRequest(server, data);\n-    r.paymentRequest.getMerchant(caStore, merchant);\n+    QVERIFY(r.paymentRequest.getMerchant(caStore, merchant) & PR_ERROR);\n     QCOMPARE(merchant, QString(\"\"));\n \n     // Load second root certificate"
+      },
+      {
+        "sha": "fdaca4aac9335d23e339221a9ef987e27c6f2ac7",
+        "filename": "src/qt/transactiondesc.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1d93a2664768fb8332998aecd6cf533dfc8f7db0/src/qt/transactiondesc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1d93a2664768fb8332998aecd6cf533dfc8f7db0/src/qt/transactiondesc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/transactiondesc.cpp?ref=1d93a2664768fb8332998aecd6cf533dfc8f7db0",
+        "patch": "@@ -255,8 +255,8 @@ QString TransactionDesc::toHTML(CWallet *wallet, CWalletTx &wtx, TransactionReco\n             PaymentRequestPlus req;\n             req.parse(QByteArray::fromRawData(r.second.data(), r.second.size()));\n             QString merchant;\n-            if (req.getMerchant(PaymentServer::getCertStore(), merchant))\n-                strHTML += \"<b>\" + tr(\"Merchant\") + \":</b> \" + GUIUtil::HtmlEscape(merchant) + \"<br>\";\n+            if (req.getMerchant(PaymentServer::getCertStore(), merchant) & PR_AUTHENTICATED)\n+                strHTML += \"<b>\" + tr(\"Authenticated merchant\") + \":</b> \" + GUIUtil::HtmlEscape(merchant) + \"<br>\";\n         }\n     }\n "
+      }
+    ]
+  }
+]

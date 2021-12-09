@@ -1,0 +1,418 @@
+[
+  {
+    "sha": "3cef0a96ab4173607831247972e6ee6bb5e274a2",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozY2VmMGE5NmFiNDE3MzYwNzgzMTI0Nzk3MmU2ZWU2YmI1ZTI3NGEy",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-10-28T14:29:10Z"
+      },
+      "committer": {
+        "name": "Johnson Lau",
+        "email": "jl2012@xbt.hk",
+        "date": "2016-12-22T13:21:34Z"
+      },
+      "message": "Add sighash cache",
+      "tree": {
+        "sha": "38f0127df3bb36d2464d0be8285d4da297803632",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/38f0127df3bb36d2464d0be8285d4da297803632"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/3cef0a96ab4173607831247972e6ee6bb5e274a2",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3cef0a96ab4173607831247972e6ee6bb5e274a2",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/3cef0a96ab4173607831247972e6ee6bb5e274a2",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3cef0a96ab4173607831247972e6ee6bb5e274a2/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "jl2012",
+      "id": 8403418,
+      "node_id": "MDQ6VXNlcjg0MDM0MTg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/8403418?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jl2012",
+      "html_url": "https://github.com/jl2012",
+      "followers_url": "https://api.github.com/users/jl2012/followers",
+      "following_url": "https://api.github.com/users/jl2012/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jl2012/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jl2012/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jl2012/subscriptions",
+      "organizations_url": "https://api.github.com/users/jl2012/orgs",
+      "repos_url": "https://api.github.com/users/jl2012/repos",
+      "events_url": "https://api.github.com/users/jl2012/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jl2012/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "e8cfe1ee2d01c493b758a67ad14707dca15792ea",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e8cfe1ee2d01c493b758a67ad14707dca15792ea",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/e8cfe1ee2d01c493b758a67ad14707dca15792ea"
+      }
+    ],
+    "stats": {
+      "total": 35,
+      "additions": 34,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "538b2b0dd783ef72750b73405d9312ebd5f0447f",
+        "filename": "src/script/interpreter.cpp",
+        "status": "modified",
+        "additions": 14,
+        "deletions": 1,
+        "changes": 15,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3cef0a96ab4173607831247972e6ee6bb5e274a2/src/script/interpreter.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3cef0a96ab4173607831247972e6ee6bb5e274a2/src/script/interpreter.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/interpreter.cpp?ref=3cef0a96ab4173607831247972e6ee6bb5e274a2",
+        "patch": "@@ -1263,7 +1263,20 @@ bool TransactionSignatureChecker::CheckSig(const vector<unsigned char>& vchSigIn\n     int nHashType = vchSig.back();\n     vchSig.pop_back();\n \n-    uint256 sighash = SignatureHash(scriptCode, *txTo, nIn, nHashType, amount, sigversion, this->txdata);\n+    // sigversion is not considered since we know there will only be one sigversion across an entire input.\n+    // Each nHashType produces an unique hash since nHashType is serialized in SignatureHash. So we need 256 cache\n+    // slots, instead of only 6 slots for the common types.\n+    // If future extra sighashes are defined, this may need extension (or, alternatively, cache read/write could be\n+    // skipped for sigversion > SIGVERSION_WITNESS_V0).\n+    if (scriptCode != cache.scriptCode) {\n+        cache.Clear();\n+        cache.scriptCode = scriptCode;\n+    }\n+    uint256& sighash = cache.value[nHashType];\n+    if (!cache.set[nHashType]) {\n+        sighash = SignatureHash(scriptCode, *txTo, nIn, nHashType, amount, sigversion, this->txdata);\n+        cache.set[nHashType] = true;\n+    }\n \n     if (!VerifySignature(vchSig, pubkey, sighash))\n         return false;"
+      },
+      {
+        "sha": "5db673ff28b7ec2678c9e88c2bb877f4bf9b6e19",
+        "filename": "src/script/interpreter.h",
+        "status": "modified",
+        "additions": 20,
+        "deletions": 0,
+        "changes": 20,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3cef0a96ab4173607831247972e6ee6bb5e274a2/src/script/interpreter.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3cef0a96ab4173607831247972e6ee6bb5e274a2/src/script/interpreter.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/interpreter.h?ref=3cef0a96ab4173607831247972e6ee6bb5e274a2",
+        "patch": "@@ -117,6 +117,25 @@ struct PrecomputedTransactionData\n     PrecomputedTransactionData(const CTransaction& tx);\n };\n \n+struct SigHashCache\n+{\n+    bool set[256];\n+    uint256 value[256];\n+    CScript scriptCode;\n+\n+    void Clear()\n+    {\n+        for (int i=0; i<256; i++) {\n+            set[i] = false;\n+        }\n+    }\n+\n+    SigHashCache()\n+    {\n+        Clear();\n+    }\n+};\n+\n enum SigVersion\n {\n     SIGVERSION_BASE = 0,\n@@ -153,6 +172,7 @@ class TransactionSignatureChecker : public BaseSignatureChecker\n     unsigned int nIn;\n     const CAmount amount;\n     const PrecomputedTransactionData* txdata;\n+    mutable SigHashCache cache;\n \n protected:\n     virtual bool VerifySignature(const std::vector<unsigned char>& vchSig, const CPubKey& vchPubKey, const uint256& sighash) const;"
+      }
+    ]
+  },
+  {
+    "sha": "838a00eb5f4cf8c787e59e50268de7a9bec124e7",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4MzhhMDBlYjVmNGNmOGM3ODdlNTllNTAyNjhkZTdhOWJlYzEyNGU3",
+    "commit": {
+      "author": {
+        "name": "Johnson Lau",
+        "email": "jl2012@xbt.hk",
+        "date": "2016-10-29T04:11:49Z"
+      },
+      "committer": {
+        "name": "Johnson Lau",
+        "email": "jl2012@xbt.hk",
+        "date": "2016-12-22T13:24:23Z"
+      },
+      "message": "[qa] add rpc-test for sighash cache",
+      "tree": {
+        "sha": "b89453475321a4f387f869d9b6085e6bed74c193",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/b89453475321a4f387f869d9b6085e6bed74c193"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/838a00eb5f4cf8c787e59e50268de7a9bec124e7",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/838a00eb5f4cf8c787e59e50268de7a9bec124e7",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/838a00eb5f4cf8c787e59e50268de7a9bec124e7",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/838a00eb5f4cf8c787e59e50268de7a9bec124e7/comments",
+    "author": {
+      "login": "jl2012",
+      "id": 8403418,
+      "node_id": "MDQ6VXNlcjg0MDM0MTg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/8403418?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jl2012",
+      "html_url": "https://github.com/jl2012",
+      "followers_url": "https://api.github.com/users/jl2012/followers",
+      "following_url": "https://api.github.com/users/jl2012/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jl2012/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jl2012/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jl2012/subscriptions",
+      "organizations_url": "https://api.github.com/users/jl2012/orgs",
+      "repos_url": "https://api.github.com/users/jl2012/repos",
+      "events_url": "https://api.github.com/users/jl2012/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jl2012/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "jl2012",
+      "id": 8403418,
+      "node_id": "MDQ6VXNlcjg0MDM0MTg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/8403418?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jl2012",
+      "html_url": "https://github.com/jl2012",
+      "followers_url": "https://api.github.com/users/jl2012/followers",
+      "following_url": "https://api.github.com/users/jl2012/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jl2012/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jl2012/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jl2012/subscriptions",
+      "organizations_url": "https://api.github.com/users/jl2012/orgs",
+      "repos_url": "https://api.github.com/users/jl2012/repos",
+      "events_url": "https://api.github.com/users/jl2012/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jl2012/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "3cef0a96ab4173607831247972e6ee6bb5e274a2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3cef0a96ab4173607831247972e6ee6bb5e274a2",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/3cef0a96ab4173607831247972e6ee6bb5e274a2"
+      }
+    ],
+    "stats": {
+      "total": 307,
+      "additions": 307,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "6212e4675f42d5fd03c4db482d88392b501babc4",
+        "filename": "qa/pull-tester/rpc-tests.py",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/838a00eb5f4cf8c787e59e50268de7a9bec124e7/qa/pull-tester/rpc-tests.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/838a00eb5f4cf8c787e59e50268de7a9bec124e7/qa/pull-tester/rpc-tests.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/qa/pull-tester/rpc-tests.py?ref=838a00eb5f4cf8c787e59e50268de7a9bec124e7",
+        "patch": "@@ -107,6 +107,7 @@\n     'fundrawtransaction.py',\n     'p2p-compactblocks.py',\n     'segwit.py',\n+    'sighashcache.py',\n     # vv Tests less than 2m vv\n     'wallet.py',\n     'wallet-accounts.py',"
+      },
+      {
+        "sha": "c2310b1eb7bb1565a9f96bd574c5f3b3399354bb",
+        "filename": "qa/rpc-tests/sighashcache.py",
+        "status": "added",
+        "additions": 306,
+        "deletions": 0,
+        "changes": 306,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/838a00eb5f4cf8c787e59e50268de7a9bec124e7/qa/rpc-tests/sighashcache.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/838a00eb5f4cf8c787e59e50268de7a9bec124e7/qa/rpc-tests/sighashcache.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/qa/rpc-tests/sighashcache.py?ref=838a00eb5f4cf8c787e59e50268de7a9bec124e7",
+        "patch": "@@ -0,0 +1,306 @@\n+#!/usr/bin/env python3\n+# Copyright (c) 2016 The Bitcoin Core developers\n+# Distributed under the MIT software license, see the accompanying\n+# file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+from test_framework.test_framework import BitcoinTestFramework\n+from test_framework.mininode import CTransaction, CTxOut, CTxIn, COutPoint, CTxInWitness\n+from test_framework.util import hex_str_to_bytes, start_node, bytes_to_hex_str\n+from test_framework.key import CECKey, CPubKey\n+from test_framework.script import CScript, OP_0, OP_1, OP_12, OP_14, OP_CHECKSIG, OP_CHECKMULTISIG, OP_CODESEPARATOR, OP_CHECKMULTISIGVERIFY, OP_CHECKSIGVERIFY, OP_HASH160, OP_EQUAL, SignatureHash, SIGHASH_ALL, hash160, sha256, SegwitVersion1SignatureHash\n+import time\n+from random import randint\n+\n+'''\n+This is to test the correctness and performance of 2 types of sighash caches:\n+#8524: Intra/inter-input sighash midstate cache for segwit (BIP143)\n+#8654: Intra-input sighash reuse\n+'''\n+\n+dummykey = hex_str_to_bytes(\"0300112233445566778899aabbccddeeff00112233445566778899aabbccddeeff\")\n+\n+# By default, we generate a transaction with 40 inputs and 40 outputs. Each input contains 14 sigOPs.\n+# scriptPubKey size for each output is 22000 bytes. The total uncached hashing size for SIGHASH_ALL is:\n+# 40 * 40 * 14 * (22200 + 32 + 4 + 4 + 8) = about 500MB\n+\n+# Set 2 to reduce the testing time if we just want to test for correctness. Set to 1 for more accurate benchmarking\n+speedup = 2\n+\n+default_nIn = 40 // speedup\n+default_nOut = default_nIn\n+default_outputsize = 22200 // speedup\n+default_amount = 200000\n+time_assertion = False # compare validation time with benchmarking test\n+verbose = False # print validation details\n+\n+class SigHashCacheTest(BitcoinTestFramework):\n+\n+    def __init__(self):\n+        super().__init__()\n+        self.setup_clean_chain = True\n+\n+    def setup_network(self):\n+        # Switch off STRICTENC so we could test strange nHashType\n+        self.nodes = [start_node(0, self.options.tmpdir, [\"-promiscuousmempoolflags=8189\"])]\n+\n+    def generate_txpair(self, offset, witoffset = 250, nIn = default_nIn, nOut = default_nOut, outputsize = default_outputsize):\n+        # Generate a pair of transactions: non-segwit and segwit\n+        txpair = [CTransaction(), CTransaction()]\n+        for i in range(nIn):\n+            txpair[0].vin.append(CTxIn(COutPoint(self.txid,i+offset)))\n+            txpair[1].vin.append(CTxIn(COutPoint(self.txid,i+offset+witoffset)))\n+            txpair[1].wit.vtxinwit.append(CTxInWitness())\n+        for i in range(nOut):\n+            txpair[0].vout.append(CTxOut(1, b'\\x00' * outputsize))\n+            txpair[1].vout.append(CTxOut(1, b'\\x00' * outputsize))\n+        return txpair\n+\n+    def validation_time(self, txpair):\n+        # sendrawtransaction and timing\n+        [tx, wtx] = txpair\n+        start = time.time()\n+        self.nodes[0].sendrawtransaction(bytes_to_hex_str(tx.serialize_with_witness()), True)\n+        t = time.time() - start\n+        self.nodes[0].generate(1)\n+        start = time.time()\n+        self.nodes[0].sendrawtransaction(bytes_to_hex_str(wtx.serialize_with_witness()), True)\n+        wt = time.time() - start\n+        if (verbose):\n+            print (\"**Non-witness**\")\n+            print (\"Transaction weight : \" + str(len(tx.serialize_without_witness()) * 3 + len(tx.serialize_with_witness())))\n+            print (\"Validation time    : \" + str(t))\n+            print (\"**Witness**\")\n+            print (\"Transaction weight : \" + str(len(wtx.serialize_without_witness()) * 3 + len(wtx.serialize_with_witness())))\n+            print (\"Validation time    : \" + str(wt))\n+        self.nodes[0].generate(1)\n+        return [t, wt]\n+\n+    def test_preparation(self):\n+        self.coinbase_blocks = self.nodes[0].generate(1)\n+        coinbase_txid = int(\"0x\" + self.nodes[0].getblock(self.coinbase_blocks[0])['tx'][0], 0)\n+        self.nodes[0].generate(450) # to activate segwit\n+        self.key = CECKey()\n+        self.key.set_secretbytes(b\"9\")\n+        self.key.set_compressed(1)\n+        pubkey = CPubKey(self.key.get_pubkey())\n+        self.script = []\n+        scriptpubkey = []\n+        self.script.append(CScript([OP_14] + [pubkey] * 14 + [OP_14, OP_CHECKMULTISIG])) # 0, 250\n+        self.script.append(CScript([OP_1, pubkey] + [dummykey] * 13 + [OP_14, OP_CHECKMULTISIG])) # 500, 750\n+        self.script.append(CScript([pubkey, OP_CHECKSIGVERIFY, OP_1, pubkey] + [dummykey] * 11 + [OP_12, OP_CHECKMULTISIGVERIFY, pubkey, OP_CHECKSIG])) # 1000, 1250\n+        self.script.append(CScript([pubkey, OP_CHECKSIGVERIFY] * 13 + [pubkey, OP_CHECKSIG])) # 1500, 1750\n+        self.script.append(CScript([pubkey, OP_CHECKSIGVERIFY, OP_CODESEPARATOR] * 13 + [pubkey, OP_CHECKSIG])) # 2000, 2250\n+        self.script.append(CScript([pubkey, OP_CHECKSIG])) # 2500, 2750\n+        self.script.append(CScript([pubkey, OP_CHECKSIGVERIFY] * 136 + [pubkey, OP_CHECKSIG])) # 3000, 3250 (Not valid for P2SH due to too big)\n+\n+        for i in self.script:\n+            scriptpubkey.append(CScript([OP_HASH160, hash160(i), OP_EQUAL])) # P2SH\n+            scriptpubkey.append(CScript([OP_0, sha256(i)])) # P2WSH\n+\n+        tx = CTransaction()\n+        tx.vin.append(CTxIn(COutPoint(coinbase_txid)))\n+        for i in scriptpubkey:\n+            for j in range(250):\n+                tx.vout.append(CTxOut(default_amount,i)) # 250 outputs for each script, non-segwit and segwit\n+\n+        # Add bare outputs\n+        for i in range(250):\n+            tx.vout.append(CTxOut(default_amount,self.script[5])) # 3500-3749: 250 bare P2PK\n+        for i in range(25):\n+            # 3750-3774: 25 bare scriptPubKey with 137 CHECKSIGs. Pay more so it could pay enough fee when spending\n+            tx.vout.append(CTxOut(default_amount * 10,self.script[6]))\n+\n+        # subScript for CODESEPERATOR tests\n+        self.csscript = []\n+        for i in range(14):\n+            self.csscript.append(CScript([pubkey, OP_CHECKSIGVERIFY, OP_CODESEPARATOR] * i + [pubkey, OP_CHECKSIG]))\n+\n+        signresult = self.nodes[0].signrawtransaction(bytes_to_hex_str(tx.serialize_without_witness()))['hex']\n+        self.txid = int(\"0x\" + self.nodes[0].sendrawtransaction(signresult, True), 0)\n+        self.nodes[0].generate(1)\n+\n+    def signtx(self, scripts, txpair, nIn, flags):\n+        sig = []\n+        wsig = []\n+        for i in (range(len(scripts))):\n+            sighash = SignatureHash(scripts[i], txpair[0], nIn, flags[i])[0]\n+            sig.append(self.key.sign(sighash) + chr(flags[i]).encode('latin-1'))\n+            wsighash = SegwitVersion1SignatureHash(scripts[i], txpair[1], nIn, flags[i], default_amount)\n+            wsig.append(self.key.sign(wsighash) + chr(flags[i]).encode('latin-1'))\n+        return [sig, wsig]\n+\n+    def MS_14_of_14_different_ALL(self):\n+        print (\"Test: 14-of-14 CHECKMULTISIG P2SH/P2WSH inputs with different variations of SIGHASH_ALL\")\n+        script = self.script[0]\n+        txpair = self.generate_txpair(0)\n+        for i in range(default_nIn):\n+            [sig, wsig] = self.signtx([script] * 14, txpair, i, range(4,18))\n+            txpair[0].vin[i].scriptSig = CScript([OP_0] + sig + [script])\n+            txpair[1].wit.vtxinwit[i].scriptWitness.stack = [b''] + wsig + [script]\n+        [t, wt] = self.validation_time(txpair)\n+        self.banchmark = t # For non-segwit this is equivalent to no cache\n+        if (time_assertion):\n+            assert(self.banchmark / wt > 4)\n+\n+    def MS_14_of_14_same_ALL(self):\n+        script = self.script[0]\n+        print (\"Test: 14-of-14 CHECKMULTISIG P2SH/P2WSH inputs with same SIGHASH_ALL\")\n+        txpair = self.generate_txpair(50)\n+        for i in range(default_nIn):\n+            [sig, wsig] = self.signtx([script], txpair, i, [SIGHASH_ALL])\n+            txpair[0].vin[i].scriptSig = CScript([OP_0] + [sig[0]] * 14 + [script])\n+            txpair[1].wit.vtxinwit[i].scriptWitness.stack = [b''] + [wsig[0]] * 14 + [script]\n+        [t, wt] = self.validation_time(txpair)\n+        if (time_assertion):\n+            assert(self.banchmark / t > 4)\n+            assert(self.banchmark / wt > 4)\n+\n+    def MS_1_of_14_ALL(self):\n+        script = self.script[1]\n+        print (\"Test: 1-of-14 CHECKMULTISIG P2SH/P2WSH inputs with SIGHASH_ALL\")\n+        txpair = self.generate_txpair(500)\n+        for i in range(default_nIn):\n+            [sig, wsig] = self.signtx([script], txpair, i, [SIGHASH_ALL])\n+            txpair[0].vin[i].scriptSig = CScript([OP_0, sig[0], script])\n+            txpair[1].wit.vtxinwit[i].scriptWitness.stack = [b'', wsig[0], script]\n+        [t, wt] = self.validation_time(txpair)\n+        if (time_assertion):\n+            assert(self.banchmark / t > 4)\n+            assert(self.banchmark / wt > 4)\n+\n+    def mix_CHECKSIG_CHECKMULTISIG_same_ALL(self):\n+        script = self.script[2]\n+        print (\"Test: CHECKSIG 1-of-13 CHECKMULTISIG CHECKSIG P2SH/P2WSH inputs with same SIGHASH_ALL\")\n+        txpair = self.generate_txpair(1000)\n+        for i in range(default_nIn):\n+            [sig, wsig] = self.signtx([script], txpair, i, [SIGHASH_ALL])\n+            txpair[0].vin[i].scriptSig = CScript([sig[0], OP_0, sig[0], sig[0], script])\n+            txpair[1].wit.vtxinwit[i].scriptWitness.stack = [wsig[0], b'', wsig[0], wsig[0], script]\n+        [t, wt] = self.validation_time(txpair)\n+        if (time_assertion):\n+            assert(self.banchmark / t > 4)\n+            assert(self.banchmark / wt > 4)\n+\n+    def many_CHECKSIG_same_ALL(self):\n+        script = self.script[3]\n+        print (\"Test: P2SH/P2WSH with 14 CHECKSIG with same SIGHASH_ALL\")\n+        txpair = self.generate_txpair(1500)\n+        for i in range(default_nIn):\n+            [sig, wsig] = self.signtx([script], txpair, i, [SIGHASH_ALL])\n+            txpair[0].vin[i].scriptSig = CScript([sig[0]] * 14 + [script])\n+            txpair[1].wit.vtxinwit[i].scriptWitness.stack = [wsig[0]] * 14 + [script]\n+        [t, wt] = self.validation_time(txpair)\n+        if (time_assertion):\n+            assert(self.banchmark / t > 4)\n+            assert(self.banchmark / wt > 4)\n+\n+    def many_CHECKSIG_different_ALL(self):\n+        script = self.script[3]\n+        print (\"Test: P2SH/P2WSH with 14 CHECKSIG with different variations of SIGHASH_ALL\")\n+        txpair = self.generate_txpair(1550)\n+        for i in range(default_nIn):\n+            [sig, wsig] = self.signtx([script] * 14, txpair, i, range(4,18))\n+            txpair[0].vin[i].scriptSig = CScript(sig + [script])\n+            txpair[1].wit.vtxinwit[i].scriptWitness.stack = wsig + [script]\n+        [t, wt] = self.validation_time(txpair)\n+        if (time_assertion):\n+            assert(self.banchmark / t < 3)\n+            assert(t / self.banchmark < 3)\n+            assert(self.banchmark / wt > 4)\n+\n+    def many_CHECKSIG_CODESEPERATOR_same_ALL(self):\n+        script = self.script[4]\n+        print (\"Test: P2SH/P2WSH with 14 CHECKSIG CODESEPERATOR with same SIGHASH_ALL\")\n+        txpair = self.generate_txpair(2000)\n+        for i in range(default_nIn):\n+            [sig, wsig] = self.signtx(self.csscript, txpair, i, [SIGHASH_ALL] * 14)\n+            txpair[0].vin[i].scriptSig = CScript(sig + [script])\n+            txpair[1].wit.vtxinwit[i].scriptWitness.stack = wsig + [script]\n+        [t, wt] = self.validation_time(txpair)\n+        if (time_assertion):\n+            assert(self.banchmark / t < 3)\n+            assert(t / self.banchmark < 3)\n+            assert(self.banchmark / wt > 4)\n+\n+    def many_CHECKSIG_CODESEPERATOR_different_ALL(self):\n+        script = self.script[4]\n+        print (\"Test: P2SH/P2WSH with 14 CHECKSIG CODESEPERATOR with different variations of SIGHASH_ALL\")\n+        txpair = self.generate_txpair(2050)\n+        for i in range(default_nIn):\n+            [sig, wsig] = self.signtx(self.csscript, txpair, i, range(4,18))\n+            txpair[0].vin[i].scriptSig = CScript(sig + [script])\n+            txpair[1].wit.vtxinwit[i].scriptWitness.stack = wsig + [script]\n+        [t, wt] = self.validation_time(txpair)\n+        if (time_assertion):\n+            assert(self.banchmark / t < 3)\n+            assert(t / self.banchmark < 3)\n+            assert(self.banchmark / wt > 4)\n+\n+    def P2PK_ALL(self):\n+        script = self.script[5]\n+        print (\"Test: Bare/segwit P2PK inputs with SIGHASH_ALL\")\n+        txpair = self.generate_txpair(3500,-750,250//speedup,250//speedup,350//speedup)\n+        for i in range(250//speedup):\n+            [sig, wsig] = self.signtx([script], txpair, i, [SIGHASH_ALL])\n+            txpair[0].vin[i].scriptSig = CScript(sig)\n+            txpair[1].wit.vtxinwit[i].scriptWitness.stack = [wsig[0], script]\n+        [t, wt] = self.validation_time(txpair)\n+        if (time_assertion):\n+            assert (t / wt > 2)\n+\n+    def many_CHECKSIG_random_flag(self):\n+        script = self.script[6]\n+        print (\"Test: Bare/P2WSH inputs with 137 CHECKSIG with random SIGHASH\")\n+        txpair = self.generate_txpair(3750,-500,24//speedup,12//speedup,1000//speedup)\n+        # 24 inputs with only 12 outputs, so some SIGHASH_SINGLE will be unmatched\n+        for i in range(24//speedup):\n+            flags = []\n+            for j in range(137):\n+                flags.append(randint(0,255))\n+            [sig, wsig] = self.signtx([script] * 137, txpair, i, flags)\n+            txpair[0].vin[i].scriptSig = CScript(sig)\n+            txpair[1].wit.vtxinwit[i].scriptWitness.stack = wsig + [script]\n+        self.validation_time(txpair)\n+\n+    def signing_test(self):\n+        print (\"Test: signrawtransaction with different SIGHASH types\")\n+        # Prepare for signing tests\n+        addresses = []\n+        addresses.append(self.nodes[0].getnewaddress())\n+        addresses.append(self.nodes[0].addmultisigaddress(3, [addresses[0]] * 3))\n+        addresses.append(self.nodes[0].addwitnessaddress(addresses[0]))\n+        addresses.append(self.nodes[0].addwitnessaddress(addresses[1]))\n+\n+        outputs = {}\n+        for i in addresses:\n+            outputs[i] = 10\n+        self.signtest_txid = self.nodes[0].sendmany(\"\", outputs)\n+        self.nodes[0].generate(1)\n+\n+        hashtypes = [\"ALL\",\"NONE\",\"SINGLE\",\"ALL|ANYONECANPAY\",\"NONE|ANYONECANPAY\",\"SINGLE|ANYONECANPAY\"]\n+        for i in range(6):\n+            inputs = []\n+            outputs = {}\n+            for j in range(5): # 5 because sendmany created a change output\n+                inputs.append({\"txid\":self.signtest_txid,\"vout\":j})\n+                outputs[self.nodes[0].getnewaddress()] = 1\n+            rawtx = self.nodes[0].createrawtransaction(inputs,outputs)\n+            signresult = self.nodes[0].signrawtransaction(rawtx,None,None,hashtypes[i])['complete']\n+            assert (signresult == True)\n+\n+    def run_test(self):\n+        self.test_preparation()\n+        self.MS_14_of_14_different_ALL()\n+        self.MS_14_of_14_same_ALL()\n+        self.MS_1_of_14_ALL()\n+        self.mix_CHECKSIG_CHECKMULTISIG_same_ALL()\n+        self.many_CHECKSIG_same_ALL()\n+        self.many_CHECKSIG_different_ALL()\n+        self.many_CHECKSIG_CODESEPERATOR_same_ALL()\n+        self.many_CHECKSIG_CODESEPERATOR_different_ALL()\n+        self.P2PK_ALL()\n+        self.many_CHECKSIG_random_flag()\n+        self.signing_test()\n+\n+if __name__ == '__main__':\n+    SigHashCacheTest().main()"
+      }
+    ]
+  },
+  {
+    "sha": "e79ab64425aa583724c0cbcd9ca5c3ada152b87a",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplNzlhYjY0NDI1YWE1ODM3MjRjMGNiY2Q5Y2E1YzNhZGExNTJiODdh",
+    "commit": {
+      "author": {
+        "name": "Johnson Lau",
+        "email": "jl2012@xbt.hk",
+        "date": "2016-10-29T04:14:06Z"
+      },
+      "committer": {
+        "name": "Johnson Lau",
+        "email": "jl2012@xbt.hk",
+        "date": "2016-12-22T13:24:23Z"
+      },
+      "message": "[qa] Add public key recovery to test_framework",
+      "tree": {
+        "sha": "517b2b6b4dc669fbf59055b2e6fe029ef46b94f4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/517b2b6b4dc669fbf59055b2e6fe029ef46b94f4"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/e79ab64425aa583724c0cbcd9ca5c3ada152b87a",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e79ab64425aa583724c0cbcd9ca5c3ada152b87a",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/e79ab64425aa583724c0cbcd9ca5c3ada152b87a",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e79ab64425aa583724c0cbcd9ca5c3ada152b87a/comments",
+    "author": {
+      "login": "jl2012",
+      "id": 8403418,
+      "node_id": "MDQ6VXNlcjg0MDM0MTg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/8403418?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jl2012",
+      "html_url": "https://github.com/jl2012",
+      "followers_url": "https://api.github.com/users/jl2012/followers",
+      "following_url": "https://api.github.com/users/jl2012/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jl2012/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jl2012/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jl2012/subscriptions",
+      "organizations_url": "https://api.github.com/users/jl2012/orgs",
+      "repos_url": "https://api.github.com/users/jl2012/repos",
+      "events_url": "https://api.github.com/users/jl2012/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jl2012/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "jl2012",
+      "id": 8403418,
+      "node_id": "MDQ6VXNlcjg0MDM0MTg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/8403418?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jl2012",
+      "html_url": "https://github.com/jl2012",
+      "followers_url": "https://api.github.com/users/jl2012/followers",
+      "following_url": "https://api.github.com/users/jl2012/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jl2012/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jl2012/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jl2012/subscriptions",
+      "organizations_url": "https://api.github.com/users/jl2012/orgs",
+      "repos_url": "https://api.github.com/users/jl2012/repos",
+      "events_url": "https://api.github.com/users/jl2012/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jl2012/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "838a00eb5f4cf8c787e59e50268de7a9bec124e7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/838a00eb5f4cf8c787e59e50268de7a9bec124e7",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/838a00eb5f4cf8c787e59e50268de7a9bec124e7"
+      }
+    ],
+    "stats": {
+      "total": 143,
+      "additions": 143,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "220b142bbd0e678264201456da525993c42f34e4",
+        "filename": "qa/rpc-tests/test_framework/key.py",
+        "status": "modified",
+        "additions": 143,
+        "deletions": 0,
+        "changes": 143,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e79ab64425aa583724c0cbcd9ca5c3ada152b87a/qa/rpc-tests/test_framework/key.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e79ab64425aa583724c0cbcd9ca5c3ada152b87a/qa/rpc-tests/test_framework/key.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/qa/rpc-tests/test_framework/key.py?ref=e79ab64425aa583724c0cbcd9ca5c3ada152b87a",
+        "patch": "@@ -21,15 +21,45 @@\n ssl.BN_new.restype = ctypes.c_void_p\n ssl.BN_new.argtypes = []\n \n+ssl.BN_add.restype = ctypes.c_int\n+ssl.BN_add.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]\n+\n ssl.BN_bin2bn.restype = ctypes.c_void_p\n ssl.BN_bin2bn.argtypes = [ctypes.c_char_p, ctypes.c_int, ctypes.c_void_p]\n \n+ssl.BN_cmp.restype = ctypes.c_int\n+ssl.BN_cmp.argtypes = [ctypes.c_void_p, ctypes.c_void_p]\n+\n+ssl.BN_free.restype = None\n+ssl.BN_free.argtypes = [ctypes.c_void_p]\n+\n+ssl.BN_copy.restype = ctypes.c_void_p\n+ssl.BN_copy.argtypes = [ctypes.c_void_p, ctypes.c_void_p]\n+\n+ssl.BN_mod_inverse.restype = ctypes.c_void_p\n+ssl.BN_mod_inverse.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]\n+\n+ssl.BN_mod_mul.restype = ctypes.c_int\n+ssl.BN_mod_mul.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]\n+\n+ssl.BN_mod_sub.restype = ctypes.c_int\n+ssl.BN_mod_sub.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]\n+\n+ssl.BN_mul_word.restype = ctypes.c_int\n+ssl.BN_mul_word.argtypes = [ctypes.c_void_p, ctypes.c_void_p]\n+\n ssl.BN_CTX_free.restype = None\n ssl.BN_CTX_free.argtypes = [ctypes.c_void_p]\n \n+ssl.BN_CTX_get.restype = ctypes.c_void_p\n+ssl.BN_CTX_get.argtypes = [ctypes.c_void_p]\n+\n ssl.BN_CTX_new.restype = ctypes.c_void_p\n ssl.BN_CTX_new.argtypes = []\n \n+ssl.EC_GROUP_get_curve_GFp.restype = ctypes.c_int\n+ssl.EC_GROUP_get_curve_GFp.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]\n+\n ssl.ECDH_compute_key.restype = ctypes.c_int\n ssl.ECDH_compute_key.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p, ctypes.c_void_p]\n \n@@ -39,6 +69,12 @@\n ssl.ECDSA_verify.restype = ctypes.c_int\n ssl.ECDSA_verify.argtypes = [ctypes.c_int, ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p]\n \n+ssl.EC_GROUP_get_degree.restype = ctypes.c_int\n+ssl.EC_GROUP_get_degree.argtypes = [ctypes.c_void_p]\n+\n+ssl.EC_GROUP_get_order.restype = ctypes.c_int\n+ssl.EC_GROUP_get_order.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]\n+\n ssl.EC_KEY_free.restype = None\n ssl.EC_KEY_free.argtypes = [ctypes.c_void_p]\n \n@@ -69,9 +105,15 @@\n ssl.EC_POINT_free.restype = None\n ssl.EC_POINT_free.argtypes = [ctypes.c_void_p]\n \n+ssl.EC_POINT_is_at_infinity.restype = ctypes.c_int\n+ssl.EC_POINT_is_at_infinity.argtypes = [ctypes.c_void_p, ctypes.c_void_p]\n+\n ssl.EC_POINT_mul.restype = ctypes.c_int\n ssl.EC_POINT_mul.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]\n \n+ssl.EC_POINT_set_compressed_coordinates_GFp.restype = ctypes.c_int\n+ssl.EC_POINT_set_compressed_coordinates_GFp.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p]\n+\n # this specifies the curve used with ECDSA.\n NID_secp256k1 = 714 # from openssl/obj_mac.h\n \n@@ -193,6 +235,107 @@ def set_compressed(self, compressed):\n             form = self.POINT_CONVERSION_UNCOMPRESSED\n         ssl.EC_KEY_set_conv_form(self.k, form)\n \n+    def recover(self, sigR, sigS, msg, msglen, recid, check):\n+        \"\"\"\n+        Perform ECDSA key recovery (see SEC1 4.1.6) for curves over (mod p)-fields\n+        recid selects which key is recovered\n+        if check is non-zero, additional checks are performed\n+        \"\"\"\n+        i = int(recid / 2)\n+\n+        r = None\n+        s = None\n+        ctx = None\n+        R = None\n+        O = None\n+        Q = None\n+\n+        assert len(sigR) == 32, len(sigR)\n+        assert len(sigS) == 32, len(sigS)\n+\n+        try:\n+            r = ssl.BN_bin2bn(bytes(sigR), len(sigR), ssl.BN_new())\n+            s = ssl.BN_bin2bn(bytes(   sigS), len(sigS), ssl.BN_new())\n+\n+            group = ssl.EC_KEY_get0_group(self.k)\n+            ctx = ssl.BN_CTX_new()\n+            order = ssl.BN_CTX_get(ctx)\n+            ctx = ssl.BN_CTX_new()\n+\n+            if not ssl.EC_GROUP_get_order(group, order, ctx):\n+                return -2\n+\n+            x = ssl.BN_CTX_get(ctx)\n+            if not ssl.BN_copy(x, order):\n+                return -1\n+            if not ssl.BN_mul_word(x, i):\n+                return -1\n+            if not ssl.BN_add(x, x, r):\n+                return -1\n+\n+            field = ssl.BN_CTX_get(ctx)\n+            if not ssl.EC_GROUP_get_curve_GFp(group, field, None, None, ctx):\n+                return -2\n+\n+            if ssl.BN_cmp(x, field) >= 0:\n+                return 0\n+\n+            R = ssl.EC_POINT_new(group)\n+            if R is None:\n+                return -2\n+            if not ssl.EC_POINT_set_compressed_coordinates_GFp(group, R, x, recid % 2, ctx):\n+                return 0\n+\n+            if check:\n+                O = ssl.EC_POINT_new(group)\n+                if O is None:\n+                    return -2\n+                if not ssl.EC_POINT_mul(group, O, None, R, order, ctx):\n+                    return -2\n+                if not ssl.EC_POINT_is_at_infinity(group, O):\n+                    return 0\n+\n+            Q = ssl.EC_POINT_new(group)\n+            if Q is None:\n+                return -2\n+\n+            n = ssl.EC_GROUP_get_degree(group)\n+            e = ssl.BN_CTX_get(ctx)\n+            if not ssl.BN_bin2bn(msg, msglen, e):\n+                return -1\n+\n+            if 8 * msglen > n:\n+                ssl.BN_rshift(e, e, 8 - (n & 7))\n+\n+            zero = ssl.BN_CTX_get(ctx)\n+            # if not ssl.BN_zero(zero):\n+            #     return -1\n+            if not ssl.BN_mod_sub(e, zero, e, order, ctx):\n+                return -1\n+            rr = ssl.BN_CTX_get(ctx)\n+            if not ssl.BN_mod_inverse(rr, r, order, ctx):\n+                return -1\n+            sor = ssl.BN_CTX_get(ctx)\n+            if not ssl.BN_mod_mul(sor, s, rr, order, ctx):\n+                return -1\n+            eor = ssl.BN_CTX_get(ctx)\n+            if not ssl.BN_mod_mul(eor, e, rr, order, ctx):\n+                return -1\n+            if not ssl.EC_POINT_mul(group, Q, eor, R, sor, ctx):\n+                return -2\n+\n+            if not ssl.EC_KEY_set_public_key(self.k, Q):\n+                return -2\n+\n+            return 1\n+        finally:\n+            if r: ssl.BN_free(r)\n+            if s: ssl.BN_free(s)\n+            if ctx: ssl.BN_CTX_free(ctx)\n+            if R: ssl.EC_POINT_free(R)\n+            if O: ssl.EC_POINT_free(O)\n+            if Q: ssl.EC_POINT_free(Q)\n+\n \n class CPubKey(bytes):\n     \"\"\"An encapsulated public key"
+      }
+    ]
+  },
+  {
+    "sha": "c70b8289795723051e267031cf9e67f6a5e9e500",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjNzBiODI4OTc5NTcyMzA1MWUyNjcwMzFjZjllNjdmNmE1ZTllNTAw",
+    "commit": {
+      "author": {
+        "name": "Johnson Lau",
+        "email": "jl2012@xbt.hk",
+        "date": "2016-10-28T21:33:10Z"
+      },
+      "committer": {
+        "name": "Johnson Lau",
+        "email": "jl2012@xbt.hk",
+        "date": "2016-12-22T13:24:23Z"
+      },
+      "message": "[qa] add FindAndDelete tests for sighash cache",
+      "tree": {
+        "sha": "ab7b24587697c81ae998bae465baff427f48ecfb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/ab7b24587697c81ae998bae465baff427f48ecfb"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/c70b8289795723051e267031cf9e67f6a5e9e500",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c70b8289795723051e267031cf9e67f6a5e9e500",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/c70b8289795723051e267031cf9e67f6a5e9e500",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c70b8289795723051e267031cf9e67f6a5e9e500/comments",
+    "author": {
+      "login": "jl2012",
+      "id": 8403418,
+      "node_id": "MDQ6VXNlcjg0MDM0MTg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/8403418?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jl2012",
+      "html_url": "https://github.com/jl2012",
+      "followers_url": "https://api.github.com/users/jl2012/followers",
+      "following_url": "https://api.github.com/users/jl2012/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jl2012/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jl2012/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jl2012/subscriptions",
+      "organizations_url": "https://api.github.com/users/jl2012/orgs",
+      "repos_url": "https://api.github.com/users/jl2012/repos",
+      "events_url": "https://api.github.com/users/jl2012/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jl2012/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "jl2012",
+      "id": 8403418,
+      "node_id": "MDQ6VXNlcjg0MDM0MTg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/8403418?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jl2012",
+      "html_url": "https://github.com/jl2012",
+      "followers_url": "https://api.github.com/users/jl2012/followers",
+      "following_url": "https://api.github.com/users/jl2012/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jl2012/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jl2012/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jl2012/subscriptions",
+      "organizations_url": "https://api.github.com/users/jl2012/orgs",
+      "repos_url": "https://api.github.com/users/jl2012/repos",
+      "events_url": "https://api.github.com/users/jl2012/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jl2012/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "e79ab64425aa583724c0cbcd9ca5c3ada152b87a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e79ab64425aa583724c0cbcd9ca5c3ada152b87a",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/e79ab64425aa583724c0cbcd9ca5c3ada152b87a"
+      }
+    ],
+    "stats": {
+      "total": 119,
+      "additions": 114,
+      "deletions": 5
+    },
+    "files": [
+      {
+        "sha": "dcaec5beec646912d9b4ed8043b83507321cae01",
+        "filename": "qa/rpc-tests/sighashcache.py",
+        "status": "modified",
+        "additions": 114,
+        "deletions": 5,
+        "changes": 119,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c70b8289795723051e267031cf9e67f6a5e9e500/qa/rpc-tests/sighashcache.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c70b8289795723051e267031cf9e67f6a5e9e500/qa/rpc-tests/sighashcache.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/qa/rpc-tests/sighashcache.py?ref=c70b8289795723051e267031cf9e67f6a5e9e500",
+        "patch": "@@ -7,7 +7,7 @@\n from test_framework.mininode import CTransaction, CTxOut, CTxIn, COutPoint, CTxInWitness\n from test_framework.util import hex_str_to_bytes, start_node, bytes_to_hex_str\n from test_framework.key import CECKey, CPubKey\n-from test_framework.script import CScript, OP_0, OP_1, OP_12, OP_14, OP_CHECKSIG, OP_CHECKMULTISIG, OP_CODESEPARATOR, OP_CHECKMULTISIGVERIFY, OP_CHECKSIGVERIFY, OP_HASH160, OP_EQUAL, SignatureHash, SIGHASH_ALL, hash160, sha256, SegwitVersion1SignatureHash\n+from test_framework.script import CScript, OP_0, OP_1, OP_12, OP_14, OP_CHECKSIG, OP_CHECKMULTISIG, OP_CODESEPARATOR, OP_CHECKMULTISIGVERIFY, OP_CHECKSIGVERIFY, OP_HASH160, OP_EQUAL, SignatureHash, SIGHASH_ALL, hash160, sha256, SegwitVersion1SignatureHash, FindAndDelete\n import time\n from random import randint\n \n@@ -33,6 +33,28 @@\n time_assertion = False # compare validation time with benchmarking test\n verbose = False # print validation details\n \n+def recoverkey(sig, hash):\n+    r_size = sig[3]\n+    s_size = sig[5 + r_size]\n+    r_val = sig[4:4+r_size]\n+    s_val = sig[6+r_size:6+r_size+s_size]\n+    while (len(r_val) != 32):\n+        if (len(r_val) > 32):\n+            assert (r_val[0] == 0)\n+            r_val = r_val[1:]\n+        else:\n+            r_val = b'\\x00' + r_val\n+    while (len(s_val) != 32):\n+        if (len(s_val) > 32):\n+            assert (s_val[0] == 0)\n+            s_val = s_val[1:]\n+        else:\n+            s_val = b'\\x00' + s_val\n+    key = CECKey()\n+    key.set_compressed(True)\n+    key.recover(r_val, s_val, hash, len(hash), 0, 0)\n+    return key.get_pubkey()\n+\n class SigHashCacheTest(BitcoinTestFramework):\n \n     def __init__(self):\n@@ -82,6 +104,9 @@ def test_preparation(self):\n         self.key = CECKey()\n         self.key.set_secretbytes(b\"9\")\n         self.key.set_compressed(1)\n+        self.dummysig = []\n+        self.dummysig.append(self.key.sign(sha256(b'\\x01')) + b'\\x01')\n+        self.dummysig.append(self.key.sign(sha256(b'\\x02')) + b'\\x01')\n         pubkey = CPubKey(self.key.get_pubkey())\n         self.script = []\n         scriptpubkey = []\n@@ -92,6 +117,7 @@ def test_preparation(self):\n         self.script.append(CScript([pubkey, OP_CHECKSIGVERIFY, OP_CODESEPARATOR] * 13 + [pubkey, OP_CHECKSIG])) # 2000, 2250\n         self.script.append(CScript([pubkey, OP_CHECKSIG])) # 2500, 2750\n         self.script.append(CScript([pubkey, OP_CHECKSIGVERIFY] * 136 + [pubkey, OP_CHECKSIG])) # 3000, 3250 (Not valid for P2SH due to too big)\n+        self.script.append(CScript([OP_CHECKSIGVERIFY] * 14 + [self.dummysig[0]])) # 3500, 3750\n \n         for i in self.script:\n             scriptpubkey.append(CScript([OP_HASH160, hash160(i), OP_EQUAL])) # P2SH\n@@ -105,16 +131,22 @@ def test_preparation(self):\n \n         # Add bare outputs\n         for i in range(250):\n-            tx.vout.append(CTxOut(default_amount,self.script[5])) # 3500-3749: 250 bare P2PK\n+            tx.vout.append(CTxOut(default_amount,self.script[5])) # 4000-4249: 250 bare P2PK\n         for i in range(25):\n-            # 3750-3774: 25 bare scriptPubKey with 137 CHECKSIGs. Pay more so it could pay enough fee when spending\n+            # 4250-4274: 25 bare scriptPubKey with 137 CHECKSIGs. Pay more so it could pay enough fee when spending\n             tx.vout.append(CTxOut(default_amount * 10,self.script[6]))\n+        for i in range(10):\n+            # 4275-4284: 10 bare FindAndDelete test\n+            tx.vout.append(CTxOut(default_amount, self.script[7]))\n \n         # subScript for CODESEPERATOR tests\n         self.csscript = []\n         for i in range(14):\n             self.csscript.append(CScript([pubkey, OP_CHECKSIGVERIFY, OP_CODESEPARATOR] * i + [pubkey, OP_CHECKSIG]))\n \n+        # subScript for FindAndDelete tests\n+        self.findanddeletescript = FindAndDelete(self.script[7], CScript([self.dummysig[0]]))\n+\n         signresult = self.nodes[0].signrawtransaction(bytes_to_hex_str(tx.serialize_without_witness()))['hex']\n         self.txid = int(\"0x\" + self.nodes[0].sendrawtransaction(signresult, True), 0)\n         self.nodes[0].generate(1)\n@@ -239,7 +271,7 @@ def many_CHECKSIG_CODESEPERATOR_different_ALL(self):\n     def P2PK_ALL(self):\n         script = self.script[5]\n         print (\"Test: Bare/segwit P2PK inputs with SIGHASH_ALL\")\n-        txpair = self.generate_txpair(3500,-750,250//speedup,250//speedup,350//speedup)\n+        txpair = self.generate_txpair(4000,-1250,250//speedup,250//speedup,350//speedup)\n         for i in range(250//speedup):\n             [sig, wsig] = self.signtx([script], txpair, i, [SIGHASH_ALL])\n             txpair[0].vin[i].scriptSig = CScript(sig)\n@@ -251,7 +283,7 @@ def P2PK_ALL(self):\n     def many_CHECKSIG_random_flag(self):\n         script = self.script[6]\n         print (\"Test: Bare/P2WSH inputs with 137 CHECKSIG with random SIGHASH\")\n-        txpair = self.generate_txpair(3750,-500,24//speedup,12//speedup,1000//speedup)\n+        txpair = self.generate_txpair(4250,-1000,24//speedup,12//speedup,1000//speedup)\n         # 24 inputs with only 12 outputs, so some SIGHASH_SINGLE will be unmatched\n         for i in range(24//speedup):\n             flags = []\n@@ -262,6 +294,80 @@ def many_CHECKSIG_random_flag(self):\n             txpair[1].wit.vtxinwit[i].scriptWitness.stack = wsig + [script]\n         self.validation_time(txpair)\n \n+    def FindAndDelete_reset(self):\n+        script = self.script[7]\n+        print (\"Test: FindAndDelete in P2SH with sighash reset\")\n+        '''\n+        The sighash cache is reset after every CHECKSIGVERIFY due to FindAndDelete.\n+        It should be as slow as no sighash cache.\n+        '''\n+        txpair = self.generate_txpair(3500)\n+        for i in range(default_nIn):\n+            sighash0 = SignatureHash(self.findanddeletescript, txpair[0], i, 1)[0]\n+            key0 = recoverkey(self.dummysig[0], sighash0)\n+            sighash1 = SignatureHash(script, txpair[0], i, 1)[0]\n+            key1 = recoverkey(self.dummysig[1], sighash1)\n+            assert (sighash0 != sighash1)\n+            wsighash = SegwitVersion1SignatureHash(script, txpair[1], i, 1, default_amount)\n+            wkey0 = recoverkey(self.dummysig[0], wsighash)\n+            wkey1 = recoverkey(self.dummysig[1], wsighash)\n+\n+            txpair[0].vin[i].scriptSig = CScript([self.dummysig[1], key1, self.dummysig[0], key0] * 7 + [script])\n+            txpair[1].wit.vtxinwit[i].scriptWitness.stack = [self.dummysig[1], wkey1, self.dummysig[0], wkey0] *7 + [script]\n+        [t, wt] = self.validation_time(txpair)\n+        if (time_assertion):\n+            assert(self.banchmark / t < 3)\n+            assert(t / self.banchmark < 3)\n+            assert(self.banchmark / wt > 4)\n+\n+    def FindAndDelete_noreset(self):\n+        script = self.script[7]\n+        print (\"Test: FindAndDelete in P2SH without sighash reset\")\n+        # No sighash reset due to FindAndDelete.\n+        txpair = self.generate_txpair(3550)\n+        for i in range(default_nIn // 2):\n+            sighash = SignatureHash(self.findanddeletescript, txpair[0], i, 1)[0]\n+            key = recoverkey(self.dummysig[0], sighash)\n+            wsighash = SegwitVersion1SignatureHash(script, txpair[1], i, 1, default_amount)\n+            wkey = recoverkey(self.dummysig[0], wsighash)\n+            txpair[0].vin[i].scriptSig = CScript([self.dummysig[0], key] * 14 + [script])\n+            txpair[1].wit.vtxinwit[i].scriptWitness.stack = [self.dummysig[0], wkey] * 14 + [script]\n+        for i in range(default_nIn // 2, default_nIn):\n+            sighash = SignatureHash(script, txpair[0], i, 1)[0]\n+            key = recoverkey(self.dummysig[1], sighash)\n+            wsighash = SegwitVersion1SignatureHash(script, txpair[1], i, 1, default_amount)\n+            wkey = recoverkey(self.dummysig[1], wsighash)\n+            txpair[0].vin[i].scriptSig = CScript([self.dummysig[1], key] * 14 + [script])\n+            txpair[1].wit.vtxinwit[i].scriptWitness.stack = [self.dummysig[1], wkey] * 14 + [script]\n+        [t, wt] = self.validation_time(txpair)\n+        if (time_assertion):\n+            assert(self.banchmark / t > 4)\n+            assert(self.banchmark / wt > 4)\n+\n+    def FindAndDelete_bare(self):\n+        script = self.script[7]\n+        print (\"Test: FindAndDelete in bare outputs\")\n+        txpair = self.generate_txpair(4275, -300, 10, 10, 1)\n+        for i in range(5):\n+            sighash0 = SignatureHash(self.findanddeletescript, txpair[0], i, 1)[0]\n+            key0 = recoverkey(self.dummysig[0], sighash0)\n+            sighash1 = SignatureHash(script, txpair[0], i, 1)[0]\n+            key1 = recoverkey(self.dummysig[1], sighash1)\n+            assert (sighash0 != sighash1)\n+            wsighash = SegwitVersion1SignatureHash(script, txpair[1], i, 1, default_amount)\n+            wkey0 = recoverkey(self.dummysig[0], wsighash)\n+            wkey1 = recoverkey(self.dummysig[1], wsighash)\n+            txpair[0].vin[i].scriptSig = CScript([self.dummysig[1], key1, self.dummysig[0], key0] * 7)\n+            txpair[1].wit.vtxinwit[i].scriptWitness.stack = [self.dummysig[1], wkey1, self.dummysig[0], wkey0] * 7 + [script]\n+        for i in range(5, 10):\n+            sighash = SignatureHash(self.findanddeletescript, txpair[0], i, 1)[0]\n+            key = recoverkey(self.dummysig[0], sighash)\n+            wsighash = SegwitVersion1SignatureHash(script, txpair[1], i, 1, default_amount)\n+            wkey = recoverkey(self.dummysig[0], wsighash)\n+            txpair[0].vin[i].scriptSig = CScript([self.dummysig[0], key] * 14)\n+            txpair[1].wit.vtxinwit[i].scriptWitness.stack = [self.dummysig[0], wkey] * 14 + [script]\n+        [t, wt] = self.validation_time(txpair)\n+\n     def signing_test(self):\n         print (\"Test: signrawtransaction with different SIGHASH types\")\n         # Prepare for signing tests\n@@ -300,6 +406,9 @@ def run_test(self):\n         self.many_CHECKSIG_CODESEPERATOR_different_ALL()\n         self.P2PK_ALL()\n         self.many_CHECKSIG_random_flag()\n+        self.FindAndDelete_reset()\n+        self.FindAndDelete_noreset()\n+        self.FindAndDelete_bare()\n         self.signing_test()\n \n if __name__ == '__main__':"
+      }
+    ]
+  }
+]

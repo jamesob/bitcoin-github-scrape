@@ -1,0 +1,302 @@
+[
+  {
+    "sha": "9e0dba8c17eb6507083b4d7602541c25f1fd7f38",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5ZTBkYmE4YzE3ZWI2NTA3MDgzYjRkNzYwMjU0MWMyNWYxZmQ3ZjM4",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-04-11T12:21:15Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-04-12T18:34:04Z"
+      },
+      "message": "fixed amount part of URI in QR-Codes / removed (no label) string if we have NO label / coding style updates / removed an unused variable",
+      "tree": {
+        "sha": "3847cdc646c91a4dc0d0131323ad63ac4d795fcb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/3847cdc646c91a4dc0d0131323ad63ac4d795fcb"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/9e0dba8c17eb6507083b4d7602541c25f1fd7f38",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9e0dba8c17eb6507083b4d7602541c25f1fd7f38",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/9e0dba8c17eb6507083b4d7602541c25f1fd7f38",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9e0dba8c17eb6507083b4d7602541c25f1fd7f38/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "460b66b14b80a55279d837c91aff1f1c3ca60d7f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/460b66b14b80a55279d837c91aff1f1c3ca60d7f",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/460b66b14b80a55279d837c91aff1f1c3ca60d7f"
+      }
+    ],
+    "stats": {
+      "total": 42,
+      "additions": 23,
+      "deletions": 19
+    },
+    "files": [
+      {
+        "sha": "f9cca13a1a96965f640272ee7bb899e25f9a8e55",
+        "filename": "src/qt/addressbookpage.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 5,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9e0dba8c17eb6507083b4d7602541c25f1fd7f38/src/qt/addressbookpage.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9e0dba8c17eb6507083b4d7602541c25f1fd7f38/src/qt/addressbookpage.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/addressbookpage.cpp?ref=9e0dba8c17eb6507083b4d7602541c25f1fd7f38",
+        "patch": "@@ -310,16 +310,14 @@ void AddressBookPage::on_showQRCode_clicked()\n     QTableView *table = ui->tableView;\n     QModelIndexList indexes = table->selectionModel()->selectedRows(AddressTableModel::Address);\n \n-\n-    QRCodeDialog *d;\n     foreach (QModelIndex index, indexes)\n     {\n         QString address = index.data().toString(),\n             label = index.sibling(index.row(), 0).data().toString(),\n-            title = QString(\"%1 << %2 >>\").arg(label).arg(address);\n+            title = QString(\"<< %1 >>\").arg(address);\n \n-        QRCodeDialog *d = new QRCodeDialog(title, address, label, tab == ReceivingTab, this);\n-        d->show();\n+        QRCodeDialog *dialog = new QRCodeDialog(title, address, label, tab == ReceivingTab, this);\n+        dialog->show();\n     }\n #endif\n }"
+      },
+      {
+        "sha": "bf132ad01325108d495a3cfffd2610c4a20dc207",
+        "filename": "src/qt/qrcodedialog.cpp",
+        "status": "modified",
+        "additions": 20,
+        "deletions": 14,
+        "changes": 34,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9e0dba8c17eb6507083b4d7602541c25f1fd7f38/src/qt/qrcodedialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9e0dba8c17eb6507083b4d7602541c25f1fd7f38/src/qt/qrcodedialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/qrcodedialog.cpp?ref=9e0dba8c17eb6507083b4d7602541c25f1fd7f38",
+        "patch": "@@ -8,7 +8,7 @@\n \n #include <qrencode.h>\n \n-#define EXPORT_IMAGE_SIZE   256\n+#define EXPORT_IMAGE_SIZE 256\n \n QRCodeDialog::QRCodeDialog(const QString &title, const QString &addr, const QString &label, bool enableReq, QWidget *parent) :\n     QDialog(parent),\n@@ -24,7 +24,9 @@ QRCodeDialog::QRCodeDialog(const QString &title, const QString &addr, const QStr\n     ui->lblAm1->setVisible(enableReq);\n     ui->lblAm2->setVisible(enableReq);\n \n-    ui->lnLabel->setText(label);\n+    // don't display \"(no label)\" if there IS no label, as this is confusing in the QR dialog\n+    if(label != tr(\"(no label)\"))\n+        ui->lnLabel->setText(label);\n \n     genCode();\n }\n@@ -37,13 +39,14 @@ QRCodeDialog::~QRCodeDialog()\n void QRCodeDialog::genCode()\n {\n     QString uri = getURI();\n-    //qDebug() << \"Encoding:\" << uri.toUtf8().constData();\n     QRcode *code = QRcode_encodeString(uri.toUtf8().constData(), 0, QR_ECLEVEL_L, QR_MODE_8, 1);\n     myImage = QImage(code->width + 8, code->width + 8, QImage::Format_RGB32);\n     myImage.fill(0xffffff);\n     unsigned char *p = code->data;\n-    for(int y = 0; y < code->width; y++) {\n-        for(int x = 0; x < code->width; x++) {\n+    for (int y = 0; y < code->width; y++)\n+    {\n+        for (int x = 0; x < code->width; x++)\n+        {\n             myImage.setPixel(x + 4, y + 4, ((*p & 1) ? 0x0 : 0xffffff));\n             p++;\n         }\n@@ -57,22 +60,26 @@ QString QRCodeDialog::getURI()\n     QString ret = QString(\"bitcoin:%1\").arg(address);\n \n     int paramCount = 0;\n-    if(ui->chkReq->isChecked() && ui->lnReqAmount->text().isEmpty() == false) {\n-        bool ok= false;\n-        double amount = ui->lnReqAmount->text().toDouble(&ok);\n-        if(ok) {\n-            ret += QString(\"?amount=%1X8\").arg(ui->lnReqAmount->text());\n+    if (ui->chkReq->isChecked() && !ui->lnReqAmount->text().isEmpty())\n+    {\n+        bool ok = false;\n+        ui->lnReqAmount->text().toDouble(&ok);\n+        if (ok)\n+        {\n+            ret += QString(\"?amount=%1\").arg(ui->lnReqAmount->text());\n             paramCount++;\n         }\n     }\n \n-    if(ui->lnLabel->text().isEmpty() == false) {\n+    if (!ui->lnLabel->text().isEmpty())\n+    {\n         QString lbl(QUrl::toPercentEncoding(ui->lnLabel->text()));\n         ret += QString(\"%1label=%2\").arg(paramCount == 0 ? \"?\" : \"&\").arg(lbl);\n         paramCount++;\n     }\n \n-    if(ui->lnMessage->text().isEmpty() == false) {\n+    if (!ui->lnMessage->text().isEmpty())\n+    {\n         QString msg(QUrl::toPercentEncoding(ui->lnMessage->text()));\n         ret += QString(\"%1message=%2\").arg(paramCount == 0 ? \"?\" : \"&\").arg(msg);\n         paramCount++;\n@@ -99,9 +106,8 @@ void QRCodeDialog::on_lnMessage_textChanged(const QString &)\n void QRCodeDialog::on_btnSaveAs_clicked()\n {\n     QString fn = GUIUtil::getSaveFileName(this, tr(\"Save Image...\"), QString(), tr(\"PNG Images (*.png)\"));\n-    if(!fn.isEmpty()) {\n+    if (!fn.isEmpty())\n         myImage.scaled(EXPORT_IMAGE_SIZE, EXPORT_IMAGE_SIZE).save(fn);\n-    }\n }\n \n void QRCodeDialog::on_chkReq_toggled(bool)"
+      }
+    ]
+  },
+  {
+    "sha": "1e8c62b29cc0bee5f8da4aa10720fddf0a1cbdfe",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxZThjNjJiMjljYzBiZWU1ZjhkYTRhYTEwNzIwZmRkZjBhMWNiZGZl",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-04-11T21:05:22Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-04-12T18:34:05Z"
+      },
+      "message": "updated to reflect pull-request suggestions / renamed some GUI elements",
+      "tree": {
+        "sha": "0deb42a817a88930b988264ad4381a830521e918",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/0deb42a817a88930b988264ad4381a830521e918"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/1e8c62b29cc0bee5f8da4aa10720fddf0a1cbdfe",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1e8c62b29cc0bee5f8da4aa10720fddf0a1cbdfe",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/1e8c62b29cc0bee5f8da4aa10720fddf0a1cbdfe",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1e8c62b29cc0bee5f8da4aa10720fddf0a1cbdfe/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "9e0dba8c17eb6507083b4d7602541c25f1fd7f38",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9e0dba8c17eb6507083b4d7602541c25f1fd7f38",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/9e0dba8c17eb6507083b4d7602541c25f1fd7f38"
+      }
+    ],
+    "stats": {
+      "total": 50,
+      "additions": 22,
+      "deletions": 28
+    },
+    "files": [
+      {
+        "sha": "3e55c39e047cd1d25da44d6302a6604f18e0eebc",
+        "filename": "src/qt/addressbookpage.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 4,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1e8c62b29cc0bee5f8da4aa10720fddf0a1cbdfe/src/qt/addressbookpage.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1e8c62b29cc0bee5f8da4aa10720fddf0a1cbdfe/src/qt/addressbookpage.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/addressbookpage.cpp?ref=1e8c62b29cc0bee5f8da4aa10720fddf0a1cbdfe",
+        "patch": "@@ -312,11 +312,9 @@ void AddressBookPage::on_showQRCode_clicked()\n \n     foreach (QModelIndex index, indexes)\n     {\n-        QString address = index.data().toString(),\n-            label = index.sibling(index.row(), 0).data().toString(),\n-            title = QString(\"<< %1 >>\").arg(address);\n+        QString address = index.data().toString(), label = index.sibling(index.row(), 0).data(Qt::EditRole).toString();\n \n-        QRCodeDialog *dialog = new QRCodeDialog(title, address, label, tab == ReceivingTab, this);\n+        QRCodeDialog *dialog = new QRCodeDialog(address, label, tab == ReceivingTab, this);\n         dialog->show();\n     }\n #endif"
+      },
+      {
+        "sha": "552eed0561e9ee1239d5ff220741684de54cb140",
+        "filename": "src/qt/forms/qrcodedialog.ui",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 6,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1e8c62b29cc0bee5f8da4aa10720fddf0a1cbdfe/src/qt/forms/qrcodedialog.ui",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1e8c62b29cc0bee5f8da4aa10720fddf0a1cbdfe/src/qt/forms/qrcodedialog.ui",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/forms/qrcodedialog.ui?ref=1e8c62b29cc0bee5f8da4aa10720fddf0a1cbdfe",
+        "patch": "@@ -44,7 +44,7 @@\n         <item>\n          <layout class=\"QVBoxLayout\" name=\"verticalLayout\">\n           <item>\n-           <widget class=\"QCheckBox\" name=\"chkReq\">\n+           <widget class=\"QCheckBox\" name=\"chkReqPayment\">\n             <property name=\"enabled\">\n              <bool>true</bool>\n             </property>\n@@ -56,7 +56,7 @@\n           <item>\n            <layout class=\"QHBoxLayout\" name=\"horizontalLayout\">\n             <item>\n-             <widget class=\"QLabel\" name=\"lblAm1\">\n+             <widget class=\"QLabel\" name=\"lblAmount\">\n               <property name=\"sizePolicy\">\n                <sizepolicy hsizetype=\"Preferred\" vsizetype=\"Maximum\">\n                 <horstretch>0</horstretch>\n@@ -91,7 +91,7 @@\n              </widget>\n             </item>\n             <item>\n-             <widget class=\"QLabel\" name=\"lblAm2\">\n+             <widget class=\"QLabel\" name=\"lblBTC\">\n               <property name=\"sizePolicy\">\n                <sizepolicy hsizetype=\"Preferred\" vsizetype=\"Maximum\">\n                 <horstretch>0</horstretch>\n@@ -113,7 +113,7 @@\n         <item>\n          <layout class=\"QGridLayout\" name=\"gridLayout\">\n           <item row=\"0\" column=\"0\">\n-           <widget class=\"QLabel\" name=\"label_3\">\n+           <widget class=\"QLabel\" name=\"lblLabel\">\n             <property name=\"text\">\n              <string>Label:</string>\n             </property>\n@@ -136,7 +136,7 @@\n            </widget>\n           </item>\n           <item row=\"1\" column=\"0\">\n-           <widget class=\"QLabel\" name=\"label_4\">\n+           <widget class=\"QLabel\" name=\"lblMessage\">\n             <property name=\"text\">\n              <string>Message:</string>\n             </property>\n@@ -194,7 +194,7 @@\n  <resources/>\n  <connections>\n   <connection>\n-   <sender>chkReq</sender>\n+   <sender>chkReqPayment</sender>\n    <signal>clicked(bool)</signal>\n    <receiver>lnReqAmount</receiver>\n    <slot>setEnabled(bool)</slot>"
+      },
+      {
+        "sha": "515cae29d21bee2228ef3c35d7facddbe05f38a3",
+        "filename": "src/qt/qrcodedialog.cpp",
+        "status": "modified",
+        "additions": 12,
+        "deletions": 16,
+        "changes": 28,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1e8c62b29cc0bee5f8da4aa10720fddf0a1cbdfe/src/qt/qrcodedialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1e8c62b29cc0bee5f8da4aa10720fddf0a1cbdfe/src/qt/qrcodedialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/qrcodedialog.cpp?ref=1e8c62b29cc0bee5f8da4aa10720fddf0a1cbdfe",
+        "patch": "@@ -10,23 +10,19 @@\n \n #define EXPORT_IMAGE_SIZE 256\n \n-QRCodeDialog::QRCodeDialog(const QString &title, const QString &addr, const QString &label, bool enableReq, QWidget *parent) :\n-    QDialog(parent),\n-    ui(new Ui::QRCodeDialog),\n-    address(addr)\n+QRCodeDialog::QRCodeDialog(const QString &addr, const QString &label, bool enableReq, QWidget *parent) :\n+    QDialog(parent), ui(new Ui::QRCodeDialog), address(addr)\n {\n     ui->setupUi(this);\n-    setWindowTitle(title);\n+    setWindowTitle(QString(\"%1\").arg(address));\n     setAttribute(Qt::WA_DeleteOnClose);\n \n-    ui->chkReq->setVisible(enableReq);\n+    ui->chkReqPayment->setVisible(enableReq);\n     ui->lnReqAmount->setVisible(enableReq);\n-    ui->lblAm1->setVisible(enableReq);\n-    ui->lblAm2->setVisible(enableReq);\n+    ui->lblAmount->setVisible(enableReq);\n+    ui->lblBTC->setVisible(enableReq);\n \n-    // don't display \"(no label)\" if there IS no label, as this is confusing in the QR dialog\n-    if(label != tr(\"(no label)\"))\n-        ui->lnLabel->setText(label);\n+    ui->lnLabel->setText(label);\n \n     genCode();\n }\n@@ -60,7 +56,7 @@ QString QRCodeDialog::getURI()\n     QString ret = QString(\"bitcoin:%1\").arg(address);\n \n     int paramCount = 0;\n-    if (ui->chkReq->isChecked() && !ui->lnReqAmount->text().isEmpty())\n+    if (ui->chkReqPayment->isChecked() && !ui->lnReqAmount->text().isEmpty())\n     {\n         bool ok = false;\n         ui->lnReqAmount->text().toDouble(&ok);\n@@ -88,17 +84,17 @@ QString QRCodeDialog::getURI()\n     return ret;\n }\n \n-void QRCodeDialog::on_lnReqAmount_textChanged(const QString &)\n+void QRCodeDialog::on_lnReqAmount_textChanged(const QString &arg1)\n {\n     genCode();\n }\n \n-void QRCodeDialog::on_lnLabel_textChanged(const QString &)\n+void QRCodeDialog::on_lnLabel_textChanged(const QString &arg1)\n {\n     genCode();\n }\n \n-void QRCodeDialog::on_lnMessage_textChanged(const QString &)\n+void QRCodeDialog::on_lnMessage_textChanged(const QString &arg1)\n {\n     genCode();\n }\n@@ -110,7 +106,7 @@ void QRCodeDialog::on_btnSaveAs_clicked()\n         myImage.scaled(EXPORT_IMAGE_SIZE, EXPORT_IMAGE_SIZE).save(fn);\n }\n \n-void QRCodeDialog::on_chkReq_toggled(bool)\n+void QRCodeDialog::on_chkReqPayment_toggled(bool)\n {\n     genCode();\n }"
+      },
+      {
+        "sha": "ad0611605b6deaa31b34f24973440bdc445cfac3",
+        "filename": "src/qt/qrcodedialog.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1e8c62b29cc0bee5f8da4aa10720fddf0a1cbdfe/src/qt/qrcodedialog.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1e8c62b29cc0bee5f8da4aa10720fddf0a1cbdfe/src/qt/qrcodedialog.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/qrcodedialog.h?ref=1e8c62b29cc0bee5f8da4aa10720fddf0a1cbdfe",
+        "patch": "@@ -13,7 +13,7 @@ class QRCodeDialog : public QDialog\n     Q_OBJECT\n \n public:\n-    explicit QRCodeDialog(const QString &title, const QString &address, const QString &label, bool allowReq, QWidget *parent = 0);\n+    explicit QRCodeDialog(const QString &addr, const QString &label, bool enableReq, QWidget *parent = 0);\n     ~QRCodeDialog();\n \n private slots:\n@@ -22,7 +22,7 @@ private slots:\n     void on_lnMessage_textChanged(const QString &arg1);\n     void on_btnSaveAs_clicked();\n \n-    void on_chkReq_toggled(bool checked);\n+    void on_chkReqPayment_toggled(bool checked);\n \n private:\n     Ui::QRCodeDialog *ui;"
+      }
+    ]
+  },
+  {
+    "sha": "b1a99c3a1fb2613e9c7cecd565e8cc604b03eb6f",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiMWE5OWMzYTFmYjI2MTNlOWM3Y2VjZDU2NWU4Y2M2MDRiMDNlYjZm",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-04-12T16:39:22Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-04-12T18:34:06Z"
+      },
+      "message": "limit length of generated URI to 255 chars to prevent a DoS against the QR-Code dialog",
+      "tree": {
+        "sha": "b19c2b1217119549a26ff5f46f6f06704525ea9c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/b19c2b1217119549a26ff5f46f6f06704525ea9c"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/b1a99c3a1fb2613e9c7cecd565e8cc604b03eb6f",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b1a99c3a1fb2613e9c7cecd565e8cc604b03eb6f",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/b1a99c3a1fb2613e9c7cecd565e8cc604b03eb6f",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b1a99c3a1fb2613e9c7cecd565e8cc604b03eb6f/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "1e8c62b29cc0bee5f8da4aa10720fddf0a1cbdfe",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1e8c62b29cc0bee5f8da4aa10720fddf0a1cbdfe",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/1e8c62b29cc0bee5f8da4aa10720fddf0a1cbdfe"
+      }
+    ],
+    "stats": {
+      "total": 34,
+      "additions": 23,
+      "deletions": 11
+    },
+    "files": [
+      {
+        "sha": "80a56d95f3774a08f09fdf6e6261e3cf2a1d1cef",
+        "filename": "src/qt/qrcodedialog.cpp",
+        "status": "modified",
+        "additions": 23,
+        "deletions": 11,
+        "changes": 34,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b1a99c3a1fb2613e9c7cecd565e8cc604b03eb6f/src/qt/qrcodedialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b1a99c3a1fb2613e9c7cecd565e8cc604b03eb6f/src/qt/qrcodedialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/qrcodedialog.cpp?ref=b1a99c3a1fb2613e9c7cecd565e8cc604b03eb6f",
+        "patch": "@@ -35,20 +35,28 @@ QRCodeDialog::~QRCodeDialog()\n void QRCodeDialog::genCode()\n {\n     QString uri = getURI();\n-    QRcode *code = QRcode_encodeString(uri.toUtf8().constData(), 0, QR_ECLEVEL_L, QR_MODE_8, 1);\n-    myImage = QImage(code->width + 8, code->width + 8, QImage::Format_RGB32);\n-    myImage.fill(0xffffff);\n-    unsigned char *p = code->data;\n-    for (int y = 0; y < code->width; y++)\n+\n+    if (uri != \"\")\n     {\n-        for (int x = 0; x < code->width; x++)\n+        ui->lblQRCode->setText(\"\");\n+\n+        QRcode *code = QRcode_encodeString(uri.toUtf8().constData(), 0, QR_ECLEVEL_L, QR_MODE_8, 1);\n+        myImage = QImage(code->width + 8, code->width + 8, QImage::Format_RGB32);\n+        myImage.fill(0xffffff);\n+        unsigned char *p = code->data;\n+        for (int y = 0; y < code->width; y++)\n         {\n-            myImage.setPixel(x + 4, y + 4, ((*p & 1) ? 0x0 : 0xffffff));\n-            p++;\n+            for (int x = 0; x < code->width; x++)\n+            {\n+                myImage.setPixel(x + 4, y + 4, ((*p & 1) ? 0x0 : 0xffffff));\n+                p++;\n+            }\n         }\n+        QRcode_free(code);\n+        ui->lblQRCode->setPixmap(QPixmap::fromImage(myImage).scaled(300, 300));\n     }\n-    QRcode_free(code);\n-    ui->lblQRCode->setPixmap(QPixmap::fromImage(myImage).scaled(300, 300));\n+    else\n+        ui->lblQRCode->setText(tr(\"Resulting URI too long, try to reduce the text for label / message.\"));\n }\n \n QString QRCodeDialog::getURI()\n@@ -81,7 +89,11 @@ QString QRCodeDialog::getURI()\n         paramCount++;\n     }\n \n-    return ret;\n+    // limit URI length to 255 chars, to prevent a DoS of the QR-Code dialog\n+    if (ret.length() < 256)\n+        return ret;\n+    else\n+        return QString(\"\");\n }\n \n void QRCodeDialog::on_lnReqAmount_textChanged(const QString &arg1)"
+      }
+    ]
+  },
+  {
+    "sha": "7261945eb5f64423d47a5bff63ecd8b65d88b8ed",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3MjYxOTQ1ZWI1ZjY0NDIzZDQ3YTViZmY2M2VjZDhiNjVkODhiOGVk",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-04-12T18:21:02Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-04-12T18:34:06Z"
+      },
+      "message": "enable wordWrap on lblQRCode / small code comment change",
+      "tree": {
+        "sha": "9f7e022c22badf18d057c09ca018a1082c5b14ae",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/9f7e022c22badf18d057c09ca018a1082c5b14ae"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/7261945eb5f64423d47a5bff63ecd8b65d88b8ed",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7261945eb5f64423d47a5bff63ecd8b65d88b8ed",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/7261945eb5f64423d47a5bff63ecd8b65d88b8ed",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7261945eb5f64423d47a5bff63ecd8b65d88b8ed/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "b1a99c3a1fb2613e9c7cecd565e8cc604b03eb6f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b1a99c3a1fb2613e9c7cecd565e8cc604b03eb6f",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b1a99c3a1fb2613e9c7cecd565e8cc604b03eb6f"
+      }
+    ],
+    "stats": {
+      "total": 5,
+      "additions": 4,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "714b1d6cd8db6e9c444c507f6d4fcf6a1eca1287",
+        "filename": "src/qt/forms/qrcodedialog.ui",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7261945eb5f64423d47a5bff63ecd8b65d88b8ed/src/qt/forms/qrcodedialog.ui",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7261945eb5f64423d47a5bff63ecd8b65d88b8ed/src/qt/forms/qrcodedialog.ui",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/forms/qrcodedialog.ui?ref=7261945eb5f64423d47a5bff63ecd8b65d88b8ed",
+        "patch": "@@ -34,6 +34,9 @@\n      <property name=\"alignment\">\n       <set>Qt::AlignCenter</set>\n      </property>\n+     <property name=\"wordWrap\">\n+      <bool>true</bool>\n+     </property>\n     </widget>\n    </item>\n    <item>"
+      },
+      {
+        "sha": "9965f1438f8829987f58a0db3d7de3c00ebf27ec",
+        "filename": "src/qt/qrcodedialog.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7261945eb5f64423d47a5bff63ecd8b65d88b8ed/src/qt/qrcodedialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7261945eb5f64423d47a5bff63ecd8b65d88b8ed/src/qt/qrcodedialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/qrcodedialog.cpp?ref=7261945eb5f64423d47a5bff63ecd8b65d88b8ed",
+        "patch": "@@ -89,7 +89,7 @@ QString QRCodeDialog::getURI()\n         paramCount++;\n     }\n \n-    // limit URI length to 255 chars, to prevent a DoS of the QR-Code dialog\n+    // limit URI length to 255 chars, to prevent a DoS against the QR-Code dialog\n     if (ret.length() < 256)\n         return ret;\n     else"
+      }
+    ]
+  }
+]

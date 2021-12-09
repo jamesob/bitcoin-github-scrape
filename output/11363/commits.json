@@ -1,0 +1,442 @@
+[
+  {
+    "sha": "1729c29dedc64d900a1a1c686a56e16fa5417fa1",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxNzI5YzI5ZGVkYzY0ZDkwMGExYTFjNjg2YTU2ZTE2ZmE1NDE3ZmEx",
+    "commit": {
+      "author": {
+        "name": "Cory Fields",
+        "email": "cory-nospam-@coryfields.com",
+        "date": "2017-09-18T22:45:51Z"
+      },
+      "committer": {
+        "name": "Cory Fields",
+        "email": "cory-nospam-@coryfields.com",
+        "date": "2017-12-12T20:25:25Z"
+      },
+      "message": "net: split socket creation out of connection\n\nAlso, check for the correct error during socket creation",
+      "tree": {
+        "sha": "6eaab18b57cd1386e117381346b0de929c9319e0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/6eaab18b57cd1386e117381346b0de929c9319e0"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/1729c29dedc64d900a1a1c686a56e16fa5417fa1",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1729c29dedc64d900a1a1c686a56e16fa5417fa1",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/1729c29dedc64d900a1a1c686a56e16fa5417fa1",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1729c29dedc64d900a1a1c686a56e16fa5417fa1/comments",
+    "author": {
+      "login": "theuni",
+      "id": 417043,
+      "node_id": "MDQ6VXNlcjQxNzA0Mw==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/417043?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/theuni",
+      "html_url": "https://github.com/theuni",
+      "followers_url": "https://api.github.com/users/theuni/followers",
+      "following_url": "https://api.github.com/users/theuni/following{/other_user}",
+      "gists_url": "https://api.github.com/users/theuni/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/theuni/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/theuni/subscriptions",
+      "organizations_url": "https://api.github.com/users/theuni/orgs",
+      "repos_url": "https://api.github.com/users/theuni/repos",
+      "events_url": "https://api.github.com/users/theuni/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/theuni/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "theuni",
+      "id": 417043,
+      "node_id": "MDQ6VXNlcjQxNzA0Mw==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/417043?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/theuni",
+      "html_url": "https://github.com/theuni",
+      "followers_url": "https://api.github.com/users/theuni/followers",
+      "following_url": "https://api.github.com/users/theuni/following{/other_user}",
+      "gists_url": "https://api.github.com/users/theuni/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/theuni/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/theuni/subscriptions",
+      "organizations_url": "https://api.github.com/users/theuni/orgs",
+      "repos_url": "https://api.github.com/users/theuni/repos",
+      "events_url": "https://api.github.com/users/theuni/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/theuni/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "6f01dcf63873a5e42798635ab4026c9a5f9fa213",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6f01dcf63873a5e42798635ab4026c9a5f9fa213",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/6f01dcf63873a5e42798635ab4026c9a5f9fa213"
+      }
+    ],
+    "stats": {
+      "total": 61,
+      "additions": 44,
+      "deletions": 17
+    },
+    "files": [
+      {
+        "sha": "8f15842150f805bc61dadc5df605fa362808b6b1",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 2,
+        "changes": 18,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1729c29dedc64d900a1a1c686a56e16fa5417fa1/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1729c29dedc64d900a1a1c686a56e16fa5417fa1/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=1729c29dedc64d900a1a1c686a56e16fa5417fa1",
+        "patch": "@@ -417,16 +417,30 @@ CNode* CConnman::ConnectNode(CAddress addrConnect, const char *pszDest, bool fCo\n     if (addrConnect.IsValid()) {\n         bool proxyConnectionFailed = false;\n \n-        if (GetProxy(addrConnect.GetNetwork(), proxy))\n+        if (GetProxy(addrConnect.GetNetwork(), proxy)) {\n+            hSocket = CreateSocket(proxy.proxy);\n+            if (hSocket == INVALID_SOCKET) {\n+                return nullptr;\n+            }\n             connected = ConnectThroughProxy(proxy, addrConnect.ToStringIP(), addrConnect.GetPort(), hSocket, nConnectTimeout, &proxyConnectionFailed);\n-        else // no proxy needed (none set for target network)\n+        } else {\n+            // no proxy needed (none set for target network)\n+            hSocket = CreateSocket(addrConnect);\n+            if (hSocket == INVALID_SOCKET) {\n+                return nullptr;\n+            }\n             connected = ConnectSocketDirectly(addrConnect, hSocket, nConnectTimeout);\n+        }\n         if (!proxyConnectionFailed) {\n             // If a connection to the node was attempted, and failure (if any) is not caused by a problem connecting to\n             // the proxy, mark this as an attempt.\n             addrman.Attempt(addrConnect, fCountFailure);\n         }\n     } else if (pszDest && GetNameProxy(proxy)) {\n+        hSocket = CreateSocket(proxy.proxy);\n+        if (hSocket == INVALID_SOCKET) {\n+            return nullptr;\n+        }\n         std::string host;\n         int port = default_port;\n         SplitHostPort(std::string(pszDest), port, host);"
+      },
+      {
+        "sha": "9b63d6034201bdfe201ce03db9c5f713f9f6d770",
+        "filename": "src/netbase.cpp",
+        "status": "modified",
+        "additions": 27,
+        "deletions": 15,
+        "changes": 42,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1729c29dedc64d900a1a1c686a56e16fa5417fa1/src/netbase.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1729c29dedc64d900a1a1c686a56e16fa5417fa1/src/netbase.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/netbase.cpp?ref=1729c29dedc64d900a1a1c686a56e16fa5417fa1",
+        "patch": "@@ -452,20 +452,18 @@ static bool Socks5(const std::string& strDest, int port, const ProxyCredentials\n     return true;\n }\n \n-bool ConnectSocketDirectly(const CService &addrConnect, SOCKET& hSocketRet, int nTimeout)\n+SOCKET CreateSocket(const CService &addrConnect)\n {\n-    hSocketRet = INVALID_SOCKET;\n-\n     struct sockaddr_storage sockaddr;\n     socklen_t len = sizeof(sockaddr);\n     if (!addrConnect.GetSockAddr((struct sockaddr*)&sockaddr, &len)) {\n-        LogPrintf(\"Cannot connect to %s: unsupported network\\n\", addrConnect.ToString());\n-        return false;\n+        LogPrintf(\"Cannot create socket for %s: unsupported network\\n\", addrConnect.ToString());\n+        return INVALID_SOCKET;\n     }\n \n     SOCKET hSocket = socket(((struct sockaddr*)&sockaddr)->sa_family, SOCK_STREAM, IPPROTO_TCP);\n     if (hSocket == INVALID_SOCKET)\n-        return false;\n+        return INVALID_SOCKET;\n \n #ifdef SO_NOSIGPIPE\n     int set = 1;\n@@ -479,9 +477,24 @@ bool ConnectSocketDirectly(const CService &addrConnect, SOCKET& hSocketRet, int\n     // Set to non-blocking\n     if (!SetSocketNonBlocking(hSocket, true)) {\n         CloseSocket(hSocket);\n-        return error(\"ConnectSocketDirectly: Setting socket to non-blocking failed, error %s\\n\", NetworkErrorString(WSAGetLastError()));\n+        LogPrintf(\"ConnectSocketDirectly: Setting socket to non-blocking failed, error %s\\n\", NetworkErrorString(WSAGetLastError()));\n     }\n+    return hSocket;\n+}\n \n+bool ConnectSocketDirectly(const CService &addrConnect, SOCKET& hSocket, int nTimeout)\n+{\n+    struct sockaddr_storage sockaddr;\n+    socklen_t len = sizeof(sockaddr);\n+    if (hSocket == INVALID_SOCKET) {\n+        LogPrintf(\"Cannot connect to %s: invalid socket\\n\", addrConnect.ToString());\n+        return false;\n+    }\n+    if (!addrConnect.GetSockAddr((struct sockaddr*)&sockaddr, &len)) {\n+        LogPrintf(\"Cannot connect to %s: unsupported network\\n\", addrConnect.ToString());\n+        CloseSocket(hSocket);\n+        return false;\n+    }\n     if (connect(hSocket, (struct sockaddr*)&sockaddr, len) == SOCKET_ERROR)\n     {\n         int nErr = WSAGetLastError();\n@@ -534,8 +547,6 @@ bool ConnectSocketDirectly(const CService &addrConnect, SOCKET& hSocketRet, int\n             return false;\n         }\n     }\n-\n-    hSocketRet = hSocket;\n     return true;\n }\n \n@@ -587,9 +598,8 @@ bool IsProxy(const CNetAddr &addr) {\n     return false;\n }\n \n-bool ConnectThroughProxy(const proxyType &proxy, const std::string& strDest, int port, SOCKET& hSocketRet, int nTimeout, bool *outProxyConnectionFailed)\n+bool ConnectThroughProxy(const proxyType &proxy, const std::string& strDest, int port, SOCKET& hSocket, int nTimeout, bool *outProxyConnectionFailed)\n {\n-    SOCKET hSocket = INVALID_SOCKET;\n     // first connect to proxy server\n     if (!ConnectSocketDirectly(proxy.proxy, hSocket, nTimeout)) {\n         if (outProxyConnectionFailed)\n@@ -601,14 +611,16 @@ bool ConnectThroughProxy(const proxyType &proxy, const std::string& strDest, int\n         ProxyCredentials random_auth;\n         static std::atomic_int counter(0);\n         random_auth.username = random_auth.password = strprintf(\"%i\", counter++);\n-        if (!Socks5(strDest, (unsigned short)port, &random_auth, hSocket))\n+        if (!Socks5(strDest, (unsigned short)port, &random_auth, hSocket)) {\n+            CloseSocket(hSocket);\n             return false;\n+        }\n     } else {\n-        if (!Socks5(strDest, (unsigned short)port, 0, hSocket))\n+        if (!Socks5(strDest, (unsigned short)port, 0, hSocket)) {\n+            CloseSocket(hSocket);\n             return false;\n+        }\n     }\n-\n-    hSocketRet = hSocket;\n     return true;\n }\n bool LookupSubNet(const char* pszName, CSubNet& ret)"
+      },
+      {
+        "sha": "59945ea97d2c82adb01ee97c9588e496d386b1cd",
+        "filename": "src/netbase.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1729c29dedc64d900a1a1c686a56e16fa5417fa1/src/netbase.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1729c29dedc64d900a1a1c686a56e16fa5417fa1/src/netbase.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/netbase.h?ref=1729c29dedc64d900a1a1c686a56e16fa5417fa1",
+        "patch": "@@ -51,6 +51,7 @@ bool Lookup(const char *pszName, CService& addr, int portDefault, bool fAllowLoo\n bool Lookup(const char *pszName, std::vector<CService>& vAddr, int portDefault, bool fAllowLookup, unsigned int nMaxSolutions);\n CService LookupNumeric(const char *pszName, int portDefault = 0);\n bool LookupSubNet(const char *pszName, CSubNet& subnet);\n+SOCKET CreateSocket(const CService &addrConnect);\n bool ConnectSocketDirectly(const CService &addrConnect, SOCKET& hSocketRet, int nTimeout);\n bool ConnectThroughProxy(const proxyType &proxy, const std::string& strDest, int port, SOCKET& hSocketRet, int nTimeout, bool *outProxyConnectionFailed);\n /** Return readable error string for a network error code */"
+      }
+    ]
+  },
+  {
+    "sha": "9e3b2f576bb368a0857e808dcbd24b2dcb8bef2d",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5ZTNiMmY1NzZiYjM2OGEwODU3ZTgwOGRjYmQyNGIyZGNiOGJlZjJk",
+    "commit": {
+      "author": {
+        "name": "Cory Fields",
+        "email": "cory-nospam-@coryfields.com",
+        "date": "2017-10-02T18:18:32Z"
+      },
+      "committer": {
+        "name": "Cory Fields",
+        "email": "cory-nospam-@coryfields.com",
+        "date": "2017-12-12T20:25:25Z"
+      },
+      "message": "net: Move IsSelectableSocket check into socket creation\n\nWe use select in ConnectSocketDirectly, so this check needs to happen before\nthat.\n\nIsSelectableSocket will not be relevant after upcoming changes to remove select.",
+      "tree": {
+        "sha": "94370b8776d0bb11a6cb376fb5f94317a59b7b92",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/94370b8776d0bb11a6cb376fb5f94317a59b7b92"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/9e3b2f576bb368a0857e808dcbd24b2dcb8bef2d",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9e3b2f576bb368a0857e808dcbd24b2dcb8bef2d",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/9e3b2f576bb368a0857e808dcbd24b2dcb8bef2d",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9e3b2f576bb368a0857e808dcbd24b2dcb8bef2d/comments",
+    "author": {
+      "login": "theuni",
+      "id": 417043,
+      "node_id": "MDQ6VXNlcjQxNzA0Mw==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/417043?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/theuni",
+      "html_url": "https://github.com/theuni",
+      "followers_url": "https://api.github.com/users/theuni/followers",
+      "following_url": "https://api.github.com/users/theuni/following{/other_user}",
+      "gists_url": "https://api.github.com/users/theuni/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/theuni/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/theuni/subscriptions",
+      "organizations_url": "https://api.github.com/users/theuni/orgs",
+      "repos_url": "https://api.github.com/users/theuni/repos",
+      "events_url": "https://api.github.com/users/theuni/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/theuni/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "theuni",
+      "id": 417043,
+      "node_id": "MDQ6VXNlcjQxNzA0Mw==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/417043?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/theuni",
+      "html_url": "https://github.com/theuni",
+      "followers_url": "https://api.github.com/users/theuni/followers",
+      "following_url": "https://api.github.com/users/theuni/following{/other_user}",
+      "gists_url": "https://api.github.com/users/theuni/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/theuni/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/theuni/subscriptions",
+      "organizations_url": "https://api.github.com/users/theuni/orgs",
+      "repos_url": "https://api.github.com/users/theuni/repos",
+      "events_url": "https://api.github.com/users/theuni/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/theuni/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "1729c29dedc64d900a1a1c686a56e16fa5417fa1",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1729c29dedc64d900a1a1c686a56e16fa5417fa1",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/1729c29dedc64d900a1a1c686a56e16fa5417fa1"
+      }
+    ],
+    "stats": {
+      "total": 33,
+      "additions": 17,
+      "deletions": 16
+    },
+    "files": [
+      {
+        "sha": "07128a034954290a8414965442eef2aea468fac2",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 16,
+        "changes": 27,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9e3b2f576bb368a0857e808dcbd24b2dcb8bef2d/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9e3b2f576bb368a0857e808dcbd24b2dcb8bef2d/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=9e3b2f576bb368a0857e808dcbd24b2dcb8bef2d",
+        "patch": "@@ -446,24 +446,19 @@ CNode* CConnman::ConnectNode(CAddress addrConnect, const char *pszDest, bool fCo\n         SplitHostPort(std::string(pszDest), port, host);\n         connected = ConnectThroughProxy(proxy, host, port, hSocket, nConnectTimeout, nullptr);\n     }\n-    if (connected) {\n-        if (!IsSelectableSocket(hSocket)) {\n-            LogPrintf(\"Cannot create connection: non-selectable socket created (fd >= FD_SETSIZE ?)\\n\");\n-            CloseSocket(hSocket);\n-            return nullptr;\n-        }\n-\n-        // Add node\n-        NodeId id = GetNewNodeId();\n-        uint64_t nonce = GetDeterministicRandomizer(RANDOMIZER_ID_LOCALHOSTNONCE).Write(id).Finalize();\n-        CAddress addr_bind = GetBindAddress(hSocket);\n-        CNode* pnode = new CNode(id, nLocalServices, GetBestHeight(), hSocket, addrConnect, CalculateKeyedNetGroup(addrConnect), nonce, addr_bind, pszDest ? pszDest : \"\", false);\n-        pnode->AddRef();\n-\n-        return pnode;\n+    if (!connected) {\n+        CloseSocket(hSocket);\n+        return nullptr;\n     }\n \n-    return nullptr;\n+    // Add node\n+    NodeId id = GetNewNodeId();\n+    uint64_t nonce = GetDeterministicRandomizer(RANDOMIZER_ID_LOCALHOSTNONCE).Write(id).Finalize();\n+    CAddress addr_bind = GetBindAddress(hSocket);\n+    CNode* pnode = new CNode(id, nLocalServices, GetBestHeight(), hSocket, addrConnect, CalculateKeyedNetGroup(addrConnect), nonce, addr_bind, pszDest ? pszDest : \"\", false);\n+    pnode->AddRef();\n+\n+    return pnode;\n }\n \n void CConnman::DumpBanlist()"
+      },
+      {
+        "sha": "1635957b7f0e72278b2eecc3b7df937cec47cdd0",
+        "filename": "src/netbase.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 0,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9e3b2f576bb368a0857e808dcbd24b2dcb8bef2d/src/netbase.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9e3b2f576bb368a0857e808dcbd24b2dcb8bef2d/src/netbase.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/netbase.cpp?ref=9e3b2f576bb368a0857e808dcbd24b2dcb8bef2d",
+        "patch": "@@ -465,6 +465,12 @@ SOCKET CreateSocket(const CService &addrConnect)\n     if (hSocket == INVALID_SOCKET)\n         return INVALID_SOCKET;\n \n+    if (!IsSelectableSocket(hSocket)) {\n+        CloseSocket(hSocket);\n+        LogPrintf(\"Cannot create connection: non-selectable socket created (fd >= FD_SETSIZE ?)\\n\");\n+        return INVALID_SOCKET;\n+    }\n+\n #ifdef SO_NOSIGPIPE\n     int set = 1;\n     // Different way of disabling SIGPIPE on BSD"
+      }
+    ]
+  },
+  {
+    "sha": "df3bcf89e49ec951baa3778a2452c0d1237ec053",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkZjNiY2Y4OWU0OWVjOTUxYmFhMzc3OGEyNDUyYzBkMTIzN2VjMDUz",
+    "commit": {
+      "author": {
+        "name": "Cory Fields",
+        "email": "cory-nospam-@coryfields.com",
+        "date": "2017-10-02T20:37:36Z"
+      },
+      "committer": {
+        "name": "Cory Fields",
+        "email": "cory-nospam-@coryfields.com",
+        "date": "2017-12-12T20:25:25Z"
+      },
+      "message": "net: pass socket closing responsibility up to caller for outgoing connections\n\nThis allows const references to be passed around, making it clear where the\nsocket may and may not be invalidated.",
+      "tree": {
+        "sha": "0af136d9b3eca5554799df19171567e2b6118085",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/0af136d9b3eca5554799df19171567e2b6118085"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/df3bcf89e49ec951baa3778a2452c0d1237ec053",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/df3bcf89e49ec951baa3778a2452c0d1237ec053",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/df3bcf89e49ec951baa3778a2452c0d1237ec053",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/df3bcf89e49ec951baa3778a2452c0d1237ec053/comments",
+    "author": {
+      "login": "theuni",
+      "id": 417043,
+      "node_id": "MDQ6VXNlcjQxNzA0Mw==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/417043?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/theuni",
+      "html_url": "https://github.com/theuni",
+      "followers_url": "https://api.github.com/users/theuni/followers",
+      "following_url": "https://api.github.com/users/theuni/following{/other_user}",
+      "gists_url": "https://api.github.com/users/theuni/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/theuni/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/theuni/subscriptions",
+      "organizations_url": "https://api.github.com/users/theuni/orgs",
+      "repos_url": "https://api.github.com/users/theuni/repos",
+      "events_url": "https://api.github.com/users/theuni/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/theuni/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "theuni",
+      "id": 417043,
+      "node_id": "MDQ6VXNlcjQxNzA0Mw==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/417043?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/theuni",
+      "html_url": "https://github.com/theuni",
+      "followers_url": "https://api.github.com/users/theuni/followers",
+      "following_url": "https://api.github.com/users/theuni/following{/other_user}",
+      "gists_url": "https://api.github.com/users/theuni/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/theuni/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/theuni/subscriptions",
+      "organizations_url": "https://api.github.com/users/theuni/orgs",
+      "repos_url": "https://api.github.com/users/theuni/repos",
+      "events_url": "https://api.github.com/users/theuni/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/theuni/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "9e3b2f576bb368a0857e808dcbd24b2dcb8bef2d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9e3b2f576bb368a0857e808dcbd24b2dcb8bef2d",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/9e3b2f576bb368a0857e808dcbd24b2dcb8bef2d"
+      }
+    ],
+    "stats": {
+      "total": 36,
+      "additions": 6,
+      "deletions": 30
+    },
+    "files": [
+      {
+        "sha": "74ea6b19cfa220740c76eb448183b0dad48d7e9f",
+        "filename": "src/netbase.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 28,
+        "changes": 32,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/df3bcf89e49ec951baa3778a2452c0d1237ec053/src/netbase.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/df3bcf89e49ec951baa3778a2452c0d1237ec053/src/netbase.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/netbase.cpp?ref=df3bcf89e49ec951baa3778a2452c0d1237ec053",
+        "patch": "@@ -317,12 +317,11 @@ std::string Socks5ErrorString(uint8_t err)\n }\n \n /** Connect using SOCKS5 (as described in RFC1928) */\n-static bool Socks5(const std::string& strDest, int port, const ProxyCredentials *auth, SOCKET& hSocket)\n+static bool Socks5(const std::string& strDest, int port, const ProxyCredentials *auth, const SOCKET& hSocket)\n {\n     IntrRecvError recvr;\n     LogPrint(BCLog::NET, \"SOCKS5 connecting %s\\n\", strDest);\n     if (strDest.size() > 255) {\n-        CloseSocket(hSocket);\n         return error(\"Hostname too long\");\n     }\n     // Accepted authentication methods\n@@ -338,17 +337,14 @@ static bool Socks5(const std::string& strDest, int port, const ProxyCredentials\n     }\n     ssize_t ret = send(hSocket, (const char*)vSocks5Init.data(), vSocks5Init.size(), MSG_NOSIGNAL);\n     if (ret != (ssize_t)vSocks5Init.size()) {\n-        CloseSocket(hSocket);\n         return error(\"Error sending to proxy\");\n     }\n     uint8_t pchRet1[2];\n     if ((recvr = InterruptibleRecv(pchRet1, 2, SOCKS5_RECV_TIMEOUT, hSocket)) != IntrRecvError::OK) {\n-        CloseSocket(hSocket);\n         LogPrintf(\"Socks5() connect to %s:%d failed: InterruptibleRecv() timeout or other failure\\n\", strDest, port);\n         return false;\n     }\n     if (pchRet1[0] != SOCKSVersion::SOCKS5) {\n-        CloseSocket(hSocket);\n         return error(\"Proxy failed to initialize\");\n     }\n     if (pchRet1[1] == SOCKS5Method::USER_PASS && auth) {\n@@ -363,23 +359,19 @@ static bool Socks5(const std::string& strDest, int port, const ProxyCredentials\n         vAuth.insert(vAuth.end(), auth->password.begin(), auth->password.end());\n         ret = send(hSocket, (const char*)vAuth.data(), vAuth.size(), MSG_NOSIGNAL);\n         if (ret != (ssize_t)vAuth.size()) {\n-            CloseSocket(hSocket);\n             return error(\"Error sending authentication to proxy\");\n         }\n         LogPrint(BCLog::PROXY, \"SOCKS5 sending proxy authentication %s:%s\\n\", auth->username, auth->password);\n         uint8_t pchRetA[2];\n         if ((recvr = InterruptibleRecv(pchRetA, 2, SOCKS5_RECV_TIMEOUT, hSocket)) != IntrRecvError::OK) {\n-            CloseSocket(hSocket);\n             return error(\"Error reading proxy authentication response\");\n         }\n         if (pchRetA[0] != 0x01 || pchRetA[1] != 0x00) {\n-            CloseSocket(hSocket);\n             return error(\"Proxy authentication unsuccessful\");\n         }\n     } else if (pchRet1[1] == SOCKS5Method::NOAUTH) {\n         // Perform no authentication\n     } else {\n-        CloseSocket(hSocket);\n         return error(\"Proxy requested wrong authentication method %02x\", pchRet1[1]);\n     }\n     std::vector<uint8_t> vSocks5;\n@@ -393,12 +385,10 @@ static bool Socks5(const std::string& strDest, int port, const ProxyCredentials\n     vSocks5.push_back((port >> 0) & 0xFF);\n     ret = send(hSocket, (const char*)vSocks5.data(), vSocks5.size(), MSG_NOSIGNAL);\n     if (ret != (ssize_t)vSocks5.size()) {\n-        CloseSocket(hSocket);\n         return error(\"Error sending to proxy\");\n     }\n     uint8_t pchRet2[4];\n     if ((recvr = InterruptibleRecv(pchRet2, 4, SOCKS5_RECV_TIMEOUT, hSocket)) != IntrRecvError::OK) {\n-        CloseSocket(hSocket);\n         if (recvr == IntrRecvError::Timeout) {\n             /* If a timeout happens here, this effectively means we timed out while connecting\n              * to the remote node. This is very common for Tor, so do not print an\n@@ -409,17 +399,14 @@ static bool Socks5(const std::string& strDest, int port, const ProxyCredentials\n         }\n     }\n     if (pchRet2[0] != SOCKSVersion::SOCKS5) {\n-        CloseSocket(hSocket);\n         return error(\"Proxy failed to accept request\");\n     }\n     if (pchRet2[1] != SOCKS5Reply::SUCCEEDED) {\n         // Failures to connect to a peer that are not proxy errors\n-        CloseSocket(hSocket);\n         LogPrintf(\"Socks5() connect to %s:%d failed: %s\\n\", strDest, port, Socks5ErrorString(pchRet2[1]));\n         return false;\n     }\n     if (pchRet2[2] != 0x00) { // Reserved field must be 0\n-        CloseSocket(hSocket);\n         return error(\"Error: malformed proxy response\");\n     }\n     uint8_t pchRet3[256];\n@@ -431,21 +418,18 @@ static bool Socks5(const std::string& strDest, int port, const ProxyCredentials\n         {\n             recvr = InterruptibleRecv(pchRet3, 1, SOCKS5_RECV_TIMEOUT, hSocket);\n             if (recvr != IntrRecvError::OK) {\n-                CloseSocket(hSocket);\n                 return error(\"Error reading from proxy\");\n             }\n             int nRecv = pchRet3[0];\n             recvr = InterruptibleRecv(pchRet3, nRecv, SOCKS5_RECV_TIMEOUT, hSocket);\n             break;\n         }\n-        default: CloseSocket(hSocket); return error(\"Error: malformed proxy response\");\n+        default: return error(\"Error: malformed proxy response\");\n     }\n     if (recvr != IntrRecvError::OK) {\n-        CloseSocket(hSocket);\n         return error(\"Error reading from proxy\");\n     }\n     if ((recvr = InterruptibleRecv(pchRet3, 2, SOCKS5_RECV_TIMEOUT, hSocket)) != IntrRecvError::OK) {\n-        CloseSocket(hSocket);\n         return error(\"Error reading from proxy\");\n     }\n     LogPrint(BCLog::NET, \"SOCKS5 connected %s\\n\", strDest);\n@@ -488,7 +472,7 @@ SOCKET CreateSocket(const CService &addrConnect)\n     return hSocket;\n }\n \n-bool ConnectSocketDirectly(const CService &addrConnect, SOCKET& hSocket, int nTimeout)\n+bool ConnectSocketDirectly(const CService &addrConnect, const SOCKET& hSocket, int nTimeout)\n {\n     struct sockaddr_storage sockaddr;\n     socklen_t len = sizeof(sockaddr);\n@@ -498,7 +482,6 @@ bool ConnectSocketDirectly(const CService &addrConnect, SOCKET& hSocket, int nTi\n     }\n     if (!addrConnect.GetSockAddr((struct sockaddr*)&sockaddr, &len)) {\n         LogPrintf(\"Cannot connect to %s: unsupported network\\n\", addrConnect.ToString());\n-        CloseSocket(hSocket);\n         return false;\n     }\n     if (connect(hSocket, (struct sockaddr*)&sockaddr, len) == SOCKET_ERROR)\n@@ -515,13 +498,11 @@ bool ConnectSocketDirectly(const CService &addrConnect, SOCKET& hSocket, int nTi\n             if (nRet == 0)\n             {\n                 LogPrint(BCLog::NET, \"connection to %s timeout\\n\", addrConnect.ToString());\n-                CloseSocket(hSocket);\n                 return false;\n             }\n             if (nRet == SOCKET_ERROR)\n             {\n                 LogPrintf(\"select() for %s failed: %s\\n\", addrConnect.ToString(), NetworkErrorString(WSAGetLastError()));\n-                CloseSocket(hSocket);\n                 return false;\n             }\n             socklen_t nRetSize = sizeof(nRet);\n@@ -532,13 +513,11 @@ bool ConnectSocketDirectly(const CService &addrConnect, SOCKET& hSocket, int nTi\n #endif\n             {\n                 LogPrintf(\"getsockopt() for %s failed: %s\\n\", addrConnect.ToString(), NetworkErrorString(WSAGetLastError()));\n-                CloseSocket(hSocket);\n                 return false;\n             }\n             if (nRet != 0)\n             {\n                 LogPrintf(\"connect() to %s failed after select(): %s\\n\", addrConnect.ToString(), NetworkErrorString(nRet));\n-                CloseSocket(hSocket);\n                 return false;\n             }\n         }\n@@ -549,7 +528,6 @@ bool ConnectSocketDirectly(const CService &addrConnect, SOCKET& hSocket, int nTi\n #endif\n         {\n             LogPrintf(\"connect() to %s failed: %s\\n\", addrConnect.ToString(), NetworkErrorString(WSAGetLastError()));\n-            CloseSocket(hSocket);\n             return false;\n         }\n     }\n@@ -604,7 +582,7 @@ bool IsProxy(const CNetAddr &addr) {\n     return false;\n }\n \n-bool ConnectThroughProxy(const proxyType &proxy, const std::string& strDest, int port, SOCKET& hSocket, int nTimeout, bool *outProxyConnectionFailed)\n+bool ConnectThroughProxy(const proxyType &proxy, const std::string& strDest, int port, const SOCKET& hSocket, int nTimeout, bool *outProxyConnectionFailed)\n {\n     // first connect to proxy server\n     if (!ConnectSocketDirectly(proxy.proxy, hSocket, nTimeout)) {\n@@ -618,12 +596,10 @@ bool ConnectThroughProxy(const proxyType &proxy, const std::string& strDest, int\n         static std::atomic_int counter(0);\n         random_auth.username = random_auth.password = strprintf(\"%i\", counter++);\n         if (!Socks5(strDest, (unsigned short)port, &random_auth, hSocket)) {\n-            CloseSocket(hSocket);\n             return false;\n         }\n     } else {\n         if (!Socks5(strDest, (unsigned short)port, 0, hSocket)) {\n-            CloseSocket(hSocket);\n             return false;\n         }\n     }"
+      },
+      {
+        "sha": "52e920b3d8c9c4dacd6bfc3c1090980488967c18",
+        "filename": "src/netbase.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/df3bcf89e49ec951baa3778a2452c0d1237ec053/src/netbase.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/df3bcf89e49ec951baa3778a2452c0d1237ec053/src/netbase.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/netbase.h?ref=df3bcf89e49ec951baa3778a2452c0d1237ec053",
+        "patch": "@@ -52,8 +52,8 @@ bool Lookup(const char *pszName, std::vector<CService>& vAddr, int portDefault,\n CService LookupNumeric(const char *pszName, int portDefault = 0);\n bool LookupSubNet(const char *pszName, CSubNet& subnet);\n SOCKET CreateSocket(const CService &addrConnect);\n-bool ConnectSocketDirectly(const CService &addrConnect, SOCKET& hSocketRet, int nTimeout);\n-bool ConnectThroughProxy(const proxyType &proxy, const std::string& strDest, int port, SOCKET& hSocketRet, int nTimeout, bool *outProxyConnectionFailed);\n+bool ConnectSocketDirectly(const CService &addrConnect, const SOCKET& hSocketRet, int nTimeout);\n+bool ConnectThroughProxy(const proxyType &proxy, const std::string& strDest, int port, const SOCKET& hSocketRet, int nTimeout, bool *outProxyConnectionFailed);\n /** Return readable error string for a network error code */\n std::string NetworkErrorString(int err);\n /** Close socket and set hSocket to INVALID_SOCKET */"
+      }
+    ]
+  },
+  {
+    "sha": "3830b6e0659106458c941029f5b2e789e3cb38a3",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozODMwYjZlMDY1OTEwNjQ1OGM5NDEwMjlmNWIyZTc4OWUzY2IzOGEz",
+    "commit": {
+      "author": {
+        "name": "Cory Fields",
+        "email": "cory-nospam-@coryfields.com",
+        "date": "2017-10-02T20:31:37Z"
+      },
+      "committer": {
+        "name": "Cory Fields",
+        "email": "cory-nospam-@coryfields.com",
+        "date": "2017-12-12T20:25:25Z"
+      },
+      "message": "net: use CreateSocket for binds",
+      "tree": {
+        "sha": "a2ec1dd8becac4a3b451fb3023efed1756af5242",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/a2ec1dd8becac4a3b451fb3023efed1756af5242"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/3830b6e0659106458c941029f5b2e789e3cb38a3",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3830b6e0659106458c941029f5b2e789e3cb38a3",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/3830b6e0659106458c941029f5b2e789e3cb38a3",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3830b6e0659106458c941029f5b2e789e3cb38a3/comments",
+    "author": {
+      "login": "theuni",
+      "id": 417043,
+      "node_id": "MDQ6VXNlcjQxNzA0Mw==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/417043?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/theuni",
+      "html_url": "https://github.com/theuni",
+      "followers_url": "https://api.github.com/users/theuni/followers",
+      "following_url": "https://api.github.com/users/theuni/following{/other_user}",
+      "gists_url": "https://api.github.com/users/theuni/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/theuni/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/theuni/subscriptions",
+      "organizations_url": "https://api.github.com/users/theuni/orgs",
+      "repos_url": "https://api.github.com/users/theuni/repos",
+      "events_url": "https://api.github.com/users/theuni/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/theuni/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "theuni",
+      "id": 417043,
+      "node_id": "MDQ6VXNlcjQxNzA0Mw==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/417043?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/theuni",
+      "html_url": "https://github.com/theuni",
+      "followers_url": "https://api.github.com/users/theuni/followers",
+      "following_url": "https://api.github.com/users/theuni/following{/other_user}",
+      "gists_url": "https://api.github.com/users/theuni/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/theuni/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/theuni/subscriptions",
+      "organizations_url": "https://api.github.com/users/theuni/orgs",
+      "repos_url": "https://api.github.com/users/theuni/repos",
+      "events_url": "https://api.github.com/users/theuni/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/theuni/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "df3bcf89e49ec951baa3778a2452c0d1237ec053",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/df3bcf89e49ec951baa3778a2452c0d1237ec053",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/df3bcf89e49ec951baa3778a2452c0d1237ec053"
+      }
+    ],
+    "stats": {
+      "total": 25,
+      "additions": 1,
+      "deletions": 24
+    },
+    "files": [
+      {
+        "sha": "8eb25a8c74e209e3871050aa1486dc5c6e4e1b97",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 24,
+        "changes": 25,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3830b6e0659106458c941029f5b2e789e3cb38a3/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3830b6e0659106458c941029f5b2e789e3cb38a3/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=3830b6e0659106458c941029f5b2e789e3cb38a3",
+        "patch": "@@ -2078,44 +2078,21 @@ bool CConnman::BindListenPort(const CService &addrBind, std::string& strError, b\n         return false;\n     }\n \n-    SOCKET hListenSocket = socket(((struct sockaddr*)&sockaddr)->sa_family, SOCK_STREAM, IPPROTO_TCP);\n+    SOCKET hListenSocket = CreateSocket(addrBind);\n     if (hListenSocket == INVALID_SOCKET)\n     {\n         strError = strprintf(\"Error: Couldn't open socket for incoming connections (socket returned error %s)\", NetworkErrorString(WSAGetLastError()));\n         LogPrintf(\"%s\\n\", strError);\n         return false;\n     }\n-    if (!IsSelectableSocket(hListenSocket))\n-    {\n-        strError = \"Error: Couldn't create a listenable socket for incoming connections\";\n-        LogPrintf(\"%s\\n\", strError);\n-        return false;\n-    }\n-\n-\n #ifndef WIN32\n-#ifdef SO_NOSIGPIPE\n-    // Different way of disabling SIGPIPE on BSD\n-    setsockopt(hListenSocket, SOL_SOCKET, SO_NOSIGPIPE, (void*)&nOne, sizeof(int));\n-#endif\n     // Allow binding if the port is still in TIME_WAIT state after\n     // the program was closed and restarted.\n     setsockopt(hListenSocket, SOL_SOCKET, SO_REUSEADDR, (void*)&nOne, sizeof(int));\n-    // Disable Nagle's algorithm\n-    setsockopt(hListenSocket, IPPROTO_TCP, TCP_NODELAY, (void*)&nOne, sizeof(int));\n #else\n     setsockopt(hListenSocket, SOL_SOCKET, SO_REUSEADDR, (const char*)&nOne, sizeof(int));\n-    setsockopt(hListenSocket, IPPROTO_TCP, TCP_NODELAY, (const char*)&nOne, sizeof(int));\n #endif\n \n-    // Set to non-blocking, incoming connections will also inherit this\n-    if (!SetSocketNonBlocking(hListenSocket, true)) {\n-        CloseSocket(hListenSocket);\n-        strError = strprintf(\"BindListenPort: Setting listening socket to non-blocking failed, error %s\\n\", NetworkErrorString(WSAGetLastError()));\n-        LogPrintf(\"%s\\n\", strError);\n-        return false;\n-    }\n-\n     // some systems don't have IPV6_V6ONLY but are always v6only; others do have the option\n     // and enable it by default or not. Try to enable it, if possible.\n     if (addrBind.IsIPv6()) {"
+      }
+    ]
+  }
+]

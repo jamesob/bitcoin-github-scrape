@@ -1,0 +1,146 @@
+[
+  {
+    "sha": "de85dc35a1af9a758f57b3d07db5489f89aebc1d",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkZTg1ZGMzNWExYWY5YTc1OGY1N2IzZDA3ZGI1NDg5Zjg5YWViYzFk",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-06-16T17:19:21Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-06-17T15:13:42Z"
+      },
+      "message": "GUI: fix immature display in GUI / add balance updates on block change\n\n- add GetImmatureCredit() function in CWalletTx\n- include clientModel in overviewpage and sendcoinsdialog\n- rename model to walletModel in overviewpage and sendcoinsdialog\n- update displayed balances when numBlocksChanged() SIGNAL occurs (as\n  an immature balance matures via new blocks and not new Tx) on\n  overviewpage and sendcoinsdialog\n- optimize handling of cached balances in walletmodell",
+      "tree": {
+        "sha": "a85a82ea54043ad141a788561c0651ae462738a7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/a85a82ea54043ad141a788561c0651ae462738a7"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/de85dc35a1af9a758f57b3d07db5489f89aebc1d",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/de85dc35a1af9a758f57b3d07db5489f89aebc1d",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/de85dc35a1af9a758f57b3d07db5489f89aebc1d",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/de85dc35a1af9a758f57b3d07db5489f89aebc1d/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "fab7858a350d4650686b3aa07bd6277ce7c9685f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fab7858a350d4650686b3aa07bd6277ce7c9685f",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/fab7858a350d4650686b3aa07bd6277ce7c9685f"
+      }
+    ],
+    "stats": {
+      "total": 123,
+      "additions": 93,
+      "deletions": 30
+    },
+    "files": [
+      {
+        "sha": "5d35746f8a347b31cb5ca5270399944ed137fbcd",
+        "filename": "src/qt/bitcoingui.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 2,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/de85dc35a1af9a758f57b3d07db5489f89aebc1d/src/qt/bitcoingui.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/de85dc35a1af9a758f57b3d07db5489f89aebc1d/src/qt/bitcoingui.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoingui.cpp?ref=de85dc35a1af9a758f57b3d07db5489f89aebc1d",
+        "patch": "@@ -357,6 +357,8 @@ void BitcoinGUI::setClientModel(ClientModel *clientModel)\n         connect(clientModel, SIGNAL(error(QString,QString,bool)), this, SLOT(error(QString,QString,bool)));\n \n         rpcConsole->setClientModel(clientModel);\n+        overviewPage->setClientModel(clientModel);\n+        sendCoinsPage->setClientModel(clientModel);\n     }\n }\n \n@@ -371,10 +373,10 @@ void BitcoinGUI::setWalletModel(WalletModel *walletModel)\n         // Put transaction list in tabs\n         transactionView->setModel(walletModel);\n \n-        overviewPage->setModel(walletModel);\n+        overviewPage->setWalletModel(walletModel);\n         addressBookPage->setModel(walletModel->getAddressTableModel());\n         receiveCoinsPage->setModel(walletModel->getAddressTableModel());\n-        sendCoinsPage->setModel(walletModel);\n+        sendCoinsPage->setWalletModel(walletModel);\n         messagePage->setModel(walletModel);\n \n         setEncryptionStatus(walletModel->getEncryptionStatus());"
+      },
+      {
+        "sha": "ee3e3b9a87cbd11ead502929731b6172db155d4d",
+        "filename": "src/qt/overviewpage.cpp",
+        "status": "modified",
+        "additions": 22,
+        "deletions": 7,
+        "changes": 29,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/de85dc35a1af9a758f57b3d07db5489f89aebc1d/src/qt/overviewpage.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/de85dc35a1af9a758f57b3d07db5489f89aebc1d/src/qt/overviewpage.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/overviewpage.cpp?ref=de85dc35a1af9a758f57b3d07db5489f89aebc1d",
+        "patch": "@@ -2,6 +2,7 @@\n #include \"ui_overviewpage.h\"\n \n #include \"walletmodel.h\"\n+#include \"clientmodel.h\"\n #include \"bitcoinunits.h\"\n #include \"optionsmodel.h\"\n #include \"transactiontablemodel.h\"\n@@ -129,7 +130,7 @@ OverviewPage::~OverviewPage()\n \n void OverviewPage::setBalance(qint64 balance, qint64 unconfirmedBalance, qint64 immatureBalance)\n {\n-    int unit = model->getOptionsModel()->getDisplayUnit();\n+    int unit = walletModel->getOptionsModel()->getDisplayUnit();\n     currentBalance = balance;\n     currentUnconfirmedBalance = unconfirmedBalance;\n     currentImmatureBalance = immatureBalance;\n@@ -149,10 +150,10 @@ void OverviewPage::setNumTransactions(int count)\n     ui->labelNumTransactions->setText(QLocale::system().toString(count));\n }\n \n-void OverviewPage::setModel(WalletModel *model)\n+void OverviewPage::setWalletModel(WalletModel *model)\n {\n-    this->model = model;\n-    if(model)\n+    this->walletModel = model;\n+    if(model && model->getOptionsModel())\n     {\n         // Set up transaction list\n         filter = new TransactionFilterProxy();\n@@ -166,7 +167,7 @@ void OverviewPage::setModel(WalletModel *model)\n         ui->listTransactions->setModelColumn(TransactionTableModel::ToAddress);\n \n         // Keep up to date with wallet\n-        setBalance(model->getBalance(), model->getUnconfirmedBalance(), model->getImmatureBalance());\n+        updateBalance();\n         connect(model, SIGNAL(balanceChanged(qint64, qint64, qint64)), this, SLOT(setBalance(qint64, qint64, qint64)));\n \n         setNumTransactions(model->getNumTransactions());\n@@ -176,14 +177,22 @@ void OverviewPage::setModel(WalletModel *model)\n     }\n }\n \n+void OverviewPage::setClientModel(ClientModel *model)\n+{\n+    this->clientModel = model;\n+    if(model)\n+        // changed block counts can mature a former immature balance, so update displayed balance on block change\n+        connect(model, SIGNAL(numBlocksChanged(int, int)), this, SLOT(updateBalance()));\n+}\n+\n void OverviewPage::displayUnitChanged()\n {\n-    if(!model || !model->getOptionsModel())\n+    if(!walletModel || !walletModel->getOptionsModel())\n         return;\n     if(currentBalance != -1)\n         setBalance(currentBalance, currentUnconfirmedBalance, currentImmatureBalance);\n \n-    txdelegate->unit = model->getOptionsModel()->getDisplayUnit();\n+    txdelegate->unit = walletModel->getOptionsModel()->getDisplayUnit();\n     ui->listTransactions->update();\n }\n \n@@ -192,3 +201,9 @@ void OverviewPage::showOutOfSyncWarning(bool fShow)\n     ui->labelWalletStatus->setVisible(fShow);\n     ui->labelTransactionsStatus->setVisible(fShow);\n }\n+\n+void OverviewPage::updateBalance()\n+{\n+    if(walletModel)\n+        setBalance(walletModel->getBalance(), walletModel->getUnconfirmedBalance(), walletModel->getImmatureBalance());\n+}"
+      },
+      {
+        "sha": "a047c74c191906fe8b5f914ba8c899af2ac95134",
+        "filename": "src/qt/overviewpage.h",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 2,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/de85dc35a1af9a758f57b3d07db5489f89aebc1d/src/qt/overviewpage.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/de85dc35a1af9a758f57b3d07db5489f89aebc1d/src/qt/overviewpage.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/overviewpage.h?ref=de85dc35a1af9a758f57b3d07db5489f89aebc1d",
+        "patch": "@@ -11,6 +11,7 @@ namespace Ui {\n     class OverviewPage;\n }\n class WalletModel;\n+class ClientModel;\n class TxViewDelegate;\n class TransactionFilterProxy;\n \n@@ -23,7 +24,8 @@ class OverviewPage : public QWidget\n     explicit OverviewPage(QWidget *parent = 0);\n     ~OverviewPage();\n \n-    void setModel(WalletModel *model);\n+    void setWalletModel(WalletModel *model);\n+    void setClientModel(ClientModel *model);\n     void showOutOfSyncWarning(bool fShow);\n \n public slots:\n@@ -35,7 +37,8 @@ public slots:\n \n private:\n     Ui::OverviewPage *ui;\n-    WalletModel *model;\n+    WalletModel *walletModel;\n+    ClientModel *clientModel;\n     qint64 currentBalance;\n     qint64 currentUnconfirmedBalance;\n     qint64 currentImmatureBalance;\n@@ -46,6 +49,7 @@ public slots:\n private slots:\n     void displayUnitChanged();\n     void handleTransactionClicked(const QModelIndex &index);\n+    void updateBalance();\n };\n \n #endif // OVERVIEWPAGE_H"
+      },
+      {
+        "sha": "22f4ca31090849d574c787cd87a3f05ac917bb54",
+        "filename": "src/qt/sendcoinsdialog.cpp",
+        "status": "modified",
+        "additions": 25,
+        "deletions": 9,
+        "changes": 34,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/de85dc35a1af9a758f57b3d07db5489f89aebc1d/src/qt/sendcoinsdialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/de85dc35a1af9a758f57b3d07db5489f89aebc1d/src/qt/sendcoinsdialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/sendcoinsdialog.cpp?ref=de85dc35a1af9a758f57b3d07db5489f89aebc1d",
+        "patch": "@@ -1,6 +1,7 @@\n #include \"sendcoinsdialog.h\"\n #include \"ui_sendcoinsdialog.h\"\n #include \"walletmodel.h\"\n+#include \"clientmodel.h\"\n #include \"bitcoinunits.h\"\n #include \"addressbookpage.h\"\n #include \"optionsmodel.h\"\n@@ -16,7 +17,8 @@\n SendCoinsDialog::SendCoinsDialog(QWidget *parent) :\n     QDialog(parent),\n     ui(new Ui::SendCoinsDialog),\n-    model(0)\n+    walletModel(0),\n+    clientModel(0)\n {\n     ui->setupUi(this);\n \n@@ -34,9 +36,9 @@ SendCoinsDialog::SendCoinsDialog(QWidget *parent) :\n     fNewRecipientAllowed = true;\n }\n \n-void SendCoinsDialog::setModel(WalletModel *model)\n+void SendCoinsDialog::setWalletModel(WalletModel *model)\n {\n-    this->model = model;\n+    this->walletModel = model;\n \n     for(int i = 0; i < ui->entries->count(); ++i)\n     {\n@@ -53,6 +55,14 @@ void SendCoinsDialog::setModel(WalletModel *model)\n     }\n }\n \n+void SendCoinsDialog::setClientModel(ClientModel *model)\n+{\n+    this->clientModel = model;\n+    if(model)\n+        // changed block counts can mature a former immature balance, so update displayed balance on block change\n+        connect(model, SIGNAL(numBlocksChanged(int, int)), this, SLOT(updateBalance()));\n+}\n+\n SendCoinsDialog::~SendCoinsDialog()\n {\n     delete ui;\n@@ -63,7 +73,7 @@ void SendCoinsDialog::on_sendButton_clicked()\n     QList<SendCoinsRecipient> recipients;\n     bool valid = true;\n \n-    if(!model)\n+    if(!walletModel)\n         return;\n \n     for(int i = 0; i < ui->entries->count(); ++i)\n@@ -107,15 +117,15 @@ void SendCoinsDialog::on_sendButton_clicked()\n         return;\n     }\n \n-    WalletModel::UnlockContext ctx(model->requestUnlock());\n+    WalletModel::UnlockContext ctx(walletModel->requestUnlock());\n     if(!ctx.isValid())\n     {\n         // Unlock wallet was cancelled\n         fNewRecipientAllowed = true;\n         return;\n     }\n \n-    WalletModel::SendCoinsReturn sendstatus = model->sendCoins(recipients);\n+    WalletModel::SendCoinsReturn sendstatus = walletModel->sendCoins(recipients);\n     switch(sendstatus.status)\n     {\n     case WalletModel::InvalidAddress:\n@@ -190,7 +200,7 @@ void SendCoinsDialog::accept()\n SendCoinsEntry *SendCoinsDialog::addEntry()\n {\n     SendCoinsEntry *entry = new SendCoinsEntry(this);\n-    entry->setModel(model);\n+    entry->setModel(walletModel);\n     ui->entries->addWidget(entry);\n     connect(entry, SIGNAL(removeEntry(SendCoinsEntry*)), this, SLOT(removeEntry(SendCoinsEntry*)));\n \n@@ -283,9 +293,15 @@ void SendCoinsDialog::setBalance(qint64 balance, qint64 unconfirmedBalance, qint\n {\n     Q_UNUSED(unconfirmedBalance);\n     Q_UNUSED(immatureBalance);\n-    if(!model || !model->getOptionsModel())\n+    if(!walletModel || !walletModel->getOptionsModel())\n         return;\n \n-    int unit = model->getOptionsModel()->getDisplayUnit();\n+    int unit = walletModel->getOptionsModel()->getDisplayUnit();\n     ui->labelBalance->setText(BitcoinUnits::formatWithUnit(unit, balance));\n }\n+\n+void SendCoinsDialog::updateBalance()\n+{\n+    if(walletModel)\n+        setBalance(walletModel->getBalance(), 0, 0);\n+}"
+      },
+      {
+        "sha": "ed37d4aefa3cd9d0e975e45fa1638c6ab9a5d65c",
+        "filename": "src/qt/sendcoinsdialog.h",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 2,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/de85dc35a1af9a758f57b3d07db5489f89aebc1d/src/qt/sendcoinsdialog.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/de85dc35a1af9a758f57b3d07db5489f89aebc1d/src/qt/sendcoinsdialog.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/sendcoinsdialog.h?ref=de85dc35a1af9a758f57b3d07db5489f89aebc1d",
+        "patch": "@@ -7,6 +7,7 @@ namespace Ui {\n     class SendCoinsDialog;\n }\n class WalletModel;\n+class ClientModel;\n class SendCoinsEntry;\n class SendCoinsRecipient;\n \n@@ -23,7 +24,8 @@ class SendCoinsDialog : public QDialog\n     explicit SendCoinsDialog(QWidget *parent = 0);\n     ~SendCoinsDialog();\n \n-    void setModel(WalletModel *model);\n+    void setWalletModel(WalletModel *model);\n+    void setClientModel(ClientModel *model);\n \n     /** Set up the tab chain manually, as Qt messes up the tab chain by default in some cases (issue http://bugreports.qt.nokia.com/browse/QTBUG-10907).\n      */\n@@ -42,13 +44,15 @@ public slots:\n \n private:\n     Ui::SendCoinsDialog *ui;\n-    WalletModel *model;\n+    WalletModel *walletModel;\n+    ClientModel *clientModel;\n     bool fNewRecipientAllowed;\n \n private slots:\n     void on_sendButton_clicked();\n \n     void removeEntry(SendCoinsEntry* entry);\n+    void updateBalance();\n };\n \n #endif // SENDCOINSDIALOG_H"
+      },
+      {
+        "sha": "3b7eb47149de6645cc74ea770add11f76144b66b",
+        "filename": "src/qt/walletmodel.cpp",
+        "status": "modified",
+        "additions": 10,
+        "deletions": 5,
+        "changes": 15,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/de85dc35a1af9a758f57b3d07db5489f89aebc1d/src/qt/walletmodel.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/de85dc35a1af9a758f57b3d07db5489f89aebc1d/src/qt/walletmodel.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/walletmodel.cpp?ref=de85dc35a1af9a758f57b3d07db5489f89aebc1d",
+        "patch": "@@ -74,15 +74,20 @@ void WalletModel::updateTransaction(const QString &hash, int status)\n     int newNumTransactions = getNumTransactions();\n \n     if(cachedBalance != newBalance || cachedUnconfirmedBalance != newUnconfirmedBalance || cachedImmatureBalance != newImmatureBalance)\n+    {\n+        cachedBalance = newBalance;\n+        cachedUnconfirmedBalance = newUnconfirmedBalance;\n+        cachedImmatureBalance = newImmatureBalance;\n+\n         emit balanceChanged(newBalance, newUnconfirmedBalance, newImmatureBalance);\n+    }\n \n     if(cachedNumTransactions != newNumTransactions)\n-        emit numTransactionsChanged(newNumTransactions);\n+    {\n+        cachedNumTransactions = newNumTransactions;\n \n-    cachedBalance = newBalance;\n-    cachedUnconfirmedBalance = newUnconfirmedBalance;\n-    cachedImmatureBalance = newImmatureBalance;\n-    cachedNumTransactions = newNumTransactions;\n+        emit numTransactionsChanged(newNumTransactions);\n+    }\n }\n \n void WalletModel::updateAddressBook(const QString &address, const QString &label, bool isMine, int status)"
+      },
+      {
+        "sha": "81e03f6e63773a9b349ee6f9cc9b904143f52365",
+        "filename": "src/wallet.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 3,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/de85dc35a1af9a758f57b3d07db5489f89aebc1d/src/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/de85dc35a1af9a758f57b3d07db5489f89aebc1d/src/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.cpp?ref=de85dc35a1af9a758f57b3d07db5489f89aebc1d",
+        "patch": "@@ -890,9 +890,8 @@ int64 CWallet::GetImmatureBalance() const\n         LOCK(cs_wallet);\n         for (map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)\n         {\n-            const CWalletTx& pcoin = (*it).second;\n-            if (pcoin.IsCoinBase() && pcoin.GetBlocksToMaturity() > 0 && pcoin.GetDepthInMainChain() >= 2)\n-                nTotal += GetCredit(pcoin);\n+            const CWalletTx* pcoin = &(*it).second;\n+            nTotal += pcoin->GetImmatureCredit();\n         }\n     }\n     return nTotal;"
+      },
+      {
+        "sha": "baf214d15fa953ff2e8136ddacb387ebabcebc1d",
+        "filename": "src/wallet.h",
+        "status": "modified",
+        "additions": 18,
+        "deletions": 0,
+        "changes": 18,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/de85dc35a1af9a758f57b3d07db5489f89aebc1d/src/wallet.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/de85dc35a1af9a758f57b3d07db5489f89aebc1d/src/wallet.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.h?ref=de85dc35a1af9a758f57b3d07db5489f89aebc1d",
+        "patch": "@@ -325,10 +325,12 @@ class CWalletTx : public CMerkleTx\n     // memory only\n     mutable bool fDebitCached;\n     mutable bool fCreditCached;\n+    mutable bool fImmatureCreditCached;\n     mutable bool fAvailableCreditCached;\n     mutable bool fChangeCached;\n     mutable int64 nDebitCached;\n     mutable int64 nCreditCached;\n+    mutable int64 nImmatureCreditCached;\n     mutable int64 nAvailableCreditCached;\n     mutable int64 nChangeCached;\n \n@@ -365,10 +367,12 @@ class CWalletTx : public CMerkleTx\n         vfSpent.clear();\n         fDebitCached = false;\n         fCreditCached = false;\n+        fImmatureCreditCached = false;\n         fAvailableCreditCached = false;\n         fChangeCached = false;\n         nDebitCached = 0;\n         nCreditCached = 0;\n+        nImmatureCreditCached = 0;\n         nAvailableCreditCached = 0;\n         nChangeCached = 0;\n     }\n@@ -500,6 +504,20 @@ class CWalletTx : public CMerkleTx\n         return nCreditCached;\n     }\n \n+    int64 GetImmatureCredit(bool fUseCache=true) const\n+    {\n+        if (IsCoinBase() && GetBlocksToMaturity() > 0 && IsInMainChain())\n+        {\n+            if (fUseCache && fImmatureCreditCached)\n+                return nImmatureCreditCached;\n+            nImmatureCreditCached = pwallet->GetCredit(*this);\n+            fImmatureCreditCached = true;\n+            return nImmatureCreditCached;\n+        }\n+\n+        return 0;\n+    }\n+\n     int64 GetAvailableCredit(bool fUseCache=true) const\n     {\n         // Must wait until coinbase is safely deep enough in the chain before valuing it"
+      }
+    ]
+  }
+]

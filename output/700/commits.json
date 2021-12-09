@@ -1,0 +1,110 @@
+[
+  {
+    "sha": "7ca47cece7854a4efb4a8dcb68b93edbde1a76fb",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3Y2E0N2NlY2U3ODU0YTRlZmI0YThkY2I2OGI5M2VkYmRlMWE3NmZi",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-12-13T19:00:21Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-12-13T20:29:17Z"
+      },
+      "message": "Fix status bar not displaying Alerts.",
+      "tree": {
+        "sha": "50d59133f31d2baff8abc22aa41bbdb444186afc",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/50d59133f31d2baff8abc22aa41bbdb444186afc"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/7ca47cece7854a4efb4a8dcb68b93edbde1a76fb",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7ca47cece7854a4efb4a8dcb68b93edbde1a76fb",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/7ca47cece7854a4efb4a8dcb68b93edbde1a76fb",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7ca47cece7854a4efb4a8dcb68b93edbde1a76fb/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "857aa73783a991e6d750c99988821585c1864e21",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/857aa73783a991e6d750c99988821585c1864e21",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/857aa73783a991e6d750c99988821585c1864e21"
+      }
+    ],
+    "stats": {
+      "total": 51,
+      "additions": 46,
+      "deletions": 5
+    },
+    "files": [
+      {
+        "sha": "dd326a690f2a513db036eefde84239f5c05b93f5",
+        "filename": "src/qt/bitcoin.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7ca47cece7854a4efb4a8dcb68b93edbde1a76fb/src/qt/bitcoin.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7ca47cece7854a4efb4a8dcb68b93edbde1a76fb/src/qt/bitcoin.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoin.cpp?ref=7ca47cece7854a4efb4a8dcb68b93edbde1a76fb",
+        "patch": "@@ -91,6 +91,8 @@ void UIThreadCall(boost::function0<void> fn)\n \n void MainFrameRepaint()\n {\n+    if(guiref)\n+        QMetaObject::invokeMethod(guiref, \"refreshStatusBar\", Qt::QueuedConnection);\n }\n \n void InitMessage(const std::string &message)"
+      },
+      {
+        "sha": "60c75286a7286b5c6fd9d3bbe95b8132521a857e",
+        "filename": "src/qt/bitcoingui.cpp",
+        "status": "modified",
+        "additions": 35,
+        "deletions": 5,
+        "changes": 40,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7ca47cece7854a4efb4a8dcb68b93edbde1a76fb/src/qt/bitcoingui.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7ca47cece7854a4efb4a8dcb68b93edbde1a76fb/src/qt/bitcoingui.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoingui.cpp?ref=7ca47cece7854a4efb4a8dcb68b93edbde1a76fb",
+        "patch": "@@ -2,6 +2,7 @@\n  * Qt4 bitcoin GUI.\n  *\n  * W.J. van der Laan 2011\n+ * The Bitcoin Developers 2011\n  */\n #include \"bitcoingui.h\"\n #include \"transactiontablemodel.h\"\n@@ -417,15 +418,31 @@ void BitcoinGUI::setNumBlocks(int count)\n \n     if(count < total)\n     {\n-        progressBarLabel->setVisible(true);\n-        progressBar->setVisible(true);\n-        progressBar->setMaximum(total - initTotal);\n-        progressBar->setValue(count - initTotal);\n+        if (clientModel->getStatusBarWarnings() == \"\")\n+        {\n+            progressBarLabel->setVisible(true);\n+            progressBarLabel->setText(tr(\"Synchronizing with network...\"));\n+            progressBar->setVisible(true);\n+            progressBar->setMaximum(total - initTotal);\n+            progressBar->setValue(count - initTotal);\n+        }\n+        else\n+        {\n+            progressBarLabel->setText(clientModel->getStatusBarWarnings());\n+            progressBarLabel->setVisible(true);\n+            progressBar->setVisible(false);\n+        }\n         tooltip = tr(\"Downloaded %1 of %2 blocks of transaction history.\").arg(count).arg(total);\n     }\n     else\n     {\n-        progressBarLabel->setVisible(false);\n+        if (clientModel->getStatusBarWarnings() == \"\")\n+            progressBarLabel->setVisible(false);\n+        else\n+        {\n+            progressBarLabel->setText(clientModel->getStatusBarWarnings());\n+            progressBarLabel->setVisible(true);\n+        }\n         progressBar->setVisible(false);\n         tooltip = tr(\"Downloaded %1 blocks of transaction history.\").arg(count);\n     }\n@@ -474,6 +491,19 @@ void BitcoinGUI::setNumBlocks(int count)\n     progressBar->setToolTip(tooltip);\n }\n \n+void BitcoinGUI::refreshStatusBar()\n+{\n+    /* Might display multiple times in the case of multiple alerts\n+    static QString prevStatusBar;\n+    QString newStatusBar = clientModel->getStatusBarWarnings();\n+    if (prevStatusBar != newStatusBar)\n+    {\n+        prevStatusBar = newStatusBar;\n+        error(tr(\"Network Alert\"), newStatusBar);\n+    }*/\n+    setNumBlocks(clientModel->getNumBlocks());\n+}\n+\n void BitcoinGUI::error(const QString &title, const QString &message)\n {\n     // Report errors from network/worker thread"
+      },
+      {
+        "sha": "ecb356dc35c562efe2d94564f9b0af54b90698dd",
+        "filename": "src/qt/bitcoingui.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7ca47cece7854a4efb4a8dcb68b93edbde1a76fb/src/qt/bitcoingui.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7ca47cece7854a4efb4a8dcb68b93edbde1a76fb/src/qt/bitcoingui.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoingui.h?ref=7ca47cece7854a4efb4a8dcb68b93edbde1a76fb",
+        "patch": "@@ -108,6 +108,8 @@ public slots:\n        @see WalletModel::EncryptionStatus\n     */\n     void setEncryptionStatus(int status);\n+    /** Set the status bar text if there are any warnings (removes sync progress bar if applicable) */\n+    void refreshStatusBar();\n \n     /** Notify the user of an error in the network or transaction handling code. */\n     void error(const QString &title, const QString &message);"
+      },
+      {
+        "sha": "5a0b4aa83ca99b46791747e19c5337fc6424dc57",
+        "filename": "src/qt/clientmodel.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 0,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7ca47cece7854a4efb4a8dcb68b93edbde1a76fb/src/qt/clientmodel.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7ca47cece7854a4efb4a8dcb68b93edbde1a76fb/src/qt/clientmodel.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/clientmodel.cpp?ref=7ca47cece7854a4efb4a8dcb68b93edbde1a76fb",
+        "patch": "@@ -72,6 +72,11 @@ int ClientModel::getNumBlocksOfPeers() const\n     return GetNumBlocksOfPeers();\n }\n \n+QString ClientModel::getStatusBarWarnings() const\n+{\n+    return QString::fromStdString(GetWarnings(\"statusbar\"));\n+}\n+\n OptionsModel *ClientModel::getOptionsModel()\n {\n     return optionsModel;"
+      },
+      {
+        "sha": "5a12c4fcd84fa0a486bec820227b45e22b7c0b54",
+        "filename": "src/qt/clientmodel.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7ca47cece7854a4efb4a8dcb68b93edbde1a76fb/src/qt/clientmodel.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7ca47cece7854a4efb4a8dcb68b93edbde1a76fb/src/qt/clientmodel.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/clientmodel.h?ref=7ca47cece7854a4efb4a8dcb68b93edbde1a76fb",
+        "patch": "@@ -33,6 +33,8 @@ class ClientModel : public QObject\n     bool inInitialBlockDownload() const;\n     //! Return conservative estimate of total number of blocks, or 0 if unknown\n     int getNumBlocksOfPeers() const;\n+    //! Return warnings to be displayed in status bar\n+    QString getStatusBarWarnings() const;\n \n     QString formatFullVersion() const;\n "
+      }
+    ]
+  }
+]

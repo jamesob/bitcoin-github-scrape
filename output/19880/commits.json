@@ -1,0 +1,93 @@
+[
+  {
+    "sha": "374c5d3117ebcd224e39de2c227c0f68d352ee75",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozNzRjNWQzMTE3ZWJjZDIyNGUzOWRlMmMyMjdjMGY2OGQzNTJlZTc1",
+    "commit": {
+      "author": {
+        "name": "Mark Lundeberg",
+        "email": "5505128-markblundeberg@users.noreply.gitlab.com",
+        "date": "2020-09-04T23:53:22Z"
+      },
+      "committer": {
+        "name": "Mark Lundeberg",
+        "email": "markblundeberg@users.noreply.github.com",
+        "date": "2020-09-05T02:58:02Z"
+      },
+      "message": "fix CTxMemPool::TrimToSize to put only confirmed coins in pvNoSpendsRemaining\n\nOnly return confirmed (not from mempool) outpoints in `pvNoSpendsRemaining`,\nas is the intended behaviour.\n\nWith the previous code, removed chains of tx would have all internally-spent outpoints\nincluded in this vector, which is not the intended result. It seems to have been\nincorrectly coded from the very start (https://github.com/bitcoin/bitcoin/pull/6872)\nbut the bug is benign as this result is only used to uncache coins.\n\nAs a bonus, no copying of CTransaction is needed now.\n\nAn existing test case is modified to test this behaviour (the modified test fails\nunder prior behaviour).",
+      "tree": {
+        "sha": "5eec5d33bde66aadec7aa5466f7db9725906de2e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/5eec5d33bde66aadec7aa5466f7db9725906de2e"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/374c5d3117ebcd224e39de2c227c0f68d352ee75",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/374c5d3117ebcd224e39de2c227c0f68d352ee75",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/374c5d3117ebcd224e39de2c227c0f68d352ee75",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/374c5d3117ebcd224e39de2c227c0f68d352ee75/comments",
+    "author": null,
+    "committer": {
+      "login": "markblundeberg",
+      "id": 36528214,
+      "node_id": "MDQ6VXNlcjM2NTI4MjE0",
+      "avatar_url": "https://avatars.githubusercontent.com/u/36528214?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/markblundeberg",
+      "html_url": "https://github.com/markblundeberg",
+      "followers_url": "https://api.github.com/users/markblundeberg/followers",
+      "following_url": "https://api.github.com/users/markblundeberg/following{/other_user}",
+      "gists_url": "https://api.github.com/users/markblundeberg/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/markblundeberg/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/markblundeberg/subscriptions",
+      "organizations_url": "https://api.github.com/users/markblundeberg/orgs",
+      "repos_url": "https://api.github.com/users/markblundeberg/repos",
+      "events_url": "https://api.github.com/users/markblundeberg/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/markblundeberg/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "23d3ae7accfc690298b1b0bac9615155f485c5ad",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/23d3ae7accfc690298b1b0bac9615155f485c5ad",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/23d3ae7accfc690298b1b0bac9615155f485c5ad"
+      }
+    ],
+    "stats": {
+      "total": 24,
+      "additions": 13,
+      "deletions": 11
+    },
+    "files": [
+      {
+        "sha": "dfeddb003022bde5a26a66b49085cdb83bbbf482",
+        "filename": "src/test/mempool_tests.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 1,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/374c5d3117ebcd224e39de2c227c0f68d352ee75/src/test/mempool_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/374c5d3117ebcd224e39de2c227c0f68d352ee75/src/test/mempool_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/mempool_tests.cpp?ref=374c5d3117ebcd224e39de2c227c0f68d352ee75",
+        "patch": "@@ -466,10 +466,15 @@ BOOST_AUTO_TEST_CASE(MempoolSizeLimitTest)\n     BOOST_CHECK(pool.exists(tx2.GetHash()));\n     BOOST_CHECK(pool.exists(tx3.GetHash()));\n \n-    pool.TrimToSize(GetVirtualTransactionSize(CTransaction(tx1))); // mempool is limited to tx1's size in memory usage, so nothing fits\n+    std::vector<COutPoint> vNoSpendsRemaining;\n+    pool.TrimToSize(GetVirtualTransactionSize(CTransaction(tx1)), &vNoSpendsRemaining); // mempool is limited to tx1's size in memory usage, so nothing fits\n     BOOST_CHECK(!pool.exists(tx1.GetHash()));\n     BOOST_CHECK(!pool.exists(tx2.GetHash()));\n     BOOST_CHECK(!pool.exists(tx3.GetHash()));\n+    // This vector should only contain 'root' (not unconfirmed) outpoints\n+    // Though both tx2 and tx3 were removed, tx3's input came from tx2.\n+    BOOST_CHECK_EQUAL(vNoSpendsRemaining.size(), 1U);\n+    BOOST_CHECK(vNoSpendsRemaining == std::vector<COutPoint>{COutPoint()});\n \n     CFeeRate maxFeeRateRemoved(25000, GetVirtualTransactionSize(CTransaction(tx3)) + GetVirtualTransactionSize(CTransaction(tx2)));\n     BOOST_CHECK_EQUAL(pool.GetMinFee(1).GetFeePerK(), maxFeeRateRemoved.GetFeePerK() + 1000);"
+      },
+      {
+        "sha": "b3a24ccbeaafd893a66250719b15f8108e5d692a",
+        "filename": "src/txmempool.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 10,
+        "changes": 17,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/374c5d3117ebcd224e39de2c227c0f68d352ee75/src/txmempool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/374c5d3117ebcd224e39de2c227c0f68d352ee75/src/txmempool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.cpp?ref=374c5d3117ebcd224e39de2c227c0f68d352ee75",
+        "patch": "@@ -1057,21 +1057,18 @@ void CTxMemPool::TrimToSize(size_t sizelimit, std::vector<COutPoint>* pvNoSpends\n         CalculateDescendants(mapTx.project<0>(it), stage);\n         nTxnRemoved += stage.size();\n \n-        std::vector<CTransaction> txn;\n         if (pvNoSpendsRemaining) {\n-            txn.reserve(stage.size());\n-            for (txiter iter : stage)\n-                txn.push_back(iter->GetTx());\n-        }\n-        RemoveStaged(stage, false, MemPoolRemovalReason::SIZELIMIT);\n-        if (pvNoSpendsRemaining) {\n-            for (const CTransaction& tx : txn) {\n-                for (const CTxIn& txin : tx.vin) {\n-                    if (exists(txin.prevout.hash)) continue;\n+            for (txiter iter : stage) {\n+                for (const CTxIn &txin : iter->GetTx().vin) {\n+                    if (exists(txin.prevout.hash)) {\n+                        continue;\n+                    }\n                     pvNoSpendsRemaining->push_back(txin.prevout);\n                 }\n             }\n         }\n+\n+        RemoveStaged(stage, false, MemPoolRemovalReason::SIZELIMIT);\n     }\n \n     if (maxFeeRateRemoved > CFeeRate(0)) {"
+      }
+    ]
+  }
+]

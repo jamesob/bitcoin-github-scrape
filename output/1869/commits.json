@@ -1,0 +1,206 @@
+[
+  {
+    "sha": "95d7f002957a7bb30a2d5d8b07fe8fe3c1f37ec0",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5NWQ3ZjAwMjk1N2E3YmIzMGEyZDVkOGIwN2ZlOGZlM2MxZjM3ZWMw",
+    "commit": {
+      "author": {
+        "name": "Mark Friedenbach",
+        "email": "mark@monetize.io",
+        "date": "2012-09-25T23:40:34Z"
+      },
+      "committer": {
+        "name": "Mark Friedenbach",
+        "email": "mark@monetize.io",
+        "date": "2012-09-25T23:40:34Z"
+      },
+      "message": "Documented bug in sign-extension behavior of opcodes OP_AND, OP_OR, and OP_XOR.\n\nDue to a bug in the implementation of MakeSameSize(), using OP_AND, OP_OR, or OP_XOR with signed values of unequal size will result in the sign-value becoming part of the smaller integer, with nonsensical results. This patch documents the unexpected behavior and provides the basis of a solution should decision be made to fix the bug in the future.",
+      "tree": {
+        "sha": "a2e8b9e591328ef2ee6db6d2eaa8c26d96bca53b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/a2e8b9e591328ef2ee6db6d2eaa8c26d96bca53b"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/95d7f002957a7bb30a2d5d8b07fe8fe3c1f37ec0",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/95d7f002957a7bb30a2d5d8b07fe8fe3c1f37ec0",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/95d7f002957a7bb30a2d5d8b07fe8fe3c1f37ec0",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/95d7f002957a7bb30a2d5d8b07fe8fe3c1f37ec0/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "1381ad2b21733071acb2a43c251dbecef524f110",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1381ad2b21733071acb2a43c251dbecef524f110",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/1381ad2b21733071acb2a43c251dbecef524f110"
+      }
+    ],
+    "stats": {
+      "total": 24,
+      "additions": 23,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "4357a9a1b3491d52a1b87b5284afab8fd421c143",
+        "filename": "src/script.cpp",
+        "status": "modified",
+        "additions": 23,
+        "deletions": 1,
+        "changes": 24,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/95d7f002957a7bb30a2d5d8b07fe8fe3c1f37ec0/src/script.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/95d7f002957a7bb30a2d5d8b07fe8fe3c1f37ec0/src/script.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script.cpp?ref=95d7f002957a7bb30a2d5d8b07fe8fe3c1f37ec0",
+        "patch": "@@ -54,12 +54,29 @@ bool CastToBool(const valtype& vch)\n     return false;\n }\n \n+//\n+// WARNING: This does not work as expected for signed integers; the sign-bit\n+// is left in place as the integer is zero-extended. The correct behavior\n+// would be to move the most significant bit of the last byte during the\n+// resize process. MakeSameSize() is currently only used by the disabled\n+// opcodes OP_AND, OP_OR, and OP_XOR.\n+//\n void MakeSameSize(valtype& vch1, valtype& vch2)\n {\n     // Lengthen the shorter one\n     if (vch1.size() < vch2.size())\n+        // PATCH:\n+        // +unsigned char msb = vch1[vch1.size()-1];\n+        // +vch1[vch1.size()-1] &= 0x7f;\n+        //  vch1.resize(vch2.size(), 0);\n+        // +vch1[vch1.size()-1] = msb;\n         vch1.resize(vch2.size(), 0);\n     if (vch2.size() < vch1.size())\n+        // PATCH:\n+        // +unsigned char msb = vch2[vch2.size()-1];\n+        // +vch2[vch2.size()-1] &= 0x7f;\n+        //  vch2.resize(vch1.size(), 0);\n+        // +vch2[vch2.size()-1] = msb;\n         vch2.resize(vch1.size(), 0);\n }\n \n@@ -663,6 +680,11 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co\n                 }\n                 break;\n \n+                //\n+                // WARNING: These disabled opcodes exhibit unexpected behavior\n+                // when used on signed integers due to a bug in MakeSameSize()\n+                // [see definition of MakeSameSize() above].\n+                //\n                 case OP_AND:\n                 case OP_OR:\n                 case OP_XOR:\n@@ -672,7 +694,7 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co\n                         return false;\n                     valtype& vch1 = stacktop(-2);\n                     valtype& vch2 = stacktop(-1);\n-                    MakeSameSize(vch1, vch2);\n+                    MakeSameSize(vch1, vch2); // <-- NOT SAFE FOR SIGNED VALUES\n                     if (opcode == OP_AND)\n                     {\n                         for (unsigned int i = 0; i < vch1.size(); i++)"
+      }
+    ]
+  },
+  {
+    "sha": "de7c86e191e480c13dc31d71f62135a185c7ec82",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkZTdjODZlMTkxZTQ4MGMxM2RjMzFkNzFmNjIxMzVhMTg1YzdlYzgy",
+    "commit": {
+      "author": {
+        "name": "Mark Friedenbach",
+        "email": "mark@monetize.io",
+        "date": "2012-09-26T17:20:06Z"
+      },
+      "committer": {
+        "name": "Mark Friedenbach",
+        "email": "mark@monetize.io",
+        "date": "2012-09-26T18:58:47Z"
+      },
+      "message": "Completely removed disabled opcodes (and one support function, MakeSameSize(), which was only used by the disabled opcodes).",
+      "tree": {
+        "sha": "4c25e1cf5a7586764bfc7de5082787088a510cbf",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/4c25e1cf5a7586764bfc7de5082787088a510cbf"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/de7c86e191e480c13dc31d71f62135a185c7ec82",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/de7c86e191e480c13dc31d71f62135a185c7ec82",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/de7c86e191e480c13dc31d71f62135a185c7ec82",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/de7c86e191e480c13dc31d71f62135a185c7ec82/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "95d7f002957a7bb30a2d5d8b07fe8fe3c1f37ec0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/95d7f002957a7bb30a2d5d8b07fe8fe3c1f37ec0",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/95d7f002957a7bb30a2d5d8b07fe8fe3c1f37ec0"
+      }
+    ],
+    "stats": {
+      "total": 270,
+      "additions": 30,
+      "deletions": 240
+    },
+    "files": [
+      {
+        "sha": "aaebdfafc84251ae06c0dbf15c9a3efbd01e9f5a",
+        "filename": "src/script.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 199,
+        "changes": 203,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/de7c86e191e480c13dc31d71f62135a185c7ec82/src/script.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/de7c86e191e480c13dc31d71f62135a185c7ec82/src/script.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script.cpp?ref=de7c86e191e480c13dc31d71f62135a185c7ec82",
+        "patch": "@@ -54,33 +54,6 @@ bool CastToBool(const valtype& vch)\n     return false;\n }\n \n-//\n-// WARNING: This does not work as expected for signed integers; the sign-bit\n-// is left in place as the integer is zero-extended. The correct behavior\n-// would be to move the most significant bit of the last byte during the\n-// resize process. MakeSameSize() is currently only used by the disabled\n-// opcodes OP_AND, OP_OR, and OP_XOR.\n-//\n-void MakeSameSize(valtype& vch1, valtype& vch2)\n-{\n-    // Lengthen the shorter one\n-    if (vch1.size() < vch2.size())\n-        // PATCH:\n-        // +unsigned char msb = vch1[vch1.size()-1];\n-        // +vch1[vch1.size()-1] &= 0x7f;\n-        //  vch1.resize(vch2.size(), 0);\n-        // +vch1[vch1.size()-1] = msb;\n-        vch1.resize(vch2.size(), 0);\n-    if (vch2.size() < vch1.size())\n-        // PATCH:\n-        // +unsigned char msb = vch2[vch2.size()-1];\n-        // +vch2[vch2.size()-1] &= 0x7f;\n-        //  vch2.resize(vch1.size(), 0);\n-        // +vch2[vch2.size()-1] = msb;\n-        vch2.resize(vch1.size(), 0);\n-}\n-\n-\n \n //\n // Script is a stack machine (like Forth) that evaluates a predicate\n@@ -171,18 +144,10 @@ const char* GetOpName(opcodetype opcode)\n     case OP_SWAP                   : return \"OP_SWAP\";\n     case OP_TUCK                   : return \"OP_TUCK\";\n \n-    // splice ops\n-    case OP_CAT                    : return \"OP_CAT\";\n-    case OP_SUBSTR                 : return \"OP_SUBSTR\";\n-    case OP_LEFT                   : return \"OP_LEFT\";\n-    case OP_RIGHT                  : return \"OP_RIGHT\";\n+    // data length\n     case OP_SIZE                   : return \"OP_SIZE\";\n \n-    // bit logic\n-    case OP_INVERT                 : return \"OP_INVERT\";\n-    case OP_AND                    : return \"OP_AND\";\n-    case OP_OR                     : return \"OP_OR\";\n-    case OP_XOR                    : return \"OP_XOR\";\n+    // bitwise equality\n     case OP_EQUAL                  : return \"OP_EQUAL\";\n     case OP_EQUALVERIFY            : return \"OP_EQUALVERIFY\";\n     case OP_RESERVED1              : return \"OP_RESERVED1\";\n@@ -191,19 +156,12 @@ const char* GetOpName(opcodetype opcode)\n     // numeric\n     case OP_1ADD                   : return \"OP_1ADD\";\n     case OP_1SUB                   : return \"OP_1SUB\";\n-    case OP_2MUL                   : return \"OP_2MUL\";\n-    case OP_2DIV                   : return \"OP_2DIV\";\n     case OP_NEGATE                 : return \"OP_NEGATE\";\n     case OP_ABS                    : return \"OP_ABS\";\n     case OP_NOT                    : return \"OP_NOT\";\n     case OP_0NOTEQUAL              : return \"OP_0NOTEQUAL\";\n     case OP_ADD                    : return \"OP_ADD\";\n     case OP_SUB                    : return \"OP_SUB\";\n-    case OP_MUL                    : return \"OP_MUL\";\n-    case OP_DIV                    : return \"OP_DIV\";\n-    case OP_MOD                    : return \"OP_MOD\";\n-    case OP_LSHIFT                 : return \"OP_LSHIFT\";\n-    case OP_RSHIFT                 : return \"OP_RSHIFT\";\n     case OP_BOOLAND                : return \"OP_BOOLAND\";\n     case OP_BOOLOR                 : return \"OP_BOOLOR\";\n     case OP_NUMEQUAL               : return \"OP_NUMEQUAL\";\n@@ -284,23 +242,6 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co\n             if (opcode > OP_16 && ++nOpCount > 201)\n                 return false;\n \n-            if (opcode == OP_CAT ||\n-                opcode == OP_SUBSTR ||\n-                opcode == OP_LEFT ||\n-                opcode == OP_RIGHT ||\n-                opcode == OP_INVERT ||\n-                opcode == OP_AND ||\n-                opcode == OP_OR ||\n-                opcode == OP_XOR ||\n-                opcode == OP_2MUL ||\n-                opcode == OP_2DIV ||\n-                opcode == OP_MUL ||\n-                opcode == OP_DIV ||\n-                opcode == OP_MOD ||\n-                opcode == OP_LSHIFT ||\n-                opcode == OP_RSHIFT)\n-                return false;\n-\n             if (fExec && 0 <= opcode && opcode <= OP_PUSHDATA4)\n                 stack.push_back(vchPushValue);\n             else if (fExec || (OP_IF <= opcode && opcode <= OP_ENDIF))\n@@ -598,63 +539,8 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co\n \n \n                 //\n-                // Splice ops\n+                // Data length\n                 //\n-                case OP_CAT:\n-                {\n-                    // (x1 x2 -- out)\n-                    if (stack.size() < 2)\n-                        return false;\n-                    valtype& vch1 = stacktop(-2);\n-                    valtype& vch2 = stacktop(-1);\n-                    vch1.insert(vch1.end(), vch2.begin(), vch2.end());\n-                    popstack(stack);\n-                    if (stacktop(-1).size() > 520)\n-                        return false;\n-                }\n-                break;\n-\n-                case OP_SUBSTR:\n-                {\n-                    // (in begin size -- out)\n-                    if (stack.size() < 3)\n-                        return false;\n-                    valtype& vch = stacktop(-3);\n-                    int nBegin = CastToBigNum(stacktop(-2)).getint();\n-                    int nEnd = nBegin + CastToBigNum(stacktop(-1)).getint();\n-                    if (nBegin < 0 || nEnd < nBegin)\n-                        return false;\n-                    if (nBegin > (int)vch.size())\n-                        nBegin = vch.size();\n-                    if (nEnd > (int)vch.size())\n-                        nEnd = vch.size();\n-                    vch.erase(vch.begin() + nEnd, vch.end());\n-                    vch.erase(vch.begin(), vch.begin() + nBegin);\n-                    popstack(stack);\n-                    popstack(stack);\n-                }\n-                break;\n-\n-                case OP_LEFT:\n-                case OP_RIGHT:\n-                {\n-                    // (in size -- out)\n-                    if (stack.size() < 2)\n-                        return false;\n-                    valtype& vch = stacktop(-2);\n-                    int nSize = CastToBigNum(stacktop(-1)).getint();\n-                    if (nSize < 0)\n-                        return false;\n-                    if (nSize > (int)vch.size())\n-                        nSize = vch.size();\n-                    if (opcode == OP_LEFT)\n-                        vch.erase(vch.begin() + nSize, vch.end());\n-                    else\n-                        vch.erase(vch.begin(), vch.end() - nSize);\n-                    popstack(stack);\n-                }\n-                break;\n-\n                 case OP_SIZE:\n                 {\n                     // (in -- in size)\n@@ -667,53 +553,8 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co\n \n \n                 //\n-                // Bitwise logic\n-                //\n-                case OP_INVERT:\n-                {\n-                    // (in - out)\n-                    if (stack.size() < 1)\n-                        return false;\n-                    valtype& vch = stacktop(-1);\n-                    for (unsigned int i = 0; i < vch.size(); i++)\n-                        vch[i] = ~vch[i];\n-                }\n-                break;\n-\n-                //\n-                // WARNING: These disabled opcodes exhibit unexpected behavior\n-                // when used on signed integers due to a bug in MakeSameSize()\n-                // [see definition of MakeSameSize() above].\n+                // Bitwise equality\n                 //\n-                case OP_AND:\n-                case OP_OR:\n-                case OP_XOR:\n-                {\n-                    // (x1 x2 - out)\n-                    if (stack.size() < 2)\n-                        return false;\n-                    valtype& vch1 = stacktop(-2);\n-                    valtype& vch2 = stacktop(-1);\n-                    MakeSameSize(vch1, vch2); // <-- NOT SAFE FOR SIGNED VALUES\n-                    if (opcode == OP_AND)\n-                    {\n-                        for (unsigned int i = 0; i < vch1.size(); i++)\n-                            vch1[i] &= vch2[i];\n-                    }\n-                    else if (opcode == OP_OR)\n-                    {\n-                        for (unsigned int i = 0; i < vch1.size(); i++)\n-                            vch1[i] |= vch2[i];\n-                    }\n-                    else if (opcode == OP_XOR)\n-                    {\n-                        for (unsigned int i = 0; i < vch1.size(); i++)\n-                            vch1[i] ^= vch2[i];\n-                    }\n-                    popstack(stack);\n-                }\n-                break;\n-\n                 case OP_EQUAL:\n                 case OP_EQUALVERIFY:\n                 //case OP_NOTEQUAL: // use OP_NUMNOTEQUAL\n@@ -748,8 +589,6 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co\n                 //\n                 case OP_1ADD:\n                 case OP_1SUB:\n-                case OP_2MUL:\n-                case OP_2DIV:\n                 case OP_NEGATE:\n                 case OP_ABS:\n                 case OP_NOT:\n@@ -763,8 +602,6 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co\n                     {\n                     case OP_1ADD:       bn += bnOne; break;\n                     case OP_1SUB:       bn -= bnOne; break;\n-                    case OP_2MUL:       bn <<= 1; break;\n-                    case OP_2DIV:       bn >>= 1; break;\n                     case OP_NEGATE:     bn = -bn; break;\n                     case OP_ABS:        if (bn < bnZero) bn = -bn; break;\n                     case OP_NOT:        bn = (bn == bnZero); break;\n@@ -778,11 +615,6 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co\n \n                 case OP_ADD:\n                 case OP_SUB:\n-                case OP_MUL:\n-                case OP_DIV:\n-                case OP_MOD:\n-                case OP_LSHIFT:\n-                case OP_RSHIFT:\n                 case OP_BOOLAND:\n                 case OP_BOOLOR:\n                 case OP_NUMEQUAL:\n@@ -811,33 +643,6 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co\n                         bn = bn1 - bn2;\n                         break;\n \n-                    case OP_MUL:\n-                        if (!BN_mul(&bn, &bn1, &bn2, pctx))\n-                            return false;\n-                        break;\n-\n-                    case OP_DIV:\n-                        if (!BN_div(&bn, NULL, &bn1, &bn2, pctx))\n-                            return false;\n-                        break;\n-\n-                    case OP_MOD:\n-                        if (!BN_mod(&bn, &bn1, &bn2, pctx))\n-                            return false;\n-                        break;\n-\n-                    case OP_LSHIFT:\n-                        if (bn2 < bnZero || bn2 > CBigNum(2048))\n-                            return false;\n-                        bn = bn1 << bn2.getulong();\n-                        break;\n-\n-                    case OP_RSHIFT:\n-                        if (bn2 < bnZero || bn2 > CBigNum(2048))\n-                            return false;\n-                        bn = bn1 >> bn2.getulong();\n-                        break;\n-\n                     case OP_BOOLAND:             bn = (bn1 != bnZero && bn2 != bnZero); break;\n                     case OP_BOOLOR:              bn = (bn1 != bnZero || bn2 != bnZero); break;\n                     case OP_NUMEQUAL:            bn = (bn1 == bn2); break;"
+      },
+      {
+        "sha": "c0cba6855f0ad4dd416b7219fc2491578c1f96c7",
+        "filename": "src/script.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 17,
+        "changes": 19,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/de7c86e191e480c13dc31d71f62135a185c7ec82/src/script.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/de7c86e191e480c13dc31d71f62135a185c7ec82/src/script.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script.h?ref=de7c86e191e480c13dc31d71f62135a185c7ec82",
+        "patch": "@@ -114,18 +114,10 @@ enum opcodetype\n     OP_SWAP = 0x7c,\n     OP_TUCK = 0x7d,\n \n-    // splice ops\n-    OP_CAT = 0x7e,\n-    OP_SUBSTR = 0x7f,\n-    OP_LEFT = 0x80,\n-    OP_RIGHT = 0x81,\n+    // data length\n     OP_SIZE = 0x82,\n \n-    // bit logic\n-    OP_INVERT = 0x83,\n-    OP_AND = 0x84,\n-    OP_OR = 0x85,\n-    OP_XOR = 0x86,\n+    // bitwise equality\n     OP_EQUAL = 0x87,\n     OP_EQUALVERIFY = 0x88,\n     OP_RESERVED1 = 0x89,\n@@ -134,20 +126,13 @@ enum opcodetype\n     // numeric\n     OP_1ADD = 0x8b,\n     OP_1SUB = 0x8c,\n-    OP_2MUL = 0x8d,\n-    OP_2DIV = 0x8e,\n     OP_NEGATE = 0x8f,\n     OP_ABS = 0x90,\n     OP_NOT = 0x91,\n     OP_0NOTEQUAL = 0x92,\n \n     OP_ADD = 0x93,\n     OP_SUB = 0x94,\n-    OP_MUL = 0x95,\n-    OP_DIV = 0x96,\n-    OP_MOD = 0x97,\n-    OP_LSHIFT = 0x98,\n-    OP_RSHIFT = 0x99,\n \n     OP_BOOLAND = 0x9a,\n     OP_BOOLOR = 0x9b,"
+      },
+      {
+        "sha": "633a3628e49a10abe109466ce22e2fbff1b310f4",
+        "filename": "src/test/data/script_invalid.json",
+        "status": "modified",
+        "additions": 24,
+        "deletions": 24,
+        "changes": 48,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/de7c86e191e480c13dc31d71f62135a185c7ec82/src/test/data/script_invalid.json",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/de7c86e191e480c13dc31d71f62135a185c7ec82/src/test/data/script_invalid.json",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/data/script_invalid.json?ref=de7c86e191e480c13dc31d71f62135a185c7ec82",
+        "patch": "@@ -86,26 +86,26 @@\n [\"NOP\", \"2SWAP 1\"],\n [\"1\", \"2 3 2SWAP 1\"],\n \n-[\"'a' 'b'\", \"CAT\", \"CAT disabled\"],\n-[\"'a' 'b' 0\", \"IF CAT ELSE 1 ENDIF\", \"CAT disabled\"],\n-[\"'abc' 1 1\", \"SUBSTR\", \"SUBSTR disabled\"],\n-[\"'abc' 1 1 0\", \"IF SUBSTR ELSE 1 ENDIF\", \"SUBSTR disabled\"],\n-[\"'abc' 2 0\", \"IF LEFT ELSE 1 ENDIF\", \"LEFT disabled\"],\n-[\"'abc' 2 0\", \"IF RIGHT ELSE 1 ENDIF\", \"RIGHT disabled\"],\n+[\"'a' 'b'\", \"0x7e\", \"CAT disabled\"],\n+[\"'a' 'b' 0\", \"IF 0x7e ELSE 1 ENDIF\", \"CAT disabled\"],\n+[\"'abc' 1 1\", \"0x7f\", \"SUBSTR disabled\"],\n+[\"'abc' 1 1 0\", \"IF 0x7f ELSE 1 ENDIF\", \"SUBSTR disabled\"],\n+[\"'abc' 2 0\", \"IF 0x80 ELSE 1 ENDIF\", \"LEFT disabled\"],\n+[\"'abc' 2 0\", \"IF 0x81 ELSE 1 ENDIF\", \"RIGHT disabled\"],\n \n [\"NOP\", \"SIZE 1\"],\n \n-[\"'abc'\", \"IF INVERT ELSE 1 ENDIF\", \"INVERT disabled\"],\n-[\"1 2 0 IF AND ELSE 1 ENDIF\", \"NOP\", \"AND disabled\"],\n-[\"1 2 0 IF OR ELSE 1 ENDIF\", \"NOP\", \"OR disabled\"],\n-[\"1 2 0 IF XOR ELSE 1 ENDIF\", \"NOP\", \"XOR disabled\"],\n-[\"2 0 IF 2MUL ELSE 1 ENDIF\", \"NOP\", \"2MUL disabled\"],\n-[\"2 0 IF 2DIV ELSE 1 ENDIF\", \"NOP\", \"2DIV disabled\"],\n-[\"2 2 0 IF MUL ELSE 1 ENDIF\", \"NOP\", \"MUL disabled\"],\n-[\"2 2 0 IF DIV ELSE 1 ENDIF\", \"NOP\", \"DIV disabled\"],\n-[\"2 2 0 IF MOD ELSE 1 ENDIF\", \"NOP\", \"MOD disabled\"],\n-[\"2 2 0 IF LSHIFT ELSE 1 ENDIF\", \"NOP\", \"LSHIFT disabled\"],\n-[\"2 2 0 IF RSHIFT ELSE 1 ENDIF\", \"NOP\", \"RSHIFT disabled\"],\n+[\"'abc'\", \"IF 0x83 ELSE 1 ENDIF\", \"INVERT disabled\"],\n+[\"1 2 0 IF 0x84 ELSE 1 ENDIF\", \"NOP\", \"AND disabled\"],\n+[\"1 2 0 IF 0x85 ELSE 1 ENDIF\", \"NOP\", \"OR disabled\"],\n+[\"1 2 0 IF 0x86 ELSE 1 ENDIF\", \"NOP\", \"XOR disabled\"],\n+[\"2 0 IF 0x8d ELSE 1 ENDIF\", \"NOP\", \"2MUL disabled\"],\n+[\"2 0 IF 0x8e ELSE 1 ENDIF\", \"NOP\", \"2DIV disabled\"],\n+[\"2 2 0 IF 0x95 ELSE 1 ENDIF\", \"NOP\", \"MUL disabled\"],\n+[\"2 2 0 IF 0x96 ELSE 1 ENDIF\", \"NOP\", \"DIV disabled\"],\n+[\"2 2 0 IF 0x97 ELSE 1 ENDIF\", \"NOP\", \"MOD disabled\"],\n+[\"2 2 0 IF 0x98 ELSE 1 ENDIF\", \"NOP\", \"LSHIFT disabled\"],\n+[\"2 2 0 IF 0x99 ELSE 1 ENDIF\", \"NOP\", \"RSHIFT disabled\"],\n \n [\"0 1\",\"EQUAL\"],\n [\"1 1 ADD\", \"0 EQUAL\"],\n@@ -116,13 +116,13 @@\n [\"2147483647 DUP ADD\", \"4294967294 NUMEQUAL\", \"NUMEQUAL must be in numeric range\"],\n [\"'abcdef' NOT\", \"0 EQUAL\", \"NOT is an arithmetic operand\"],\n \n-[\"2 DUP MUL\", \"4 EQUAL\", \"disabled\"],\n-[\"2 DUP DIV\", \"1 EQUAL\", \"disabled\"],\n-[\"2 2MUL\", \"4 EQUAL\", \"disabled\"],\n-[\"2 2DIV\", \"1 EQUAL\", \"disabled\"],\n-[\"7 3 MOD\", \"1 EQUAL\", \"disabled\"],\n-[\"2 2 LSHIFT\", \"8 EQUAL\", \"disabled\"],\n-[\"2 1 RSHIFT\", \"1 EQUAL\", \"disabled\"],\n+[\"2 DUP 0x95\", \"4 EQUAL\", \"disabled\"],\n+[\"2 DUP 0x96\", \"1 EQUAL\", \"disabled\"],\n+[\"2 0x8d\", \"4 EQUAL\", \"disabled\"],\n+[\"2 0x8e\", \"1 EQUAL\", \"disabled\"],\n+[\"7 3 0x97\", \"1 EQUAL\", \"disabled\"],\n+[\"2 2 0x98\", \"8 EQUAL\", \"disabled\"],\n+[\"2 1 0x99\", \"1 EQUAL\", \"disabled\"],\n \n [\"1\",\"NOP1 NOP2 NOP3 NOP4 NOP5 NOP6 NOP7 NOP8 NOP9 NOP10 2 EQUAL\"],\n [\"'NOP_1_to_10' NOP1 NOP2 NOP3 NOP4 NOP5 NOP6 NOP7 NOP8 NOP9 NOP10\",\"'NOP_1_to_11' EQUAL\"],"
+      }
+    ]
+  },
+  {
+    "sha": "f0b3fb366cfe82f38a14fee9c3d89c12feef2536",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmMGIzZmIzNjZjZmU4MmYzOGExNGZlZTljM2Q4OWMxMmZlZWYyNTM2",
+    "commit": {
+      "author": {
+        "name": "Mark Friedenbach",
+        "email": "mark@monetize.io",
+        "date": "2012-09-26T19:15:49Z"
+      },
+      "committer": {
+        "name": "Mark Friedenbach",
+        "email": "mark@monetize.io",
+        "date": "2012-09-26T19:15:49Z"
+      },
+      "message": "Correct unit test scripts such that IF-branch of the conditional is taken and the previously disabled, now unused opcodes are executed.",
+      "tree": {
+        "sha": "84e1af4b4e0541e783a338ef16d31ccc56af642a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/84e1af4b4e0541e783a338ef16d31ccc56af642a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/f0b3fb366cfe82f38a14fee9c3d89c12feef2536",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f0b3fb366cfe82f38a14fee9c3d89c12feef2536",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/f0b3fb366cfe82f38a14fee9c3d89c12feef2536",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f0b3fb366cfe82f38a14fee9c3d89c12feef2536/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "de7c86e191e480c13dc31d71f62135a185c7ec82",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/de7c86e191e480c13dc31d71f62135a185c7ec82",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/de7c86e191e480c13dc31d71f62135a185c7ec82"
+      }
+    ],
+    "stats": {
+      "total": 28,
+      "additions": 14,
+      "deletions": 14
+    },
+    "files": [
+      {
+        "sha": "4b3523950dd1bfc3a84d69bf9a16aa9368990b6f",
+        "filename": "src/test/data/script_invalid.json",
+        "status": "modified",
+        "additions": 14,
+        "deletions": 14,
+        "changes": 28,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f0b3fb366cfe82f38a14fee9c3d89c12feef2536/src/test/data/script_invalid.json",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f0b3fb366cfe82f38a14fee9c3d89c12feef2536/src/test/data/script_invalid.json",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/data/script_invalid.json?ref=f0b3fb366cfe82f38a14fee9c3d89c12feef2536",
+        "patch": "@@ -87,25 +87,25 @@\n [\"1\", \"2 3 2SWAP 1\"],\n \n [\"'a' 'b'\", \"0x7e\", \"CAT disabled\"],\n-[\"'a' 'b' 0\", \"IF 0x7e ELSE 1 ENDIF\", \"CAT disabled\"],\n+[\"'a' 'b' 1\", \"IF 0x7e ELSE 1 ENDIF\", \"CAT disabled\"],\n [\"'abc' 1 1\", \"0x7f\", \"SUBSTR disabled\"],\n-[\"'abc' 1 1 0\", \"IF 0x7f ELSE 1 ENDIF\", \"SUBSTR disabled\"],\n-[\"'abc' 2 0\", \"IF 0x80 ELSE 1 ENDIF\", \"LEFT disabled\"],\n-[\"'abc' 2 0\", \"IF 0x81 ELSE 1 ENDIF\", \"RIGHT disabled\"],\n+[\"'abc' 1 1 1\", \"IF 0x7f ELSE 1 ENDIF\", \"SUBSTR disabled\"],\n+[\"'abc' 2 1\", \"IF 0x80 ELSE 1 ENDIF\", \"LEFT disabled\"],\n+[\"'abc' 2 1\", \"IF 0x81 ELSE 1 ENDIF\", \"RIGHT disabled\"],\n \n [\"NOP\", \"SIZE 1\"],\n \n [\"'abc'\", \"IF 0x83 ELSE 1 ENDIF\", \"INVERT disabled\"],\n-[\"1 2 0 IF 0x84 ELSE 1 ENDIF\", \"NOP\", \"AND disabled\"],\n-[\"1 2 0 IF 0x85 ELSE 1 ENDIF\", \"NOP\", \"OR disabled\"],\n-[\"1 2 0 IF 0x86 ELSE 1 ENDIF\", \"NOP\", \"XOR disabled\"],\n-[\"2 0 IF 0x8d ELSE 1 ENDIF\", \"NOP\", \"2MUL disabled\"],\n-[\"2 0 IF 0x8e ELSE 1 ENDIF\", \"NOP\", \"2DIV disabled\"],\n-[\"2 2 0 IF 0x95 ELSE 1 ENDIF\", \"NOP\", \"MUL disabled\"],\n-[\"2 2 0 IF 0x96 ELSE 1 ENDIF\", \"NOP\", \"DIV disabled\"],\n-[\"2 2 0 IF 0x97 ELSE 1 ENDIF\", \"NOP\", \"MOD disabled\"],\n-[\"2 2 0 IF 0x98 ELSE 1 ENDIF\", \"NOP\", \"LSHIFT disabled\"],\n-[\"2 2 0 IF 0x99 ELSE 1 ENDIF\", \"NOP\", \"RSHIFT disabled\"],\n+[\"1 2 1 IF 0x84 ELSE 1 ENDIF\", \"NOP\", \"AND disabled\"],\n+[\"1 2 1 IF 0x85 ELSE 1 ENDIF\", \"NOP\", \"OR disabled\"],\n+[\"1 2 1 IF 0x86 ELSE 1 ENDIF\", \"NOP\", \"XOR disabled\"],\n+[\"2 1 IF 0x8d ELSE 1 ENDIF\", \"NOP\", \"2MUL disabled\"],\n+[\"2 1 IF 0x8e ELSE 1 ENDIF\", \"NOP\", \"2DIV disabled\"],\n+[\"2 2 1 IF 0x95 ELSE 1 ENDIF\", \"NOP\", \"MUL disabled\"],\n+[\"2 2 1 IF 0x96 ELSE 1 ENDIF\", \"NOP\", \"DIV disabled\"],\n+[\"2 2 1 IF 0x97 ELSE 1 ENDIF\", \"NOP\", \"MOD disabled\"],\n+[\"2 2 1 IF 0x98 ELSE 1 ENDIF\", \"NOP\", \"LSHIFT disabled\"],\n+[\"2 2 1 IF 0x99 ELSE 1 ENDIF\", \"NOP\", \"RSHIFT disabled\"],\n \n [\"0 1\",\"EQUAL\"],\n [\"1 1 ADD\", \"0 EQUAL\"],"
+      }
+    ]
+  }
+]

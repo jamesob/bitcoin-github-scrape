@@ -1,0 +1,86 @@
+[
+  {
+    "sha": "8e296230775deade9c63f48e61a1ccc9c7e3f4da",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4ZTI5NjIzMDc3NWRlYWRlOWM2M2Y0OGU2MWExY2NjOWM3ZTNmNGRh",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-02-16T18:48:27Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-03-03T21:35:02Z"
+      },
+      "message": "[Qt] show number of in/out connections in debug console",
+      "tree": {
+        "sha": "854545f3e8777abc8383f0b1a1c6b52a10d62f7e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/854545f3e8777abc8383f0b1a1c6b52a10d62f7e"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/8e296230775deade9c63f48e61a1ccc9c7e3f4da",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8e296230775deade9c63f48e61a1ccc9c7e3f4da",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/8e296230775deade9c63f48e61a1ccc9c7e3f4da",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8e296230775deade9c63f48e61a1ccc9c7e3f4da/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "aefbf6e30cadaf77ebee44284c74cc5449dc173f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/aefbf6e30cadaf77ebee44284c74cc5449dc173f",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/aefbf6e30cadaf77ebee44284c74cc5449dc173f"
+      }
+    ],
+    "stats": {
+      "total": 32,
+      "additions": 28,
+      "deletions": 4
+    },
+    "files": [
+      {
+        "sha": "cb832fdd4239f6636e8975b709a93ce03aff8e89",
+        "filename": "src/qt/clientmodel.cpp",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 2,
+        "changes": 13,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8e296230775deade9c63f48e61a1ccc9c7e3f4da/src/qt/clientmodel.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8e296230775deade9c63f48e61a1ccc9c7e3f4da/src/qt/clientmodel.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/clientmodel.cpp?ref=8e296230775deade9c63f48e61a1ccc9c7e3f4da",
+        "patch": "@@ -39,9 +39,18 @@ ClientModel::~ClientModel()\n     unsubscribeFromCoreSignals();\n }\n \n-int ClientModel::getNumConnections() const\n+int ClientModel::getNumConnections(unsigned int flags) const\n {\n-    return vNodes.size();\n+    LOCK(cs_vNodes);\n+    if (flags == CONNECTIONS_ALL) // Shortcut if we want total\n+        return vNodes.size();\n+\n+    int nNum = 0;\n+    BOOST_FOREACH(CNode* pnode, vNodes)\n+    if (flags & (pnode->fInbound ? CONNECTIONS_IN : CONNECTIONS_OUT))\n+        nNum++;\n+\n+    return nNum;\n }\n \n int ClientModel::getNumBlocks() const"
+      },
+      {
+        "sha": "f29b695ea103fb5be1089121b24b94386e4e3659",
+        "filename": "src/qt/clientmodel.h",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 1,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8e296230775deade9c63f48e61a1ccc9c7e3f4da/src/qt/clientmodel.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8e296230775deade9c63f48e61a1ccc9c7e3f4da/src/qt/clientmodel.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/clientmodel.h?ref=8e296230775deade9c63f48e61a1ccc9c7e3f4da",
+        "patch": "@@ -25,6 +25,13 @@ enum BlockSource {\n     BLOCK_SOURCE_NETWORK\n };\n \n+enum NumConnections {\n+    CONNECTIONS_NONE = 0,\n+    CONNECTIONS_IN   = (1U << 0),\n+    CONNECTIONS_OUT  = (1U << 1),\n+    CONNECTIONS_ALL  = (CONNECTIONS_IN | CONNECTIONS_OUT),\n+};\n+\n /** Model for Bitcoin network client. */\n class ClientModel : public QObject\n {\n@@ -36,7 +43,8 @@ class ClientModel : public QObject\n \n     OptionsModel *getOptionsModel();\n \n-    int getNumConnections() const;\n+    //! Return number of connections, default is in- and outbound (total)\n+    int getNumConnections(unsigned int flags = CONNECTIONS_ALL) const;\n     int getNumBlocks() const;\n     int getNumBlocksAtStartup();\n "
+      },
+      {
+        "sha": "cb5991adf1bf8cd810a58f26b985755aa5dd624e",
+        "filename": "src/qt/rpcconsole.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 1,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8e296230775deade9c63f48e61a1ccc9c7e3f4da/src/qt/rpcconsole.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8e296230775deade9c63f48e61a1ccc9c7e3f4da/src/qt/rpcconsole.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/rpcconsole.cpp?ref=8e296230775deade9c63f48e61a1ccc9c7e3f4da",
+        "patch": "@@ -349,7 +349,14 @@ void RPCConsole::message(int category, const QString &message, bool html)\n \n void RPCConsole::setNumConnections(int count)\n {\n-    ui->numberOfConnections->setText(QString::number(count));\n+    if (!clientModel)\n+        return;\n+\n+    QString connections = QString::number(count) + \" (\";\n+    connections += tr(\"In:\") + \" \" + QString::number(clientModel->getNumConnections(CONNECTIONS_IN)) + \" / \";\n+    connections += tr(\"Out:\") + \" \" + QString::number(clientModel->getNumConnections(CONNECTIONS_OUT)) + \")\";\n+\n+    ui->numberOfConnections->setText(connections);\n }\n \n void RPCConsole::setNumBlocks(int count, int countOfPeers)"
+      }
+    ]
+  }
+]

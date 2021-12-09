@@ -1,0 +1,957 @@
+[
+  {
+    "sha": "a48f2d6ddd8a438a126bfb7940d993f2da598476",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphNDhmMmQ2ZGRkOGE0MzhhMTI2YmZiNzk0MGQ5OTNmMmRhNTk4NDc2",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2014-10-19T23:09:50Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2014-11-18T19:20:10Z"
+      },
+      "message": "Abstract context-dependent block checking from acceptance",
+      "tree": {
+        "sha": "1d7f974e45d99b47ed15bc447fa4078274345db8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/1d7f974e45d99b47ed15bc447fa4078274345db8"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a48f2d6ddd8a438a126bfb7940d993f2da598476",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a48f2d6ddd8a438a126bfb7940d993f2da598476",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a48f2d6ddd8a438a126bfb7940d993f2da598476",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a48f2d6ddd8a438a126bfb7940d993f2da598476/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "ff17816abf2d2be2b349c4ba4d49633a126074fa",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ff17816abf2d2be2b349c4ba4d49633a126074fa",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/ff17816abf2d2be2b349c4ba4d49633a126074fa"
+      }
+    ],
+    "stats": {
+      "total": 128,
+      "additions": 75,
+      "deletions": 53
+    },
+    "files": [
+      {
+        "sha": "2781c6f3fb41b4db44bb2d11187c6cf92c7bad01",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 71,
+        "deletions": 53,
+        "changes": 124,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a48f2d6ddd8a438a126bfb7940d993f2da598476/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a48f2d6ddd8a438a126bfb7940d993f2da598476/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=a48f2d6ddd8a438a126bfb7940d993f2da598476",
+        "patch": "@@ -2334,6 +2334,73 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo\n     return true;\n }\n \n+bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& state, CBlockIndex * const pindexPrev)\n+{\n+    uint256 hash = block.GetHash();\n+    if (hash == Params().HashGenesisBlock())\n+        return true;\n+\n+    assert(pindexPrev);\n+\n+    int nHeight = pindexPrev->nHeight+1;\n+\n+    // Check proof of work\n+    if ((!Params().SkipProofOfWorkCheck()) &&\n+       (block.nBits != GetNextWorkRequired(pindexPrev, &block)))\n+        return state.DoS(100, error(\"%s : incorrect proof of work\", __func__),\n+                         REJECT_INVALID, \"bad-diffbits\");\n+\n+    // Check timestamp against prev\n+    if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())\n+        return state.Invalid(error(\"%s : block's timestamp is too early\", __func__),\n+                             REJECT_INVALID, \"time-too-old\");\n+\n+    // Check that the block chain matches the known block chain up to a checkpoint\n+    if (!Checkpoints::CheckBlock(nHeight, hash))\n+        return state.DoS(100, error(\"%s : rejected by checkpoint lock-in at %d\", __func__, nHeight),\n+                         REJECT_CHECKPOINT, \"checkpoint mismatch\");\n+\n+    // Don't accept any forks from the main chain prior to last checkpoint\n+    CBlockIndex* pcheckpoint = Checkpoints::GetLastCheckpoint();\n+    if (pcheckpoint && nHeight < pcheckpoint->nHeight)\n+        return state.DoS(100, error(\"%s : forked chain older than last checkpoint (height %d)\", __func__, nHeight));\n+\n+    // Reject block.nVersion=1 blocks when 95% (75% on testnet) of the network has upgraded:\n+    if (block.nVersion < 2 && \n+        CBlockIndex::IsSuperMajority(2, pindexPrev, Params().RejectBlockOutdatedMajority()))\n+    {\n+        return state.Invalid(error(\"%s : rejected nVersion=1 block\", __func__),\n+                             REJECT_OBSOLETE, \"bad-version\");\n+    }\n+\n+    return true;\n+}\n+\n+bool ContextualCheckBlock(const CBlock& block, CValidationState& state, CBlockIndex * const pindexPrev)\n+{\n+    const int nHeight = pindexPrev == NULL ? 0 : pindexPrev->nHeight + 1;\n+\n+    // Check that all transactions are finalized\n+    BOOST_FOREACH(const CTransaction& tx, block.vtx)\n+        if (!IsFinalTx(tx, nHeight, block.GetBlockTime())) {\n+            return state.DoS(10, error(\"%s : contains a non-final transaction\", __func__), REJECT_INVALID, \"bad-txns-nonfinal\");\n+        }\n+\n+    // Enforce block.nVersion=2 rule that the coinbase starts with serialized block height\n+    // if 750 of the last 1,000 blocks are version 2 or greater (51/100 if testnet):\n+    if (block.nVersion >= 2 && \n+        CBlockIndex::IsSuperMajority(2, pindexPrev, Params().EnforceBlockUpgradeMajority()))\n+    {\n+        CScript expect = CScript() << nHeight;\n+        if (block.vtx[0].vin[0].scriptSig.size() < expect.size() ||\n+            !std::equal(expect.begin(), expect.end(), block.vtx[0].vin[0].scriptSig.begin())) {\n+            return state.DoS(100, error(\"%s : block height mismatch in coinbase\", __func__), REJECT_INVALID, \"bad-cb-height\");\n+        }\n+    }\n+\n+    return true;\n+}\n+\n bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state, CBlockIndex** ppindex)\n {\n     AssertLockHeld(cs_main);\n@@ -2353,44 +2420,16 @@ bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state, CBloc\n \n     // Get prev block index\n     CBlockIndex* pindexPrev = NULL;\n-    int nHeight = 0;\n     if (hash != Params().HashGenesisBlock()) {\n         BlockMap::iterator mi = mapBlockIndex.find(block.hashPrevBlock);\n         if (mi == mapBlockIndex.end())\n             return state.DoS(10, error(\"%s : prev block not found\", __func__), 0, \"bad-prevblk\");\n         pindexPrev = (*mi).second;\n-        nHeight = pindexPrev->nHeight+1;\n-\n-        // Check proof of work\n-        if ((!Params().SkipProofOfWorkCheck()) &&\n-           (block.nBits != GetNextWorkRequired(pindexPrev, &block)))\n-            return state.DoS(100, error(\"%s : incorrect proof of work\", __func__),\n-                             REJECT_INVALID, \"bad-diffbits\");\n-\n-        // Check timestamp against prev\n-        if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())\n-            return state.Invalid(error(\"%s : block's timestamp is too early\", __func__),\n-                                 REJECT_INVALID, \"time-too-old\");\n-\n-        // Check that the block chain matches the known block chain up to a checkpoint\n-        if (!Checkpoints::CheckBlock(nHeight, hash))\n-            return state.DoS(100, error(\"%s : rejected by checkpoint lock-in at %d\", __func__, nHeight),\n-                             REJECT_CHECKPOINT, \"checkpoint mismatch\");\n-\n-        // Don't accept any forks from the main chain prior to last checkpoint\n-        CBlockIndex* pcheckpoint = Checkpoints::GetLastCheckpoint();\n-        if (pcheckpoint && nHeight < pcheckpoint->nHeight)\n-            return state.DoS(100, error(\"%s : forked chain older than last checkpoint (height %d)\", __func__, nHeight));\n-\n-        // Reject block.nVersion=1 blocks when 95% (75% on testnet) of the network has upgraded:\n-        if (block.nVersion < 2 && \n-            CBlockIndex::IsSuperMajority(2, pindexPrev, Params().RejectBlockOutdatedMajority()))\n-        {\n-            return state.Invalid(error(\"%s : rejected nVersion=1 block\", __func__),\n-                                 REJECT_OBSOLETE, \"bad-version\");\n-        }\n     }\n \n+    if (!ContextualCheckBlockHeader(block, state, pindexPrev))\n+        return false;\n+\n     if (pindex == NULL)\n         pindex = AddToBlockIndex(block);\n \n@@ -2415,7 +2454,7 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CBlockIndex** ppindex,\n         return true;\n     }\n \n-    if (!CheckBlock(block, state)) {\n+    if ((!CheckBlock(block, state)) || !ContextualCheckBlock(block, state, pindex->pprev)) {\n         if (state.IsInvalid() && !state.CorruptionPossible()) {\n             pindex->nStatus |= BLOCK_FAILED_VALID;\n         }\n@@ -2424,27 +2463,6 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CBlockIndex** ppindex,\n \n     int nHeight = pindex->nHeight;\n \n-    // Check that all transactions are finalized\n-    BOOST_FOREACH(const CTransaction& tx, block.vtx)\n-        if (!IsFinalTx(tx, nHeight, block.GetBlockTime())) {\n-            pindex->nStatus |= BLOCK_FAILED_VALID;\n-            return state.DoS(10, error(\"AcceptBlock() : contains a non-final transaction\"),\n-                             REJECT_INVALID, \"bad-txns-nonfinal\");\n-        }\n-\n-    // Enforce block.nVersion=2 rule that the coinbase starts with serialized block height\n-    // if 750 of the last 1,000 blocks are version 2 or greater (51/100 if testnet):\n-    if (block.nVersion >= 2 && \n-        CBlockIndex::IsSuperMajority(2, pindex->pprev, Params().EnforceBlockUpgradeMajority()))\n-    {\n-        CScript expect = CScript() << nHeight;\n-        if (block.vtx[0].vin[0].scriptSig.size() < expect.size() ||\n-            !std::equal(expect.begin(), expect.end(), block.vtx[0].vin[0].scriptSig.begin())) {\n-            pindex->nStatus |= BLOCK_FAILED_VALID;\n-            return state.DoS(100, error(\"AcceptBlock() : block height mismatch in coinbase\"), REJECT_INVALID, \"bad-cb-height\");\n-        }\n-    }\n-\n     // Write block to history file\n     try {\n         unsigned int nBlockSize = ::GetSerializeSize(block, SER_DISK, CLIENT_VERSION);"
+      },
+      {
+        "sha": "6e684be8c0e4266ef7896853c0a9f3858d7ebfbf",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 0,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a48f2d6ddd8a438a126bfb7940d993f2da598476/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a48f2d6ddd8a438a126bfb7940d993f2da598476/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=a48f2d6ddd8a438a126bfb7940d993f2da598476",
+        "patch": "@@ -463,6 +463,10 @@ bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, C\n bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, bool fCheckPOW = true);\n bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW = true, bool fCheckMerkleRoot = true);\n \n+// Context-dependent validity checks\n+bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& state, CBlockIndex *pindexPrev);\n+bool ContextualCheckBlock(const CBlock& block, CValidationState& state, CBlockIndex *pindexPrev);\n+\n // Store block on disk\n // if dbp is provided, the file is known to already reside on disk\n bool AcceptBlock(CBlock& block, CValidationState& state, CBlockIndex **pindex, CDiskBlockPos* dbp = NULL);"
+      }
+    ]
+  },
+  {
+    "sha": "4ea1be7fb84a397222754473c2bc315e3665ff18",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0ZWExYmU3ZmI4NGEzOTcyMjI3NTQ0NzNjMmJjMzE1ZTM2NjVmZjE4",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2014-10-16T03:50:33Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2014-11-18T19:20:10Z"
+      },
+      "message": "CreateNewBlock and miner_tests: Also check generated template is valid by CheckBlockHeader, ContextualCheckBlockHeader, CheckBlock, and ContextualCheckBlock",
+      "tree": {
+        "sha": "45568c5b462cfb6cc2ba1e4eab69853d15c50c6c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/45568c5b462cfb6cc2ba1e4eab69853d15c50c6c"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/4ea1be7fb84a397222754473c2bc315e3665ff18",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4ea1be7fb84a397222754473c2bc315e3665ff18",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/4ea1be7fb84a397222754473c2bc315e3665ff18",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4ea1be7fb84a397222754473c2bc315e3665ff18/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "a48f2d6ddd8a438a126bfb7940d993f2da598476",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a48f2d6ddd8a438a126bfb7940d993f2da598476",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/a48f2d6ddd8a438a126bfb7940d993f2da598476"
+      }
+    ],
+    "stats": {
+      "total": 9,
+      "additions": 9,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "d7ecd5e40e32a49936bb89e1921cfc45da195f92",
+        "filename": "src/miner.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 0,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4ea1be7fb84a397222754473c2bc315e3665ff18/src/miner.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4ea1be7fb84a397222754473c2bc315e3665ff18/src/miner.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/miner.cpp?ref=4ea1be7fb84a397222754473c2bc315e3665ff18",
+        "patch": "@@ -326,8 +326,17 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)\n         indexDummy.nHeight = pindexPrev->nHeight + 1;\n         CCoinsViewCache viewNew(pcoinsTip);\n         CValidationState state;\n+        // NOTE: CheckBlockHeader is called by CheckBlock\n+        if (!ContextualCheckBlockHeader(*pblock, state, pindexPrev))\n+            throw std::runtime_error(\"CreateNewBlock() : ContextualCheckBlockHeader failed\");\n+        if (!CheckBlock(*pblock, state, false, false))\n+            throw std::runtime_error(\"CreateNewBlock() : CheckBlock failed\");\n+        if (!ContextualCheckBlock(*pblock, state, pindexPrev))\n+            throw std::runtime_error(\"CreateNewBlock() : ContextualCheckBlock failed\");\n         if (!ConnectBlock(*pblock, state, &indexDummy, viewNew, true))\n             throw std::runtime_error(\"CreateNewBlock() : ConnectBlock failed\");\n+        if (!state.IsValid())\n+            throw std::runtime_error(\"CreateNewBlock() : State is not valid\");\n     }\n \n     return pblocktemplate.release();"
+      }
+    ]
+  },
+  {
+    "sha": "df08a626e0440457ae0d1966439fd956c27ae2fe",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkZjA4YTYyNmUwNDQwNDU3YWUwZDE5NjY0MzlmZDk1NmMyN2FlMmZl",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2014-10-20T02:10:03Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2014-11-18T19:20:10Z"
+      },
+      "message": "TestBlockValidity function for CBlock proposals (used by CreateNewBlock)",
+      "tree": {
+        "sha": "586501914259b6303dab55bd719efb1be76d5df4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/586501914259b6303dab55bd719efb1be76d5df4"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/df08a626e0440457ae0d1966439fd956c27ae2fe",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/df08a626e0440457ae0d1966439fd956c27ae2fe",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/df08a626e0440457ae0d1966439fd956c27ae2fe",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/df08a626e0440457ae0d1966439fd956c27ae2fe/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "4ea1be7fb84a397222754473c2bc315e3665ff18",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4ea1be7fb84a397222754473c2bc315e3665ff18",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/4ea1be7fb84a397222754473c2bc315e3665ff18"
+      }
+    ],
+    "stats": {
+      "total": 48,
+      "additions": 31,
+      "deletions": 17
+    },
+    "files": [
+      {
+        "sha": "fda71a365dd3b15274ecef608c49f7309f4170ad",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 25,
+        "deletions": 1,
+        "changes": 26,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/df08a626e0440457ae0d1966439fd956c27ae2fe/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/df08a626e0440457ae0d1966439fd956c27ae2fe/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=df08a626e0440457ae0d1966439fd956c27ae2fe",
+        "patch": "@@ -1593,7 +1593,7 @@ static int64_t nTimeIndex = 0;\n static int64_t nTimeCallbacks = 0;\n static int64_t nTimeTotal = 0;\n \n-bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, CCoinsViewCache& view, bool fJustCheck)\n+bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pindex, CCoinsViewCache& view, bool fJustCheck)\n {\n     AssertLockHeld(cs_main);\n     // Check it again in case a previous version let a bad block in\n@@ -2573,6 +2573,30 @@ bool ProcessNewBlock(CValidationState &state, CNode* pfrom, CBlock* pblock, CDis\n     return true;\n }\n \n+bool TestBlockValidity(CValidationState &state, const CBlock& block, CBlockIndex * const pindexPrev, bool fCheckPOW, bool fCheckMerkleRoot)\n+{\n+    AssertLockHeld(cs_main);\n+    assert(pindexPrev == chainActive.Tip());\n+\n+    CCoinsViewCache viewNew(pcoinsTip);\n+    CBlockIndex indexDummy(block);\n+    indexDummy.pprev = pindexPrev;\n+    indexDummy.nHeight = pindexPrev->nHeight + 1;\n+\n+    // NOTE: CheckBlockHeader is called by CheckBlock\n+    if (!ContextualCheckBlockHeader(block, state, pindexPrev))\n+        return false;\n+    if (!CheckBlock(block, state, fCheckPOW, fCheckMerkleRoot))\n+        return false;\n+    if (!ContextualCheckBlock(block, state, pindexPrev))\n+        return false;\n+    if (!ConnectBlock(block, state, &indexDummy, viewNew, true))\n+        return false;\n+    assert(state.IsValid());\n+\n+    return true;\n+}\n+\n \n \n "
+      },
+      {
+        "sha": "b49f0a06ebba075b55dc21c6d54c74f24fd03702",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 1,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/df08a626e0440457ae0d1966439fd956c27ae2fe/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/df08a626e0440457ae0d1966439fd956c27ae2fe/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=df08a626e0440457ae0d1966439fd956c27ae2fe",
+        "patch": "@@ -457,7 +457,7 @@ bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex);\n bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, CCoinsViewCache& coins, bool* pfClean = NULL);\n \n // Apply the effects of this block (with given index) on the UTXO set represented by coins\n-bool ConnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex, CCoinsViewCache& coins, bool fJustCheck = false);\n+bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pindex, CCoinsViewCache& coins, bool fJustCheck = false);\n \n // Context-independent validity checks\n bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, bool fCheckPOW = true);\n@@ -467,6 +467,9 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW = t\n bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& state, CBlockIndex *pindexPrev);\n bool ContextualCheckBlock(const CBlock& block, CValidationState& state, CBlockIndex *pindexPrev);\n \n+// Check a block is completely valid from start to finish (only works on top of our current best block, with cs_main held)\n+bool TestBlockValidity(CValidationState &state, const CBlock& block, CBlockIndex *pindexPrev, bool fCheckPOW = true, bool fCheckMerkleRoot = true);\n+\n // Store block on disk\n // if dbp is provided, the file is known to already reside on disk\n bool AcceptBlock(CBlock& block, CValidationState& state, CBlockIndex **pindex, CDiskBlockPos* dbp = NULL);"
+      },
+      {
+        "sha": "200498d109aa647a88e2c45c0548b716c6661f2d",
+        "filename": "src/miner.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 15,
+        "changes": 17,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/df08a626e0440457ae0d1966439fd956c27ae2fe/src/miner.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/df08a626e0440457ae0d1966439fd956c27ae2fe/src/miner.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/miner.cpp?ref=df08a626e0440457ae0d1966439fd956c27ae2fe",
+        "patch": "@@ -321,22 +321,9 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)\n         pblock->nNonce         = 0;\n         pblocktemplate->vTxSigOps[0] = GetLegacySigOpCount(pblock->vtx[0]);\n \n-        CBlockIndex indexDummy(*pblock);\n-        indexDummy.pprev = pindexPrev;\n-        indexDummy.nHeight = pindexPrev->nHeight + 1;\n-        CCoinsViewCache viewNew(pcoinsTip);\n         CValidationState state;\n-        // NOTE: CheckBlockHeader is called by CheckBlock\n-        if (!ContextualCheckBlockHeader(*pblock, state, pindexPrev))\n-            throw std::runtime_error(\"CreateNewBlock() : ContextualCheckBlockHeader failed\");\n-        if (!CheckBlock(*pblock, state, false, false))\n-            throw std::runtime_error(\"CreateNewBlock() : CheckBlock failed\");\n-        if (!ContextualCheckBlock(*pblock, state, pindexPrev))\n-            throw std::runtime_error(\"CreateNewBlock() : ContextualCheckBlock failed\");\n-        if (!ConnectBlock(*pblock, state, &indexDummy, viewNew, true))\n-            throw std::runtime_error(\"CreateNewBlock() : ConnectBlock failed\");\n-        if (!state.IsValid())\n-            throw std::runtime_error(\"CreateNewBlock() : State is not valid\");\n+        if (!TestBlockValidity(state, *pblock, pindexPrev, false, false))\n+            throw std::runtime_error(\"CreateNewBlock() : TestBlockValidity failed\");\n     }\n \n     return pblocktemplate.release();"
+      }
+    ]
+  },
+  {
+    "sha": "132ea9b48f65dcb4784a7e9688f3b194d5578c80",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxMzJlYTliNDhmNjVkY2I0Nzg0YTdlOTY4OGYzYjE5NGQ1NTc4Yzgw",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2014-10-30T04:26:31Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2014-11-18T19:20:10Z"
+      },
+      "message": "miner_tests: Disable checkpoints so they don't fail the subsidy-change test",
+      "tree": {
+        "sha": "dfe8c232ac269bbdd835ee540ac4afffb26569f1",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/dfe8c232ac269bbdd835ee540ac4afffb26569f1"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/132ea9b48f65dcb4784a7e9688f3b194d5578c80",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/132ea9b48f65dcb4784a7e9688f3b194d5578c80",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/132ea9b48f65dcb4784a7e9688f3b194d5578c80",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/132ea9b48f65dcb4784a7e9688f3b194d5578c80/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "df08a626e0440457ae0d1966439fd956c27ae2fe",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/df08a626e0440457ae0d1966439fd956c27ae2fe",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/df08a626e0440457ae0d1966439fd956c27ae2fe"
+      }
+    ],
+    "stats": {
+      "total": 2,
+      "additions": 2,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "1caee13c3362436fcf41f92ceace9e2e358ee506",
+        "filename": "src/test/miner_tests.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/132ea9b48f65dcb4784a7e9688f3b194d5578c80/src/test/miner_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/132ea9b48f65dcb4784a7e9688f3b194d5578c80/src/test/miner_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/miner_tests.cpp?ref=132ea9b48f65dcb4784a7e9688f3b194d5578c80",
+        "patch": "@@ -56,6 +56,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n     uint256 hash;\n \n     LOCK(cs_main);\n+    Checkpoints::fEnabled = false;\n \n     // Simple block creation, nothing special yet:\n     BOOST_CHECK(pblocktemplate = CreateNewBlock(scriptPubKey));\n@@ -258,6 +259,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n     BOOST_FOREACH(CTransaction *tx, txFirst)\n         delete tx;\n \n+    Checkpoints::fEnabled = true;\n }\n \n BOOST_AUTO_TEST_SUITE_END()"
+      }
+    ]
+  },
+  {
+    "sha": "3dcbb9b6b488f077d4ab7e4296dffbf3aea4a0fb",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozZGNiYjliNmI0ODhmMDc3ZDRhYjdlNDI5NmRmZmJmM2FlYTRhMGZi",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2014-10-30T02:56:33Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2014-11-18T19:20:10Z"
+      },
+      "message": "Abstract DecodeHexBlk and BIP22ValidationResult functions out of submitblock",
+      "tree": {
+        "sha": "287a28eb494933d9b41cb50c77f9bdd81f9ce066",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/287a28eb494933d9b41cb50c77f9bdd81f9ce066"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/3dcbb9b6b488f077d4ab7e4296dffbf3aea4a0fb",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3dcbb9b6b488f077d4ab7e4296dffbf3aea4a0fb",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/3dcbb9b6b488f077d4ab7e4296dffbf3aea4a0fb",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3dcbb9b6b488f077d4ab7e4296dffbf3aea4a0fb/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "132ea9b48f65dcb4784a7e9688f3b194d5578c80",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/132ea9b48f65dcb4784a7e9688f3b194d5578c80",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/132ea9b48f65dcb4784a7e9688f3b194d5578c80"
+      }
+    ],
+    "stats": {
+      "total": 62,
+      "additions": 41,
+      "deletions": 21
+    },
+    "files": [
+      {
+        "sha": "8777aa3b85091d981824a070b04df3a968ab429e",
+        "filename": "src/core_io.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3dcbb9b6b488f077d4ab7e4296dffbf3aea4a0fb/src/core_io.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3dcbb9b6b488f077d4ab7e4296dffbf3aea4a0fb/src/core_io.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/core_io.h?ref=3dcbb9b6b488f077d4ab7e4296dffbf3aea4a0fb",
+        "patch": "@@ -8,6 +8,7 @@\n #include <string>\n #include <vector>\n \n+class CBlock;\n class CScript;\n class CTransaction;\n class uint256;\n@@ -16,6 +17,7 @@ class UniValue;\n // core_read.cpp\n extern CScript ParseScript(std::string s);\n extern bool DecodeHexTx(CTransaction& tx, const std::string& strHexTx);\n+extern bool DecodeHexBlk(CBlock&, const std::string& strHexBlk);\n extern uint256 ParseHashUV(const UniValue& v, const std::string& strName);\n extern std::vector<unsigned char> ParseHexUV(const UniValue& v, const std::string& strName);\n "
+      },
+      {
+        "sha": "42e2f8d2003a9126c190f7999d2c17529b0b38d1",
+        "filename": "src/core_read.cpp",
+        "status": "modified",
+        "additions": 18,
+        "deletions": 0,
+        "changes": 18,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3dcbb9b6b488f077d4ab7e4296dffbf3aea4a0fb/src/core_read.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3dcbb9b6b488f077d4ab7e4296dffbf3aea4a0fb/src/core_read.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/core_read.cpp?ref=3dcbb9b6b488f077d4ab7e4296dffbf3aea4a0fb",
+        "patch": "@@ -4,6 +4,7 @@\n \n #include \"core_io.h\"\n \n+#include \"core/block.h\"\n #include \"core/transaction.h\"\n #include \"script/script.h\"\n #include \"serialize.h\"\n@@ -108,6 +109,23 @@ bool DecodeHexTx(CTransaction& tx, const std::string& strHexTx)\n     return true;\n }\n \n+bool DecodeHexBlk(CBlock& block, const std::string& strHexBlk)\n+{\n+    if (!IsHex(strHexBlk))\n+        return false;\n+\n+    std::vector<unsigned char> blockData(ParseHex(strHexBlk));\n+    CDataStream ssBlock(blockData, SER_NETWORK, PROTOCOL_VERSION);\n+    try {\n+        ssBlock >> block;\n+    }\n+    catch (const std::exception &) {\n+        return false;\n+    }\n+\n+    return true;\n+}\n+\n uint256 ParseHashUV(const UniValue& v, const string& strName)\n {\n     string strHex;"
+      },
+      {
+        "sha": "577f377796f3905ce64b8621dc47ddd4018c94f5",
+        "filename": "src/rpcmining.cpp",
+        "status": "modified",
+        "additions": 21,
+        "deletions": 21,
+        "changes": 42,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3dcbb9b6b488f077d4ab7e4296dffbf3aea4a0fb/src/rpcmining.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3dcbb9b6b488f077d4ab7e4296dffbf3aea4a0fb/src/rpcmining.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcmining.cpp?ref=3dcbb9b6b488f077d4ab7e4296dffbf3aea4a0fb",
+        "patch": "@@ -283,6 +283,25 @@ Value prioritisetransaction(const Array& params, bool fHelp)\n }\n \n \n+// NOTE: Assumes a conclusive result; if result is inconclusive, it must be handled by caller\n+static Value BIP22ValidationResult(const CValidationState& state)\n+{\n+    if (state.IsValid())\n+        return Value::null;\n+\n+    std::string strRejectReason = state.GetRejectReason();\n+    if (state.IsError())\n+        throw JSONRPCError(RPC_VERIFY_ERROR, strRejectReason);\n+    if (state.IsInvalid())\n+    {\n+        if (strRejectReason.empty())\n+            return \"rejected\";\n+        return strRejectReason;\n+    }\n+    // Should be impossible\n+    return \"valid?\";\n+}\n+\n Value getblocktemplate(const Array& params, bool fHelp)\n {\n     if (fHelp || params.size() > 1)\n@@ -566,15 +585,9 @@ Value submitblock(const Array& params, bool fHelp)\n             + HelpExampleRpc(\"submitblock\", \"\\\"mydata\\\"\")\n         );\n \n-    vector<unsigned char> blockData(ParseHex(params[0].get_str()));\n-    CDataStream ssBlock(blockData, SER_NETWORK, PROTOCOL_VERSION);\n     CBlock pblock;\n-    try {\n-        ssBlock >> pblock;\n-    }\n-    catch (const std::exception &) {\n+    if (!DecodeHexBlk(pblock, params[0].get_str()))\n         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, \"Block decode failed\");\n-    }\n \n     CValidationState state;\n     submitblock_StateCatcher sc(pblock.GetHash());\n@@ -587,20 +600,7 @@ Value submitblock(const Array& params, bool fHelp)\n             return \"inconclusive\";\n         state = sc.state;\n     }\n-    if (state.IsError())\n-    {\n-        std::string strRejectReason = state.GetRejectReason();\n-        throw JSONRPCError(RPC_VERIFY_ERROR, strRejectReason);\n-    }\n-    if (state.IsInvalid())\n-    {\n-        std::string strRejectReason = state.GetRejectReason();\n-        if (strRejectReason.empty())\n-            return \"rejected\";\n-        return strRejectReason;\n-    }\n-\n-    return Value::null;\n+    return BIP22ValidationResult(state);\n }\n \n Value estimatefee(const Array& params, bool fHelp)"
+      }
+    ]
+  },
+  {
+    "sha": "9765a50cbdbcb45cc87c51e301663c2b29ff1bf8",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5NzY1YTUwY2JkYmNiNDVjYzg3YzUxZTMwMTY2M2MyYjI5ZmYxYmY4",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2012-09-10T02:55:03Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2014-11-20T00:15:16Z"
+      },
+      "message": "Implement BIP 23 Block Proposal",
+      "tree": {
+        "sha": "bf7597e6d90666f6a97dfd12ef518814fcefa72b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/bf7597e6d90666f6a97dfd12ef518814fcefa72b"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/9765a50cbdbcb45cc87c51e301663c2b29ff1bf8",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9765a50cbdbcb45cc87c51e301663c2b29ff1bf8",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/9765a50cbdbcb45cc87c51e301663c2b29ff1bf8",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9765a50cbdbcb45cc87c51e301663c2b29ff1bf8/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "3dcbb9b6b488f077d4ab7e4296dffbf3aea4a0fb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3dcbb9b6b488f077d4ab7e4296dffbf3aea4a0fb",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/3dcbb9b6b488f077d4ab7e4296dffbf3aea4a0fb"
+      }
+    ],
+    "stats": {
+      "total": 33,
+      "additions": 33,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "0d49fb34d2dd64712a7733476abc3322694dfdf0",
+        "filename": "src/rpcmining.cpp",
+        "status": "modified",
+        "additions": 33,
+        "deletions": 0,
+        "changes": 33,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9765a50cbdbcb45cc87c51e301663c2b29ff1bf8/src/rpcmining.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9765a50cbdbcb45cc87c51e301663c2b29ff1bf8/src/rpcmining.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcmining.cpp?ref=9765a50cbdbcb45cc87c51e301663c2b29ff1bf8",
+        "patch": "@@ -379,6 +379,36 @@ Value getblocktemplate(const Array& params, bool fHelp)\n         else\n             throw JSONRPCError(RPC_INVALID_PARAMETER, \"Invalid mode\");\n         lpval = find_value(oparam, \"longpollid\");\n+\n+        if (strMode == \"proposal\")\n+        {\n+            const Value& dataval = find_value(oparam, \"data\");\n+            if (dataval.type() != str_type)\n+                throw JSONRPCError(RPC_TYPE_ERROR, \"Missing data String key for proposal\");\n+\n+            CBlock block;\n+            if (!DecodeHexBlk(block, dataval.get_str()))\n+                throw JSONRPCError(RPC_DESERIALIZATION_ERROR, \"Block decode failed\");\n+\n+            uint256 hash = block.GetHash();\n+            BlockMap::iterator mi = mapBlockIndex.find(hash);\n+            if (mi != mapBlockIndex.end()) {\n+                CBlockIndex *pindex = mi->second;\n+                if (pindex->IsValid(BLOCK_VALID_SCRIPTS))\n+                    return \"duplicate\";\n+                if (pindex->nStatus & BLOCK_FAILED_MASK)\n+                    return \"duplicate-invalid\";\n+                return \"duplicate-inconclusive\";\n+            }\n+\n+            CBlockIndex* const pindexPrev = chainActive.Tip();\n+            // TestBlockValidity only supports blocks built on the current Tip\n+            if (block.hashPrevBlock != pindexPrev->GetBlockHash())\n+                return \"inconclusive-not-best-prevblk\";\n+            CValidationState state;\n+            TestBlockValidity(state, block, pindexPrev, false, true);\n+            return BIP22ValidationResult(state);\n+        }\n     }\n \n     if (strMode != \"template\")\n@@ -481,6 +511,8 @@ Value getblocktemplate(const Array& params, bool fHelp)\n     UpdateTime(pblock, pindexPrev);\n     pblock->nNonce = 0;\n \n+    static const Array aCaps = boost::assign::list_of(\"proposal\");\n+\n     Array transactions;\n     map<uint256, int64_t> setTxIndex;\n     int i = 0;\n@@ -527,6 +559,7 @@ Value getblocktemplate(const Array& params, bool fHelp)\n     }\n \n     Object result;\n+    result.push_back(Pair(\"capabilities\", aCaps));\n     result.push_back(Pair(\"version\", pblock->nVersion));\n     result.push_back(Pair(\"previousblockhash\", pblock->hashPrevBlock.GetHex()));\n     result.push_back(Pair(\"transactions\", transactions));"
+      }
+    ]
+  },
+  {
+    "sha": "bc6cb4177b143bf1c3d0fad065d3a4de6df97ef9",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiYzZjYjQxNzdiMTQzYmYxYzNkMGZhZDA2NWQzYTRkZTZkZjk3ZWY5",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2014-11-17T18:47:40Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2014-11-20T00:15:17Z"
+      },
+      "message": "QA RPC tests: Add tests block block proposals",
+      "tree": {
+        "sha": "c227976d3b6d3028e69b2f8df223ac49e098624d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/c227976d3b6d3028e69b2f8df223ac49e098624d"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/bc6cb4177b143bf1c3d0fad065d3a4de6df97ef9",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/bc6cb4177b143bf1c3d0fad065d3a4de6df97ef9",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/bc6cb4177b143bf1c3d0fad065d3a4de6df97ef9",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/bc6cb4177b143bf1c3d0fad065d3a4de6df97ef9/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "9765a50cbdbcb45cc87c51e301663c2b29ff1bf8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9765a50cbdbcb45cc87c51e301663c2b29ff1bf8",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/9765a50cbdbcb45cc87c51e301663c2b29ff1bf8"
+      }
+    ],
+    "stats": {
+      "total": 188,
+      "additions": 184,
+      "deletions": 4
+    },
+    "files": [
+      {
+        "sha": "263a5f6d59c6db1f44f36f9e6667c20bf770c79e",
+        "filename": "qa/rpc-tests/getblocktemplate_longpoll.py",
+        "status": "renamed",
+        "additions": 2,
+        "deletions": 4,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/bc6cb4177b143bf1c3d0fad065d3a4de6df97ef9/qa/rpc-tests/getblocktemplate_longpoll.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/bc6cb4177b143bf1c3d0fad065d3a4de6df97ef9/qa/rpc-tests/getblocktemplate_longpoll.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/qa/rpc-tests/getblocktemplate_longpoll.py?ref=bc6cb4177b143bf1c3d0fad065d3a4de6df97ef9",
+        "patch": "@@ -3,8 +3,6 @@\n # Distributed under the MIT software license, see the accompanying\n # file COPYING or http://www.opensource.org/licenses/mit-license.php.\n \n-# Exercise the listtransactions API\n-\n from test_framework import BitcoinTestFramework\n from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException\n from util import *\n@@ -46,7 +44,7 @@ def __init__(self, node):\n     def run(self):\n         self.node.getblocktemplate({'longpollid':self.longpollid})\n \n-class GetBlockTemplateTest(BitcoinTestFramework):\n+class GetBlockTemplateLPTest(BitcoinTestFramework):\n     '''\n     Test longpolling with getblocktemplate.\n     '''\n@@ -90,5 +88,5 @@ def run_test(self):\n         assert(not thr.is_alive())\n \n if __name__ == '__main__':\n-    GetBlockTemplateTest().main()\n+    GetBlockTemplateLPTest().main()\n ",
+        "previous_filename": "qa/rpc-tests/getblocktemplate.py"
+      },
+      {
+        "sha": "0f7859584a429c18f6e862e963d5b2b9b8da2768",
+        "filename": "qa/rpc-tests/getblocktemplate_proposals.py",
+        "status": "added",
+        "additions": 182,
+        "deletions": 0,
+        "changes": 182,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/bc6cb4177b143bf1c3d0fad065d3a4de6df97ef9/qa/rpc-tests/getblocktemplate_proposals.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/bc6cb4177b143bf1c3d0fad065d3a4de6df97ef9/qa/rpc-tests/getblocktemplate_proposals.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/qa/rpc-tests/getblocktemplate_proposals.py?ref=bc6cb4177b143bf1c3d0fad065d3a4de6df97ef9",
+        "patch": "@@ -0,0 +1,182 @@\n+#!/usr/bin/env python\n+# Copyright (c) 2014 The Bitcoin Core developers\n+# Distributed under the MIT software license, see the accompanying\n+# file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+from test_framework import BitcoinTestFramework\n+from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException\n+from util import *\n+\n+from binascii import a2b_hex, b2a_hex\n+from hashlib import sha256\n+from struct import pack\n+\n+\n+def check_array_result(object_array, to_match, expected):\n+    \"\"\"\n+    Pass in array of JSON objects, a dictionary with key/value pairs\n+    to match against, and another dictionary with expected key/value\n+    pairs.\n+    \"\"\"\n+    num_matched = 0\n+    for item in object_array:\n+        all_match = True\n+        for key,value in to_match.items():\n+            if item[key] != value:\n+                all_match = False\n+        if not all_match:\n+            continue\n+        for key,value in expected.items():\n+            if item[key] != value:\n+                raise AssertionError(\"%s : expected %s=%s\"%(str(item), str(key), str(value)))\n+            num_matched = num_matched+1\n+    if num_matched == 0:\n+        raise AssertionError(\"No objects matched %s\"%(str(to_match)))\n+\n+def b2x(b):\n+    return b2a_hex(b).decode('ascii')\n+\n+# NOTE: This does not work for signed numbers (set the high bit) or zero (use b'\\0')\n+def encodeUNum(n):\n+    s = bytearray(b'\\1')\n+    while n > 127:\n+        s[0] += 1\n+        s.append(n % 256)\n+        n //= 256\n+    s.append(n)\n+    return bytes(s)\n+\n+def varlenEncode(n):\n+    if n < 0xfd:\n+        return pack('<B', n)\n+    if n <= 0xffff:\n+        return b'\\xfd' + pack('<H', n)\n+    if n <= 0xffffffff:\n+        return b'\\xfe' + pack('<L', n)\n+    return b'\\xff' + pack('<Q', n)\n+\n+def dblsha(b):\n+    return sha256(sha256(b).digest()).digest()\n+\n+def genmrklroot(leaflist):\n+    cur = leaflist\n+    while len(cur) > 1:\n+        n = []\n+        if len(cur) & 1:\n+            cur.append(cur[-1])\n+        for i in range(0, len(cur), 2):\n+            n.append(dblsha(cur[i] + cur[i+1]))\n+        cur = n\n+    return cur[0]\n+\n+def template_to_bytes(tmpl, txlist):\n+    blkver = pack('<L', tmpl['version'])\n+    mrklroot = genmrklroot(list(dblsha(a) for a in txlist))\n+    timestamp = pack('<L', tmpl['curtime'])\n+    nonce = b'\\0\\0\\0\\0'\n+    blk = blkver + a2b_hex(tmpl['previousblockhash'])[::-1] + mrklroot + timestamp + a2b_hex(tmpl['bits'])[::-1] + nonce\n+    blk += varlenEncode(len(txlist))\n+    for tx in txlist:\n+        blk += tx\n+    return blk\n+\n+def template_to_hex(tmpl, txlist):\n+    return b2x(template_to_bytes(tmpl, txlist))\n+\n+def assert_template(node, tmpl, txlist, expect):\n+    rsp = node.getblocktemplate({'data':template_to_hex(tmpl, txlist),'mode':'proposal'})\n+    if rsp != expect:\n+        raise AssertionError('unexpected: %s' % (rsp,))\n+\n+class GetBlockTemplateProposalTest(BitcoinTestFramework):\n+    '''\n+    Test block proposals with getblocktemplate.\n+    '''\n+\n+    def run_test(self):\n+        node = self.nodes[0]\n+        tmpl = node.getblocktemplate()\n+        if 'coinbasetxn' not in tmpl:\n+            rawcoinbase = encodeUNum(tmpl['height'])\n+            rawcoinbase += b'\\x01-'\n+            hexcoinbase = b2x(rawcoinbase)\n+            hexoutval = b2x(pack('<Q', tmpl['coinbasevalue']))\n+            tmpl['coinbasetxn'] = {'data': '01000000' + '01' + '0000000000000000000000000000000000000000000000000000000000000000ffffffff' + ('%02x' % (len(rawcoinbase),)) + hexcoinbase + 'fffffffe' + '01' + hexoutval + '00' + '00000000'}\n+        txlist = list(bytearray(a2b_hex(a['data'])) for a in (tmpl['coinbasetxn'],) + tuple(tmpl['transactions']))\n+\n+        # Test 0: Capability advertised\n+        assert('proposal' in tmpl['capabilities'])\n+\n+        # NOTE: This test currently FAILS (regtest mode doesn't enforce block height in coinbase)\n+        ## Test 1: Bad height in coinbase\n+        #txlist[0][4+1+36+1+1] += 1\n+        #assert_template(node, tmpl, txlist, 'FIXME')\n+        #txlist[0][4+1+36+1+1] -= 1\n+\n+        # Test 2: Bad input hash for gen tx\n+        txlist[0][4+1] += 1\n+        assert_template(node, tmpl, txlist, 'bad-cb-missing')\n+        txlist[0][4+1] -= 1\n+\n+        # Test 3: Truncated final tx\n+        lastbyte = txlist[-1].pop()\n+        try:\n+            assert_template(node, tmpl, txlist, 'n/a')\n+        except JSONRPCException:\n+            pass  # Expected\n+        txlist[-1].append(lastbyte)\n+\n+        # Test 4: Add an invalid tx to the end (duplicate of gen tx)\n+        txlist.append(txlist[0])\n+        assert_template(node, tmpl, txlist, 'bad-txns-duplicate')\n+        txlist.pop()\n+\n+        # Test 5: Add an invalid tx to the end (non-duplicate)\n+        txlist.append(bytearray(txlist[0]))\n+        txlist[-1][4+1] = b'\\xff'\n+        assert_template(node, tmpl, txlist, 'bad-txns-inputs-missingorspent')\n+        txlist.pop()\n+\n+        # Test 6: Future tx lock time\n+        txlist[0][-4:] = b'\\xff\\xff\\xff\\xff'\n+        assert_template(node, tmpl, txlist, 'bad-txns-nonfinal')\n+        txlist[0][-4:] = b'\\0\\0\\0\\0'\n+\n+        # Test 7: Bad tx count\n+        txlist.append(b'')\n+        try:\n+            assert_template(node, tmpl, txlist, 'n/a')\n+        except JSONRPCException:\n+            pass  # Expected\n+        txlist.pop()\n+\n+        # Test 8: Bad bits\n+        realbits = tmpl['bits']\n+        tmpl['bits'] = '1c0000ff'  # impossible in the real world\n+        assert_template(node, tmpl, txlist, 'bad-diffbits')\n+        tmpl['bits'] = realbits\n+\n+        # Test 9: Bad merkle root\n+        rawtmpl = template_to_bytes(tmpl, txlist)\n+        rawtmpl[4+32] = (rawtmpl[4+32] + 1) % 0x100\n+        rsp = node.getblocktemplate({'data':b2x(rawtmpl),'mode':'proposal'})\n+        if rsp != 'bad-txnmrklroot':\n+            raise AssertionError('unexpected: %s' % (rsp,))\n+\n+        # Test 10: Bad timestamps\n+        realtime = tmpl['curtime']\n+        tmpl['curtime'] = 0x7fffffff\n+        assert_template(node, tmpl, txlist, 'time-too-new')\n+        tmpl['curtime'] = 0\n+        assert_template(node, tmpl, txlist, 'time-too-old')\n+        tmpl['curtime'] = realtime\n+\n+        # Test 11: Valid block\n+        assert_template(node, tmpl, txlist, None)\n+\n+        # Test 12: Orphan block\n+        tmpl['previousblockhash'] = 'ff00' * 16\n+        assert_template(node, tmpl, txlist, 'inconclusive-not-best-prevblk')\n+\n+if __name__ == '__main__':\n+    GetBlockTemplateProposalTest().main()"
+      }
+    ]
+  },
+  {
+    "sha": "60755dbf762cd36bb01859b5e9b0bd4447f23229",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2MDc1NWRiZjc2MmNkMzZiYjAxODU5YjVlOWIwYmQ0NDQ3ZjIzMjI5",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2014-11-18T19:09:20Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2014-11-20T00:15:17Z"
+      },
+      "message": "submitblock: Check for duplicate submissions explicitly",
+      "tree": {
+        "sha": "d58139b55bf8567201ef222ce135754989cb1452",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/d58139b55bf8567201ef222ce135754989cb1452"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/60755dbf762cd36bb01859b5e9b0bd4447f23229",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/60755dbf762cd36bb01859b5e9b0bd4447f23229",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/60755dbf762cd36bb01859b5e9b0bd4447f23229",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/60755dbf762cd36bb01859b5e9b0bd4447f23229/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "bc6cb4177b143bf1c3d0fad065d3a4de6df97ef9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/bc6cb4177b143bf1c3d0fad065d3a4de6df97ef9",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/bc6cb4177b143bf1c3d0fad065d3a4de6df97ef9"
+      }
+    ],
+    "stats": {
+      "total": 25,
+      "additions": 21,
+      "deletions": 4
+    },
+    "files": [
+      {
+        "sha": "7a2b6c778928550829aaaf6ce565c3ab155717e1",
+        "filename": "src/rpcmining.cpp",
+        "status": "modified",
+        "additions": 21,
+        "deletions": 4,
+        "changes": 25,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/60755dbf762cd36bb01859b5e9b0bd4447f23229/src/rpcmining.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/60755dbf762cd36bb01859b5e9b0bd4447f23229/src/rpcmining.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcmining.cpp?ref=60755dbf762cd36bb01859b5e9b0bd4447f23229",
+        "patch": "@@ -618,15 +618,32 @@ Value submitblock(const Array& params, bool fHelp)\n             + HelpExampleRpc(\"submitblock\", \"\\\"mydata\\\"\")\n         );\n \n-    CBlock pblock;\n-    if (!DecodeHexBlk(pblock, params[0].get_str()))\n+    CBlock block;\n+    if (!DecodeHexBlk(block, params[0].get_str()))\n         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, \"Block decode failed\");\n \n+    uint256 hash = block.GetHash();\n+    BlockMap::iterator mi = mapBlockIndex.find(hash);\n+    if (mi != mapBlockIndex.end()) {\n+        CBlockIndex *pindex = mi->second;\n+        if (pindex->IsValid(BLOCK_VALID_SCRIPTS))\n+            return \"duplicate\";\n+        if (pindex->nStatus & BLOCK_FAILED_MASK)\n+            return \"duplicate-invalid\";\n+        // Otherwise, we might only have the header - process the block before returning\n+    }\n+\n     CValidationState state;\n-    submitblock_StateCatcher sc(pblock.GetHash());\n+    submitblock_StateCatcher sc(block.GetHash());\n     RegisterValidationInterface(&sc);\n-    bool fAccepted = ProcessNewBlock(state, NULL, &pblock);\n+    bool fAccepted = ProcessNewBlock(state, NULL, &block);\n     UnregisterValidationInterface(&sc);\n+    if (mi != mapBlockIndex.end())\n+    {\n+        if (fAccepted && !sc.found)\n+            return \"duplicate-inconclusive\";\n+        return \"duplicate\";\n+    }\n     if (fAccepted)\n     {\n         if (!sc.found)"
+      }
+    ]
+  },
+  {
+    "sha": "b867e409e5dd34b84eb9d6d0d8f257dbb19b986d",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiODY3ZTQwOWU1ZGQzNGI4NGViOWQ2ZDBkOGYyNTdkYmIxOWI5ODZk",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2014-11-20T02:23:20Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2014-11-20T15:32:49Z"
+      },
+      "message": "CreateNewBlock: Stick height in coinbase so we pass template sanity check",
+      "tree": {
+        "sha": "77244d823816d7f05e4fba596d60211d6ed1644a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/77244d823816d7f05e4fba596d60211d6ed1644a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/b867e409e5dd34b84eb9d6d0d8f257dbb19b986d",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b867e409e5dd34b84eb9d6d0d8f257dbb19b986d",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/b867e409e5dd34b84eb9d6d0d8f257dbb19b986d",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b867e409e5dd34b84eb9d6d0d8f257dbb19b986d/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "60755dbf762cd36bb01859b5e9b0bd4447f23229",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/60755dbf762cd36bb01859b5e9b0bd4447f23229",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/60755dbf762cd36bb01859b5e9b0bd4447f23229"
+      }
+    ],
+    "stats": {
+      "total": 11,
+      "additions": 6,
+      "deletions": 5
+    },
+    "files": [
+      {
+        "sha": "5ac4b05af850ceb2440e674037595949dd1f342f",
+        "filename": "src/miner.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 5,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b867e409e5dd34b84eb9d6d0d8f257dbb19b986d/src/miner.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b867e409e5dd34b84eb9d6d0d8f257dbb19b986d/src/miner.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/miner.cpp?ref=b867e409e5dd34b84eb9d6d0d8f257dbb19b986d",
+        "patch": "@@ -124,6 +124,7 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)\n     {\n         LOCK2(cs_main, mempool.cs);\n         CBlockIndex* pindexPrev = chainActive.Tip();\n+        const int nHeight = pindexPrev->nHeight + 1;\n         CCoinsViewCache view(pcoinsTip);\n \n         // Priority order to process transactions\n@@ -138,7 +139,7 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)\n              mi != mempool.mapTx.end(); ++mi)\n         {\n             const CTransaction& tx = mi->second.GetTx();\n-            if (tx.IsCoinBase() || !IsFinalTx(tx, pindexPrev->nHeight + 1))\n+            if (tx.IsCoinBase() || !IsFinalTx(tx, nHeight))\n                 continue;\n \n             COrphan* porphan = NULL;\n@@ -181,7 +182,7 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)\n                 CAmount nValueIn = coins->vout[txin.prevout.n].nValue;\n                 nTotalIn += nValueIn;\n \n-                int nConf = pindexPrev->nHeight - coins->nHeight + 1;\n+                int nConf = nHeight - coins->nHeight;\n \n                 dPriority += (double)nValueIn * nConf;\n             }\n@@ -269,7 +270,7 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)\n                 continue;\n \n             CTxUndo txundo;\n-            UpdateCoins(tx, state, view, txundo, pindexPrev->nHeight+1);\n+            UpdateCoins(tx, state, view, txundo, nHeight);\n \n             // Added\n             pblock->vtx.push_back(tx);\n@@ -309,8 +310,8 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)\n         LogPrintf(\"CreateNewBlock(): total size %u\\n\", nBlockSize);\n \n         // Compute final coinbase transaction.\n-        txNew.vout[0].nValue = GetBlockValue(pindexPrev->nHeight+1, nFees);\n-        txNew.vin[0].scriptSig = CScript() << OP_0 << OP_0;\n+        txNew.vout[0].nValue = GetBlockValue(nHeight, nFees);\n+        txNew.vin[0].scriptSig = CScript() << nHeight << OP_0;\n         pblock->vtx[0] = txNew;\n         pblocktemplate->vTxFees[0] = -nFees;\n "
+      }
+    ]
+  }
+]

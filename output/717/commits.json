@@ -1,0 +1,98 @@
+[
+  {
+    "sha": "f18a119ac057a3256efffb3ec7d131949ccf48d3",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmMThhMTE5YWMwNTdhMzI1NmVmZmZiM2VjN2QxMzE5NDljY2Y0OGQz",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-12-19T23:49:07Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-12-20T18:51:06Z"
+      },
+      "message": "Implement \"Start on window system startup\" on Win32 + Linux.",
+      "tree": {
+        "sha": "471a906e81f9a450e53d83fd546b4488ff0a75ce",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/471a906e81f9a450e53d83fd546b4488ff0a75ce"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/f18a119ac057a3256efffb3ec7d131949ccf48d3",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f18a119ac057a3256efffb3ec7d131949ccf48d3",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/f18a119ac057a3256efffb3ec7d131949ccf48d3",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f18a119ac057a3256efffb3ec7d131949ccf48d3/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "821462017860c780badf42cb50c3796575e0e053",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/821462017860c780badf42cb50c3796575e0e053",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/821462017860c780badf42cb50c3796575e0e053"
+      }
+    ],
+    "stats": {
+      "total": 169,
+      "additions": 166,
+      "deletions": 3
+    },
+    "files": [
+      {
+        "sha": "cbb92353b7d6ecc013707578a6a699759033c89f",
+        "filename": "bitcoin-qt.pro",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 1,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f18a119ac057a3256efffb3ec7d131949ccf48d3/bitcoin-qt.pro",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f18a119ac057a3256efffb3ec7d131949ccf48d3/bitcoin-qt.pro",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/bitcoin-qt.pro?ref=f18a119ac057a3256efffb3ec7d131949ccf48d3",
+        "patch": "@@ -251,10 +251,14 @@ isEmpty(BOOST_INCLUDE_PATH) {\n     macx:BOOST_INCLUDE_PATH = /opt/local/include\n }\n \n-windows:LIBS += -lws2_32\n+windows:LIBS += -lws2_32 -lshlwapi\n windows:DEFINES += WIN32\n windows:RC_FILE = src/qt/res/bitcoin-qt.rc\n \n+!windows:!mac {\n+    DEFINES += LINUX\n+}\n+\n macx:HEADERS += src/qt/macdockiconhandler.h\n macx:OBJECTIVE_SOURCES += src/qt/macdockiconhandler.mm\n macx:LIBS += -framework Foundation -framework ApplicationServices -framework AppKit"
+      },
+      {
+        "sha": "0d83b345fcc018a97043b4ee56c6d5ae0646bbb2",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 155,
+        "deletions": 0,
+        "changes": 155,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f18a119ac057a3256efffb3ec7d131949ccf48d3/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f18a119ac057a3256efffb3ec7d131949ccf48d3/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=f18a119ac057a3256efffb3ec7d131949ccf48d3",
+        "patch": "@@ -10,6 +10,7 @@\n #include \"strlcpy.h\"\n #include <boost/filesystem.hpp>\n #include <boost/filesystem/fstream.hpp>\n+#include <boost/filesystem/convenience.hpp>\n #include <boost/interprocess/sync/file_lock.hpp>\n \n #if defined(BITCOIN_NEED_QT_PLUGINS) && !defined(_BITCOIN_QT_PLUGINS_INCLUDED)\n@@ -523,10 +524,164 @@ bool AppInit2(int argc, char* argv[])\n     if (fServer)\n         CreateThread(ThreadRPCServer, NULL);\n \n+#ifdef QT_GUI\n+    if(GetStartOnSystemStartup())\n+        SetStartOnSystemStartup(true); // Remove startup links to bitcoin-wx\n+#endif\n+\n #if !defined(QT_GUI)\n     while (1)\n         Sleep(5000);\n #endif\n \n     return true;\n }\n+\n+#ifdef WIN32\n+string StartupShortcutPath()\n+{\n+    return MyGetSpecialFolderPath(CSIDL_STARTUP, true) + \"\\\\Bitcoin.lnk\";\n+}\n+\n+bool GetStartOnSystemStartup()\n+{\n+    return filesystem::exists(StartupShortcutPath().c_str());\n+}\n+\n+bool SetStartOnSystemStartup(bool fAutoStart)\n+{\n+    // If the shortcut exists already, remove it for updating\n+    remove(StartupShortcutPath().c_str());\n+\n+    if (fAutoStart)\n+    {\n+        CoInitialize(NULL);\n+\n+        // Get a pointer to the IShellLink interface.\n+        IShellLink* psl = NULL;\n+        HRESULT hres = CoCreateInstance(CLSID_ShellLink, NULL,\n+                                CLSCTX_INPROC_SERVER, IID_IShellLink,\n+                                reinterpret_cast<void**>(&psl));\n+\n+        if (SUCCEEDED(hres))\n+        {\n+            // Get the current executable path\n+            TCHAR pszExePath[MAX_PATH];\n+            GetModuleFileName(NULL, pszExePath, sizeof(pszExePath));\n+\n+            TCHAR pszArgs[5] = TEXT(\"-min\");\n+\n+            // Set the path to the shortcut target\n+            psl->SetPath(pszExePath);\n+            PathRemoveFileSpec(pszExePath);\n+            psl->SetWorkingDirectory(pszExePath);\n+            psl->SetShowCmd(SW_SHOWMINNOACTIVE);\n+            psl->SetArguments(pszArgs);\n+\n+            // Query IShellLink for the IPersistFile interface for\n+            // saving the shortcut in persistent storage.\n+            IPersistFile* ppf = NULL;\n+            hres = psl->QueryInterface(IID_IPersistFile,\n+                                       reinterpret_cast<void**>(&ppf));\n+            if (SUCCEEDED(hres))\n+            {\n+                WCHAR pwsz[MAX_PATH];\n+                // Ensure that the string is ANSI.\n+                MultiByteToWideChar(CP_ACP, 0, StartupShortcutPath().c_str(), -1, pwsz, MAX_PATH);\n+                // Save the link by calling IPersistFile::Save.\n+                hres = ppf->Save(pwsz, TRUE);\n+                ppf->Release();\n+                psl->Release();\n+                CoUninitialize();\n+                return true;\n+            }\n+            psl->Release();\n+        }\n+        CoUninitialize();\n+        return false;\n+    }\n+    return true;\n+}\n+\n+#elif defined(LINUX)\n+\n+// Follow the Desktop Application Autostart Spec:\n+//  http://standards.freedesktop.org/autostart-spec/autostart-spec-latest.html\n+\n+boost::filesystem::path GetAutostartDir()\n+{\n+    namespace fs = boost::filesystem;\n+\n+    char* pszConfigHome = getenv(\"XDG_CONFIG_HOME\");\n+    if (pszConfigHome) return fs::path(pszConfigHome) / fs::path(\"autostart\");\n+    char* pszHome = getenv(\"HOME\");\n+    if (pszHome) return fs::path(pszHome) / fs::path(\".config/autostart\");\n+    return fs::path();\n+}\n+\n+boost::filesystem::path GetAutostartFilePath()\n+{\n+    return GetAutostartDir() / boost::filesystem::path(\"bitcoin.desktop\");\n+}\n+\n+bool GetStartOnSystemStartup()\n+{\n+    boost::filesystem::ifstream optionFile(GetAutostartFilePath());\n+    if (!optionFile.good())\n+        return false;\n+    // Scan through file for \"Hidden=true\":\n+    string line;\n+    while (!optionFile.eof())\n+    {\n+        getline(optionFile, line);\n+        if (line.find(\"Hidden\") != string::npos &&\n+            line.find(\"true\") != string::npos)\n+            return false;\n+    }\n+    optionFile.close();\n+\n+    return true;\n+}\n+\n+bool SetStartOnSystemStartup(bool fAutoStart)\n+{\n+    if (!fAutoStart)\n+    {\n+#if defined(BOOST_FILESYSTEM_VERSION) && BOOST_FILESYSTEM_VERSION >= 3\n+        unlink(GetAutostartFilePath().string().c_str());\n+#else\n+        unlink(GetAutostartFilePath().native_file_string().c_str());\n+#endif\n+    }\n+    else\n+    {\n+        char pszExePath[MAX_PATH+1];\n+        memset(pszExePath, 0, sizeof(pszExePath));\n+        if (readlink(\"/proc/self/exe\", pszExePath, sizeof(pszExePath)-1) == -1)\n+            return false;\n+\n+        boost::filesystem::create_directories(GetAutostartDir());\n+\n+        boost::filesystem::ofstream optionFile(GetAutostartFilePath(), ios_base::out|ios_base::trunc);\n+        if (!optionFile.good())\n+            return false;\n+        // Write a bitcoin.desktop file to the autostart directory:\n+        optionFile << \"[Desktop Entry]\\n\";\n+        optionFile << \"Type=Application\\n\";\n+        optionFile << \"Name=Bitcoin\\n\";\n+        optionFile << \"Exec=\" << pszExePath << \" -min\\n\";\n+        optionFile << \"Terminal=false\\n\";\n+        optionFile << \"Hidden=false\\n\";\n+        optionFile.close();\n+    }\n+    return true;\n+}\n+#else\n+\n+// TODO: OSX startup stuff; see:\n+// http://developer.apple.com/mac/library/documentation/MacOSX/Conceptual/BPSystemStartup/Articles/CustomLogin.html\n+\n+bool GetStartOnSystemStartup() { return false; }\n+bool SetStartOnSystemStartup(bool fAutoStart) { return false; }\n+\n+#endif"
+      },
+      {
+        "sha": "6721b2899be884d43e5908327e3739c1388b9e39",
+        "filename": "src/init.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f18a119ac057a3256efffb3ec7d131949ccf48d3/src/init.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f18a119ac057a3256efffb3ec7d131949ccf48d3/src/init.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.h?ref=f18a119ac057a3256efffb3ec7d131949ccf48d3",
+        "patch": "@@ -11,4 +11,7 @@ void Shutdown(void* parg);\n bool AppInit(int argc, char* argv[]);\n bool AppInit2(int argc, char* argv[]);\n \n+bool GetStartOnSystemStartup();\n+bool SetStartOnSystemStartup(bool fAutoStart);\n+\n #endif"
+      },
+      {
+        "sha": "35d0b57e7e5b1e26e151d7f0fa8ed0f302838deb",
+        "filename": "src/qt/optionsmodel.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 2,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f18a119ac057a3256efffb3ec7d131949ccf48d3/src/qt/optionsmodel.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f18a119ac057a3256efffb3ec7d131949ccf48d3/src/qt/optionsmodel.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/optionsmodel.cpp?ref=f18a119ac057a3256efffb3ec7d131949ccf48d3",
+        "patch": "@@ -2,6 +2,7 @@\n #include \"bitcoinunits.h\"\n \n #include \"headers.h\"\n+#include \"init.h\"\n \n OptionsModel::OptionsModel(CWallet *wallet, QObject *parent) :\n     QAbstractListModel(parent),\n@@ -27,7 +28,7 @@ QVariant OptionsModel::data(const QModelIndex & index, int role) const\n         switch(index.row())\n         {\n         case StartAtStartup:\n-            return QVariant();\n+            return QVariant(GetStartOnSystemStartup());\n         case MinimizeToTray:\n             return QVariant(fMinimizeToTray);\n         case MapPortUPnP:\n@@ -62,7 +63,7 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in\n         switch(index.row())\n         {\n         case StartAtStartup:\n-            successful = false; /*TODO*/\n+            successful = SetStartOnSystemStartup(value.toBool());\n             break;\n         case MinimizeToTray:\n             fMinimizeToTray = value.toBool();"
+      }
+    ]
+  }
+]

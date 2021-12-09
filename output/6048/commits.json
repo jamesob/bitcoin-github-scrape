@@ -1,0 +1,270 @@
+[
+  {
+    "sha": "4658a49243407a129537e17c081de9e204dc57d8",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0NjU4YTQ5MjQzNDA3YTEyOTUzN2UxN2MwODFkZTllMjA0ZGM1N2Q4",
+    "commit": {
+      "author": {
+        "name": "Jorge Tim\u00f3n",
+        "email": "jtimon@jtimon.cc",
+        "date": "2015-03-30T11:48:04Z"
+      },
+      "committer": {
+        "name": "Jorge Tim\u00f3n",
+        "email": "jtimon@jtimon.cc",
+        "date": "2015-04-24T22:10:59Z"
+      },
+      "message": "Consensus: Separate CheckIndexAgainstCheckpoint() from ContextualCheckBlockHeader",
+      "tree": {
+        "sha": "4bf950088d75328e5e90cf38dc7ed28a10182b27",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/4bf950088d75328e5e90cf38dc7ed28a10182b27"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/4658a49243407a129537e17c081de9e204dc57d8",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4658a49243407a129537e17c081de9e204dc57d8",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/4658a49243407a129537e17c081de9e204dc57d8",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4658a49243407a129537e17c081de9e204dc57d8/comments",
+    "author": {
+      "login": "jtimon",
+      "id": 1008458,
+      "node_id": "MDQ6VXNlcjEwMDg0NTg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1008458?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jtimon",
+      "html_url": "https://github.com/jtimon",
+      "followers_url": "https://api.github.com/users/jtimon/followers",
+      "following_url": "https://api.github.com/users/jtimon/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jtimon/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jtimon/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jtimon/subscriptions",
+      "organizations_url": "https://api.github.com/users/jtimon/orgs",
+      "repos_url": "https://api.github.com/users/jtimon/repos",
+      "events_url": "https://api.github.com/users/jtimon/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jtimon/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "jtimon",
+      "id": 1008458,
+      "node_id": "MDQ6VXNlcjEwMDg0NTg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1008458?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jtimon",
+      "html_url": "https://github.com/jtimon",
+      "followers_url": "https://api.github.com/users/jtimon/followers",
+      "following_url": "https://api.github.com/users/jtimon/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jtimon/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jtimon/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jtimon/subscriptions",
+      "organizations_url": "https://api.github.com/users/jtimon/orgs",
+      "repos_url": "https://api.github.com/users/jtimon/repos",
+      "events_url": "https://api.github.com/users/jtimon/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jtimon/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "b6ea3bcede1cbbf89486b9d67329e0110c4624ae",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b6ea3bcede1cbbf89486b9d67329e0110c4624ae",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b6ea3bcede1cbbf89486b9d67329e0110c4624ae"
+      }
+    ],
+    "stats": {
+      "total": 40,
+      "additions": 23,
+      "deletions": 17
+    },
+    "files": [
+      {
+        "sha": "efa8e05763d2e3dec0ae44aead520ce1334bf553",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 23,
+        "deletions": 17,
+        "changes": 40,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4658a49243407a129537e17c081de9e204dc57d8/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4658a49243407a129537e17c081de9e204dc57d8/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=4658a49243407a129537e17c081de9e204dc57d8",
+        "patch": "@@ -2540,19 +2540,30 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo\n     return true;\n }\n \n-bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& state, CBlockIndex * const pindexPrev)\n+static bool CheckIndexAgainstCheckpoint(const CBlockIndex* pindexPrev, CValidationState& state, const CChainParams& chainparams, const BlockMap& mapBlockIndex)\n {\n-    const Consensus::Params& consensusParams = Params().GetConsensus();\n-    uint256 hash = block.GetHash();\n-    if (hash == consensusParams.hashGenesisBlock)\n-        return true;\n-\n     assert(pindexPrev);\n+    if (*pindexPrev->phashBlock == chainparams.GetConsensus().hashGenesisBlock)\n+        return true;\n \n     int nHeight = pindexPrev->nHeight+1;\n+    // Check that the block chain matches the known block chain up to a checkpoint\n+    if (!Checkpoints::CheckBlock(nHeight, *pindexPrev->phashBlock))\n+        return state.DoS(100, false, REJECT_CHECKPOINT, strprintf(\"checkpoint mismatch (height %d)\", nHeight));\n+\n+    // Don't accept any forks from the main chain prior to last checkpoint\n+    CBlockIndex* pcheckpoint = Checkpoints::GetLastCheckpoint();\n+    if (pcheckpoint && nHeight < pcheckpoint->nHeight)\n+        return state.DoS(100, false, REJECT_INVALID, strprintf(\"forked-chain-older-checkpoint (height %d)\", nHeight));\n+\n+    return true;\n+}\n \n+bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& state, CBlockIndex * const pindexPrev)\n+{\n+    const Consensus::Params& consensusParams = Params().GetConsensus();\n     // Check proof of work\n-    if (block.nBits != GetNextWorkRequired(pindexPrev, &block, Params().GetConsensus()))\n+    if (block.nBits != GetNextWorkRequired(pindexPrev, &block, consensusParams))\n         return state.DoS(100, error(\"%s: incorrect proof of work\", __func__),\n                          REJECT_INVALID, \"bad-diffbits\");\n \n@@ -2561,16 +2572,6 @@ bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& sta\n         return state.Invalid(error(\"%s: block's timestamp is too early\", __func__),\n                              REJECT_INVALID, \"time-too-old\");\n \n-    // Check that the block chain matches the known block chain up to a checkpoint\n-    if (!Checkpoints::CheckBlock(nHeight, hash))\n-        return state.DoS(100, error(\"%s: rejected by checkpoint lock-in at %d\", __func__, nHeight),\n-                         REJECT_CHECKPOINT, \"checkpoint mismatch\");\n-\n-    // Don't accept any forks from the main chain prior to last checkpoint\n-    CBlockIndex* pcheckpoint = Checkpoints::GetLastCheckpoint();\n-    if (pcheckpoint && nHeight < pcheckpoint->nHeight)\n-        return state.DoS(100, error(\"%s: forked chain older than last checkpoint (height %d)\", __func__, nHeight));\n-\n     // Reject block.nVersion=1 blocks when 95% (75% on testnet) of the network has upgraded:\n     if (block.nVersion < 2 && IsSuperMajority(2, pindexPrev, Params().RejectBlockOutdatedMajority()))\n     {\n@@ -2643,6 +2644,8 @@ bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state, CBloc\n         if (pindexPrev->nStatus & BLOCK_FAILED_MASK)\n             return state.DoS(100, error(\"%s: prev block invalid\", __func__), REJECT_INVALID, \"bad-prevblk\");\n     }\n+    if (!CheckIndexAgainstCheckpoint(pindexPrev, state, chainparams, mapBlockIndex))\n+        return error(\"%s: CheckIndexAgainstCheckpoint(): %s\", __func__, state.GetRejectReason().c_str());\n \n     if (!ContextualCheckBlockHeader(block, state, pindexPrev))\n         return false;\n@@ -2746,8 +2749,11 @@ bool ProcessNewBlock(CValidationState &state, CNode* pfrom, CBlock* pblock, CDis\n \n bool TestBlockValidity(CValidationState &state, const CBlock& block, CBlockIndex * const pindexPrev, bool fCheckPOW, bool fCheckMerkleRoot)\n {\n+    const CChainParams& chainparams = Params();\n     AssertLockHeld(cs_main);\n     assert(pindexPrev == chainActive.Tip());\n+    if (!CheckIndexAgainstCheckpoint(pindexPrev, state, chainparams, mapBlockIndex))\n+        return error(\"%s: CheckIndexAgainstCheckpoint(): %s\", __func__, state.GetRejectReason().c_str());\n \n     CCoinsViewCache viewNew(pcoinsTip);\n     CBlockIndex indexDummy(block);"
+      }
+    ]
+  },
+  {
+    "sha": "0d486be24a3b512f2e66dbf55348fd93e50bf3d2",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowZDQ4NmJlMjRhM2I1MTJmMmU2NmRiZjU1MzQ4ZmQ5M2U1MGJmM2Qy",
+    "commit": {
+      "author": {
+        "name": "Jorge Tim\u00f3n",
+        "email": "jtimon@jtimon.cc",
+        "date": "2015-04-24T14:18:43Z"
+      },
+      "committer": {
+        "name": "Jorge Tim\u00f3n",
+        "email": "jtimon@jtimon.cc",
+        "date": "2015-04-25T08:41:15Z"
+      },
+      "message": "MOVEONLY: Move to consensus/blockverify.cpp:\n\n(declarations to consensus/consensus.h)\n\nfrom main.cpp:\n-CheckBlockHeader\n-ContextualCheckBlockHeader\n-IsSuperMajority\n\nfrom pow.cpp:\n-CalculateNextWorkRequired\n-CheckProofOfWork\n-GetNextWorkRequired",
+      "tree": {
+        "sha": "ae2e145f6275a6a929e163453c359b30b19a8938",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/ae2e145f6275a6a929e163453c359b30b19a8938"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/0d486be24a3b512f2e66dbf55348fd93e50bf3d2",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0d486be24a3b512f2e66dbf55348fd93e50bf3d2",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/0d486be24a3b512f2e66dbf55348fd93e50bf3d2",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0d486be24a3b512f2e66dbf55348fd93e50bf3d2/comments",
+    "author": {
+      "login": "jtimon",
+      "id": 1008458,
+      "node_id": "MDQ6VXNlcjEwMDg0NTg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1008458?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jtimon",
+      "html_url": "https://github.com/jtimon",
+      "followers_url": "https://api.github.com/users/jtimon/followers",
+      "following_url": "https://api.github.com/users/jtimon/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jtimon/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jtimon/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jtimon/subscriptions",
+      "organizations_url": "https://api.github.com/users/jtimon/orgs",
+      "repos_url": "https://api.github.com/users/jtimon/repos",
+      "events_url": "https://api.github.com/users/jtimon/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jtimon/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "jtimon",
+      "id": 1008458,
+      "node_id": "MDQ6VXNlcjEwMDg0NTg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1008458?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jtimon",
+      "html_url": "https://github.com/jtimon",
+      "followers_url": "https://api.github.com/users/jtimon/followers",
+      "following_url": "https://api.github.com/users/jtimon/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jtimon/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jtimon/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jtimon/subscriptions",
+      "organizations_url": "https://api.github.com/users/jtimon/orgs",
+      "repos_url": "https://api.github.com/users/jtimon/repos",
+      "events_url": "https://api.github.com/users/jtimon/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jtimon/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "4658a49243407a129537e17c081de9e204dc57d8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4658a49243407a129537e17c081de9e204dc57d8",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/4658a49243407a129537e17c081de9e204dc57d8"
+      }
+    ],
+    "stats": {
+      "total": 395,
+      "additions": 229,
+      "deletions": 166
+    },
+    "files": [
+      {
+        "sha": "136f8ee2d07cf8b105a2ce180816f72dbb4ba994",
+        "filename": "src/Makefile.am",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0d486be24a3b512f2e66dbf55348fd93e50bf3d2/src/Makefile.am",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0d486be24a3b512f2e66dbf55348fd93e50bf3d2/src/Makefile.am",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/Makefile.am?ref=0d486be24a3b512f2e66dbf55348fd93e50bf3d2",
+        "patch": "@@ -87,6 +87,7 @@ BITCOIN_CORE_H = \\\n   coins.h \\\n   compat.h \\\n   compressor.h \\\n+  consensus/consensus.h \\\n   consensus/params.h \\\n   core_io.h \\\n   wallet/db.h \\\n@@ -174,6 +175,7 @@ libbitcoin_server_a_SOURCES = \\\n   bloom.cpp \\\n   chain.cpp \\\n   checkpoints.cpp \\\n+  consensus/blockverify.cpp \\\n   init.cpp \\\n   leveldbwrapper.cpp \\\n   main.cpp \\"
+      },
+      {
+        "sha": "9ee90dbe75f5fa93ae53604aacd86de7c88036ee",
+        "filename": "src/consensus/blockverify.cpp",
+        "status": "added",
+        "additions": 181,
+        "deletions": 0,
+        "changes": 181,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0d486be24a3b512f2e66dbf55348fd93e50bf3d2/src/consensus/blockverify.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0d486be24a3b512f2e66dbf55348fd93e50bf3d2/src/consensus/blockverify.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/consensus/blockverify.cpp?ref=0d486be24a3b512f2e66dbf55348fd93e50bf3d2",
+        "patch": "@@ -0,0 +1,181 @@\n+// Copyright (c) 2009-2010 Satoshi Nakamoto\n+// Copyright (c) 2009-2014 The Bitcoin Core developers\n+// Distributed under the MIT software license, see the accompanying\n+// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+#include \"consensus/consensus.h\"\n+\n+#include \"arith_uint256.h\"\n+#include \"chain.h\"\n+#include \"chainparams.h\"\n+#include \"consensus/params.h\"\n+#include \"main.h\"\n+#include \"primitives/block.h\"\n+#include \"timedata.h\"\n+#include \"tinyformat.h\"\n+#include \"uint256.h\"\n+#include \"util.h\"\n+\n+#include <algorithm>  \n+\n+static const unsigned int MEDIAN_TIME_SPAN = 11;\n+\n+unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params& params)\n+{\n+    unsigned int nProofOfWorkLimit = UintToArith256(params.powLimit).GetCompact();\n+\n+    // Genesis block\n+    if (pindexLast == NULL)\n+        return nProofOfWorkLimit;\n+\n+    // Only change once per difficulty adjustment interval\n+    if ((pindexLast->nHeight+1) % params.DifficultyAdjustmentInterval() != 0)\n+    {\n+        if (params.fPowAllowMinDifficultyBlocks)\n+        {\n+            // Special difficulty rule for testnet:\n+            // If the new block's timestamp is more than 2* 10 minutes\n+            // then allow mining of a min-difficulty block.\n+            if (pblock->GetBlockTime() > pindexLast->GetBlockTime() + params.nPowTargetSpacing*2)\n+                return nProofOfWorkLimit;\n+            else\n+            {\n+                // Return the last non-special-min-difficulty-rules-block\n+                const CBlockIndex* pindex = pindexLast;\n+                while (pindex->pprev && pindex->nHeight % params.DifficultyAdjustmentInterval() != 0 && pindex->nBits == nProofOfWorkLimit)\n+                    pindex = pindex->pprev;\n+                return pindex->nBits;\n+            }\n+        }\n+        return pindexLast->nBits;\n+    }\n+\n+    // Go back by what we want to be 14 days worth of blocks\n+    int nHeightFirst = pindexLast->nHeight - (params.DifficultyAdjustmentInterval()-1);\n+    assert(nHeightFirst >= 0);\n+    const CBlockIndex* pindexFirst = pindexLast->GetAncestor(nHeightFirst);\n+    assert(pindexFirst);\n+\n+    return CalculateNextWorkRequired(pindexLast, pindexFirst->GetBlockTime(), params);\n+}\n+\n+unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirstBlockTime, const Consensus::Params& params)\n+{\n+    // Limit adjustment step\n+    int64_t nActualTimespan = pindexLast->GetBlockTime() - nFirstBlockTime;\n+    LogPrintf(\"  nActualTimespan = %d  before bounds\\n\", nActualTimespan);\n+    if (nActualTimespan < params.nPowTargetTimespan/4)\n+        nActualTimespan = params.nPowTargetTimespan/4;\n+    if (nActualTimespan > params.nPowTargetTimespan*4)\n+        nActualTimespan = params.nPowTargetTimespan*4;\n+\n+    // Retarget\n+    const arith_uint256 bnPowLimit = UintToArith256(params.powLimit);\n+    arith_uint256 bnNew;\n+    arith_uint256 bnOld;\n+    bnNew.SetCompact(pindexLast->nBits);\n+    bnOld = bnNew;\n+    bnNew *= nActualTimespan;\n+    bnNew /= params.nPowTargetTimespan;\n+\n+    if (bnNew > bnPowLimit)\n+        bnNew = bnPowLimit;\n+\n+    /// debug print\n+    LogPrintf(\"GetNextWorkRequired RETARGET\\n\");\n+    LogPrintf(\"params.nPowTargetTimespan = %d    nActualTimespan = %d\\n\", params.nPowTargetTimespan, nActualTimespan);\n+    LogPrintf(\"Before: %08x  %s\\n\", pindexLast->nBits, bnOld.ToString());\n+    LogPrintf(\"After:  %08x  %s\\n\", bnNew.GetCompact(), bnNew.ToString());\n+\n+    return bnNew.GetCompact();\n+}\n+\n+bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params& params)\n+{\n+    bool fNegative;\n+    bool fOverflow;\n+    arith_uint256 bnTarget;\n+\n+    bnTarget.SetCompact(nBits, &fNegative, &fOverflow);\n+\n+    // Check range\n+    if (fNegative || bnTarget == 0 || fOverflow || bnTarget > UintToArith256(params.powLimit))\n+        return error(\"CheckProofOfWork(): nBits below minimum work\");\n+\n+    // Check proof of work matches claimed amount\n+    if (UintToArith256(hash) > bnTarget)\n+        return error(\"CheckProofOfWork(): hash doesn't match nBits\");\n+\n+    return true;\n+}\n+\n+int64_t GetMedianTimePast(const CBlockIndex* pindex)\n+{\n+    int64_t pmedian[MEDIAN_TIME_SPAN];\n+    int64_t* pbegin = &pmedian[MEDIAN_TIME_SPAN];\n+    int64_t* pend = &pmedian[MEDIAN_TIME_SPAN];\n+\n+    for (unsigned int i = 0; i < MEDIAN_TIME_SPAN && pindex; i++, pindex = pindex->pprev)\n+        *(--pbegin) = (int64_t)pindex->nTime;\n+\n+    std::sort(pbegin, pend);\n+    return pbegin[(pend - pbegin)/2];\n+}\n+\n+bool IsSuperMajority(int minVersion, const CBlockIndex* pstart, unsigned int nRequired)\n+{\n+    unsigned int nToCheck = Params().ToCheckBlockUpgradeMajority();\n+    unsigned int nFound = 0;\n+    for (unsigned int i = 0; i < nToCheck && nFound < nRequired && pstart != NULL; i++)\n+    {\n+        if (pstart->nVersion >= minVersion)\n+            ++nFound;\n+        pstart = pstart->pprev;\n+    }\n+    return (nFound >= nRequired);\n+}\n+\n+bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, bool fCheckPOW)\n+{\n+    // Check proof of work matches claimed amount\n+    if (fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits, Params().GetConsensus()))\n+        return state.DoS(50, error(\"CheckBlockHeader(): proof of work failed\"),\n+                         REJECT_INVALID, \"high-hash\");\n+\n+    // Check timestamp\n+    if (block.GetBlockTime() > GetAdjustedTime() + 2 * 60 * 60)\n+        return state.Invalid(error(\"CheckBlockHeader(): block timestamp too far in the future\"),\n+                             REJECT_INVALID, \"time-too-new\");\n+\n+    return true;\n+}\n+\n+bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& state, CBlockIndex * const pindexPrev)\n+{\n+    const Consensus::Params& consensusParams = Params().GetConsensus();\n+    // Check proof of work\n+    if (block.nBits != GetNextWorkRequired(pindexPrev, &block, consensusParams))\n+        return state.DoS(100, error(\"%s: incorrect proof of work\", __func__),\n+                         REJECT_INVALID, \"bad-diffbits\");\n+\n+    // Check timestamp against prev\n+    if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())\n+        return state.Invalid(error(\"%s: block's timestamp is too early\", __func__),\n+                             REJECT_INVALID, \"time-too-old\");\n+\n+    // Reject block.nVersion=1 blocks when 95% (75% on testnet) of the network has upgraded:\n+    if (block.nVersion < 2 && IsSuperMajority(2, pindexPrev, Params().RejectBlockOutdatedMajority()))\n+    {\n+        return state.Invalid(error(\"%s: rejected nVersion=1 block\", __func__),\n+                             REJECT_OBSOLETE, \"bad-version\");\n+    }\n+\n+    // Reject block.nVersion=2 blocks when 95% (75% on testnet) of the network has upgraded:\n+    if (block.nVersion < 3 && IsSuperMajority(3, pindexPrev, Params().RejectBlockOutdatedMajority()))\n+    {\n+        return state.Invalid(error(\"%s : rejected nVersion=2 block\", __func__),\n+                             REJECT_OBSOLETE, \"bad-version\");\n+    }\n+\n+    return true;\n+}"
+      },
+      {
+        "sha": "ae866821d8bfa019091adc03cd1d787929af1252",
+        "filename": "src/consensus/consensus.h",
+        "status": "added",
+        "additions": 45,
+        "deletions": 0,
+        "changes": 45,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0d486be24a3b512f2e66dbf55348fd93e50bf3d2/src/consensus/consensus.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0d486be24a3b512f2e66dbf55348fd93e50bf3d2/src/consensus/consensus.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/consensus/consensus.h?ref=0d486be24a3b512f2e66dbf55348fd93e50bf3d2",
+        "patch": "@@ -0,0 +1,45 @@\n+// Copyright (c) 2009-2010 Satoshi Nakamoto\n+// Copyright (c) 2009-2014 The Bitcoin Core developers\n+// Distributed under the MIT software license, see the accompanying\n+// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+#ifndef BITCOIN_CONSENSUS_CONSENSUS_H\n+#define BITCOIN_CONSENSUS_CONSENSUS_H\n+\n+#include <stdint.h>\n+\n+class CBlockHeader;\n+class CBlockIndex;\n+class CValidationState;\n+class uint256;\n+\n+namespace Consensus {\n+\n+class Params;\n+\n+} // namespace Consensus\n+\n+/** Block header validation functions */\n+\n+/**\n+ * Context-independent CBlockHeader validity checks\n+ */\n+bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, bool fCheckPOW = true);\n+/**\n+ * Context-dependent CBlockHeader validity checks\n+ */\n+bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& state, CBlockIndex *pindexPrev);\n+\n+/** Block header validation utility functions */\n+\n+uint32_t GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params&);\n+uint32_t CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirstBlockTime, const Consensus::Params&);\n+/** Check whether a block hash satisfies the proof-of-work requirement specified by nBits */\n+bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params&);\n+/**\n+ * Returns true if there are nRequired or more blocks of minVersion or above\n+ * in the last Consensus::Params::nMajorityWindow blocks, starting at pstart and going backwards.\n+ */\n+bool IsSuperMajority(int minVersion, const CBlockIndex* pstart, unsigned nRequired);\n+\n+#endif // BITCOIN_CONSENSUS_CONSENSUS_H"
+      },
+      {
+        "sha": "6be9eee4c11cf8e4705954ca9c75d759d0fa3475",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 65,
+        "changes": 65,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0d486be24a3b512f2e66dbf55348fd93e50bf3d2/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0d486be24a3b512f2e66dbf55348fd93e50bf3d2/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=0d486be24a3b512f2e66dbf55348fd93e50bf3d2",
+        "patch": "@@ -69,12 +69,6 @@ map<uint256, COrphanTx> mapOrphanTransactions;\n map<uint256, set<uint256> > mapOrphanTransactionsByPrev;\n void EraseOrphansFor(NodeId peer);\n \n-/**\n- * Returns true if there are nRequired or more blocks of minVersion or above\n- * in the last Params().ToCheckBlockUpgradeMajority() blocks, starting at pstart \n- * and going backwards.\n- */\n-static bool IsSuperMajority(int minVersion, const CBlockIndex* pstart, unsigned int nRequired);\n static void CheckBlockIndex();\n \n /** Constant stuff for coinbase transactions we create: */\n@@ -2465,21 +2459,6 @@ bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, unsigne\n     return true;\n }\n \n-bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, bool fCheckPOW)\n-{\n-    // Check proof of work matches claimed amount\n-    if (fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits, Params().GetConsensus()))\n-        return state.DoS(50, error(\"CheckBlockHeader(): proof of work failed\"),\n-                         REJECT_INVALID, \"high-hash\");\n-\n-    // Check timestamp\n-    if (block.GetBlockTime() > GetAdjustedTime() + 2 * 60 * 60)\n-        return state.Invalid(error(\"CheckBlockHeader(): block timestamp too far in the future\"),\n-                             REJECT_INVALID, \"time-too-new\");\n-\n-    return true;\n-}\n-\n bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bool fCheckMerkleRoot)\n {\n     // These are checks that are independent of context.\n@@ -2559,36 +2538,6 @@ static bool CheckIndexAgainstCheckpoint(const CBlockIndex* pindexPrev, CValidati\n     return true;\n }\n \n-bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& state, CBlockIndex * const pindexPrev)\n-{\n-    const Consensus::Params& consensusParams = Params().GetConsensus();\n-    // Check proof of work\n-    if (block.nBits != GetNextWorkRequired(pindexPrev, &block, consensusParams))\n-        return state.DoS(100, error(\"%s: incorrect proof of work\", __func__),\n-                         REJECT_INVALID, \"bad-diffbits\");\n-\n-    // Check timestamp against prev\n-    if (block.GetBlockTime() <= pindexPrev->GetMedianTimePast())\n-        return state.Invalid(error(\"%s: block's timestamp is too early\", __func__),\n-                             REJECT_INVALID, \"time-too-old\");\n-\n-    // Reject block.nVersion=1 blocks when 95% (75% on testnet) of the network has upgraded:\n-    if (block.nVersion < 2 && IsSuperMajority(2, pindexPrev, Params().RejectBlockOutdatedMajority()))\n-    {\n-        return state.Invalid(error(\"%s: rejected nVersion=1 block\", __func__),\n-                             REJECT_OBSOLETE, \"bad-version\");\n-    }\n-\n-    // Reject block.nVersion=2 blocks when 95% (75% on testnet) of the network has upgraded:\n-    if (block.nVersion < 3 && IsSuperMajority(3, pindexPrev, Params().RejectBlockOutdatedMajority()))\n-    {\n-        return state.Invalid(error(\"%s : rejected nVersion=2 block\", __func__),\n-                             REJECT_OBSOLETE, \"bad-version\");\n-    }\n-\n-    return true;\n-}\n-\n bool ContextualCheckBlock(const CBlock& block, CValidationState& state, CBlockIndex * const pindexPrev)\n {\n     const int nHeight = pindexPrev == NULL ? 0 : pindexPrev->nHeight + 1;\n@@ -2704,20 +2653,6 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CBlockIndex** ppindex,\n     return true;\n }\n \n-static bool IsSuperMajority(int minVersion, const CBlockIndex* pstart, unsigned int nRequired)\n-{\n-    unsigned int nToCheck = Params().ToCheckBlockUpgradeMajority();\n-    unsigned int nFound = 0;\n-    for (unsigned int i = 0; i < nToCheck && nFound < nRequired && pstart != NULL; i++)\n-    {\n-        if (pstart->nVersion >= minVersion)\n-            ++nFound;\n-        pstart = pstart->pprev;\n-    }\n-    return (nFound >= nRequired);\n-}\n-\n-\n bool ProcessNewBlock(CValidationState &state, CNode* pfrom, CBlock* pblock, CDiskBlockPos *dbp)\n {\n     // Preliminary checks"
+      },
+      {
+        "sha": "a283eed18c76daebfd764dd31343e0691c1a3206",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 2,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0d486be24a3b512f2e66dbf55348fd93e50bf3d2/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0d486be24a3b512f2e66dbf55348fd93e50bf3d2/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=0d486be24a3b512f2e66dbf55348fd93e50bf3d2",
+        "patch": "@@ -348,11 +348,9 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex\n bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pindex, CCoinsViewCache& coins, bool fJustCheck = false);\n \n /** Context-independent validity checks */\n-bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, bool fCheckPOW = true);\n bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW = true, bool fCheckMerkleRoot = true);\n \n /** Context-dependent validity checks */\n-bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& state, CBlockIndex *pindexPrev);\n bool ContextualCheckBlock(const CBlock& block, CValidationState& state, CBlockIndex *pindexPrev);\n \n /** Check a block is completely valid from start to finish (only works on top of our current best block, with cs_main held) */"
+      },
+      {
+        "sha": "e9cbb157ae2a397e107629629057f7bb3f6fff10",
+        "filename": "src/pow.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 92,
+        "changes": 92,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0d486be24a3b512f2e66dbf55348fd93e50bf3d2/src/pow.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0d486be24a3b512f2e66dbf55348fd93e50bf3d2/src/pow.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/pow.cpp?ref=0d486be24a3b512f2e66dbf55348fd93e50bf3d2",
+        "patch": "@@ -7,98 +7,6 @@\n \n #include \"arith_uint256.h\"\n #include \"chain.h\"\n-#include \"primitives/block.h\"\n-#include \"uint256.h\"\n-#include \"util.h\"\n-\n-unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params& params)\n-{\n-    unsigned int nProofOfWorkLimit = UintToArith256(params.powLimit).GetCompact();\n-\n-    // Genesis block\n-    if (pindexLast == NULL)\n-        return nProofOfWorkLimit;\n-\n-    // Only change once per difficulty adjustment interval\n-    if ((pindexLast->nHeight+1) % params.DifficultyAdjustmentInterval() != 0)\n-    {\n-        if (params.fPowAllowMinDifficultyBlocks)\n-        {\n-            // Special difficulty rule for testnet:\n-            // If the new block's timestamp is more than 2* 10 minutes\n-            // then allow mining of a min-difficulty block.\n-            if (pblock->GetBlockTime() > pindexLast->GetBlockTime() + params.nPowTargetSpacing*2)\n-                return nProofOfWorkLimit;\n-            else\n-            {\n-                // Return the last non-special-min-difficulty-rules-block\n-                const CBlockIndex* pindex = pindexLast;\n-                while (pindex->pprev && pindex->nHeight % params.DifficultyAdjustmentInterval() != 0 && pindex->nBits == nProofOfWorkLimit)\n-                    pindex = pindex->pprev;\n-                return pindex->nBits;\n-            }\n-        }\n-        return pindexLast->nBits;\n-    }\n-\n-    // Go back by what we want to be 14 days worth of blocks\n-    int nHeightFirst = pindexLast->nHeight - (params.DifficultyAdjustmentInterval()-1);\n-    assert(nHeightFirst >= 0);\n-    const CBlockIndex* pindexFirst = pindexLast->GetAncestor(nHeightFirst);\n-    assert(pindexFirst);\n-\n-    return CalculateNextWorkRequired(pindexLast, pindexFirst->GetBlockTime(), params);\n-}\n-\n-unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirstBlockTime, const Consensus::Params& params)\n-{\n-    // Limit adjustment step\n-    int64_t nActualTimespan = pindexLast->GetBlockTime() - nFirstBlockTime;\n-    LogPrintf(\"  nActualTimespan = %d  before bounds\\n\", nActualTimespan);\n-    if (nActualTimespan < params.nPowTargetTimespan/4)\n-        nActualTimespan = params.nPowTargetTimespan/4;\n-    if (nActualTimespan > params.nPowTargetTimespan*4)\n-        nActualTimespan = params.nPowTargetTimespan*4;\n-\n-    // Retarget\n-    const arith_uint256 bnPowLimit = UintToArith256(params.powLimit);\n-    arith_uint256 bnNew;\n-    arith_uint256 bnOld;\n-    bnNew.SetCompact(pindexLast->nBits);\n-    bnOld = bnNew;\n-    bnNew *= nActualTimespan;\n-    bnNew /= params.nPowTargetTimespan;\n-\n-    if (bnNew > bnPowLimit)\n-        bnNew = bnPowLimit;\n-\n-    /// debug print\n-    LogPrintf(\"GetNextWorkRequired RETARGET\\n\");\n-    LogPrintf(\"params.nPowTargetTimespan = %d    nActualTimespan = %d\\n\", params.nPowTargetTimespan, nActualTimespan);\n-    LogPrintf(\"Before: %08x  %s\\n\", pindexLast->nBits, bnOld.ToString());\n-    LogPrintf(\"After:  %08x  %s\\n\", bnNew.GetCompact(), bnNew.ToString());\n-\n-    return bnNew.GetCompact();\n-}\n-\n-bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params& params)\n-{\n-    bool fNegative;\n-    bool fOverflow;\n-    arith_uint256 bnTarget;\n-\n-    bnTarget.SetCompact(nBits, &fNegative, &fOverflow);\n-\n-    // Check range\n-    if (fNegative || bnTarget == 0 || fOverflow || bnTarget > UintToArith256(params.powLimit))\n-        return error(\"CheckProofOfWork(): nBits below minimum work\");\n-\n-    // Check proof of work matches claimed amount\n-    if (UintToArith256(hash) > bnTarget)\n-        return error(\"CheckProofOfWork(): hash doesn't match nBits\");\n-\n-    return true;\n-}\n \n arith_uint256 GetBlockProof(const CBlockIndex& block)\n {"
+      },
+      {
+        "sha": "922e4bee1fab225089a45f5ef3746a7332231557",
+        "filename": "src/pow.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 7,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0d486be24a3b512f2e66dbf55348fd93e50bf3d2/src/pow.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0d486be24a3b512f2e66dbf55348fd93e50bf3d2/src/pow.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/pow.h?ref=0d486be24a3b512f2e66dbf55348fd93e50bf3d2",
+        "patch": "@@ -6,20 +6,14 @@\n #ifndef BITCOIN_POW_H\n #define BITCOIN_POW_H\n \n+#include \"consensus/consensus.h\"\n #include \"consensus/params.h\"\n \n #include <stdint.h>\n \n-class CBlockHeader;\n class CBlockIndex;\n-class uint256;\n class arith_uint256;\n \n-unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params&);\n-unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirstBlockTime, const Consensus::Params&);\n-\n-/** Check whether a block hash satisfies the proof-of-work requirement specified by nBits */\n-bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params&);\n arith_uint256 GetBlockProof(const CBlockIndex& block);\n \n #endif // BITCOIN_POW_H"
+      }
+    ]
+  }
+]

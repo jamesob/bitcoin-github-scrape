@@ -1,0 +1,196 @@
+[
+  {
+    "sha": "e9205293bd8d6352ce51372111336ba3c4e14e70",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplOTIwNTI5M2JkOGQ2MzUyY2U1MTM3MjExMTMzNmJhM2M0ZTE0ZTcw",
+    "commit": {
+      "author": {
+        "name": "David Joel Schwartz",
+        "email": "davidjoelschwartz@gmail.com",
+        "date": "2012-04-15T00:35:58Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-05-09T00:11:17Z"
+      },
+      "message": "Support multi-threaded JSON-RPC\n\nChange internal HTTP JSON-RPC server from single-threaded to\nthread-per-connection model.  The IP filter list is applied prior to starting\nthe thread, which then processes the RPC.\n\nA mutex covers the entire RPC operation, because not all RPC operations are\nthread-safe.\n\n[minor modifications by jgarzik, to make change upstream-ready]",
+      "tree": {
+        "sha": "28963d21d87c814049ee10cd5bb22e0eca6e1619",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/28963d21d87c814049ee10cd5bb22e0eca6e1619"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/e9205293bd8d6352ce51372111336ba3c4e14e70",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e9205293bd8d6352ce51372111336ba3c4e14e70",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/e9205293bd8d6352ce51372111336ba3c4e14e70",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e9205293bd8d6352ce51372111336ba3c4e14e70/comments",
+    "author": {
+      "login": "JoelKatz",
+      "id": 877549,
+      "node_id": "MDQ6VXNlcjg3NzU0OQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/877549?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/JoelKatz",
+      "html_url": "https://github.com/JoelKatz",
+      "followers_url": "https://api.github.com/users/JoelKatz/followers",
+      "following_url": "https://api.github.com/users/JoelKatz/following{/other_user}",
+      "gists_url": "https://api.github.com/users/JoelKatz/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/JoelKatz/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/JoelKatz/subscriptions",
+      "organizations_url": "https://api.github.com/users/JoelKatz/orgs",
+      "repos_url": "https://api.github.com/users/JoelKatz/repos",
+      "events_url": "https://api.github.com/users/JoelKatz/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/JoelKatz/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": null,
+    "parents": [
+      {
+        "sha": "203f9e6c0010893df20fb64c77dc0ac42e396947",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/203f9e6c0010893df20fb64c77dc0ac42e396947",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/203f9e6c0010893df20fb64c77dc0ac42e396947"
+      }
+    ],
+    "stats": {
+      "total": 107,
+      "additions": 72,
+      "deletions": 35
+    },
+    "files": [
+      {
+        "sha": "b3a27101a686e15f583c98d260eda7e420f67cf0",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 66,
+        "deletions": 32,
+        "changes": 98,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e9205293bd8d6352ce51372111336ba3c4e14e70/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e9205293bd8d6352ce51372111336ba3c4e14e70/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=e9205293bd8d6352ce51372111336ba3c4e14e70",
+        "patch": "@@ -46,6 +46,8 @@ extern Value importprivkey(const Array& params, bool fHelp);\n \n const Object emptyobj;\n \n+void ThreadRPCServer3(void* parg);\n+\n Object JSONRPCError(int code, const string& message)\n {\n     Object error;\n@@ -2021,7 +2023,7 @@ Value getwork(const Array& params, bool fHelp)\n         throw JSONRPCError(-10, \"Bitcoin is downloading blocks...\");\n \n     typedef map<uint256, pair<CBlock*, CScript> > mapNewBlock_t;\n-    static mapNewBlock_t mapNewBlock;\n+    static mapNewBlock_t mapNewBlock;    // FIXME: thread safety\n     static vector<CBlock*> vNewBlock;\n     static CReserveKey reservekey(pwalletMain);\n \n@@ -2573,20 +2575,34 @@ class SSLIOStreamDevice : public iostreams::device<iostreams::bidirectional> {\n     SSLStream& stream;\n };\n \n+class AcceptedConnection\n+{\n+    public:\n+    SSLStream sslStream;\n+    SSLIOStreamDevice d;\n+    iostreams::stream<SSLIOStreamDevice> stream;\n+\n+    ip::tcp::endpoint peer;\n+\n+    AcceptedConnection(asio::io_service &io_service, ssl::context &context,\n+     bool fUseSSL) : sslStream(io_service, context), d(sslStream, fUseSSL),\n+     stream(d) { ; }\n+};\n+\n void ThreadRPCServer(void* parg)\n {\n     IMPLEMENT_RANDOMIZE_STACK(ThreadRPCServer(parg));\n     try\n     {\n-        vnThreadsRunning[THREAD_RPCSERVER]++;\n+        vnThreadsRunning[THREAD_RPCLISTENER]++;\n         ThreadRPCServer2(parg);\n-        vnThreadsRunning[THREAD_RPCSERVER]--;\n+        vnThreadsRunning[THREAD_RPCLISTENER]--;\n     }\n     catch (std::exception& e) {\n-        vnThreadsRunning[THREAD_RPCSERVER]--;\n+        vnThreadsRunning[THREAD_RPCLISTENER]--;\n         PrintException(&e, \"ThreadRPCServer()\");\n     } catch (...) {\n-        vnThreadsRunning[THREAD_RPCSERVER]--;\n+        vnThreadsRunning[THREAD_RPCLISTENER]--;\n         PrintException(NULL, \"ThreadRPCServer()\");\n     }\n     printf(\"ThreadRPCServer exiting\\n\");\n@@ -2664,54 +2680,67 @@ void ThreadRPCServer2(void* parg)\n     loop\n     {\n         // Accept connection\n-        SSLStream sslStream(io_service, context);\n-        SSLIOStreamDevice d(sslStream, fUseSSL);\n-        iostreams::stream<SSLIOStreamDevice> stream(d);\n-\n-        ip::tcp::endpoint peer;\n-        vnThreadsRunning[THREAD_RPCSERVER]--;\n-        acceptor.accept(sslStream.lowest_layer(), peer);\n-        vnThreadsRunning[4]++;\n+        AcceptedConnection *conn =\n+\t            new AcceptedConnection(io_service, context, fUseSSL);\n+\n+        vnThreadsRunning[THREAD_RPCLISTENER]--;\n+        acceptor.accept(conn->sslStream.lowest_layer(), conn->peer);\n+        vnThreadsRunning[THREAD_RPCLISTENER]++;\n+\n         if (fShutdown)\n+        {\n+            delete conn;\n             return;\n+        }\n \n-        // Restrict callers by IP\n-        if (!ClientAllowed(peer.address().to_string()))\n+        // Restrict callers by IP.  It is important to\n+        // do this before starting client thread, to filter out\n+        // certain DoS and misbehaving clients.\n+        if (!ClientAllowed(conn->peer.address().to_string()))\n         {\n             // Only send a 403 if we're not using SSL to prevent a DoS during the SSL handshake.\n             if (!fUseSSL)\n-                stream << HTTPReply(403, \"\") << std::flush;\n-            continue;\n+                conn->stream << HTTPReply(403, \"\") << std::flush;\n+            delete conn;\n         }\n \n+        // start HTTP client thread\n+        else if (!CreateThread(ThreadRPCServer3, conn)) {\n+            printf(\"Failed to create RPC server client thread\\n\");\n+            delete conn;\n+        }\n+    }\n+}\n+\n+void ThreadRPCServer3(void* parg)\n+{\n+    IMPLEMENT_RANDOMIZE_STACK(ThreadRPCServer3(parg));\n+    vnThreadsRunning[THREAD_RPCHANDLER]++;\n+    AcceptedConnection *conn = (AcceptedConnection *) parg;\n+\n+    do {\n         map<string, string> mapHeaders;\n         string strRequest;\n \n-        boost::thread api_caller(ReadHTTP, boost::ref(stream), boost::ref(mapHeaders), boost::ref(strRequest));\n-        if (!api_caller.timed_join(boost::posix_time::seconds(GetArg(\"-rpctimeout\", 30))))\n-        {   // Timed out:\n-            acceptor.cancel();\n-            printf(\"ThreadRPCServer ReadHTTP timeout\\n\");\n-            continue;\n-        }\n+        ReadHTTP(conn->stream, mapHeaders, strRequest);\n \n         // Check authorization\n         if (mapHeaders.count(\"authorization\") == 0)\n         {\n-            stream << HTTPReply(401, \"\") << std::flush;\n-            continue;\n+            conn->stream << HTTPReply(401, \"\") << std::flush;\n+            break;\n         }\n         if (!HTTPAuthorized(mapHeaders))\n         {\n-            printf(\"ThreadRPCServer incorrect password attempt from %s\\n\",peer.address().to_string().c_str());\n+            printf(\"ThreadRPCServer incorrect password attempt from %s\\n\", conn->peer.address().to_string().c_str());\n             /* Deter brute-forcing short passwords.\n                If this results in a DOS the user really\n                shouldn't have their RPC port exposed.*/\n             if (mapArgs[\"-rpcpassword\"].size() < 20)\n                 Sleep(250);\n \n-            stream << HTTPReply(401, \"\") << std::flush;\n-            continue;\n+            conn->stream << HTTPReply(401, \"\") << std::flush;\n+            break;\n         }\n \n         Value id = Value::null;\n@@ -2750,17 +2779,22 @@ void ThreadRPCServer2(void* parg)\n \n             // Send reply\n             string strReply = JSONRPCReply(result, Value::null, id);\n-            stream << HTTPReply(200, strReply) << std::flush;\n+            conn->stream << HTTPReply(200, strReply) << std::flush;\n         }\n         catch (Object& objError)\n         {\n-            ErrorReply(stream, objError, id);\n+            ErrorReply(conn->stream, objError, id);\n+            break;\n         }\n         catch (std::exception& e)\n         {\n-            ErrorReply(stream, JSONRPCError(-32700, e.what()), id);\n+            ErrorReply(conn->stream, JSONRPCError(-32700, e.what()), id);\n+            break;\n         }\n     }\n+    while (0);\n+    delete conn;\n+    vnThreadsRunning[THREAD_RPCHANDLER]--;\n }\n \n json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_spirit::Array &params) const"
+      },
+      {
+        "sha": "ed5974578cbef011c5780976f82b6cc967cbe458",
+        "filename": "src/bitcoinrpc.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e9205293bd8d6352ce51372111336ba3c4e14e70/src/bitcoinrpc.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e9205293bd8d6352ce51372111336ba3c4e14e70/src/bitcoinrpc.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.h?ref=e9205293bd8d6352ce51372111336ba3c4e14e70",
+        "patch": "@@ -9,6 +9,7 @@\n #include <string>\n #include <map>\n \n+#define BOOST_SPIRIT_THREADSAFE\n #include \"json/json_spirit_reader_template.h\"\n #include \"json/json_spirit_writer_template.h\"\n #include \"json/json_spirit_utils.h\""
+      },
+      {
+        "sha": "6da256a8cb6370ea6a1bd88ce6bc9bb7cdf32d08",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 2,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e9205293bd8d6352ce51372111336ba3c4e14e70/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e9205293bd8d6352ce51372111336ba3c4e14e70/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=e9205293bd8d6352ce51372111336ba3c4e14e70",
+        "patch": "@@ -1839,12 +1839,13 @@ bool StopNode()\n     if (vnThreadsRunning[THREAD_OPENCONNECTIONS] > 0) printf(\"ThreadOpenConnections still running\\n\");\n     if (vnThreadsRunning[THREAD_MESSAGEHANDLER] > 0) printf(\"ThreadMessageHandler still running\\n\");\n     if (vnThreadsRunning[THREAD_MINER] > 0) printf(\"ThreadBitcoinMiner still running\\n\");\n-    if (vnThreadsRunning[THREAD_RPCSERVER] > 0) printf(\"ThreadRPCServer still running\\n\");\n+    if (vnThreadsRunning[THREAD_RPCLISTENER] > 0) printf(\"ThreadRPCListener still running\\n\");\n+    if (vnThreadsRunning[THREAD_RPCHANDLER] > 0) printf(\"ThreadsRPCServer still running\\n\");\n     if (fHaveUPnP && vnThreadsRunning[THREAD_UPNP] > 0) printf(\"ThreadMapPort still running\\n\");\n     if (vnThreadsRunning[THREAD_DNSSEED] > 0) printf(\"ThreadDNSAddressSeed still running\\n\");\n     if (vnThreadsRunning[THREAD_ADDEDCONNECTIONS] > 0) printf(\"ThreadOpenAddedConnections still running\\n\");\n     if (vnThreadsRunning[THREAD_DUMPADDRESS] > 0) printf(\"ThreadDumpAddresses still running\\n\");\n-    while (vnThreadsRunning[THREAD_MESSAGEHANDLER] > 0 || vnThreadsRunning[THREAD_RPCSERVER] > 0)\n+    while (vnThreadsRunning[THREAD_MESSAGEHANDLER] > 0 || vnThreadsRunning[THREAD_RPCHANDLER] > 0)\n         Sleep(20);\n     Sleep(50);\n     DumpAddresses();"
+      },
+      {
+        "sha": "c649242a0732218710069491e4de906729bca463",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 1,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e9205293bd8d6352ce51372111336ba3c4e14e70/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e9205293bd8d6352ce51372111336ba3c4e14e70/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=e9205293bd8d6352ce51372111336ba3c4e14e70",
+        "patch": "@@ -92,11 +92,12 @@ enum threadId\n     THREAD_OPENCONNECTIONS,\n     THREAD_MESSAGEHANDLER,\n     THREAD_MINER,\n-    THREAD_RPCSERVER,\n+    THREAD_RPCLISTENER,\n     THREAD_UPNP,\n     THREAD_DNSSEED,\n     THREAD_ADDEDCONNECTIONS,\n     THREAD_DUMPADDRESS,\n+    THREAD_RPCHANDLER,\n \n     THREAD_MAX\n };"
+      }
+    ]
+  },
+  {
+    "sha": "96c5269511b0cecbea67c0981aaea1a8a3345ba3",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5NmM1MjY5NTExYjBjZWNiZWE2N2MwOTgxYWFlYTFhOGEzMzQ1YmEz",
+    "commit": {
+      "author": {
+        "name": "David Joel Schwartz",
+        "email": "davidjoelschwartz@gmail.com",
+        "date": "2012-04-24T05:10:02Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-05-09T00:25:39Z"
+      },
+      "message": "RPC: Support HTTP/1.0 and HTTP/1.1, including the proper use of keep-alives",
+      "tree": {
+        "sha": "eee19a37dbb5bc8969079fcae511821a584c0a7a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/eee19a37dbb5bc8969079fcae511821a584c0a7a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/96c5269511b0cecbea67c0981aaea1a8a3345ba3",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/96c5269511b0cecbea67c0981aaea1a8a3345ba3",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/96c5269511b0cecbea67c0981aaea1a8a3345ba3",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/96c5269511b0cecbea67c0981aaea1a8a3345ba3/comments",
+    "author": {
+      "login": "JoelKatz",
+      "id": 877549,
+      "node_id": "MDQ6VXNlcjg3NzU0OQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/877549?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/JoelKatz",
+      "html_url": "https://github.com/JoelKatz",
+      "followers_url": "https://api.github.com/users/JoelKatz/followers",
+      "following_url": "https://api.github.com/users/JoelKatz/following{/other_user}",
+      "gists_url": "https://api.github.com/users/JoelKatz/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/JoelKatz/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/JoelKatz/subscriptions",
+      "organizations_url": "https://api.github.com/users/JoelKatz/orgs",
+      "repos_url": "https://api.github.com/users/JoelKatz/repos",
+      "events_url": "https://api.github.com/users/JoelKatz/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/JoelKatz/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": null,
+    "parents": [
+      {
+        "sha": "e9205293bd8d6352ce51372111336ba3c4e14e70",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e9205293bd8d6352ce51372111336ba3c4e14e70",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/e9205293bd8d6352ce51372111336ba3c4e14e70"
+      }
+    ],
+    "stats": {
+      "total": 50,
+      "additions": 38,
+      "deletions": 12
+    },
+    "files": [
+      {
+        "sha": "a324f0916433a3d9904b73a38bbe49ccfc557246",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 38,
+        "deletions": 12,
+        "changes": 50,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/96c5269511b0cecbea67c0981aaea1a8a3345ba3/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/96c5269511b0cecbea67c0981aaea1a8a3345ba3/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=96c5269511b0cecbea67c0981aaea1a8a3345ba3",
+        "patch": "@@ -2357,7 +2357,7 @@ string rfc1123Time()\n     return string(buffer);\n }\n \n-static string HTTPReply(int nStatus, const string& strMsg)\n+static string HTTPReply(int nStatus, const string& strMsg, bool keepalive)\n {\n     if (nStatus == 401)\n         return strprintf(\"HTTP/1.0 401 Authorization Required\\r\\n\"\n@@ -2386,7 +2386,7 @@ static string HTTPReply(int nStatus, const string& strMsg)\n     return strprintf(\n             \"HTTP/1.1 %d %s\\r\\n\"\n             \"Date: %s\\r\\n\"\n-            \"Connection: close\\r\\n\"\n+            \"Connection: %s\\r\\n\"\n             \"Content-Length: %d\\r\\n\"\n             \"Content-Type: application/json\\r\\n\"\n             \"Server: bitcoin-json-rpc/%s\\r\\n\"\n@@ -2395,19 +2395,24 @@ static string HTTPReply(int nStatus, const string& strMsg)\n         nStatus,\n         cStatus,\n         rfc1123Time().c_str(),\n+        keepalive ? \"keep-alive\" : \"close\",\n         strMsg.size(),\n         FormatFullVersion().c_str(),\n         strMsg.c_str());\n }\n \n-int ReadHTTPStatus(std::basic_istream<char>& stream)\n+int ReadHTTPStatus(std::basic_istream<char>& stream, int &proto)\n {\n     string str;\n     getline(stream, str);\n     vector<string> vWords;\n     boost::split(vWords, str, boost::is_any_of(\" \"));\n     if (vWords.size() < 2)\n         return 500;\n+    proto = 0;\n+    const char *ver = strstr(str.c_str(), \"HTTP/1.\");\n+    if (ver != NULL)\n+        proto = atoi(ver+7);\n     return atoi(vWords[1].c_str());\n }\n \n@@ -2442,7 +2447,8 @@ int ReadHTTP(std::basic_istream<char>& stream, map<string, string>& mapHeadersRe\n     strMessageRet = \"\";\n \n     // Read status\n-    int nStatus = ReadHTTPStatus(stream);\n+    int nProto;\n+    int nStatus = ReadHTTPStatus(stream, nProto);\n \n     // Read header\n     int nLen = ReadHTTPHeader(stream, mapHeadersRet);\n@@ -2457,6 +2463,16 @@ int ReadHTTP(std::basic_istream<char>& stream, map<string, string>& mapHeadersRe\n         strMessageRet = string(vch.begin(), vch.end());\n     }\n \n+    string sConHdr = mapHeadersRet[\"connection\"];\n+\n+    if ((sConHdr != \"close\") && (sConHdr != \"keep-alive\"))\n+    {\n+        if (nProto >= 1)\n+            mapHeadersRet[\"connection\"] = \"keep-alive\";\n+        else\n+            mapHeadersRet[\"connection\"] = \"close\";\n+    }\n+\n     return nStatus;\n }\n \n@@ -2509,7 +2525,7 @@ void ErrorReply(std::ostream& stream, const Object& objError, const Value& id)\n     if (code == -32600) nStatus = 400;\n     else if (code == -32601) nStatus = 404;\n     string strReply = JSONRPCReply(Value::null, objError, id);\n-    stream << HTTPReply(nStatus, strReply) << std::flush;\n+    stream << HTTPReply(nStatus, strReply, false) << std::flush;\n }\n \n bool ClientAllowed(const string& strAddress)\n@@ -2681,7 +2697,7 @@ void ThreadRPCServer2(void* parg)\n     {\n         // Accept connection\n         AcceptedConnection *conn =\n-\t            new AcceptedConnection(io_service, context, fUseSSL);\n+                    new AcceptedConnection(io_service, context, fUseSSL);\n \n         vnThreadsRunning[THREAD_RPCLISTENER]--;\n         acceptor.accept(conn->sslStream.lowest_layer(), conn->peer);\n@@ -2700,7 +2716,7 @@ void ThreadRPCServer2(void* parg)\n         {\n             // Only send a 403 if we're not using SSL to prevent a DoS during the SSL handshake.\n             if (!fUseSSL)\n-                conn->stream << HTTPReply(403, \"\") << std::flush;\n+                conn->stream << HTTPReply(403, \"\", false) << std::flush;\n             delete conn;\n         }\n \n@@ -2718,7 +2734,15 @@ void ThreadRPCServer3(void* parg)\n     vnThreadsRunning[THREAD_RPCHANDLER]++;\n     AcceptedConnection *conn = (AcceptedConnection *) parg;\n \n-    do {\n+    bool fRun = true;\n+    loop {\n+        if (fShutdown || !fRun)\n+        {\n+            conn->stream.close();\n+            delete conn;\n+            --vnThreadsRunning[THREAD_RPCHANDLER];\n+            return;\n+        }\n         map<string, string> mapHeaders;\n         string strRequest;\n \n@@ -2727,7 +2751,7 @@ void ThreadRPCServer3(void* parg)\n         // Check authorization\n         if (mapHeaders.count(\"authorization\") == 0)\n         {\n-            conn->stream << HTTPReply(401, \"\") << std::flush;\n+            conn->stream << HTTPReply(401, \"\", false) << std::flush;\n             break;\n         }\n         if (!HTTPAuthorized(mapHeaders))\n@@ -2739,9 +2763,11 @@ void ThreadRPCServer3(void* parg)\n             if (mapArgs[\"-rpcpassword\"].size() < 20)\n                 Sleep(250);\n \n-            conn->stream << HTTPReply(401, \"\") << std::flush;\n+            conn->stream << HTTPReply(401, \"\", false) << std::flush;\n             break;\n         }\n+        if (mapHeaders[\"connection\"] == \"close\")\n+            fRun = false;\n \n         Value id = Value::null;\n         try\n@@ -2779,7 +2805,7 @@ void ThreadRPCServer3(void* parg)\n \n             // Send reply\n             string strReply = JSONRPCReply(result, Value::null, id);\n-            conn->stream << HTTPReply(200, strReply) << std::flush;\n+            conn->stream << HTTPReply(200, strReply, fRun) << std::flush;\n         }\n         catch (Object& objError)\n         {\n@@ -2792,7 +2818,7 @@ void ThreadRPCServer3(void* parg)\n             break;\n         }\n     }\n-    while (0);\n+\n     delete conn;\n     vnThreadsRunning[THREAD_RPCHANDLER]--;\n }"
+      }
+    ]
+  }
+]

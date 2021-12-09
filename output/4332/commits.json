@@ -1,0 +1,585 @@
+[
+  {
+    "sha": "ae775b5b311982a3d932a9e34ddc94ce597dcaaf",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphZTc3NWI1YjMxMTk4MmEzZDkzMmE5ZTM0ZGRjOTRjZTU5N2RjYWFm",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-06-24T03:10:24Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-07-29T15:13:27Z"
+      },
+      "message": "Consolidate CTransaction hex encode/decode into core_io.h, core_{read,write}.cpp",
+      "tree": {
+        "sha": "39bdd6b040c905395473564b0d2e6c7808270133",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/39bdd6b040c905395473564b0d2e6c7808270133"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/ae775b5b311982a3d932a9e34ddc94ce597dcaaf",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ae775b5b311982a3d932a9e34ddc94ce597dcaaf",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/ae775b5b311982a3d932a9e34ddc94ce597dcaaf",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ae775b5b311982a3d932a9e34ddc94ce597dcaaf/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "29203228710de3e180914c1d66f48dd7e41270a0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/29203228710de3e180914c1d66f48dd7e41270a0",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/29203228710de3e180914c1d66f48dd7e41270a0"
+      }
+    ],
+    "stats": {
+      "total": 106,
+      "additions": 73,
+      "deletions": 33
+    },
+    "files": [
+      {
+        "sha": "4e591464242bc4525976ac362c3f6543fb5adaf9",
+        "filename": "src/Makefile.am",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ae775b5b311982a3d932a9e34ddc94ce597dcaaf/src/Makefile.am",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ae775b5b311982a3d932a9e34ddc94ce597dcaaf/src/Makefile.am",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/Makefile.am?ref=ae775b5b311982a3d932a9e34ddc94ce597dcaaf",
+        "patch": "@@ -75,6 +75,7 @@ BITCOIN_CORE_H = \\\n   coins.h \\\n   compat.h \\\n   core.h \\\n+  core_io.h \\\n   crypter.h \\\n   db.h \\\n   hash.h \\\n@@ -185,6 +186,8 @@ libbitcoin_common_a_SOURCES = \\\n   chainparams.cpp \\\n   coins.cpp \\\n   core.cpp \\\n+  core_read.cpp \\\n+  core_write.cpp \\\n   hash.cpp \\\n   key.cpp \\\n   keystore.cpp \\"
+      },
+      {
+        "sha": "257dac36271de75104ba4c0ced6f419f7644684a",
+        "filename": "src/core_io.h",
+        "status": "added",
+        "additions": 14,
+        "deletions": 0,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ae775b5b311982a3d932a9e34ddc94ce597dcaaf/src/core_io.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ae775b5b311982a3d932a9e34ddc94ce597dcaaf/src/core_io.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/core_io.h?ref=ae775b5b311982a3d932a9e34ddc94ce597dcaaf",
+        "patch": "@@ -0,0 +1,14 @@\n+#ifndef __BITCOIN_CORE_IO_H__\n+#define __BITCOIN_CORE_IO_H__\n+\n+#include <string>\n+\n+class CTransaction;\n+\n+// core_read.cpp\n+extern bool DecodeHexTx(CTransaction& tx, const std::string& strHexTx);\n+\n+// core_write.cpp\n+extern std::string EncodeHexTx(const CTransaction& tx);\n+\n+#endif // __BITCOIN_CORE_IO_H__"
+      },
+      {
+        "sha": "937dcd9c122b96c1be878d45e9b1e7c8b7dd182e",
+        "filename": "src/core_read.cpp",
+        "status": "added",
+        "additions": 25,
+        "deletions": 0,
+        "changes": 25,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ae775b5b311982a3d932a9e34ddc94ce597dcaaf/src/core_read.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ae775b5b311982a3d932a9e34ddc94ce597dcaaf/src/core_read.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/core_read.cpp?ref=ae775b5b311982a3d932a9e34ddc94ce597dcaaf",
+        "patch": "@@ -0,0 +1,25 @@\n+\n+#include <vector>\n+#include \"core_io.h\"\n+#include \"core.h\"\n+#include \"serialize.h\"\n+\n+using namespace std;\n+\n+bool DecodeHexTx(CTransaction& tx, const std::string& strHexTx)\n+{\n+    if (!IsHex(strHexTx))\n+        return false;\n+\n+    vector<unsigned char> txData(ParseHex(strHexTx));\n+    CDataStream ssData(txData, SER_NETWORK, PROTOCOL_VERSION);\n+    try {\n+        ssData >> tx;\n+    }\n+    catch (std::exception &e) {\n+        return false;\n+    }\n+\n+    return true;\n+}\n+"
+      },
+      {
+        "sha": "960974df8935e116eeabedf4d815a1a0bf06c860",
+        "filename": "src/core_write.cpp",
+        "status": "added",
+        "additions": 15,
+        "deletions": 0,
+        "changes": 15,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ae775b5b311982a3d932a9e34ddc94ce597dcaaf/src/core_write.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ae775b5b311982a3d932a9e34ddc94ce597dcaaf/src/core_write.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/core_write.cpp?ref=ae775b5b311982a3d932a9e34ddc94ce597dcaaf",
+        "patch": "@@ -0,0 +1,15 @@\n+\n+#include \"core_io.h\"\n+#include \"core.h\"\n+#include \"serialize.h\"\n+#include \"util.h\"\n+\n+using namespace std;\n+\n+string EncodeHexTx(const CTransaction& tx)\n+{\n+    CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);\n+    ssTx << tx;\n+    return HexStr(ssTx.begin(), ssTx.end());\n+}\n+"
+      },
+      {
+        "sha": "edab427cbfac63c5f1e17d8da54445ee87a00e48",
+        "filename": "src/rpcmining.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 3,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ae775b5b311982a3d932a9e34ddc94ce597dcaaf/src/rpcmining.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ae775b5b311982a3d932a9e34ddc94ce597dcaaf/src/rpcmining.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcmining.cpp?ref=ae775b5b311982a3d932a9e34ddc94ce597dcaaf",
+        "patch": "@@ -10,6 +10,7 @@\n #include \"main.h\"\n #include \"miner.h\"\n #include \"pow.h\"\n+#include \"core_io.h\"\n #ifdef ENABLE_WALLET\n #include \"db.h\"\n #include \"wallet.h\"\n@@ -472,9 +473,7 @@ Value getblocktemplate(const Array& params, bool fHelp)\n \n         Object entry;\n \n-        CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);\n-        ssTx << tx;\n-        entry.push_back(Pair(\"data\", HexStr(ssTx.begin(), ssTx.end())));\n+        entry.push_back(Pair(\"data\", EncodeHexTx(tx)));\n \n         entry.push_back(Pair(\"hash\", txHash.GetHex()));\n "
+      },
+      {
+        "sha": "a7aeb8f00b02988a54f22bb19efa39a46eb4a604",
+        "filename": "src/rpcrawtransaction.cpp",
+        "status": "modified",
+        "additions": 12,
+        "deletions": 27,
+        "changes": 39,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ae775b5b311982a3d932a9e34ddc94ce597dcaaf/src/rpcrawtransaction.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ae775b5b311982a3d932a9e34ddc94ce597dcaaf/src/rpcrawtransaction.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcrawtransaction.cpp?ref=ae775b5b311982a3d932a9e34ddc94ce597dcaaf",
+        "patch": "@@ -5,6 +5,7 @@\n \n #include \"base58.h\"\n #include \"core.h\"\n+#include \"core_io.h\"\n #include \"init.h\"\n #include \"keystore.h\"\n #include \"main.h\"\n@@ -182,9 +183,7 @@ Value getrawtransaction(const Array& params, bool fHelp)\n     if (!GetTransaction(hash, tx, hashBlock, true))\n         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, \"No information available about transaction\");\n \n-    CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);\n-    ssTx << tx;\n-    string strHex = HexStr(ssTx.begin(), ssTx.end());\n+    string strHex = EncodeHexTx(tx);\n \n     if (!fVerbose)\n         return strHex;\n@@ -388,9 +387,7 @@ Value createrawtransaction(const Array& params, bool fHelp)\n         rawTx.vout.push_back(out);\n     }\n \n-    CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);\n-    ss << rawTx;\n-    return HexStr(ss.begin(), ss.end());\n+    return EncodeHexTx(rawTx);\n }\n \n Value decoderawtransaction(const Array& params, bool fHelp)\n@@ -444,15 +441,12 @@ Value decoderawtransaction(const Array& params, bool fHelp)\n             + HelpExampleRpc(\"decoderawtransaction\", \"\\\"hexstring\\\"\")\n         );\n \n-    vector<unsigned char> txData(ParseHexV(params[0], \"argument\"));\n-    CDataStream ssData(txData, SER_NETWORK, PROTOCOL_VERSION);\n+    RPCTypeCheck(params, list_of(str_type));\n+\n     CTransaction tx;\n-    try {\n-        ssData >> tx;\n-    }\n-    catch (std::exception &e) {\n+\n+    if (!DecodeHexTx(tx, params[0].get_str()))\n         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, \"TX decode failed\");\n-    }\n \n     Object result;\n     TxToJSON(tx, 0, result);\n@@ -723,9 +717,7 @@ Value signrawtransaction(const Array& params, bool fHelp)\n     }\n \n     Object result;\n-    CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);\n-    ssTx << mergedTx;\n-    result.push_back(Pair(\"hex\", HexStr(ssTx.begin(), ssTx.end())));\n+    result.push_back(Pair(\"hex\", EncodeHexTx(mergedTx)));\n     result.push_back(Pair(\"complete\", fComplete));\n \n     return result;\n@@ -754,25 +746,18 @@ Value sendrawtransaction(const Array& params, bool fHelp)\n             + HelpExampleRpc(\"sendrawtransaction\", \"\\\"signedhex\\\"\")\n         );\n \n+    RPCTypeCheck(params, list_of(str_type)(bool_type));\n \n     // parse hex string from parameter\n-    vector<unsigned char> txData(ParseHexV(params[0], \"parameter\"));\n-    CDataStream ssData(txData, SER_NETWORK, PROTOCOL_VERSION);\n     CTransaction tx;\n+    if (!DecodeHexTx(tx, params[0].get_str()))\n+        throw JSONRPCError(RPC_DESERIALIZATION_ERROR, \"TX decode failed\");\n+    uint256 hashTx = tx.GetHash();\n \n     bool fOverrideFees = false;\n     if (params.size() > 1)\n         fOverrideFees = params[1].get_bool();\n \n-    // deserialize binary data stream\n-    try {\n-        ssData >> tx;\n-    }\n-    catch (std::exception &e) {\n-        throw JSONRPCError(RPC_DESERIALIZATION_ERROR, \"TX decode failed\");\n-    }\n-    const uint256 &hashTx = tx.GetHash();\n-\n     CCoinsViewCache &view = *pcoinsTip;\n     CCoins existingCoins;\n     bool fHaveMempool = mempool.exists(hashTx);"
+      },
+      {
+        "sha": "667ca33ce1c0ba070069e96cc4a19cb11f93f255",
+        "filename": "src/rpcwallet.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 3,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ae775b5b311982a3d932a9e34ddc94ce597dcaaf/src/rpcwallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ae775b5b311982a3d932a9e34ddc94ce597dcaaf/src/rpcwallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcwallet.cpp?ref=ae775b5b311982a3d932a9e34ddc94ce597dcaaf",
+        "patch": "@@ -4,6 +4,7 @@\n // file COPYING or http://www.opensource.org/licenses/mit-license.php.\n \n #include \"base58.h\"\n+#include \"core_io.h\"\n #include \"rpcserver.h\"\n #include \"init.h\"\n #include \"net.h\"\n@@ -1550,9 +1551,7 @@ Value gettransaction(const Array& params, bool fHelp)\n     ListTransactions(wtx, \"*\", 0, false, details, filter);\n     entry.push_back(Pair(\"details\", details));\n \n-    CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);\n-    ssTx << static_cast<CTransaction>(wtx);\n-    string strHex = HexStr(ssTx.begin(), ssTx.end());\n+    string strHex = EncodeHexTx(static_cast<CTransaction>(wtx));\n     entry.push_back(Pair(\"hex\", strHex));\n \n     return entry;"
+      }
+    ]
+  },
+  {
+    "sha": "b2aeaa79393608132104183eba117fcbf583148e",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiMmFlYWE3OTM5MzYwODEzMjEwNDE4M2ViYTExN2ZjYmY1ODMxNDhl",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-06-24T03:16:33Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-07-29T15:13:27Z"
+      },
+      "message": "Move ParseScript() helper, becoming accessible outside src/test/",
+      "tree": {
+        "sha": "98bc68b1a815c0afe644e56e6fa6eb47297fe355",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/98bc68b1a815c0afe644e56e6fa6eb47297fe355"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/b2aeaa79393608132104183eba117fcbf583148e",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b2aeaa79393608132104183eba117fcbf583148e",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/b2aeaa79393608132104183eba117fcbf583148e",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b2aeaa79393608132104183eba117fcbf583148e/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "ae775b5b311982a3d932a9e34ddc94ce597dcaaf",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ae775b5b311982a3d932a9e34ddc94ce597dcaaf",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/ae775b5b311982a3d932a9e34ddc94ce597dcaaf"
+      }
+    ],
+    "stats": {
+      "total": 152,
+      "additions": 81,
+      "deletions": 71
+    },
+    "files": [
+      {
+        "sha": "528c472803ed188f6719583d2479a324b674db38",
+        "filename": "src/core_io.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b2aeaa79393608132104183eba117fcbf583148e/src/core_io.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b2aeaa79393608132104183eba117fcbf583148e/src/core_io.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/core_io.h?ref=b2aeaa79393608132104183eba117fcbf583148e",
+        "patch": "@@ -3,9 +3,11 @@\n \n #include <string>\n \n+class CScript;\n class CTransaction;\n \n // core_read.cpp\n+extern CScript ParseScript(std::string s);\n extern bool DecodeHexTx(CTransaction& tx, const std::string& strHexTx);\n \n // core_write.cpp"
+      },
+      {
+        "sha": "d5d3cca48027832a0c7d5b9b3ddea5ca0e501226",
+        "filename": "src/core_read.cpp",
+        "status": "modified",
+        "additions": 77,
+        "deletions": 0,
+        "changes": 77,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b2aeaa79393608132104183eba117fcbf583148e/src/core_read.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b2aeaa79393608132104183eba117fcbf583148e/src/core_read.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/core_read.cpp?ref=b2aeaa79393608132104183eba117fcbf583148e",
+        "patch": "@@ -3,8 +3,85 @@\n #include \"core_io.h\"\n #include \"core.h\"\n #include \"serialize.h\"\n+#include \"script.h\"\n+\n+#include <boost/assign/list_of.hpp>\n+#include <boost/algorithm/string/classification.hpp>\n+#include <boost/algorithm/string/predicate.hpp>\n+#include <boost/algorithm/string/split.hpp>\n+#include <boost/algorithm/string/replace.hpp>\n \n using namespace std;\n+using namespace boost;\n+using namespace boost::algorithm;\n+\n+CScript ParseScript(std::string s)\n+{\n+    CScript result;\n+\n+    static map<string, opcodetype> mapOpNames;\n+\n+    if (mapOpNames.size() == 0)\n+    {\n+        for (int op = 0; op <= OP_NOP10; op++)\n+        {\n+            // Allow OP_RESERVED to get into mapOpNames\n+            if (op < OP_NOP && op != OP_RESERVED)\n+                continue;\n+\n+            const char* name = GetOpName((opcodetype)op);\n+            if (strcmp(name, \"OP_UNKNOWN\") == 0)\n+                continue;\n+            string strName(name);\n+            mapOpNames[strName] = (opcodetype)op;\n+            // Convenience: OP_ADD and just ADD are both recognized:\n+            replace_first(strName, \"OP_\", \"\");\n+            mapOpNames[strName] = (opcodetype)op;\n+        }\n+    }\n+\n+    vector<string> words;\n+    split(words, s, is_any_of(\" \\t\\n\"), token_compress_on);\n+\n+    BOOST_FOREACH(string w, words)\n+    {\n+        if (w.size() == 0)\n+        {\n+            // Empty string, ignore. (boost::split given '' will return one word)\n+        }\n+        else if (all(w, is_digit()) ||\n+            (starts_with(w, \"-\") && all(string(w.begin()+1, w.end()), is_digit())))\n+        {\n+            // Number\n+            int64_t n = atoi64(w);\n+            result << n;\n+        }\n+        else if (starts_with(w, \"0x\") && IsHex(string(w.begin()+2, w.end())))\n+        {\n+            // Raw hex data, inserted NOT pushed onto stack:\n+            std::vector<unsigned char> raw = ParseHex(string(w.begin()+2, w.end()));\n+            result.insert(result.end(), raw.begin(), raw.end());\n+        }\n+        else if (w.size() >= 2 && starts_with(w, \"'\") && ends_with(w, \"'\"))\n+        {\n+            // Single-quoted string, pushed as data. NOTE: this is poor-man's\n+            // parsing, spaces/tabs/newlines in single-quoted strings won't work.\n+            std::vector<unsigned char> value(w.begin()+1, w.end()-1);\n+            result << value;\n+        }\n+        else if (mapOpNames.count(w))\n+        {\n+            // opcode, e.g. OP_ADD or ADD:\n+            result << mapOpNames[w];\n+        }\n+        else\n+        {\n+            throw runtime_error(\"script parse error\");\n+        }\n+    }\n+\n+    return result;\n+}\n \n bool DecodeHexTx(CTransaction& tx, const std::string& strHexTx)\n {"
+      },
+      {
+        "sha": "5e35875a8e4c367ae51468636fbc5286056c4670",
+        "filename": "src/test/script_tests.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 70,
+        "changes": 71,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b2aeaa79393608132104183eba117fcbf583148e/src/test/script_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b2aeaa79393608132104183eba117fcbf583148e/src/test/script_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/script_tests.cpp?ref=b2aeaa79393608132104183eba117fcbf583148e",
+        "patch": "@@ -10,6 +10,7 @@\n #include \"key.h\"\n #include \"keystore.h\"\n #include \"main.h\"\n+#include \"core_io.h\"\n \n #include <fstream>\n #include <stdint.h>\n@@ -36,76 +37,6 @@ extern uint256 SignatureHash(const CScript &scriptCode, const CTransaction& txTo\n \n static const unsigned int flags = SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC;\n \n-CScript\n-ParseScript(string s)\n-{\n-    CScript result;\n-\n-    static map<string, opcodetype> mapOpNames;\n-\n-    if (mapOpNames.size() == 0)\n-    {\n-        for (int op = 0; op <= OP_NOP10; op++)\n-        {\n-            // Allow OP_RESERVED to get into mapOpNames\n-            if (op < OP_NOP && op != OP_RESERVED)\n-                continue;\n-\n-            const char* name = GetOpName((opcodetype)op);\n-            if (strcmp(name, \"OP_UNKNOWN\") == 0)\n-                continue;\n-            string strName(name);\n-            mapOpNames[strName] = (opcodetype)op;\n-            // Convenience: OP_ADD and just ADD are both recognized:\n-            replace_first(strName, \"OP_\", \"\");\n-            mapOpNames[strName] = (opcodetype)op;\n-        }\n-    }\n-\n-    vector<string> words;\n-    split(words, s, is_any_of(\" \\t\\n\"), token_compress_on);\n-\n-    BOOST_FOREACH(string w, words)\n-    {\n-        if (w.size() == 0)\n-        {\n-            // Empty string, ignore. (boost::split given '' will return one word)\n-        }\n-        else if (all(w, is_digit()) ||\n-            (starts_with(w, \"-\") && all(string(w.begin()+1, w.end()), is_digit())))\n-        {\n-            // Number\n-            int64_t n = atoi64(w);\n-            result << n;\n-        }\n-        else if (starts_with(w, \"0x\") && IsHex(string(w.begin()+2, w.end())))\n-        {\n-            // Raw hex data, inserted NOT pushed onto stack:\n-            std::vector<unsigned char> raw = ParseHex(string(w.begin()+2, w.end()));\n-            result.insert(result.end(), raw.begin(), raw.end());\n-        }\n-        else if (w.size() >= 2 && starts_with(w, \"'\") && ends_with(w, \"'\"))\n-        {\n-            // Single-quoted string, pushed as data. NOTE: this is poor-man's\n-            // parsing, spaces/tabs/newlines in single-quoted strings won't work.\n-            std::vector<unsigned char> value(w.begin()+1, w.end()-1);\n-            result << value;\n-        }\n-        else if (mapOpNames.count(w))\n-        {\n-            // opcode, e.g. OP_ADD or ADD:\n-            result << mapOpNames[w];\n-        }\n-        else\n-        {\n-            BOOST_ERROR(\"Parse error: \" << s);\n-            return CScript();\n-        }\n-    }\n-\n-    return result;\n-}\n-\n Array\n read_json(const std::string& jsondata)\n {"
+      },
+      {
+        "sha": "03919e7c7d3fb6aaee2d45a3a0d3392844485d12",
+        "filename": "src/test/transaction_tests.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b2aeaa79393608132104183eba117fcbf583148e/src/test/transaction_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b2aeaa79393608132104183eba117fcbf583148e/src/test/transaction_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/transaction_tests.cpp?ref=b2aeaa79393608132104183eba117fcbf583148e",
+        "patch": "@@ -9,6 +9,7 @@\n #include \"keystore.h\"\n #include \"main.h\"\n #include \"script.h\"\n+#include \"core_io.h\"\n \n #include <map>\n #include <string>\n@@ -24,7 +25,6 @@ using namespace boost::algorithm;\n \n // In script_tests.cpp\n extern Array read_json(const std::string& jsondata);\n-extern CScript ParseScript(string s);\n \n unsigned int ParseFlags(string strFlags){\n     unsigned int flags = 0;"
+      }
+    ]
+  },
+  {
+    "sha": "2a5840096fd3b6235a4ff4b8488f8d4494414765",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyYTU4NDAwOTZmZDNiNjIzNWE0ZmY0Yjg0ODhmOGQ0NDk0NDE0NzY1",
+    "commit": {
+      "author": {
+        "name": "Cory Fields",
+        "email": "cory-nospam-@coryfields.com",
+        "date": "2014-06-23T23:32:54Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-07-29T15:13:27Z"
+      },
+      "message": "core_read's ParseScript(): minor cleanups\n\n- use .empty() rather than .size() == 0\n- use a const_iterator rather than BOOST_FOREACH\n- validate iterators before creating a string from them",
+      "tree": {
+        "sha": "dfe49dad65c52ef87e2c5111ac432853a788daf9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/dfe49dad65c52ef87e2c5111ac432853a788daf9"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/2a5840096fd3b6235a4ff4b8488f8d4494414765",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2a5840096fd3b6235a4ff4b8488f8d4494414765",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/2a5840096fd3b6235a4ff4b8488f8d4494414765",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2a5840096fd3b6235a4ff4b8488f8d4494414765/comments",
+    "author": {
+      "login": "theuni",
+      "id": 417043,
+      "node_id": "MDQ6VXNlcjQxNzA0Mw==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/417043?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/theuni",
+      "html_url": "https://github.com/theuni",
+      "followers_url": "https://api.github.com/users/theuni/followers",
+      "following_url": "https://api.github.com/users/theuni/following{/other_user}",
+      "gists_url": "https://api.github.com/users/theuni/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/theuni/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/theuni/subscriptions",
+      "organizations_url": "https://api.github.com/users/theuni/orgs",
+      "repos_url": "https://api.github.com/users/theuni/repos",
+      "events_url": "https://api.github.com/users/theuni/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/theuni/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": null,
+    "parents": [
+      {
+        "sha": "b2aeaa79393608132104183eba117fcbf583148e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b2aeaa79393608132104183eba117fcbf583148e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b2aeaa79393608132104183eba117fcbf583148e"
+      }
+    ],
+    "stats": {
+      "total": 24,
+      "additions": 12,
+      "deletions": 12
+    },
+    "files": [
+      {
+        "sha": "1ecd6db324cb4ce58c5a0e1b3a93ad5d7372d120",
+        "filename": "src/core_read.cpp",
+        "status": "modified",
+        "additions": 12,
+        "deletions": 12,
+        "changes": 24,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/2a5840096fd3b6235a4ff4b8488f8d4494414765/src/core_read.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/2a5840096fd3b6235a4ff4b8488f8d4494414765/src/core_read.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/core_read.cpp?ref=2a5840096fd3b6235a4ff4b8488f8d4494414765",
+        "patch": "@@ -21,7 +21,7 @@ CScript ParseScript(std::string s)\n \n     static map<string, opcodetype> mapOpNames;\n \n-    if (mapOpNames.size() == 0)\n+    if (mapOpNames.empty())\n     {\n         for (int op = 0; op <= OP_NOP10; op++)\n         {\n@@ -43,36 +43,36 @@ CScript ParseScript(std::string s)\n     vector<string> words;\n     split(words, s, is_any_of(\" \\t\\n\"), token_compress_on);\n \n-    BOOST_FOREACH(string w, words)\n+    for (std::vector<std::string>::const_iterator w = words.begin(); w != words.end(); ++w)\n     {\n-        if (w.size() == 0)\n+        if (w->empty())\n         {\n             // Empty string, ignore. (boost::split given '' will return one word)\n         }\n-        else if (all(w, is_digit()) ||\n-            (starts_with(w, \"-\") && all(string(w.begin()+1, w.end()), is_digit())))\n+        else if (all(*w, is_digit()) ||\n+            (starts_with(*w, \"-\") && all(string(w->begin()+1, w->end()), is_digit())))\n         {\n             // Number\n-            int64_t n = atoi64(w);\n+            int64_t n = atoi64(*w);\n             result << n;\n         }\n-        else if (starts_with(w, \"0x\") && IsHex(string(w.begin()+2, w.end())))\n+        else if (starts_with(*w, \"0x\") && (w->begin()+2 != w->end()) && IsHex(string(w->begin()+2, w->end())))\n         {\n             // Raw hex data, inserted NOT pushed onto stack:\n-            std::vector<unsigned char> raw = ParseHex(string(w.begin()+2, w.end()));\n+            std::vector<unsigned char> raw = ParseHex(string(w->begin()+2, w->end()));\n             result.insert(result.end(), raw.begin(), raw.end());\n         }\n-        else if (w.size() >= 2 && starts_with(w, \"'\") && ends_with(w, \"'\"))\n+        else if (w->size() >= 2 && starts_with(*w, \"'\") && ends_with(*w, \"'\"))\n         {\n             // Single-quoted string, pushed as data. NOTE: this is poor-man's\n             // parsing, spaces/tabs/newlines in single-quoted strings won't work.\n-            std::vector<unsigned char> value(w.begin()+1, w.end()-1);\n+            std::vector<unsigned char> value(w->begin()+1, w->end()-1);\n             result << value;\n         }\n-        else if (mapOpNames.count(w))\n+        else if (mapOpNames.count(*w))\n         {\n             // opcode, e.g. OP_ADD or ADD:\n-            result << mapOpNames[w];\n+            result << mapOpNames[*w];\n         }\n         else\n         {"
+      }
+    ]
+  },
+  {
+    "sha": "3ce7e669e3f90b3099a969ea5ffe3fa2643f4ed8",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozY2U3ZTY2OWUzZjkwYjMwOTlhOTY5ZWE1ZmZlM2ZhMjY0M2Y0ZWQ4",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-06-26T01:09:36Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-07-29T15:13:27Z"
+      },
+      "message": "bitcoin-cli, rpcrawtransaction: harmonize \"{\" styling",
+      "tree": {
+        "sha": "8a7b3a45774a5021aaf9171ac9e592a57fe4182f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/8a7b3a45774a5021aaf9171ac9e592a57fe4182f"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/3ce7e669e3f90b3099a969ea5ffe3fa2643f4ed8",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3ce7e669e3f90b3099a969ea5ffe3fa2643f4ed8",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/3ce7e669e3f90b3099a969ea5ffe3fa2643f4ed8",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3ce7e669e3f90b3099a969ea5ffe3fa2643f4ed8/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "2a5840096fd3b6235a4ff4b8488f8d4494414765",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2a5840096fd3b6235a4ff4b8488f8d4494414765",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/2a5840096fd3b6235a4ff4b8488f8d4494414765"
+      }
+    ],
+    "stats": {
+      "total": 112,
+      "additions": 37,
+      "deletions": 75
+    },
+    "files": [
+      {
+        "sha": "3b991f9276b2091ba27c93652f299b07009fbc99",
+        "filename": "src/bitcoin-cli.cpp",
+        "status": "modified",
+        "additions": 10,
+        "deletions": 21,
+        "changes": 31,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3ce7e669e3f90b3099a969ea5ffe3fa2643f4ed8/src/bitcoin-cli.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3ce7e669e3f90b3099a969ea5ffe3fa2643f4ed8/src/bitcoin-cli.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoin-cli.cpp?ref=3ce7e669e3f90b3099a969ea5ffe3fa2643f4ed8",
+        "patch": "@@ -50,8 +50,7 @@ static bool AppInitRPC(int argc, char* argv[])\n     // Parameters\n     //\n     ParseParameters(argc, argv);\n-    if (!boost::filesystem::is_directory(GetDataDir(false)))\n-    {\n+    if (!boost::filesystem::is_directory(GetDataDir(false))) {\n         fprintf(stderr, \"Error: Specified data directory \\\"%s\\\" does not exist.\\n\", mapArgs[\"-datadir\"].c_str());\n         return false;\n     }\n@@ -66,11 +65,9 @@ static bool AppInitRPC(int argc, char* argv[])\n         fprintf(stderr, \"Error: Invalid combination of -regtest and -testnet.\\n\");\n         return false;\n     }\n-    if (argc<2 || mapArgs.count(\"-?\") || mapArgs.count(\"-help\") || mapArgs.count(\"-version\"))\n-    {\n+    if (argc<2 || mapArgs.count(\"-?\") || mapArgs.count(\"-help\") || mapArgs.count(\"-version\")) {\n         std::string strUsage = _(\"Bitcoin Core RPC client version\") + \" \" + FormatFullVersion() + \"\\n\";\n-        if (!mapArgs.count(\"-version\"))\n-        {\n+        if (!mapArgs.count(\"-version\")) {\n             strUsage += \"\\n\" + _(\"Usage:\") + \"\\n\" +\n                   \"  bitcoin-cli [options] <command> [params]  \" + _(\"Send command to Bitcoin Core\") + \"\\n\" +\n                   \"  bitcoin-cli [options] help                \" + _(\"List commands\") + \"\\n\" +\n@@ -153,11 +150,9 @@ int CommandLineRPC(int argc, char *argv[])\n {\n     string strPrint;\n     int nRet = 0;\n-    try\n-    {\n+    try {\n         // Skip switches\n-        while (argc > 1 && IsSwitchChar(argv[1][0]))\n-        {\n+        while (argc > 1 && IsSwitchChar(argv[1][0])) {\n             argc--;\n             argv++;\n         }\n@@ -178,15 +173,12 @@ int CommandLineRPC(int argc, char *argv[])\n         const Value& result = find_value(reply, \"result\");\n         const Value& error  = find_value(reply, \"error\");\n \n-        if (error.type() != null_type)\n-        {\n+        if (error.type() != null_type) {\n             // Error\n             strPrint = \"error: \" + write_string(error, false);\n             int code = find_value(error.get_obj(), \"code\").get_int();\n             nRet = abs(code);\n-        }\n-        else\n-        {\n+        } else {\n             // Result\n             if (result.type() == null_type)\n                 strPrint = \"\";\n@@ -208,8 +200,7 @@ int CommandLineRPC(int argc, char *argv[])\n         throw;\n     }\n \n-    if (strPrint != \"\")\n-    {\n+    if (strPrint != \"\") {\n         fprintf((nRet == 0 ? stdout : stderr), \"%s\\n\", strPrint.c_str());\n     }\n     return nRet;\n@@ -219,8 +210,7 @@ int main(int argc, char* argv[])\n {\n     SetupEnvironment();\n \n-    try\n-    {\n+    try {\n         if(!AppInitRPC(argc, argv))\n             return EXIT_FAILURE;\n     }\n@@ -233,8 +223,7 @@ int main(int argc, char* argv[])\n     }\n \n     int ret = EXIT_FAILURE;\n-    try\n-    {\n+    try {\n         ret = CommandLineRPC(argc, argv);\n     }\n     catch (std::exception& e) {"
+      },
+      {
+        "sha": "763615120ae872f1bacfb7470953a72059991e28",
+        "filename": "src/rpcrawtransaction.cpp",
+        "status": "modified",
+        "additions": 27,
+        "deletions": 54,
+        "changes": 81,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3ce7e669e3f90b3099a969ea5ffe3fa2643f4ed8/src/rpcrawtransaction.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3ce7e669e3f90b3099a969ea5ffe3fa2643f4ed8/src/rpcrawtransaction.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcrawtransaction.cpp?ref=3ce7e669e3f90b3099a969ea5ffe3fa2643f4ed8",
+        "patch": "@@ -37,8 +37,7 @@ void ScriptPubKeyToJSON(const CScript& scriptPubKey, Object& out, bool fIncludeH\n     if (fIncludeHex)\n         out.push_back(Pair(\"hex\", HexStr(scriptPubKey.begin(), scriptPubKey.end())));\n \n-    if (!ExtractDestinations(scriptPubKey, type, addresses, nRequired))\n-    {\n+    if (!ExtractDestinations(scriptPubKey, type, addresses, nRequired)) {\n         out.push_back(Pair(\"type\", GetTxnOutputType(type)));\n         return;\n     }\n@@ -58,13 +57,11 @@ void TxToJSON(const CTransaction& tx, const uint256 hashBlock, Object& entry)\n     entry.push_back(Pair(\"version\", tx.nVersion));\n     entry.push_back(Pair(\"locktime\", (int64_t)tx.nLockTime));\n     Array vin;\n-    BOOST_FOREACH(const CTxIn& txin, tx.vin)\n-    {\n+    BOOST_FOREACH(const CTxIn& txin, tx.vin) {\n         Object in;\n         if (tx.IsCoinBase())\n             in.push_back(Pair(\"coinbase\", HexStr(txin.scriptSig.begin(), txin.scriptSig.end())));\n-        else\n-        {\n+        else {\n             in.push_back(Pair(\"txid\", txin.prevout.hash.GetHex()));\n             in.push_back(Pair(\"vout\", (int64_t)txin.prevout.n));\n             Object o;\n@@ -77,8 +74,7 @@ void TxToJSON(const CTransaction& tx, const uint256 hashBlock, Object& entry)\n     }\n     entry.push_back(Pair(\"vin\", vin));\n     Array vout;\n-    for (unsigned int i = 0; i < tx.vout.size(); i++)\n-    {\n+    for (unsigned int i = 0; i < tx.vout.size(); i++) {\n         const CTxOut& txout = tx.vout[i];\n         Object out;\n         out.push_back(Pair(\"value\", ValueFromAmount(txout.nValue)));\n@@ -90,15 +86,12 @@ void TxToJSON(const CTransaction& tx, const uint256 hashBlock, Object& entry)\n     }\n     entry.push_back(Pair(\"vout\", vout));\n \n-    if (hashBlock != 0)\n-    {\n+    if (hashBlock != 0) {\n         entry.push_back(Pair(\"blockhash\", hashBlock.GetHex()));\n         map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(hashBlock);\n-        if (mi != mapBlockIndex.end() && (*mi).second)\n-        {\n+        if (mi != mapBlockIndex.end() && (*mi).second) {\n             CBlockIndex* pindex = (*mi).second;\n-            if (chainActive.Contains(pindex))\n-            {\n+            if (chainActive.Contains(pindex)) {\n                 entry.push_back(Pair(\"confirmations\", 1 + chainActive.Height() - pindex->nHeight));\n                 entry.push_back(Pair(\"time\", pindex->GetBlockTime()));\n                 entry.push_back(Pair(\"blocktime\", pindex->GetBlockTime()));\n@@ -244,11 +237,9 @@ Value listunspent(const Array& params, bool fHelp)\n         nMaxDepth = params[1].get_int();\n \n     set<CBitcoinAddress> setAddress;\n-    if (params.size() > 2)\n-    {\n+    if (params.size() > 2) {\n         Array inputs = params[2].get_array();\n-        BOOST_FOREACH(Value& input, inputs)\n-        {\n+        BOOST_FOREACH(Value& input, inputs) {\n             CBitcoinAddress address(input.get_str());\n             if (!address.IsValid())\n                 throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, string(\"Invalid Bitcoin address: \")+input.get_str());\n@@ -262,13 +253,11 @@ Value listunspent(const Array& params, bool fHelp)\n     vector<COutput> vecOutputs;\n     assert(pwalletMain != NULL);\n     pwalletMain->AvailableCoins(vecOutputs, false);\n-    BOOST_FOREACH(const COutput& out, vecOutputs)\n-    {\n+    BOOST_FOREACH(const COutput& out, vecOutputs) {\n         if (out.nDepth < nMinDepth || out.nDepth > nMaxDepth)\n             continue;\n \n-        if (setAddress.size())\n-        {\n+        if (setAddress.size()) {\n             CTxDestination address;\n             if (!ExtractDestination(out.tx->vout[out.i].scriptPubKey, address))\n                 continue;\n@@ -283,18 +272,15 @@ Value listunspent(const Array& params, bool fHelp)\n         entry.push_back(Pair(\"txid\", out.tx->GetHash().GetHex()));\n         entry.push_back(Pair(\"vout\", out.i));\n         CTxDestination address;\n-        if (ExtractDestination(out.tx->vout[out.i].scriptPubKey, address))\n-        {\n+        if (ExtractDestination(out.tx->vout[out.i].scriptPubKey, address)) {\n             entry.push_back(Pair(\"address\", CBitcoinAddress(address).ToString()));\n             if (pwalletMain->mapAddressBook.count(address))\n                 entry.push_back(Pair(\"account\", pwalletMain->mapAddressBook[address].name));\n         }\n         entry.push_back(Pair(\"scriptPubKey\", HexStr(pk.begin(), pk.end())));\n-        if (pk.IsPayToScriptHash())\n-        {\n+        if (pk.IsPayToScriptHash()) {\n             CTxDestination address;\n-            if (ExtractDestination(pk, address))\n-            {\n+            if (ExtractDestination(pk, address)) {\n                 const CScriptID& hash = boost::get<const CScriptID&>(address);\n                 CScript redeemScript;\n                 if (pwalletMain->GetCScript(hash, redeemScript))\n@@ -351,8 +337,7 @@ Value createrawtransaction(const Array& params, bool fHelp)\n \n     CMutableTransaction rawTx;\n \n-    BOOST_FOREACH(const Value& input, inputs)\n-    {\n+    BOOST_FOREACH(const Value& input, inputs) {\n         const Object& o = input.get_obj();\n \n         uint256 txid = ParseHashO(o, \"txid\");\n@@ -369,8 +354,7 @@ Value createrawtransaction(const Array& params, bool fHelp)\n     }\n \n     set<CBitcoinAddress> setAddress;\n-    BOOST_FOREACH(const Pair& s, sendTo)\n-    {\n+    BOOST_FOREACH(const Pair& s, sendTo) {\n         CBitcoinAddress address(s.name_);\n         if (!address.IsValid())\n             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, string(\"Invalid Bitcoin address: \")+s.name_);\n@@ -550,8 +534,7 @@ Value signrawtransaction(const Array& params, bool fHelp)\n     vector<unsigned char> txData(ParseHexV(params[0], \"argument 1\"));\n     CDataStream ssData(txData, SER_NETWORK, PROTOCOL_VERSION);\n     vector<CMutableTransaction> txVariants;\n-    while (!ssData.empty())\n-    {\n+    while (!ssData.empty()) {\n         try {\n             CMutableTransaction tx;\n             ssData >> tx;\n@@ -590,12 +573,10 @@ Value signrawtransaction(const Array& params, bool fHelp)\n \n     bool fGivenKeys = false;\n     CBasicKeyStore tempKeystore;\n-    if (params.size() > 2 && params[2].type() != null_type)\n-    {\n+    if (params.size() > 2 && params[2].type() != null_type) {\n         fGivenKeys = true;\n         Array keys = params[2].get_array();\n-        BOOST_FOREACH(Value k, keys)\n-        {\n+        BOOST_FOREACH(Value k, keys) {\n             CBitcoinSecret vchSecret;\n             bool fGood = vchSecret.SetString(k.get_str());\n             if (!fGood)\n@@ -610,11 +591,9 @@ Value signrawtransaction(const Array& params, bool fHelp)\n #endif\n \n     // Add previous txouts given in the RPC call:\n-    if (params.size() > 1 && params[1].type() != null_type)\n-    {\n+    if (params.size() > 1 && params[1].type() != null_type) {\n         Array prevTxs = params[1].get_array();\n-        BOOST_FOREACH(Value& p, prevTxs)\n-        {\n+        BOOST_FOREACH(Value& p, prevTxs) {\n             if (p.type() != obj_type)\n                 throw JSONRPCError(RPC_DESERIALIZATION_ERROR, \"expected object with {\\\"txid'\\\",\\\"vout\\\",\\\"scriptPubKey\\\"}\");\n \n@@ -649,12 +628,10 @@ Value signrawtransaction(const Array& params, bool fHelp)\n \n             // if redeemScript given and not using the local wallet (private keys\n             // given), add redeemScript to the tempKeystore so it can be signed:\n-            if (fGivenKeys && scriptPubKey.IsPayToScriptHash())\n-            {\n+            if (fGivenKeys && scriptPubKey.IsPayToScriptHash()) {\n                 RPCTypeCheck(prevOut, map_list_of(\"txid\", str_type)(\"vout\", int_type)(\"scriptPubKey\", str_type)(\"redeemScript\",str_type));\n                 Value v = find_value(prevOut, \"redeemScript\");\n-                if (!(v == Value::null))\n-                {\n+                if (!(v == Value::null)) {\n                     vector<unsigned char> rsData(ParseHexV(v, \"redeemScript\"));\n                     CScript redeemScript(rsData.begin(), rsData.end());\n                     tempKeystore.AddCScript(redeemScript);\n@@ -670,8 +647,7 @@ Value signrawtransaction(const Array& params, bool fHelp)\n #endif\n \n     int nHashType = SIGHASH_ALL;\n-    if (params.size() > 3 && params[3].type() != null_type)\n-    {\n+    if (params.size() > 3 && params[3].type() != null_type) {\n         static map<string, int> mapSigHashValues =\n             boost::assign::map_list_of\n             (string(\"ALL\"), int(SIGHASH_ALL))\n@@ -691,12 +667,10 @@ Value signrawtransaction(const Array& params, bool fHelp)\n     bool fHashSingle = ((nHashType & ~SIGHASH_ANYONECANPAY) == SIGHASH_SINGLE);\n \n     // Sign what we can:\n-    for (unsigned int i = 0; i < mergedTx.vin.size(); i++)\n-    {\n+    for (unsigned int i = 0; i < mergedTx.vin.size(); i++) {\n         CTxIn& txin = mergedTx.vin[i];\n         CCoins coins;\n-        if (!view.GetCoins(txin.prevout.hash, coins) || !coins.IsAvailable(txin.prevout.n))\n-        {\n+        if (!view.GetCoins(txin.prevout.hash, coins) || !coins.IsAvailable(txin.prevout.n)) {\n             fComplete = false;\n             continue;\n         }\n@@ -708,8 +682,7 @@ Value signrawtransaction(const Array& params, bool fHelp)\n             SignSignature(keystore, prevPubKey, mergedTx, i, nHashType);\n \n         // ... and merge in other signatures:\n-        BOOST_FOREACH(const CMutableTransaction& txv, txVariants)\n-        {\n+        BOOST_FOREACH(const CMutableTransaction& txv, txVariants) {\n             txin.scriptSig = CombineSignatures(prevPubKey, mergedTx, i, txin.scriptSig, txv.vin[i].scriptSig);\n         }\n         if (!VerifyScript(txin.scriptSig, prevPubKey, mergedTx, i, STANDARD_SCRIPT_VERIFY_FLAGS, 0))"
+      }
+    ]
+  },
+  {
+    "sha": "cbe39a38526a6c17619d02cc697b80ebfd57203b",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjYmUzOWEzODUyNmE2YzE3NjE5ZDAyY2M2OTdiODBlYmZkNTcyMDNi",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-07-29T15:12:44Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-07-29T15:13:27Z"
+      },
+      "message": "Add \"bitcoin-tx\" command line utility and supporting modules.\n\nThis is a simple utility that provides command line manipulation of\na hex-encoded TX. The utility takes a hex string on the command line\nas input, performs zero or more mutations, and outputs a hex string\nto standard output.\n\nThis utility is also an intentional exercise of the \"bitcoin library\"\nconcept. It is designed to require minimal libraries, and works\nentirely without need for any RPC or P2P communication.\n\nSee \"bitcoin-tx --help\" for command and options summary.",
+      "tree": {
+        "sha": "41ee0470ef9b6f3c87a4bb509c5b25ddba84c3a5",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/41ee0470ef9b6f3c87a4bb509c5b25ddba84c3a5"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/cbe39a38526a6c17619d02cc697b80ebfd57203b",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/cbe39a38526a6c17619d02cc697b80ebfd57203b",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/cbe39a38526a6c17619d02cc697b80ebfd57203b",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/cbe39a38526a6c17619d02cc697b80ebfd57203b/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "3ce7e669e3f90b3099a969ea5ffe3fa2643f4ed8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3ce7e669e3f90b3099a969ea5ffe3fa2643f4ed8",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/3ce7e669e3f90b3099a969ea5ffe3fa2643f4ed8"
+      }
+    ],
+    "stats": {
+      "total": 1658,
+      "additions": 1655,
+      "deletions": 3
+    },
+    "files": [
+      {
+        "sha": "e21ea92552a1017ba03aa0ee991f549589702a21",
+        "filename": ".gitignore",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/cbe39a38526a6c17619d02cc697b80ebfd57203b/.gitignore",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/cbe39a38526a6c17619d02cc697b80ebfd57203b/.gitignore",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/.gitignore?ref=cbe39a38526a6c17619d02cc697b80ebfd57203b",
+        "patch": "@@ -4,6 +4,7 @@\n src/bitcoin\n src/bitcoind\n src/bitcoin-cli\n+src/bitcoin-tx\n src/test/test_bitcoin\n src/qt/test/test_bitcoin-qt\n "
+      },
+      {
+        "sha": "2d84eeba1c970e0a5a5c453e88c3e5c41d594f16",
+        "filename": "src/Makefile.am",
+        "status": "modified",
+        "additions": 23,
+        "deletions": 0,
+        "changes": 23,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/cbe39a38526a6c17619d02cc697b80ebfd57203b/src/Makefile.am",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/cbe39a38526a6c17619d02cc697b80ebfd57203b/src/Makefile.am",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/Makefile.am?ref=cbe39a38526a6c17619d02cc697b80ebfd57203b",
+        "patch": "@@ -34,13 +34,15 @@ LIBBITCOIN_COMMON=libbitcoin_common.a\n LIBBITCOIN_CLI=libbitcoin_cli.a\n LIBBITCOIN_UTIL=libbitcoin_util.a\n LIBBITCOIN_CRYPTO=crypto/libbitcoin_crypto.a\n+LIBBITCOIN_UNIVALUE=univalue/libbitcoin_univalue.a\n LIBBITCOINQT=qt/libbitcoinqt.a\n \n noinst_LIBRARIES = \\\n   libbitcoin_server.a \\\n   libbitcoin_common.a \\\n   libbitcoin_cli.a \\\n   libbitcoin_util.a \\\n+  univalue/libbitcoin_univalue.a \\\n   crypto/libbitcoin_crypto.a\n if ENABLE_WALLET\n BITCOIN_INCLUDES += $(BDB_CPPFLAGS)\n@@ -58,6 +60,8 @@ if BUILD_BITCOIN_CLI\n   bin_PROGRAMS += bitcoin-cli\n endif\n \n+bin_PROGRAMS += bitcoin-tx\n+\n .PHONY: FORCE\n # bitcoin core #\n BITCOIN_CORE_H = \\\n@@ -178,6 +182,13 @@ crypto_libbitcoin_crypto_a_SOURCES = \\\n   crypto/sha1.h \\\n   crypto/ripemd160.h\n \n+# univalue JSON library\n+univalue_libbitcoin_univalue_a_SOURCES = \\\n+  univalue/univalue.cpp \\\n+  univalue/univalue_read.cpp \\\n+  univalue/univalue_write.cpp \\\n+  univalue/univalue.h\n+\n # common: shared between bitcoind, and bitcoin-qt and non-server tools\n libbitcoin_common_a_CPPFLAGS = $(BITCOIN_INCLUDES)\n libbitcoin_common_a_SOURCES = \\\n@@ -229,6 +240,7 @@ nodist_libbitcoin_util_a_SOURCES = $(srcdir)/obj/build.h\n bitcoind_LDADD = \\\n   $(LIBBITCOIN_SERVER) \\\n   $(LIBBITCOIN_COMMON) \\\n+  $(LIBBITCOIN_UNIVALUE) \\\n   $(LIBBITCOIN_UTIL) \\\n   $(LIBBITCOIN_CRYPTO) \\\n   $(LIBLEVELDB) \\\n@@ -267,6 +279,17 @@ endif\n bitcoin_cli_CPPFLAGS = $(BITCOIN_INCLUDES)\n #\n \n+# bitcoin-tx binary #\n+bitcoin_tx_LDADD = \\\n+  $(LIBBITCOIN_UNIVALUE) \\\n+  $(LIBBITCOIN_COMMON) \\\n+  $(LIBBITCOIN_UTIL) \\\n+  $(LIBBITCOIN_CRYPTO) \\\n+  $(BOOST_LIBS)\n+bitcoin_tx_SOURCES = bitcoin-tx.cpp\n+bitcoin_tx_CPPFLAGS = $(BITCOIN_INCLUDES)\n+#\n+\n if TARGET_WINDOWS\n bitcoin_cli_SOURCES += bitcoin-cli-res.rc\n endif"
+      },
+      {
+        "sha": "2052264dc95c4d1429e49222bd52764d50fe5db1",
+        "filename": "src/Makefile.qt.include",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/cbe39a38526a6c17619d02cc697b80ebfd57203b/src/Makefile.qt.include",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/cbe39a38526a6c17619d02cc697b80ebfd57203b/src/Makefile.qt.include",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/Makefile.qt.include?ref=cbe39a38526a6c17619d02cc697b80ebfd57203b",
+        "patch": "@@ -359,7 +359,7 @@ qt_bitcoin_qt_LDADD = qt/libbitcoinqt.a $(LIBBITCOIN_SERVER)\n if ENABLE_WALLET\n qt_bitcoin_qt_LDADD += $(LIBBITCOIN_WALLET)\n endif\n-qt_bitcoin_qt_LDADD += $(LIBBITCOIN_CLI) $(LIBBITCOIN_COMMON) $(LIBBITCOIN_UTIL) $(LIBBITCOIN_CRYPTO) $(LIBLEVELDB) $(LIBMEMENV) \\\n+qt_bitcoin_qt_LDADD += $(LIBBITCOIN_CLI) $(LIBBITCOIN_COMMON) $(LIBBITCOIN_UTIL) $(LIBBITCOIN_CRYPTO) $(LIBBITCOIN_UNIVALUE) $(LIBLEVELDB) $(LIBMEMENV) \\\n   $(BOOST_LIBS) $(QT_LIBS) $(QT_DBUS_LIBS) $(QR_LIBS) $(PROTOBUF_LIBS) $(BDB_LIBS)\n if USE_LIBSECP256K1\n   qt_bitcoin_qt_LDADD += secp256k1/libsecp256k1.la"
+      },
+      {
+        "sha": "d49b2240eaf6aacb8e0857603b7d66f2729d375c",
+        "filename": "src/Makefile.qttest.include",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/cbe39a38526a6c17619d02cc697b80ebfd57203b/src/Makefile.qttest.include",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/cbe39a38526a6c17619d02cc697b80ebfd57203b/src/Makefile.qttest.include",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/Makefile.qttest.include?ref=cbe39a38526a6c17619d02cc697b80ebfd57203b",
+        "patch": "@@ -30,7 +30,7 @@ qt_test_test_bitcoin_qt_LDADD = $(LIBBITCOINQT) $(LIBBITCOIN_SERVER)\n if ENABLE_WALLET\n qt_test_test_bitcoin_qt_LDADD += $(LIBBITCOIN_WALLET)\n endif\n-qt_test_test_bitcoin_qt_LDADD += $(LIBBITCOIN_CLI) $(LIBBITCOIN_COMMON) $(LIBBITCOIN_UTIL) $(LIBBITCOIN_CRYPTO) $(LIBLEVELDB) \\\n+qt_test_test_bitcoin_qt_LDADD += $(LIBBITCOIN_CLI) $(LIBBITCOIN_COMMON) $(LIBBITCOIN_UTIL) $(LIBBITCOIN_CRYPTO) $(LIBBITCOIN_UNIVALUE) $(LIBLEVELDB) \\\n   $(LIBMEMENV) $(BOOST_LIBS) $(QT_DBUS_LIBS) $(QT_TEST_LIBS) $(QT_LIBS) \\\n   $(QR_LIBS) $(PROTOBUF_LIBS) $(BDB_LIBS)\n if USE_LIBSECP256K1"
+      },
+      {
+        "sha": "72451fba9af3dde77fbb8f257fb5fe3b35fadf4a",
+        "filename": "src/Makefile.test.include",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/cbe39a38526a6c17619d02cc697b80ebfd57203b/src/Makefile.test.include",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/cbe39a38526a6c17619d02cc697b80ebfd57203b/src/Makefile.test.include",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/Makefile.test.include?ref=cbe39a38526a6c17619d02cc697b80ebfd57203b",
+        "patch": "@@ -64,7 +64,7 @@ endif\n \n test_test_bitcoin_SOURCES = $(BITCOIN_TESTS) $(JSON_TEST_FILES) $(RAW_TEST_FILES)\n test_test_bitcoin_CPPFLAGS = $(BITCOIN_INCLUDES) -I$(builddir)/test/ $(TESTDEFS)\n-test_test_bitcoin_LDADD = $(LIBBITCOIN_SERVER) $(LIBBITCOIN_CLI) $(LIBBITCOIN_COMMON) $(LIBBITCOIN_UTIL) $(LIBBITCOIN_CRYPTO) $(LIBLEVELDB) $(LIBMEMENV) \\\n+test_test_bitcoin_LDADD = $(LIBBITCOIN_SERVER) $(LIBBITCOIN_CLI) $(LIBBITCOIN_COMMON) $(LIBBITCOIN_UTIL) $(LIBBITCOIN_CRYPTO) $(LIBBITCOIN_UNIVALUE) $(LIBLEVELDB) $(LIBMEMENV) \\\n   $(BOOST_LIBS) $(BOOST_UNIT_TEST_FRAMEWORK_LIB)\n if ENABLE_WALLET\n test_test_bitcoin_LDADD += $(LIBBITCOIN_WALLET)"
+      },
+      {
+        "sha": "299315424bb8a6d4fa099c9b4a4aea2e25356ebb",
+        "filename": "src/bitcoin-tx.cpp",
+        "status": "added",
+        "additions": 597,
+        "deletions": 0,
+        "changes": 597,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/cbe39a38526a6c17619d02cc697b80ebfd57203b/src/bitcoin-tx.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/cbe39a38526a6c17619d02cc697b80ebfd57203b/src/bitcoin-tx.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoin-tx.cpp?ref=cbe39a38526a6c17619d02cc697b80ebfd57203b",
+        "patch": "@@ -0,0 +1,597 @@\n+// Copyright (c) 2009-2014 The Bitcoin developers\n+// Distributed under the MIT/X11 software license, see the accompanying\n+// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+#include \"base58.h\"\n+#include \"util.h\"\n+#include \"core.h\"\n+#include \"main.h\"         // for MAX_BLOCK_SIZE\n+#include \"keystore.h\"\n+#include \"ui_interface.h\" // for _(...)\n+#include \"univalue/univalue.h\"\n+#include \"core_io.h\"\n+\n+#include <stdio.h>\n+#include <boost/assign/list_of.hpp>\n+\n+using namespace std;\n+using namespace boost::assign;\n+\n+static bool fCreateBlank;\n+static map<string,UniValue> registers;\n+CClientUIInterface uiInterface;\n+\n+static bool AppInitRawTx(int argc, char* argv[])\n+{\n+    //\n+    // Parameters\n+    //\n+    ParseParameters(argc, argv);\n+\n+    // Check for -testnet or -regtest parameter (Params() calls are only valid after this clause)\n+    if (!SelectParamsFromCommandLine()) {\n+        fprintf(stderr, \"Error: Invalid combination of -regtest and -testnet.\\n\");\n+        return false;\n+    }\n+\n+    fCreateBlank = GetBoolArg(\"-create\", false);\n+\n+    if (argc<2 || mapArgs.count(\"-?\") || mapArgs.count(\"-help\"))\n+    {\n+        // First part of help message is specific to this utility\n+        std::string strUsage = _(\"Bitcoin Core bitcoin-tx utility version\") + \" \" + FormatFullVersion() + \"\\n\\n\" +\n+            _(\"Usage:\") + \"\\n\" +\n+              \"  bitcoin-tx [options] <hex-tx> [commands]  \" + _(\"Update hex-encoded bitcoin transaction\") + \"\\n\" +\n+              \"  bitcoin-tx [options] -create [commands]   \" + _(\"Create hex-encoded bitcoin transaction\") + \"\\n\" +\n+              \"\\n\";\n+\n+        fprintf(stdout, \"%s\", strUsage.c_str());\n+\n+        strUsage = _(\"Options:\") + \"\\n\";\n+        strUsage += \"  -?                      \" + _(\"This help message\") + \"\\n\";\n+        strUsage += \"  -create                 \" + _(\"Create new, empty TX.\") + \"\\n\";\n+        strUsage += \"  -json                   \" + _(\"Select JSON output\") + \"\\n\";\n+        strUsage += \"  -regtest                \" + _(\"Enter regression test mode, which uses a special chain in which blocks can be solved instantly.\") + \"\\n\";\n+        strUsage += \"  -testnet                \" + _(\"Use the test network\") + \"\\n\";\n+        strUsage += \"\\n\";\n+\n+        fprintf(stdout, \"%s\", strUsage.c_str());\n+\n+\n+        strUsage = _(\"Commands:\") + \"\\n\";\n+        strUsage += \"  delin=N                \" + _(\"Delete input N from TX\") + \"\\n\";\n+        strUsage += \"  delout=N               \" + _(\"Delete output N from TX\") + \"\\n\";\n+        strUsage += \"  in=TXID:VOUT           \" + _(\"Add input to TX\") + \"\\n\";\n+        strUsage += \"  locktime=N             \" + _(\"Set TX lock time to N\") + \"\\n\";\n+        strUsage += \"  nversion=N             \" + _(\"Set TX version to N\") + \"\\n\";\n+        strUsage += \"  outaddr=VALUE:ADDRESS  \" + _(\"Add address-based output to TX\") + \"\\n\";\n+        strUsage += \"  outscript=VALUE:SCRIPT \" + _(\"Add raw script output to TX\") + \"\\n\";\n+        strUsage += \"  sign=SIGHASH-FLAGS     \" + _(\"Add zero or more signatures to transaction\") + \"\\n\";\n+        strUsage += \"      This command requires JSON registers:\\n\";\n+        strUsage += \"      prevtxs=JSON object\\n\";\n+        strUsage += \"      privatekeys=JSON object\\n\";\n+        strUsage += \"      See signrawtransaction docs for format of sighash flags, JSON objects.\\n\";\n+        strUsage += \"\\n\";\n+        fprintf(stdout, \"%s\", strUsage.c_str());\n+\n+        strUsage = _(\"Register Commands:\") + \"\\n\";\n+        strUsage += \"  load=NAME:FILENAME     \" + _(\"Load JSON file FILENAME into register NAME\") + \"\\n\";\n+        strUsage += \"  set=NAME:JSON-STRING   \" + _(\"Set register NAME to given JSON-STRING\") + \"\\n\";\n+        strUsage += \"\\n\";\n+        fprintf(stdout, \"%s\", strUsage.c_str());\n+\n+        return false;\n+    }\n+    return true;\n+}\n+\n+static void RegisterSetJson(const string& key, const string& rawJson)\n+{\n+    UniValue val;\n+    if (!val.read(rawJson)) {\n+        string strErr = \"Cannot parse JSON for key \" + key;\n+        throw runtime_error(strErr);\n+    }\n+\n+    registers[key] = val;\n+}\n+\n+static void RegisterSet(const string& strInput)\n+{\n+    // separate NAME:VALUE in string\n+    size_t pos = strInput.find(':');\n+    if ((pos == string::npos) ||\n+        (pos == 0) ||\n+        (pos == (strInput.size() - 1)))\n+        throw runtime_error(\"Register input requires NAME:VALUE\");\n+\n+    string key = strInput.substr(0, pos);\n+    string valStr = strInput.substr(pos + 1, string::npos);\n+\n+    RegisterSetJson(key, valStr);\n+}\n+\n+static void RegisterLoad(const string& strInput)\n+{\n+    // separate NAME:FILENAME in string\n+    size_t pos = strInput.find(':');\n+    if ((pos == string::npos) ||\n+        (pos == 0) ||\n+        (pos == (strInput.size() - 1)))\n+        throw runtime_error(\"Register load requires NAME:FILENAME\");\n+\n+    string key = strInput.substr(0, pos);\n+    string filename = strInput.substr(pos + 1, string::npos);\n+\n+    FILE *f = fopen(filename.c_str(), \"r\");\n+    if (!f) {\n+        string strErr = \"Cannot open file \" + filename;\n+        throw runtime_error(strErr);\n+    }\n+\n+    // load file chunks into one big buffer\n+    string valStr;\n+    while ((!feof(f)) && (!ferror(f))) {\n+        char buf[4096];\n+        int bread = fread(buf, 1, sizeof(buf), f);\n+        if (bread <= 0)\n+            break;\n+\n+        valStr.insert(valStr.size(), buf, bread);\n+    }\n+\n+    if (ferror(f)) {\n+        string strErr = \"Error reading file \" + filename;\n+        throw runtime_error(strErr);\n+    }\n+\n+    fclose(f);\n+\n+    // evaluate as JSON buffer register\n+    RegisterSetJson(key, valStr);\n+}\n+\n+static void MutateTxVersion(CMutableTransaction& tx, const string& cmdVal)\n+{\n+    int64_t newVersion = atoi64(cmdVal);\n+    if (newVersion < 1 || newVersion > CTransaction::CURRENT_VERSION)\n+        throw runtime_error(\"Invalid TX version requested\");\n+\n+    tx.nVersion = (int) newVersion;\n+}\n+\n+static void MutateTxLocktime(CMutableTransaction& tx, const string& cmdVal)\n+{\n+    int64_t newLocktime = atoi64(cmdVal);\n+    if (newLocktime < 0LL || newLocktime > 0xffffffffLL)\n+        throw runtime_error(\"Invalid TX locktime requested\");\n+\n+    tx.nLockTime = (unsigned int) newLocktime;\n+}\n+\n+static void MutateTxAddInput(CMutableTransaction& tx, const string& strInput)\n+{\n+    // separate TXID:VOUT in string\n+    size_t pos = strInput.find(':');\n+    if ((pos == string::npos) ||\n+        (pos == 0) ||\n+        (pos == (strInput.size() - 1)))\n+        throw runtime_error(\"TX input missing separator\");\n+\n+    // extract and validate TXID\n+    string strTxid = strInput.substr(0, pos);\n+    if ((strTxid.size() != 64) || !IsHex(strTxid))\n+        throw runtime_error(\"invalid TX input txid\");\n+    uint256 txid(strTxid);\n+\n+    static const unsigned int minTxOutSz = 9;\n+    static const unsigned int maxVout = MAX_BLOCK_SIZE / minTxOutSz;\n+\n+    // extract and validate vout\n+    string strVout = strInput.substr(pos + 1, string::npos);\n+    int vout = atoi(strVout);\n+    if ((vout < 0) || (vout > (int)maxVout))\n+        throw runtime_error(\"invalid TX input vout\");\n+\n+    // append to transaction input list\n+    CTxIn txin(txid, vout);\n+    tx.vin.push_back(txin);\n+}\n+\n+static void MutateTxAddOutAddr(CMutableTransaction& tx, const string& strInput)\n+{\n+    // separate VALUE:ADDRESS in string\n+    size_t pos = strInput.find(':');\n+    if ((pos == string::npos) ||\n+        (pos == 0) ||\n+        (pos == (strInput.size() - 1)))\n+        throw runtime_error(\"TX output missing separator\");\n+\n+    // extract and validate VALUE\n+    string strValue = strInput.substr(0, pos);\n+    int64_t value;\n+    if (!ParseMoney(strValue, value))\n+        throw runtime_error(\"invalid TX output value\");\n+\n+    // extract and validate ADDRESS\n+    string strAddr = strInput.substr(pos + 1, string::npos);\n+    CBitcoinAddress addr(strAddr);\n+    if (!addr.IsValid())\n+        throw runtime_error(\"invalid TX output address\");\n+\n+    // build standard output script via SetDestination()\n+    CScript scriptPubKey;\n+    scriptPubKey.SetDestination(addr.Get());\n+\n+    // construct TxOut, append to transaction output list\n+    CTxOut txout(value, scriptPubKey);\n+    tx.vout.push_back(txout);\n+}\n+\n+static void MutateTxAddOutScript(CMutableTransaction& tx, const string& strInput)\n+{\n+    // separate VALUE:SCRIPT in string\n+    size_t pos = strInput.find(':');\n+    if ((pos == string::npos) ||\n+        (pos == 0) ||\n+        (pos == (strInput.size() - 1)))\n+        throw runtime_error(\"TX output missing separator\");\n+\n+    // extract and validate VALUE\n+    string strValue = strInput.substr(0, pos);\n+    int64_t value;\n+    if (!ParseMoney(strValue, value))\n+        throw runtime_error(\"invalid TX output value\");\n+\n+    // extract and validate script\n+    string strScript = strInput.substr(pos + 1, string::npos);\n+    CScript scriptPubKey = ParseScript(strScript); // throws on err\n+\n+    // construct TxOut, append to transaction output list\n+    CTxOut txout(value, scriptPubKey);\n+    tx.vout.push_back(txout);\n+}\n+\n+static void MutateTxDelInput(CMutableTransaction& tx, const string& strInIdx)\n+{\n+    // parse requested deletion index\n+    int inIdx = atoi(strInIdx);\n+    if (inIdx < 0 || inIdx >= (int)tx.vin.size()) {\n+        string strErr = \"Invalid TX input index '\" + strInIdx + \"'\";\n+        throw runtime_error(strErr.c_str());\n+    }\n+\n+    // delete input from transaction\n+    tx.vin.erase(tx.vin.begin() + inIdx);\n+}\n+\n+static void MutateTxDelOutput(CMutableTransaction& tx, const string& strOutIdx)\n+{\n+    // parse requested deletion index\n+    int outIdx = atoi(strOutIdx);\n+    if (outIdx < 0 || outIdx >= (int)tx.vout.size()) {\n+        string strErr = \"Invalid TX output index '\" + strOutIdx + \"'\";\n+        throw runtime_error(strErr.c_str());\n+    }\n+\n+    // delete output from transaction\n+    tx.vout.erase(tx.vout.begin() + outIdx);\n+}\n+\n+static const unsigned int N_SIGHASH_OPTS = 6;\n+static const struct {\n+    const char *flagStr;\n+    int flags;\n+} sighashOptions[N_SIGHASH_OPTS] = {\n+    \"ALL\", SIGHASH_ALL,\n+    \"NONE\", SIGHASH_NONE,\n+    \"SINGLE\", SIGHASH_SINGLE,\n+    \"ALL|ANYONECANPAY\", SIGHASH_ALL|SIGHASH_ANYONECANPAY,\n+    \"NONE|ANYONECANPAY\", SIGHASH_NONE|SIGHASH_ANYONECANPAY,\n+    \"SINGLE|ANYONECANPAY\", SIGHASH_SINGLE|SIGHASH_ANYONECANPAY,\n+};\n+\n+static bool findSighashFlags(int& flags, const string& flagStr)\n+{\n+    flags = 0;\n+\n+    for (unsigned int i = 0; i < N_SIGHASH_OPTS; i++) {\n+        if (flagStr == sighashOptions[i].flagStr) {\n+            flags = sighashOptions[i].flags;\n+            return true;\n+        }\n+    }\n+\n+    return false;\n+}\n+\n+uint256 ParseHashUO(map<string,UniValue>& o, string strKey)\n+{\n+    if (!o.count(strKey))\n+        return 0;\n+    return ParseHashUV(o[strKey], strKey);\n+}\n+\n+vector<unsigned char> ParseHexUO(map<string,UniValue>& o, string strKey)\n+{\n+    if (!o.count(strKey)) {\n+        vector<unsigned char> emptyVec;\n+        return emptyVec;\n+    }\n+    return ParseHexUV(o[strKey], strKey);\n+}\n+\n+static void MutateTxSign(CMutableTransaction& tx, const string& flagStr)\n+{\n+    int nHashType = SIGHASH_ALL;\n+\n+    if (flagStr.size() > 0)\n+        if (!findSighashFlags(nHashType, flagStr))\n+            throw runtime_error(\"unknown sighash flag/sign option\");\n+\n+    vector<CTransaction> txVariants;\n+    txVariants.push_back(tx);\n+\n+    // mergedTx will end up with all the signatures; it\n+    // starts as a clone of the raw tx:\n+    CMutableTransaction mergedTx(txVariants[0]);\n+    bool fComplete = true;\n+    CCoinsView viewDummy;\n+    CCoinsViewCache view(viewDummy);\n+\n+    if (!registers.count(\"privatekeys\"))\n+        throw runtime_error(\"privatekeys register variable must be set.\");\n+    bool fGivenKeys = false;\n+    CBasicKeyStore tempKeystore;\n+    UniValue keysObj = registers[\"privatekeys\"];\n+    fGivenKeys = true;\n+\n+    for (unsigned int kidx = 0; kidx < keysObj.count(); kidx++) {\n+        if (!keysObj[kidx].isStr())\n+            throw runtime_error(\"privatekey not a string\");\n+        CBitcoinSecret vchSecret;\n+        bool fGood = vchSecret.SetString(keysObj[kidx].getValStr());\n+        if (!fGood)\n+            throw runtime_error(\"privatekey not valid\");\n+\n+        CKey key = vchSecret.GetKey();\n+        tempKeystore.AddKey(key);\n+    }\n+\n+    // Add previous txouts given in the RPC call:\n+    if (!registers.count(\"prevtxs\"))\n+        throw runtime_error(\"prevtxs register variable must be set.\");\n+    UniValue prevtxsObj = registers[\"privatekeys\"];\n+    {\n+        for (unsigned int previdx = 0; previdx < prevtxsObj.count(); previdx++) {\n+            UniValue prevOut = prevtxsObj[previdx];\n+            if (!prevOut.isObject())\n+                throw runtime_error(\"expected prevtxs internal object\");\n+\n+            map<string,UniValue::VType> types = map_list_of(\"txid\", UniValue::VSTR)(\"vout\",UniValue::VNUM)(\"scriptPubKey\",UniValue::VSTR);\n+            if (!prevOut.checkObject(types))\n+                throw runtime_error(\"prevtxs internal object typecheck fail\");\n+\n+            uint256 txid = ParseHashUV(prevOut, \"txid\");\n+\n+            int nOut = atoi(prevOut[\"vout\"].getValStr());\n+            if (nOut < 0)\n+                throw runtime_error(\"vout must be positive\");\n+\n+            vector<unsigned char> pkData(ParseHexUV(prevOut, \"scriptPubKey\"));\n+            CScript scriptPubKey(pkData.begin(), pkData.end());\n+\n+            CCoins coins;\n+            if (view.GetCoins(txid, coins)) {\n+                if (coins.IsAvailable(nOut) && coins.vout[nOut].scriptPubKey != scriptPubKey) {\n+                    string err(\"Previous output scriptPubKey mismatch:\\n\");\n+                    err = err + coins.vout[nOut].scriptPubKey.ToString() + \"\\nvs:\\n\"+\n+                        scriptPubKey.ToString();\n+                    throw runtime_error(err);\n+                }\n+                // what todo if txid is known, but the actual output isn't?\n+            }\n+            if ((unsigned int)nOut >= coins.vout.size())\n+                coins.vout.resize(nOut+1);\n+            coins.vout[nOut].scriptPubKey = scriptPubKey;\n+            coins.vout[nOut].nValue = 0; // we don't know the actual output value\n+            view.SetCoins(txid, coins);\n+\n+            // if redeemScript given and private keys given,\n+            // add redeemScript to the tempKeystore so it can be signed:\n+            if (fGivenKeys && scriptPubKey.IsPayToScriptHash() &&\n+                prevOut.exists(\"redeemScript\")) {\n+                UniValue v = prevOut[\"redeemScript\"];\n+                vector<unsigned char> rsData(ParseHexUV(v, \"redeemScript\"));\n+                CScript redeemScript(rsData.begin(), rsData.end());\n+                tempKeystore.AddCScript(redeemScript);\n+            }\n+        }\n+    }\n+\n+    const CKeyStore& keystore = tempKeystore;\n+\n+    bool fHashSingle = ((nHashType & ~SIGHASH_ANYONECANPAY) == SIGHASH_SINGLE);\n+\n+    // Sign what we can:\n+    for (unsigned int i = 0; i < mergedTx.vin.size(); i++) {\n+        CTxIn& txin = mergedTx.vin[i];\n+        CCoins coins;\n+        if (!view.GetCoins(txin.prevout.hash, coins) || !coins.IsAvailable(txin.prevout.n)) {\n+            fComplete = false;\n+            continue;\n+        }\n+        const CScript& prevPubKey = coins.vout[txin.prevout.n].scriptPubKey;\n+\n+        txin.scriptSig.clear();\n+        // Only sign SIGHASH_SINGLE if there's a corresponding output:\n+        if (!fHashSingle || (i < mergedTx.vout.size()))\n+            SignSignature(keystore, prevPubKey, mergedTx, i, nHashType);\n+\n+        // ... and merge in other signatures:\n+        BOOST_FOREACH(const CTransaction& txv, txVariants) {\n+            txin.scriptSig = CombineSignatures(prevPubKey, mergedTx, i, txin.scriptSig, txv.vin[i].scriptSig);\n+        }\n+        if (!VerifyScript(txin.scriptSig, prevPubKey, mergedTx, i, STANDARD_SCRIPT_VERIFY_FLAGS, 0))\n+            fComplete = false;\n+    }\n+\n+    if (fComplete) {\n+        // do nothing... for now\n+        // perhaps store this for later optional JSON output\n+    }\n+\n+    tx = mergedTx;\n+}\n+\n+static void MutateTx(CMutableTransaction& tx, const string& command,\n+                     const string& commandVal)\n+{\n+    if (command == \"nversion\")\n+        MutateTxVersion(tx, commandVal);\n+    else if (command == \"locktime\")\n+        MutateTxLocktime(tx, commandVal);\n+\n+    else if (command == \"delin\")\n+        MutateTxDelInput(tx, commandVal);\n+    else if (command == \"in\")\n+        MutateTxAddInput(tx, commandVal);\n+\n+    else if (command == \"delout\")\n+        MutateTxDelOutput(tx, commandVal);\n+    else if (command == \"outaddr\")\n+        MutateTxAddOutAddr(tx, commandVal);\n+    else if (command == \"outscript\")\n+        MutateTxAddOutScript(tx, commandVal);\n+\n+    else if (command == \"sign\")\n+        MutateTxSign(tx, commandVal);\n+\n+    else if (command == \"load\")\n+        RegisterLoad(commandVal);\n+\n+    else if (command == \"set\")\n+        RegisterSet(commandVal);\n+\n+    else\n+        throw runtime_error(\"unknown command\");\n+}\n+\n+static void OutputTxJSON(const CTransaction& tx)\n+{\n+    UniValue entry(UniValue::VOBJ);\n+    TxToUniv(tx, 0, entry);\n+\n+    string jsonOutput = entry.write(4);\n+    fprintf(stdout, \"%s\\n\", jsonOutput.c_str());\n+}\n+\n+static void OutputTxHex(const CTransaction& tx)\n+{\n+    string strHex = EncodeHexTx(tx);\n+\n+    fprintf(stdout, \"%s\\n\", strHex.c_str());\n+}\n+\n+static void OutputTx(const CTransaction& tx)\n+{\n+    if (GetBoolArg(\"-json\", false))\n+        OutputTxJSON(tx);\n+    else\n+        OutputTxHex(tx);\n+}\n+\n+static int CommandLineRawTx(int argc, char* argv[])\n+{\n+    string strPrint;\n+    int nRet = 0;\n+    try {\n+        // Skip switches\n+        while (argc > 1 && IsSwitchChar(argv[1][0])) {\n+            argc--;\n+            argv++;\n+        }\n+\n+        CTransaction txDecodeTmp;\n+        int startArg;\n+\n+        if (!fCreateBlank) {\n+            // require at least one param\n+            if (argc < 2)\n+                throw runtime_error(\"too few parameters\");\n+\n+            // param: hex-encoded bitcoin transaction\n+            string strHexTx(argv[1]);\n+\n+            if (!DecodeHexTx(txDecodeTmp, strHexTx))\n+                throw runtime_error(\"invalid transaction encoding\");\n+\n+            startArg = 2;\n+        } else\n+            startArg = 1;\n+\n+        CMutableTransaction tx(txDecodeTmp);\n+\n+        for (int i = startArg; i < argc; i++) {\n+            string arg = argv[i];\n+            string key, value;\n+            size_t eqpos = arg.find('=');\n+            if (eqpos == string::npos)\n+                key = arg;\n+            else {\n+                key = arg.substr(0, eqpos);\n+                value = arg.substr(eqpos + 1);\n+            }\n+\n+            MutateTx(tx, key, value);\n+        }\n+\n+        OutputTx(tx);\n+    }\n+\n+    catch (boost::thread_interrupted) {\n+        throw;\n+    }\n+    catch (std::exception& e) {\n+        strPrint = string(\"error: \") + e.what();\n+        nRet = EXIT_FAILURE;\n+    }\n+    catch (...) {\n+        PrintExceptionContinue(NULL, \"CommandLineRawTx()\");\n+        throw;\n+    }\n+\n+    if (strPrint != \"\") {\n+        fprintf((nRet == 0 ? stdout : stderr), \"%s\\n\", strPrint.c_str());\n+    }\n+    return nRet;\n+}\n+\n+int main(int argc, char* argv[])\n+{\n+    SetupEnvironment();\n+\n+    try {\n+        if(!AppInitRawTx(argc, argv))\n+            return EXIT_FAILURE;\n+    }\n+    catch (std::exception& e) {\n+        PrintExceptionContinue(&e, \"AppInitRawTx()\");\n+        return EXIT_FAILURE;\n+    } catch (...) {\n+        PrintExceptionContinue(NULL, \"AppInitRawTx()\");\n+        return EXIT_FAILURE;\n+    }\n+\n+    int ret = EXIT_FAILURE;\n+    try {\n+        ret = CommandLineRawTx(argc, argv);\n+    }\n+    catch (std::exception& e) {\n+        PrintExceptionContinue(&e, \"CommandLineRawTx()\");\n+    } catch (...) {\n+        PrintExceptionContinue(NULL, \"CommandLineRawTx()\");\n+    }\n+    return ret;\n+}\n+"
+      },
+      {
+        "sha": "8a7d5805704c48261f5177fba44c36dd415d385a",
+        "filename": "src/core_io.h",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 0,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/cbe39a38526a6c17619d02cc697b80ebfd57203b/src/core_io.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/cbe39a38526a6c17619d02cc697b80ebfd57203b/src/core_io.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/core_io.h?ref=cbe39a38526a6c17619d02cc697b80ebfd57203b",
+        "patch": "@@ -3,14 +3,21 @@\n \n #include <string>\n \n+class uint256;\n class CScript;\n class CTransaction;\n+class UniValue;\n \n // core_read.cpp\n extern CScript ParseScript(std::string s);\n extern bool DecodeHexTx(CTransaction& tx, const std::string& strHexTx);\n+extern uint256 ParseHashUV(const UniValue& v, const std::string& strName);\n+extern std::vector<unsigned char> ParseHexUV(const UniValue& v, const std::string& strName);\n \n // core_write.cpp\n extern std::string EncodeHexTx(const CTransaction& tx);\n+extern void ScriptPubKeyToUniv(const CScript& scriptPubKey,\n+                        UniValue& out, bool fIncludeHex);\n+extern void TxToUniv(const CTransaction& tx, const uint256& hashBlock, UniValue& entry);\n \n #endif // __BITCOIN_CORE_IO_H__"
+      },
+      {
+        "sha": "0f06bb6952d1d985b08e378045cd015e646de1f9",
+        "filename": "src/core_read.cpp",
+        "status": "modified",
+        "additions": 25,
+        "deletions": 0,
+        "changes": 25,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/cbe39a38526a6c17619d02cc697b80ebfd57203b/src/core_read.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/cbe39a38526a6c17619d02cc697b80ebfd57203b/src/core_read.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/core_read.cpp?ref=cbe39a38526a6c17619d02cc697b80ebfd57203b",
+        "patch": "@@ -4,12 +4,14 @@\n #include \"core.h\"\n #include \"serialize.h\"\n #include \"script.h\"\n+#include \"util.h\"\n \n #include <boost/assign/list_of.hpp>\n #include <boost/algorithm/string/classification.hpp>\n #include <boost/algorithm/string/predicate.hpp>\n #include <boost/algorithm/string/split.hpp>\n #include <boost/algorithm/string/replace.hpp>\n+#include \"univalue/univalue.h\"\n \n using namespace std;\n using namespace boost;\n@@ -100,3 +102,26 @@ bool DecodeHexTx(CTransaction& tx, const std::string& strHexTx)\n     return true;\n }\n \n+uint256 ParseHashUV(const UniValue& v, const string& strName)\n+{\n+    string strHex;\n+    if (v.isStr())\n+        strHex = v.getValStr();\n+    if (!IsHex(strHex)) // Note: IsHex(\"\") is false\n+        throw runtime_error(strName+\" must be hexadecimal string (not '\"+strHex+\"')\");\n+\n+    uint256 result;\n+    result.SetHex(strHex);\n+    return result;\n+}\n+\n+vector<unsigned char> ParseHexUV(const UniValue& v, const string& strName)\n+{\n+    string strHex;\n+    if (v.isStr())\n+        strHex = v.getValStr();\n+    if (!IsHex(strHex))\n+        throw runtime_error(strName+\" must be hexadecimal string (not '\"+strHex+\"')\");\n+    return ParseHex(strHex);\n+}\n+"
+      },
+      {
+        "sha": "2eb220779f060340b7b6043f9e51f91c68ec7d3f",
+        "filename": "src/core_write.cpp",
+        "status": "modified",
+        "additions": 74,
+        "deletions": 0,
+        "changes": 74,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/cbe39a38526a6c17619d02cc697b80ebfd57203b/src/core_write.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/cbe39a38526a6c17619d02cc697b80ebfd57203b/src/core_write.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/core_write.cpp?ref=cbe39a38526a6c17619d02cc697b80ebfd57203b",
+        "patch": "@@ -1,8 +1,12 @@\n \n+#include <vector>\n #include \"core_io.h\"\n+#include \"univalue/univalue.h\"\n+#include \"script.h\"\n #include \"core.h\"\n #include \"serialize.h\"\n #include \"util.h\"\n+#include \"base58.h\"\n \n using namespace std;\n \n@@ -13,3 +17,73 @@ string EncodeHexTx(const CTransaction& tx)\n     return HexStr(ssTx.begin(), ssTx.end());\n }\n \n+void ScriptPubKeyToUniv(const CScript& scriptPubKey,\n+                        UniValue& out, bool fIncludeHex)\n+{\n+    txnouttype type;\n+    vector<CTxDestination> addresses;\n+    int nRequired;\n+\n+    out.pushKV(\"asm\", scriptPubKey.ToString());\n+    if (fIncludeHex)\n+        out.pushKV(\"hex\", HexStr(scriptPubKey.begin(), scriptPubKey.end()));\n+\n+    if (!ExtractDestinations(scriptPubKey, type, addresses, nRequired)) {\n+        out.pushKV(\"type\", GetTxnOutputType(type));\n+        return;\n+    }\n+\n+    out.pushKV(\"reqSigs\", nRequired);\n+    out.pushKV(\"type\", GetTxnOutputType(type));\n+\n+    UniValue a(UniValue::VARR);\n+    BOOST_FOREACH(const CTxDestination& addr, addresses)\n+        a.push_back(CBitcoinAddress(addr).ToString());\n+    out.pushKV(\"addresses\", a);\n+}\n+\n+void TxToUniv(const CTransaction& tx, const uint256& hashBlock, UniValue& entry)\n+{\n+    entry.pushKV(\"txid\", tx.GetHash().GetHex());\n+    entry.pushKV(\"version\", tx.nVersion);\n+    entry.pushKV(\"locktime\", (int64_t)tx.nLockTime);\n+\n+    UniValue vin(UniValue::VARR);\n+    BOOST_FOREACH(const CTxIn& txin, tx.vin) {\n+        UniValue in(UniValue::VOBJ);\n+        if (tx.IsCoinBase())\n+            in.pushKV(\"coinbase\", HexStr(txin.scriptSig.begin(), txin.scriptSig.end()));\n+        else {\n+            in.pushKV(\"txid\", txin.prevout.hash.GetHex());\n+            in.pushKV(\"vout\", (int64_t)txin.prevout.n);\n+            UniValue o(UniValue::VOBJ);\n+            o.pushKV(\"asm\", txin.scriptSig.ToString());\n+            o.pushKV(\"hex\", HexStr(txin.scriptSig.begin(), txin.scriptSig.end()));\n+            in.pushKV(\"scriptSig\", o);\n+        }\n+        in.pushKV(\"sequence\", (int64_t)txin.nSequence);\n+        vin.push_back(in);\n+    }\n+    entry.pushKV(\"vin\", vin);\n+\n+    UniValue vout(UniValue::VARR);\n+    for (unsigned int i = 0; i < tx.vout.size(); i++) {\n+        const CTxOut& txout = tx.vout[i];\n+\n+        UniValue out(UniValue::VOBJ);\n+\n+        UniValue outValue(UniValue::VNUM, FormatMoney(txout.nValue));\n+        out.pushKV(\"value\", outValue);\n+        out.pushKV(\"n\", (int64_t)i);\n+\n+        UniValue o(UniValue::VOBJ);\n+        ScriptPubKeyToUniv(txout.scriptPubKey, o, true);\n+        out.pushKV(\"scriptPubKey\", o);\n+        vout.push_back(out);\n+    }\n+    entry.pushKV(\"vout\", vout);\n+\n+    if (hashBlock != 0)\n+        entry.pushKV(\"blockhash\", hashBlock.GetHex());\n+}\n+"
+      },
+      {
+        "sha": "e577aa8ee49d0ffb178b45a07d4cfcd8fdcd24e2",
+        "filename": "src/univalue/univalue.cpp",
+        "status": "added",
+        "additions": 233,
+        "deletions": 0,
+        "changes": 233,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/cbe39a38526a6c17619d02cc697b80ebfd57203b/src/univalue/univalue.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/cbe39a38526a6c17619d02cc697b80ebfd57203b/src/univalue/univalue.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/univalue/univalue.cpp?ref=cbe39a38526a6c17619d02cc697b80ebfd57203b",
+        "patch": "@@ -0,0 +1,233 @@\n+// Copyright 2014 BitPay Inc.\n+// Distributed under the MIT/X11 software license, see the accompanying\n+// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+#include <stdint.h>\n+#include <ctype.h>\n+#include <sstream>\n+#include \"univalue.h\"\n+\n+using namespace std;\n+\n+static const UniValue nullValue;\n+\n+void UniValue::clear()\n+{\n+    typ = VNULL;\n+    val.clear();\n+    keys.clear();\n+    values.clear();\n+}\n+\n+bool UniValue::setNull()\n+{\n+    clear();\n+    return true;\n+}\n+\n+bool UniValue::setBool(bool val_)\n+{\n+    clear();\n+    typ = VBOOL;\n+    if (val_)\n+        val = \"1\";\n+    return true;\n+}\n+\n+static bool validNumStr(const string& s)\n+{\n+    string tokenVal;\n+    unsigned int consumed;\n+    enum jtokentype tt = getJsonToken(tokenVal, consumed, s.c_str());\n+    return (tt == JTOK_NUMBER);\n+}\n+\n+bool UniValue::setNumStr(const string& val_)\n+{\n+    if (!validNumStr(val))\n+        return false;\n+\n+    clear();\n+    typ = VNUM;\n+    val = val_;\n+    return true;\n+}\n+\n+bool UniValue::setInt(uint64_t val)\n+{\n+    string s;\n+    ostringstream oss;\n+\n+    oss << val;\n+\n+    return setNumStr(oss.str());\n+}\n+\n+bool UniValue::setInt(int64_t val)\n+{\n+    string s;\n+    ostringstream oss;\n+\n+    oss << val;\n+\n+    return setNumStr(oss.str());\n+}\n+\n+bool UniValue::setFloat(double val)\n+{\n+    string s;\n+    ostringstream oss;\n+\n+    oss << val;\n+\n+    return setNumStr(oss.str());\n+}\n+\n+bool UniValue::setStr(const string& val_)\n+{\n+    clear();\n+    typ = VSTR;\n+    val = val_;\n+    return true;\n+}\n+\n+bool UniValue::setArray()\n+{\n+    clear();\n+    typ = VARR;\n+    return true;\n+}\n+\n+bool UniValue::setObject()\n+{\n+    clear();\n+    typ = VOBJ;\n+    return true;\n+}\n+\n+bool UniValue::push_back(const UniValue& val)\n+{\n+    if (typ != VARR)\n+        return false;\n+\n+    values.push_back(val);\n+    return true;\n+}\n+\n+bool UniValue::push_backV(const std::vector<UniValue>& vec)\n+{\n+    if (typ != VARR)\n+        return false;\n+\n+    values.insert(values.end(), vec.begin(), vec.end());\n+\n+    return true;\n+}\n+\n+bool UniValue::pushKV(const std::string& key, const UniValue& val)\n+{\n+    if (typ != VOBJ)\n+        return false;\n+\n+    keys.push_back(key);\n+    values.push_back(val);\n+    return true;\n+}\n+\n+bool UniValue::pushKVs(const UniValue& obj)\n+{\n+    if (typ != VOBJ || obj.typ != VOBJ)\n+        return false;\n+\n+    for (unsigned int i = 0; i < obj.keys.size(); i++) {\n+        keys.push_back(obj.keys[i]);\n+        values.push_back(obj.values[i]);\n+    }\n+\n+    return true;\n+}\n+\n+bool UniValue::getArray(std::vector<UniValue>& arr)\n+{\n+    if (typ != VARR)\n+        return false;\n+\n+    arr = values;\n+    return true;\n+}\n+\n+bool UniValue::getObject(std::map<std::string,UniValue>& obj)\n+{\n+    if (typ != VOBJ)\n+        return false;\n+\n+    obj.clear();\n+    for (unsigned int i = 0; i < keys.size(); i++) {\n+        obj[keys[i]] = values[i];\n+    }\n+\n+    return true;\n+}\n+\n+int UniValue::findKey(const std::string& key) const\n+{\n+    for (unsigned int i = 0; i < keys.size(); i++) {\n+        if (keys[i] == key)\n+            return (int) i;\n+    }\n+\n+    return -1;\n+}\n+\n+bool UniValue::checkObject(const std::map<std::string,UniValue::VType>& t)\n+{\n+    for (std::map<std::string,UniValue::VType>::const_iterator it = t.begin();\n+         it != t.end(); it++) {\n+        int idx = findKey(it->first);\n+        if (idx < 0)\n+            return false;\n+\n+        if (values[idx].getType() != it->second)\n+            return false;\n+    }\n+\n+    return true;\n+}\n+\n+const UniValue& UniValue::operator[](const std::string& key) const\n+{\n+    if (typ != VOBJ)\n+        return nullValue;\n+\n+    int index = findKey(key);\n+    if (index < 0)\n+        return nullValue;\n+\n+    return values[index];\n+}\n+\n+const UniValue& UniValue::operator[](unsigned int index) const\n+{\n+    if (typ != VOBJ && typ != VARR)\n+        return nullValue;\n+    if (index >= values.size())\n+        return nullValue;\n+\n+    return values[index];\n+}\n+\n+const char *uvTypeName(UniValue::VType t)\n+{\n+    switch (t) {\n+    case UniValue::VNULL: return \"null\";\n+    case UniValue::VBOOL: return \"bool\";\n+    case UniValue::VOBJ: return \"object\";\n+    case UniValue::VARR: return \"array\";\n+    case UniValue::VSTR: return \"string\";\n+    case UniValue::VNUM: return \"number\";\n+    }\n+\n+    // not reached\n+    return NULL;\n+}\n+"
+      },
+      {
+        "sha": "5e94b6ba238df7c7d680e5d01cca087c003e93a1",
+        "filename": "src/univalue/univalue.h",
+        "status": "added",
+        "additions": 157,
+        "deletions": 0,
+        "changes": 157,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/cbe39a38526a6c17619d02cc697b80ebfd57203b/src/univalue/univalue.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/cbe39a38526a6c17619d02cc697b80ebfd57203b/src/univalue/univalue.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/univalue/univalue.h?ref=cbe39a38526a6c17619d02cc697b80ebfd57203b",
+        "patch": "@@ -0,0 +1,157 @@\n+// Copyright 2014 BitPay Inc.\n+// Distributed under the MIT/X11 software license, see the accompanying\n+// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+#ifndef __UNIVALUE_H__\n+#define __UNIVALUE_H__\n+\n+#include <stdint.h>\n+#include <string>\n+#include <vector>\n+#include <map>\n+#include <cassert>\n+\n+class UniValue {\n+public:\n+    enum VType { VNULL, VOBJ, VARR, VSTR, VNUM, VBOOL, };\n+\n+    UniValue() { typ = VNULL; }\n+    UniValue(UniValue::VType initialType, const std::string& initialStr = \"\") {\n+        typ = initialType;\n+        val = initialStr;\n+    }\n+    UniValue(uint64_t val_) {\n+        setInt(val_);\n+    }\n+    UniValue(int64_t val_) {\n+        setInt(val_);\n+    }\n+    UniValue(int val_) {\n+        setInt(val_);\n+    }\n+    UniValue(double val_) {\n+        setFloat(val_);\n+    }\n+    UniValue(const std::string& val_) {\n+        setStr(val_);\n+    }\n+    UniValue(const char *val_) {\n+        std::string s(val_);\n+        setStr(s);\n+    }\n+    ~UniValue() {}\n+\n+    void clear();\n+\n+    bool setNull();\n+    bool setBool(bool val);\n+    bool setNumStr(const std::string& val);\n+    bool setInt(uint64_t val);\n+    bool setInt(int64_t val);\n+    bool setInt(int val) { return setInt((int64_t)val); }\n+    bool setFloat(double val);\n+    bool setStr(const std::string& val);\n+    bool setArray();\n+    bool setObject();\n+\n+    enum VType getType() const { return typ; }\n+    std::string getValStr() const { return val; }\n+    bool empty() const { return (values.size() == 0); }\n+\n+    size_t count() const { return values.size(); }\n+\n+    bool getBool() const { return isTrue(); }\n+    bool getArray(std::vector<UniValue>& arr);\n+    bool getObject(std::map<std::string,UniValue>& obj);\n+    bool checkObject(const std::map<std::string,UniValue::VType>& memberTypes);\n+    const UniValue& operator[](const std::string& key) const;\n+    const UniValue& operator[](unsigned int index) const;\n+    bool exists(const std::string& key) const { return (findKey(key) >= 0); }\n+\n+    bool isNull() const { return (typ == VNULL); }\n+    bool isTrue() const { return (typ == VBOOL) && (val == \"1\"); }\n+    bool isFalse() const { return (!isTrue()); }\n+    bool isBool() const { return (typ == VBOOL); }\n+    bool isStr() const { return (typ == VSTR); }\n+    bool isNum() const { return (typ == VNUM); }\n+    bool isArray() const { return (typ == VARR); }\n+    bool isObject() const { return (typ == VOBJ); }\n+\n+    bool push_back(const UniValue& val);\n+    bool push_back(const std::string& val_) {\n+        UniValue tmpVal(VSTR, val_);\n+        return push_back(tmpVal);\n+    }\n+    bool push_back(const char *val_) {\n+        std::string s(val_);\n+        return push_back(s);\n+    }\n+    bool push_backV(const std::vector<UniValue>& vec);\n+\n+    bool pushKV(const std::string& key, const UniValue& val);\n+    bool pushKV(const std::string& key, const std::string& val) {\n+        UniValue tmpVal(VSTR, val);\n+        return pushKV(key, tmpVal);\n+    }\n+    bool pushKV(const std::string& key, const char *val_) {\n+        std::string val(val_);\n+        return pushKV(key, val);\n+    }\n+    bool pushKV(const std::string& key, int64_t val) {\n+        UniValue tmpVal(val);\n+        return pushKV(key, tmpVal);\n+    }\n+    bool pushKV(const std::string& key, uint64_t val) {\n+        UniValue tmpVal(val);\n+        return pushKV(key, tmpVal);\n+    }\n+    bool pushKV(const std::string& key, int val) {\n+        UniValue tmpVal((int64_t)val);\n+        return pushKV(key, tmpVal);\n+    }\n+    bool pushKV(const std::string& key, double val) {\n+        UniValue tmpVal(val);\n+        return pushKV(key, tmpVal);\n+    }\n+    bool pushKVs(const UniValue& obj);\n+\n+    std::string write(unsigned int prettyIndent = 0,\n+                      unsigned int indentLevel = 0) const;\n+\n+    bool read(const char *raw);\n+    bool read(const std::string& rawStr) {\n+        return read(rawStr.c_str());\n+    }\n+\n+private:\n+    UniValue::VType typ;\n+    std::string val;                       // numbers are stored as C++ strings\n+    std::vector<std::string> keys;\n+    std::vector<UniValue> values;\n+\n+    int findKey(const std::string& key) const;\n+    void writeArray(unsigned int prettyIndent, unsigned int indentLevel, std::string& s) const;\n+    void writeObject(unsigned int prettyIndent, unsigned int indentLevel, std::string& s) const;\n+};\n+\n+enum jtokentype {\n+    JTOK_ERR        = -1,\n+    JTOK_NONE       = 0,                           // eof\n+    JTOK_OBJ_OPEN,\n+    JTOK_OBJ_CLOSE,\n+    JTOK_ARR_OPEN,\n+    JTOK_ARR_CLOSE,\n+    JTOK_COLON,\n+    JTOK_COMMA,\n+    JTOK_KW_NULL,\n+    JTOK_KW_TRUE,\n+    JTOK_KW_FALSE,\n+    JTOK_NUMBER,\n+    JTOK_STRING,\n+};\n+\n+extern enum jtokentype getJsonToken(std::string& tokenVal,\n+                                    unsigned int& consumed, const char *raw);\n+extern const char *uvTypeName(UniValue::VType t);\n+\n+#endif // __UNIVALUE_H__"
+      },
+      {
+        "sha": "405be3e81f863e0a377588ab77a72a0edc773211",
+        "filename": "src/univalue/univalue_read.cpp",
+        "status": "added",
+        "additions": 390,
+        "deletions": 0,
+        "changes": 390,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/cbe39a38526a6c17619d02cc697b80ebfd57203b/src/univalue/univalue_read.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/cbe39a38526a6c17619d02cc697b80ebfd57203b/src/univalue/univalue_read.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/univalue/univalue_read.cpp?ref=cbe39a38526a6c17619d02cc697b80ebfd57203b",
+        "patch": "@@ -0,0 +1,390 @@\n+// Copyright 2014 BitPay Inc.\n+// Distributed under the MIT/X11 software license, see the accompanying\n+// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+#include <string.h>\n+#include <vector>\n+#include <stdio.h>\n+#include \"univalue.h\"\n+\n+using namespace std;\n+\n+// convert hexadecimal string to unsigned integer\n+static const char *hatoui(const char *first, const char *last,\n+                          unsigned int& out)\n+{\n+    unsigned int result = 0;\n+    for (; first != last; ++first)\n+    {\n+        int digit;\n+        if (isdigit(*first))\n+            digit = *first - '0';\n+\n+        else if (*first >= 'a' && *first <= 'f')\n+            digit = *first - 'a' + 10;\n+\n+        else if (*first >= 'A' && *first <= 'F')\n+            digit = *first - 'A' + 10;\n+\n+        else\n+            break;\n+\n+        result = 16 * result + digit;\n+    }\n+    out = result;\n+\n+    return first;\n+}\n+\n+enum jtokentype getJsonToken(string& tokenVal, unsigned int& consumed,\n+                            const char *raw)\n+{\n+    tokenVal.clear();\n+    consumed = 0;\n+\n+    const char *rawStart = raw;\n+\n+    while ((*raw) && (isspace(*raw)))             // skip whitespace\n+        raw++;\n+\n+    switch (*raw) {\n+\n+    case 0:\n+        return JTOK_NONE;\n+\n+    case '{':\n+        raw++;\n+        consumed = (raw - rawStart);\n+        return JTOK_OBJ_OPEN;\n+    case '}':\n+        raw++;\n+        consumed = (raw - rawStart);\n+        return JTOK_OBJ_CLOSE;\n+    case '[':\n+        raw++;\n+        consumed = (raw - rawStart);\n+        return JTOK_ARR_OPEN;\n+    case ']':\n+        raw++;\n+        consumed = (raw - rawStart);\n+        return JTOK_ARR_CLOSE;\n+\n+    case ':':\n+        raw++;\n+        consumed = (raw - rawStart);\n+        return JTOK_COLON;\n+    case ',':\n+        raw++;\n+        consumed = (raw - rawStart);\n+        return JTOK_COMMA;\n+\n+    case 'n':\n+    case 't':\n+    case 'f':\n+        if (!strncmp(raw, \"null\", 4)) {\n+            raw += 4;\n+            consumed = (raw - rawStart);\n+            return JTOK_KW_NULL;\n+        } else if (!strncmp(raw, \"true\", 4)) {\n+            raw += 4;\n+            consumed = (raw - rawStart);\n+            return JTOK_KW_TRUE;\n+        } else if (!strncmp(raw, \"false\", 5)) {\n+            raw += 5;\n+            consumed = (raw - rawStart);\n+            return JTOK_KW_FALSE;\n+        } else\n+            return JTOK_ERR;\n+\n+    case '-':\n+    case '0':\n+    case '1':\n+    case '2':\n+    case '3':\n+    case '4':\n+    case '5':\n+    case '6':\n+    case '7':\n+    case '8':\n+    case '9': {\n+        // part 1: int\n+        string numStr;\n+\n+        const char *first = raw;\n+\n+        const char *firstDigit = first;\n+        if (!isdigit(*firstDigit))\n+            firstDigit++;\n+        if ((*firstDigit == '0') && isdigit(firstDigit[1]))\n+            return JTOK_ERR;\n+\n+        numStr += *raw;                       // copy first char\n+        raw++;\n+\n+        if ((*first == '-') && (!isdigit(*raw)))\n+            return JTOK_ERR;\n+\n+        while ((*raw) && isdigit(*raw)) {     // copy digits\n+            numStr += *raw;\n+            raw++;\n+        }\n+\n+        // part 2: frac\n+        if (*raw == '.') {\n+            numStr += *raw;                   // copy .\n+            raw++;\n+\n+            if (!isdigit(*raw))\n+                return JTOK_ERR;\n+            while ((*raw) && isdigit(*raw)) { // copy digits\n+                numStr += *raw;\n+                raw++;\n+            }\n+        }\n+\n+        // part 3: exp\n+        if (*raw == 'e' || *raw == 'E') {\n+            numStr += *raw;                   // copy E\n+            raw++;\n+\n+            if (*raw == '-' || *raw == '+') { // copy +/-\n+                numStr += *raw;\n+                raw++;\n+            }\n+\n+            if (!isdigit(*raw))\n+                return JTOK_ERR;\n+            while ((*raw) && isdigit(*raw)) { // copy digits\n+                numStr += *raw;\n+                raw++;\n+            }\n+        }\n+\n+        tokenVal = numStr;\n+        consumed = (raw - rawStart);\n+        return JTOK_NUMBER;\n+        }\n+\n+    case '\"': {\n+        raw++;                                // skip \"\n+\n+        string valStr;\n+\n+        while (*raw) {\n+            if (*raw < 0x20)\n+                return JTOK_ERR;\n+\n+            else if (*raw == '\\\\') {\n+                raw++;                        // skip backslash\n+\n+                switch (*raw) {\n+                case '\"':  valStr += \"\\\"\"; break;\n+                case '\\\\': valStr += \"\\\\\"; break;\n+                case '/':  valStr += \"/\"; break;\n+                case 'b':  valStr += \"\\b\"; break;\n+                case 'f':  valStr += \"\\f\"; break;\n+                case 'n':  valStr += \"\\n\"; break;\n+                case 'r':  valStr += \"\\r\"; break;\n+                case 't':  valStr += \"\\t\"; break;\n+\n+                case 'u': {\n+                    char buf[4] = {0,0,0,0};\n+                    char *last = &buf[0];\n+                    unsigned int codepoint;\n+                    if (hatoui(raw + 1, raw + 1 + 4, codepoint) !=\n+                               raw + 1 + 4)\n+                        return JTOK_ERR;\n+\n+                    if (codepoint <= 0x7f)\n+                         *last = (char)codepoint;\n+                    else if (codepoint <= 0x7FF) {\n+                        *last++ = (char)(0xC0 | (codepoint >> 6));\n+                        *last = (char)(0x80 | (codepoint & 0x3F));\n+                    } else if (codepoint <= 0xFFFF) {\n+                        *last++ = (char)(0xE0 | (codepoint >> 12));\n+                        *last++ = (char)(0x80 | ((codepoint >> 6) & 0x3F));\n+                        *last = (char)(0x80 | (codepoint & 0x3F));\n+                    }\n+\n+                    valStr += buf;\n+                    raw += 4;\n+                    break;\n+                    }\n+                default:\n+                    return JTOK_ERR;\n+\n+                }\n+\n+                raw++;                        // skip esc'd char\n+            }\n+\n+            else if (*raw == '\"') {\n+                raw++;                        // skip \"\n+                break;                        // stop scanning\n+            }\n+\n+            else {\n+                valStr += *raw;\n+                raw++;\n+            }\n+        }\n+\n+        tokenVal = valStr;\n+        consumed = (raw - rawStart);\n+        return JTOK_STRING;\n+        }\n+\n+    default:\n+        return JTOK_ERR;\n+    }\n+}\n+\n+bool UniValue::read(const char *raw)\n+{\n+    clear();\n+\n+    bool expectName = false;\n+    bool expectColon = false;\n+    vector<UniValue*> stack;\n+\n+    enum jtokentype tok = JTOK_NONE;\n+    enum jtokentype last_tok = JTOK_NONE;\n+    while (1) {\n+        last_tok = tok;\n+\n+        string tokenVal;\n+        unsigned int consumed;\n+        tok = getJsonToken(tokenVal, consumed, raw);\n+        if (tok == JTOK_NONE || tok == JTOK_ERR)\n+            break;\n+        raw += consumed;\n+\n+        switch (tok) {\n+\n+        case JTOK_OBJ_OPEN:\n+        case JTOK_ARR_OPEN: {\n+            VType utyp = (tok == JTOK_OBJ_OPEN ? VOBJ : VARR);\n+            if (!stack.size()) {\n+                if (utyp == VOBJ)\n+                    setObject();\n+                else\n+                    setArray();\n+                stack.push_back(this);\n+            } else {\n+                UniValue tmpVal(utyp);\n+                UniValue *top = stack.back();\n+                top->values.push_back(tmpVal);\n+\n+                UniValue *newTop = &(top->values.back());\n+                stack.push_back(newTop);\n+            }\n+\n+            if (utyp == VOBJ)\n+                expectName = true;\n+            break;\n+            }\n+\n+        case JTOK_OBJ_CLOSE:\n+        case JTOK_ARR_CLOSE: {\n+            if (!stack.size() || expectColon || (last_tok == JTOK_COMMA))\n+                return false;\n+\n+            VType utyp = (tok == JTOK_OBJ_CLOSE ? VOBJ : VARR);\n+            UniValue *top = stack.back();\n+            if (utyp != top->getType())\n+                return false;\n+\n+            stack.pop_back();\n+            expectName = false;\n+            break;\n+            }\n+\n+        case JTOK_COLON: {\n+            if (!stack.size() || expectName || !expectColon)\n+                return false;\n+\n+            UniValue *top = stack.back();\n+            if (top->getType() != VOBJ)\n+                return false;\n+\n+            expectColon = false;\n+            break;\n+            }\n+\n+        case JTOK_COMMA: {\n+            if (!stack.size() || expectName || expectColon ||\n+                (last_tok == JTOK_COMMA) || (last_tok == JTOK_ARR_OPEN))\n+                return false;\n+\n+            UniValue *top = stack.back();\n+            if (top->getType() == VOBJ)\n+                expectName = true;\n+            break;\n+            }\n+\n+        case JTOK_KW_NULL:\n+        case JTOK_KW_TRUE:\n+        case JTOK_KW_FALSE: {\n+            if (!stack.size() || expectName || expectColon)\n+                return false;\n+\n+            UniValue tmpVal;\n+            switch (tok) {\n+            case JTOK_KW_NULL:\n+                // do nothing more\n+                break;\n+            case JTOK_KW_TRUE:\n+                tmpVal.setBool(true);\n+                break;\n+            case JTOK_KW_FALSE:\n+                tmpVal.setBool(false);\n+                break;\n+            default: /* impossible */ break;\n+            }\n+\n+            UniValue *top = stack.back();\n+            top->values.push_back(tmpVal);\n+\n+            break;\n+            }\n+\n+        case JTOK_NUMBER: {\n+            if (!stack.size() || expectName || expectColon)\n+                return false;\n+\n+            UniValue tmpVal(VNUM, tokenVal);\n+            UniValue *top = stack.back();\n+            top->values.push_back(tmpVal);\n+\n+            break;\n+            }\n+\n+        case JTOK_STRING: {\n+            if (!stack.size())\n+                return false;\n+\n+            UniValue *top = stack.back();\n+\n+            if (expectName) {\n+                top->keys.push_back(tokenVal);\n+                expectName = false;\n+                expectColon = true;\n+            } else {\n+                UniValue tmpVal(VSTR, tokenVal);\n+                top->values.push_back(tmpVal);\n+            }\n+\n+            break;\n+            }\n+\n+        default:\n+            return false;\n+        }\n+    }\n+\n+    if (stack.size() != 0)\n+        return false;\n+\n+    return true;\n+}\n+"
+      },
+      {
+        "sha": "1818f5c6f9c59a1aaf48cbe5fde31470e17d6dcc",
+        "filename": "src/univalue/univalue_write.cpp",
+        "status": "added",
+        "additions": 145,
+        "deletions": 0,
+        "changes": 145,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/cbe39a38526a6c17619d02cc697b80ebfd57203b/src/univalue/univalue_write.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/cbe39a38526a6c17619d02cc697b80ebfd57203b/src/univalue/univalue_write.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/univalue/univalue_write.cpp?ref=cbe39a38526a6c17619d02cc697b80ebfd57203b",
+        "patch": "@@ -0,0 +1,145 @@\n+// Copyright 2014 BitPay Inc.\n+// Distributed under the MIT/X11 software license, see the accompanying\n+// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+#include <ctype.h>\n+#include <stdio.h>\n+#include \"univalue.h\"\n+\n+// TODO: Using UTF8\n+\n+using namespace std;\n+\n+static bool initEscapes;\n+static const char *escapes[256];\n+\n+static void initJsonEscape()\n+{\n+    escapes['\"'] = \"\\\\\\\"\";\n+    escapes['\\\\'] = \"\\\\\\\\\";\n+    escapes['/'] = \"\\\\/\";\n+    escapes['\\b'] = \"\\\\b\";\n+    escapes['\\f'] = \"\\\\f\";\n+    escapes['\\n'] = \"\\\\n\";\n+    escapes['\\r'] = \"\\\\r\";\n+    escapes['\\t'] = \"\\\\t\";\n+\n+    initEscapes = true;\n+}\n+\n+static string json_escape(const string& inS)\n+{\n+    if (!initEscapes)\n+        initJsonEscape();\n+\n+    string outS;\n+    outS.reserve(inS.size() * 2);\n+\n+    for (unsigned int i = 0; i < inS.size(); i++) {\n+        unsigned char ch = inS[i];\n+        const char *escStr = escapes[ch];\n+\n+        if (escStr)\n+            outS += escStr;\n+\n+        else if (isprint(ch))\n+            outS += ch;\n+\n+        else {\n+            char tmpesc[16];\n+            sprintf(tmpesc, \"\\\\u%04x\", ch);\n+            outS += tmpesc;\n+        }\n+    }\n+\n+    return outS;\n+}\n+\n+string UniValue::write(unsigned int prettyIndent,\n+                       unsigned int indentLevel) const\n+{\n+    string s;\n+    s.reserve(1024);\n+\n+    unsigned int modIndent = indentLevel;\n+    if (modIndent == 0)\n+        modIndent = 1;\n+\n+    switch (typ) {\n+    case VNULL:\n+        s += \"null\";\n+        break;\n+    case VOBJ:\n+        writeObject(prettyIndent, modIndent, s);\n+        break;\n+    case VARR:\n+        writeArray(prettyIndent, modIndent, s);\n+        break;\n+    case VSTR:\n+        s += \"\\\"\" + json_escape(val) + \"\\\"\";\n+        break;\n+    case VNUM:\n+        s += val;\n+        break;\n+    case VBOOL:\n+        s += (val == \"1\" ? \"true\" : \"false\");\n+        break;\n+    }\n+\n+    return s;\n+}\n+\n+static string spaceStr;\n+\n+static string indentStr(unsigned int prettyIndent, unsigned int indentLevel)\n+{\n+    unsigned int spaces = prettyIndent * indentLevel;\n+    while (spaceStr.size() < spaces)\n+        spaceStr += \"                \";\n+\n+    return spaceStr.substr(0, spaces);\n+}\n+\n+void UniValue::writeArray(unsigned int prettyIndent, unsigned int indentLevel, string& s) const\n+{\n+    s += \"[\";\n+    if (prettyIndent)\n+        s += \"\\n\";\n+\n+    for (unsigned int i = 0; i < values.size(); i++) {\n+        if (prettyIndent)\n+            s += indentStr(prettyIndent, indentLevel);\n+        s += values[i].write(prettyIndent, indentLevel + 1);\n+        if (i != (values.size() - 1))\n+            s += \", \";\n+        if (prettyIndent)\n+            s += \"\\n\";\n+    }\n+\n+    if (prettyIndent)\n+        s += indentStr(prettyIndent, indentLevel - 1);\n+    s += \"]\";\n+}\n+\n+void UniValue::writeObject(unsigned int prettyIndent, unsigned int indentLevel, string& s) const\n+{\n+    s += \"{\";\n+    if (prettyIndent)\n+        s += \"\\n\";\n+\n+    for (unsigned int i = 0; i < keys.size(); i++) {\n+        if (prettyIndent)\n+            s += indentStr(prettyIndent, indentLevel);\n+        s += \"\\\"\" + json_escape(keys[i]) + \"\\\": \";\n+        s += values[i].write(prettyIndent, indentLevel + 1);\n+        if (i != (values.size() - 1))\n+            s += \",\";\n+        if (prettyIndent)\n+            s += \"\\n\";\n+    }\n+\n+    if (prettyIndent)\n+        s += indentStr(prettyIndent, indentLevel - 1);\n+    s += \"}\";\n+}\n+"
+      }
+    ]
+  }
+]

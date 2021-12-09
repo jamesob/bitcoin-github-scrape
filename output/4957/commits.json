@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "13d76e5cdca2ba8382ecbf91790ef89dcc74a6ac",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxM2Q3NmU1Y2RjYTJiYTgzODJlY2JmOTE3OTBlZjg5ZGNjNzRhNmFj",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-09-22T07:43:02Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-09-22T07:43:02Z"
+      },
+      "message": "move CAddrDB implementation at the end of net.cpp\n\n- no code changes",
+      "tree": {
+        "sha": "b02f812984ea0428cc420823a84a79b0bb44ca88",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/b02f812984ea0428cc420823a84a79b0bb44ca88"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/13d76e5cdca2ba8382ecbf91790ef89dcc74a6ac",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/13d76e5cdca2ba8382ecbf91790ef89dcc74a6ac",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/13d76e5cdca2ba8382ecbf91790ef89dcc74a6ac",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/13d76e5cdca2ba8382ecbf91790ef89dcc74a6ac/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "5547f08ec70882340fc0cf76e2a442298c02f326",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5547f08ec70882340fc0cf76e2a442298c02f326",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/5547f08ec70882340fc0cf76e2a442298c02f326"
+      }
+    ],
+    "stats": {
+      "total": 202,
+      "additions": 101,
+      "deletions": 101
+    },
+    "files": [
+      {
+        "sha": "17583931a2fe5caffb62e6a88fd2d078880a371d",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 101,
+        "deletions": 101,
+        "changes": 202,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/13d76e5cdca2ba8382ecbf91790ef89dcc74a6ac/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/13d76e5cdca2ba8382ecbf91790ef89dcc74a6ac/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=13d76e5cdca2ba8382ecbf91790ef89dcc74a6ac",
+        "patch": "@@ -1931,107 +1931,6 @@ void CNode::Fuzz(int nChance)\n     Fuzz(2);\n }\n \n-//\n-// CAddrDB\n-//\n-\n-CAddrDB::CAddrDB()\n-{\n-    pathAddr = GetDataDir() / \"peers.dat\";\n-}\n-\n-bool CAddrDB::Write(const CAddrMan& addr)\n-{\n-    // Generate random temporary filename\n-    unsigned short randv = 0;\n-    GetRandBytes((unsigned char*)&randv, sizeof(randv));\n-    std::string tmpfn = strprintf(\"peers.dat.%04x\", randv);\n-\n-    // serialize addresses, checksum data up to that point, then append csum\n-    CDataStream ssPeers(SER_DISK, CLIENT_VERSION);\n-    ssPeers << FLATDATA(Params().MessageStart());\n-    ssPeers << addr;\n-    uint256 hash = Hash(ssPeers.begin(), ssPeers.end());\n-    ssPeers << hash;\n-\n-    // open temp output file, and associate with CAutoFile\n-    boost::filesystem::path pathTmp = GetDataDir() / tmpfn;\n-    FILE *file = fopen(pathTmp.string().c_str(), \"wb\");\n-    CAutoFile fileout = CAutoFile(file, SER_DISK, CLIENT_VERSION);\n-    if (!fileout)\n-        return error(\"%s : Failed to open file %s\", __func__, pathTmp.string());\n-\n-    // Write and commit header, data\n-    try {\n-        fileout << ssPeers;\n-    }\n-    catch (std::exception &e) {\n-        return error(\"%s : Serialize or I/O error - %s\", __func__, e.what());\n-    }\n-    FileCommit(fileout);\n-    fileout.fclose();\n-\n-    // replace existing peers.dat, if any, with new peers.dat.XXXX\n-    if (!RenameOver(pathTmp, pathAddr))\n-        return error(\"%s : Rename-into-place failed\", __func__);\n-\n-    return true;\n-}\n-\n-bool CAddrDB::Read(CAddrMan& addr)\n-{\n-    // open input file, and associate with CAutoFile\n-    FILE *file = fopen(pathAddr.string().c_str(), \"rb\");\n-    CAutoFile filein = CAutoFile(file, SER_DISK, CLIENT_VERSION);\n-    if (!filein)\n-        return error(\"%s : Failed to open file %s\", __func__, pathAddr.string());\n-\n-    // use file size to size memory buffer\n-    int fileSize = boost::filesystem::file_size(pathAddr);\n-    int dataSize = fileSize - sizeof(uint256);\n-    // Don't try to resize to a negative number if file is small\n-    if (dataSize < 0)\n-        dataSize = 0;\n-    vector<unsigned char> vchData;\n-    vchData.resize(dataSize);\n-    uint256 hashIn;\n-\n-    // read data and checksum from file\n-    try {\n-        filein.read((char *)&vchData[0], dataSize);\n-        filein >> hashIn;\n-    }\n-    catch (std::exception &e) {\n-        return error(\"%s : Deserialize or I/O error - %s\", __func__, e.what());\n-    }\n-    filein.fclose();\n-\n-    CDataStream ssPeers(vchData, SER_DISK, CLIENT_VERSION);\n-\n-    // verify stored checksum matches input data\n-    uint256 hashTmp = Hash(ssPeers.begin(), ssPeers.end());\n-    if (hashIn != hashTmp)\n-        return error(\"%s : Checksum mismatch, data corrupted\", __func__);\n-\n-    unsigned char pchMsgTmp[4];\n-    try {\n-        // de-serialize file header (network specific magic number) and ..\n-        ssPeers >> FLATDATA(pchMsgTmp);\n-\n-        // ... verify the network matches ours\n-        if (memcmp(pchMsgTmp, Params().MessageStart(), sizeof(pchMsgTmp)))\n-            return error(\"%s : Invalid network magic number\", __func__);\n-\n-        // de-serialize address data into one CAddrMan object\n-        ssPeers >> addr;\n-    }\n-    catch (std::exception &e) {\n-        return error(\"%s : Deserialize or I/O error - %s\", __func__, e.what());\n-    }\n-\n-    return true;\n-}\n-\n unsigned int ReceiveFloodSize() { return 1000*GetArg(\"-maxreceivebuffer\", 5*1000); }\n unsigned int SendBufferSize() { return 1000*GetArg(\"-maxsendbuffer\", 1*1000); }\n \n@@ -2187,3 +2086,104 @@ void CNode::EndMessage() UNLOCK_FUNCTION(cs_vSend)\n \n     LEAVE_CRITICAL_SECTION(cs_vSend);\n }\n+\n+//\n+// CAddrDB\n+//\n+\n+CAddrDB::CAddrDB()\n+{\n+    pathAddr = GetDataDir() / \"peers.dat\";\n+}\n+\n+bool CAddrDB::Write(const CAddrMan& addr)\n+{\n+    // Generate random temporary filename\n+    unsigned short randv = 0;\n+    GetRandBytes((unsigned char*)&randv, sizeof(randv));\n+    std::string tmpfn = strprintf(\"peers.dat.%04x\", randv);\n+\n+    // serialize addresses, checksum data up to that point, then append csum\n+    CDataStream ssPeers(SER_DISK, CLIENT_VERSION);\n+    ssPeers << FLATDATA(Params().MessageStart());\n+    ssPeers << addr;\n+    uint256 hash = Hash(ssPeers.begin(), ssPeers.end());\n+    ssPeers << hash;\n+\n+    // open temp output file, and associate with CAutoFile\n+    boost::filesystem::path pathTmp = GetDataDir() / tmpfn;\n+    FILE *file = fopen(pathTmp.string().c_str(), \"wb\");\n+    CAutoFile fileout = CAutoFile(file, SER_DISK, CLIENT_VERSION);\n+    if (!fileout)\n+        return error(\"%s : Failed to open file %s\", __func__, pathTmp.string());\n+\n+    // Write and commit header, data\n+    try {\n+        fileout << ssPeers;\n+    }\n+    catch (std::exception &e) {\n+        return error(\"%s : Serialize or I/O error - %s\", __func__, e.what());\n+    }\n+    FileCommit(fileout);\n+    fileout.fclose();\n+\n+    // replace existing peers.dat, if any, with new peers.dat.XXXX\n+    if (!RenameOver(pathTmp, pathAddr))\n+        return error(\"%s : Rename-into-place failed\", __func__);\n+\n+    return true;\n+}\n+\n+bool CAddrDB::Read(CAddrMan& addr)\n+{\n+    // open input file, and associate with CAutoFile\n+    FILE *file = fopen(pathAddr.string().c_str(), \"rb\");\n+    CAutoFile filein = CAutoFile(file, SER_DISK, CLIENT_VERSION);\n+    if (!filein)\n+        return error(\"%s : Failed to open file %s\", __func__, pathAddr.string());\n+\n+    // use file size to size memory buffer\n+    int fileSize = boost::filesystem::file_size(pathAddr);\n+    int dataSize = fileSize - sizeof(uint256);\n+    // Don't try to resize to a negative number if file is small\n+    if (dataSize < 0)\n+        dataSize = 0;\n+    vector<unsigned char> vchData;\n+    vchData.resize(dataSize);\n+    uint256 hashIn;\n+\n+    // read data and checksum from file\n+    try {\n+        filein.read((char *)&vchData[0], dataSize);\n+        filein >> hashIn;\n+    }\n+    catch (std::exception &e) {\n+        return error(\"%s : Deserialize or I/O error - %s\", __func__, e.what());\n+    }\n+    filein.fclose();\n+\n+    CDataStream ssPeers(vchData, SER_DISK, CLIENT_VERSION);\n+\n+    // verify stored checksum matches input data\n+    uint256 hashTmp = Hash(ssPeers.begin(), ssPeers.end());\n+    if (hashIn != hashTmp)\n+        return error(\"%s : Checksum mismatch, data corrupted\", __func__);\n+\n+    unsigned char pchMsgTmp[4];\n+    try {\n+        // de-serialize file header (network specific magic number) and ..\n+        ssPeers >> FLATDATA(pchMsgTmp);\n+\n+        // ... verify the network matches ours\n+        if (memcmp(pchMsgTmp, Params().MessageStart(), sizeof(pchMsgTmp)))\n+            return error(\"%s : Invalid network magic number\", __func__);\n+\n+        // de-serialize address data into one CAddrMan object\n+        ssPeers >> addr;\n+    }\n+    catch (std::exception &e) {\n+        return error(\"%s : Deserialize or I/O error - %s\", __func__, e.what());\n+    }\n+\n+    return true;\n+}\n\\ No newline at end of file"
+      }
+    ]
+  }
+]

@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "c55d1600da35e3882f149b00f972c0ef9cb41dfa",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjNTVkMTYwMGRhMzVlMzg4MmYxNDliMDBmOTcyYzBlZjljYjQxZGZh",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-10-06T12:18:55Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-10-07T06:52:54Z"
+      },
+      "message": "add missing Boost Thread join_all() call during shutdown\n\n- fixes #3037 by adding missing join_all() call and brings bitcoind\n  shutdown code in line with Bitcoin-Qt shutdown code\n- added a comment for the if (!fRet) case",
+      "tree": {
+        "sha": "1c73c33736e93fac079a9724f5b40dbd269da10e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/1c73c33736e93fac079a9724f5b40dbd269da10e"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/c55d1600da35e3882f149b00f972c0ef9cb41dfa",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c55d1600da35e3882f149b00f972c0ef9cb41dfa",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/c55d1600da35e3882f149b00f972c0ef9cb41dfa",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c55d1600da35e3882f149b00f972c0ef9cb41dfa/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "695a722003a2565f79cc337668e52d5c941fde10",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/695a722003a2565f79cc337668e52d5c941fde10",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/695a722003a2565f79cc337668e52d5c941fde10"
+      }
+    ],
+    "stats": {
+      "total": 17,
+      "additions": 13,
+      "deletions": 4
+    },
+    "files": [
+      {
+        "sha": "407e1d28c79498e51ae7084055812233e40fe8f7",
+        "filename": "src/bitcoind.cpp",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 4,
+        "changes": 17,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c55d1600da35e3882f149b00f972c0ef9cb41dfa/src/bitcoind.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c55d1600da35e3882f149b00f972c0ef9cb41dfa/src/bitcoind.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoind.cpp?ref=c55d1600da35e3882f149b00f972c0ef9cb41dfa",
+        "patch": "@@ -9,15 +9,18 @@\n \n void DetectShutdownThread(boost::thread_group* threadGroup)\n {\n-    bool shutdown = ShutdownRequested();\n+    bool fShutdown = ShutdownRequested();\n     // Tell the main threads to shutdown.\n-    while (!shutdown)\n+    while (!fShutdown)\n     {\n         MilliSleep(200);\n-        shutdown = ShutdownRequested();\n+        fShutdown = ShutdownRequested();\n     }\n     if (threadGroup)\n+    {\n         threadGroup->interrupt_all();\n+        threadGroup->join_all();\n+    }\n }\n \n //////////////////////////////////////////////////////////////////////////////\n@@ -107,10 +110,16 @@ bool AppInit(int argc, char* argv[])\n     } catch (...) {\n         PrintExceptionContinue(NULL, \"AppInit()\");\n     }\n-    if (!fRet) {\n+\n+    if (!fRet)\n+    {\n         if (detectShutdownThread)\n             detectShutdownThread->interrupt();\n+\n         threadGroup.interrupt_all();\n+        // threadGroup.join_all(); was left out intentionally here, because we didn't re-test all of\n+        // the startup-failure cases to make sure they don't result in a hang due to some\n+        // thread-blocking-waiting-for-another-thread-during-startup case\n     }\n \n     if (detectShutdownThread)"
+      }
+    ]
+  }
+]

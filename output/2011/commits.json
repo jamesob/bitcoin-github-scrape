@@ -1,0 +1,74 @@
+[
+  {
+    "sha": "0c7d18cc0cecc26876963b47783eb3bf4b3170ef",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowYzdkMThjYzBjZWNjMjY4NzY5NjNiNDc3ODNlYjNiZjRiMzE3MGVm",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-11-14T16:20:09Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-11-14T16:20:09Z"
+      },
+      "message": "cleanup db.cpp/.h after Ultraprune patch\n\n- remove obsolete functions, variables, definitions and such\n- cleanup layout (no need to keep that many ugly empty lines IMHO)",
+      "tree": {
+        "sha": "4e9e4f97e904a43bdcbf2dfd093f1cc92cdce7a8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/4e9e4f97e904a43bdcbf2dfd093f1cc92cdce7a8"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/0c7d18cc0cecc26876963b47783eb3bf4b3170ef",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0c7d18cc0cecc26876963b47783eb3bf4b3170ef",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/0c7d18cc0cecc26876963b47783eb3bf4b3170ef",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0c7d18cc0cecc26876963b47783eb3bf4b3170ef/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "f2b12807d04e981d0a252cbda6ba80c87a809d6e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f2b12807d04e981d0a252cbda6ba80c87a809d6e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/f2b12807d04e981d0a252cbda6ba80c87a809d6e"
+      }
+    ],
+    "stats": {
+      "total": 102,
+      "additions": 8,
+      "deletions": 94
+    },
+    "files": [
+      {
+        "sha": "24654fec4f71a68ed6989fa1020d10b09c68c3a3",
+        "filename": "src/db.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 78,
+        "changes": 85,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0c7d18cc0cecc26876963b47783eb3bf4b3170ef/src/db.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0c7d18cc0cecc26876963b47783eb3bf4b3170ef/src/db.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.cpp?ref=0c7d18cc0cecc26876963b47783eb3bf4b3170ef",
+        "patch": "@@ -17,11 +17,8 @@\n using namespace std;\n using namespace boost;\n \n-\n unsigned int nWalletDBUpdated;\n \n-\n-\n //\n // CDB\n //\n@@ -37,8 +34,7 @@ void CDBEnv::EnvShutdown()\n     int ret = dbenv.close(0);\n     if (ret != 0)\n         printf(\"EnvShutdown exception: %s (%d)\\n\", DbEnv::strerror(ret), ret);\n-    if (!fMockDb)\n-        DbEnv(0).remove(GetDataDir().string().c_str(), 0);\n+    DbEnv(0).remove(GetDataDir().string().c_str(), 0);\n }\n \n CDBEnv::CDBEnv() : dbenv(DB_CXX_NO_EXCEPTIONS)\n@@ -97,43 +93,9 @@ bool CDBEnv::Open(const boost::filesystem::path& path)\n         return error(\"CDB() : error %s (%d) opening database environment\", DbEnv::strerror(ret), ret);\n \n     fDbEnvInit = true;\n-    fMockDb = false;\n     return true;\n }\n \n-void CDBEnv::MakeMock()\n-{\n-    if (fDbEnvInit)\n-        throw runtime_error(\"CDBEnv::MakeMock(): already initialized\");\n-\n-    if (fShutdown)\n-        throw runtime_error(\"CDBEnv::MakeMock(): during shutdown\");\n-\n-    printf(\"CDBEnv::MakeMock()\\n\");\n-\n-    dbenv.set_cachesize(1, 0, 1);\n-    dbenv.set_lg_bsize(10485760*4);\n-    dbenv.set_lg_max(10485760);\n-    dbenv.set_lk_max_locks(10000);\n-    dbenv.set_lk_max_objects(10000);\n-    dbenv.set_flags(DB_AUTO_COMMIT, 1);\n-    dbenv.log_set_config(DB_LOG_IN_MEMORY, 1);\n-    int ret = dbenv.open(NULL,\n-                     DB_CREATE     |\n-                     DB_INIT_LOCK  |\n-                     DB_INIT_LOG   |\n-                     DB_INIT_MPOOL |\n-                     DB_INIT_TXN   |\n-                     DB_THREAD     |\n-                     DB_PRIVATE,\n-                     S_IRUSR | S_IWUSR);\n-    if (ret > 0)\n-        throw runtime_error(strprintf(\"CDBEnv::MakeMock(): error %d opening database environment\", ret));\n-\n-    fDbEnvInit = true;\n-    fMockDb = true;\n-}\n-\n CDBEnv::VerifyResult CDBEnv::Verify(std::string strFile, bool (*recoverFunc)(CDBEnv& dbenv, std::string strFile))\n {\n     LOCK(cs_db);\n@@ -196,16 +158,12 @@ bool CDBEnv::Salvage(std::string strFile, bool fAggressive,\n     return (result == 0);\n }\n \n-\n void CDBEnv::CheckpointLSN(std::string strFile)\n {\n     dbenv.txn_checkpoint(0, 0, 0);\n-    if (fMockDb)\n-        return;\n     dbenv.lsn_reset(strFile.c_str(), 0);\n }\n \n-\n CDB::CDB(const char *pszFile, const char* pszMode) :\n     pdb(NULL), activeTxn(NULL)\n {\n@@ -231,20 +189,11 @@ CDB::CDB(const char *pszFile, const char* pszMode) :\n         {\n             pdb = new Db(&bitdb.dbenv, 0);\n \n-            bool fMockDb = bitdb.IsMock();\n-            if (fMockDb)\n-            {\n-                DbMpoolFile*mpf = pdb->get_mpf();\n-                ret = mpf->set_flags(DB_MPOOL_NOFILE, 1);\n-                if (ret != 0)\n-                    throw runtime_error(strprintf(\"CDB() : failed to configure for no temp file backing for database %s\", pszFile));\n-            }\n-\n-            ret = pdb->open(NULL,      // Txn pointer\n-                            fMockDb ? NULL : pszFile,   // Filename\n-                            fMockDb ? pszFile : \"main\", // Logical db name\n-                            DB_BTREE,  // Database type\n-                            nFlags,    // Flags\n+            ret = pdb->open(NULL,       // Txn pointer\n+                            pszFile,    // Filename\n+                            \"main\",     // Logical db name\n+                            DB_BTREE,   // Database type\n+                            nFlags,     // Flags\n                             0);\n \n             if (ret != 0)\n@@ -314,15 +263,6 @@ void CDBEnv::CloseDb(const string& strFile)\n     }\n }\n \n-bool CDBEnv::RemoveDb(const string& strFile)\n-{\n-    this->CloseDb(strFile);\n-\n-    LOCK(cs_db);\n-    int rc = dbenv.dbremove(NULL, strFile.c_str(), NULL, DB_AUTO_COMMIT);\n-    return (rc == 0);\n-}\n-\n bool CDB::Rewrite(const string& strFile, const char* pszSkip)\n {\n     while (!fShutdown)\n@@ -416,7 +356,6 @@ bool CDB::Rewrite(const string& strFile, const char* pszSkip)\n     return false;\n }\n \n-\n void CDBEnv::Flush(bool fShutdown)\n {\n     int64 nStart = GetTimeMillis();\n@@ -440,8 +379,7 @@ void CDBEnv::Flush(bool fShutdown)\n                 printf(\"%s checkpoint\\n\", strFile.c_str());\n                 dbenv.txn_checkpoint(0, 0, 0);\n                 printf(\"%s detach\\n\", strFile.c_str());\n-                if (!fMockDb)\n-                    dbenv.lsn_reset(strFile.c_str(), 0);\n+                dbenv.lsn_reset(strFile.c_str(), 0);\n                 printf(\"%s closed\\n\", strFile.c_str());\n                 mapFileUseCount.erase(mi++);\n             }\n@@ -462,15 +400,6 @@ void CDBEnv::Flush(bool fShutdown)\n }\n \n \n-\n-\n-\n-\n-\n-\n-\n-\n-\n //\n // CAddrDB\n //"
+      },
+      {
+        "sha": "89daf5992a82abaa22f85979777b56cbde259297",
+        "filename": "src/db.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 16,
+        "changes": 17,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0c7d18cc0cecc26876963b47783eb3bf4b3170ef/src/db.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0c7d18cc0cecc26876963b47783eb3bf4b3170ef/src/db.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.h?ref=0c7d18cc0cecc26876963b47783eb3bf4b3170ef",
+        "patch": "@@ -2,6 +2,7 @@\n // Copyright (c) 2009-2012 The Bitcoin developers\n // Distributed under the MIT/X11 software license, see the accompanying\n // file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n #ifndef BITCOIN_DB_H\n #define BITCOIN_DB_H\n \n@@ -13,12 +14,7 @@\n \n #include <db_cxx.h>\n \n-class CAddress;\n class CAddrMan;\n-class CBlockLocator;\n-class CDiskBlockIndex;\n-class CMasterKey;\n-class COutPoint;\n class CWallet;\n class CWalletTx;\n \n@@ -27,12 +23,10 @@ extern unsigned int nWalletDBUpdated;\n void ThreadFlushWalletDB(void* parg);\n bool BackupWallet(const CWallet& wallet, const std::string& strDest);\n \n-\n class CDBEnv\n {\n private:\n     bool fDbEnvInit;\n-    bool fMockDb;\n \n     void EnvShutdown();\n \n@@ -44,8 +38,6 @@ class CDBEnv\n \n     CDBEnv();\n     ~CDBEnv();\n-    void MakeMock();\n-    bool IsMock() { return fMockDb; }\n \n     /*\n      * Verify that database file strFile is OK. If it is not,\n@@ -71,7 +63,6 @@ class CDBEnv\n     void CheckpointLSN(std::string strFile);\n \n     void CloseDb(const std::string& strFile);\n-    bool RemoveDb(const std::string& strFile);\n \n     DbTxn *TxnBegin(int flags=DB_TXN_WRITE_NOSYNC)\n     {\n@@ -306,12 +297,6 @@ class CDB\n };\n \n \n-\n-\n-\n-\n-\n-\n /** Access to the (IP) address database (peers.dat) */\n class CAddrDB\n {"
+      }
+    ]
+  }
+]

@@ -1,0 +1,170 @@
+[
+  {
+    "sha": "164f2d172934d7f2ae5e1c99a794846d8e226c3c",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxNjRmMmQxNzI5MzRkN2YyYWU1ZTFjOTlhNzk0ODQ2ZDhlMjI2YzNj",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-01-18T19:24:46Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-01-18T19:24:46Z"
+      },
+      "message": "Revert \"collect more info on tx pooling and block finding for getmininginfo\"\n\nThis reverts commit 340f0876eabcabefa77588585f7c8f29954dcb48.",
+      "tree": {
+        "sha": "4e7bdc90b4ae225f4007532f420bc573f7a911b9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/4e7bdc90b4ae225f4007532f420bc573f7a911b9"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/164f2d172934d7f2ae5e1c99a794846d8e226c3c",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/164f2d172934d7f2ae5e1c99a794846d8e226c3c",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/164f2d172934d7f2ae5e1c99a794846d8e226c3c",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/164f2d172934d7f2ae5e1c99a794846d8e226c3c/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "43cda5f325f53e8941efa7f712aed66e3fde172a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/43cda5f325f53e8941efa7f712aed66e3fde172a",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/43cda5f325f53e8941efa7f712aed66e3fde172a"
+      }
+    ],
+    "stats": {
+      "total": 21,
+      "additions": 0,
+      "deletions": 21
+    },
+    "files": [
+      {
+        "sha": "fbb7c6f31c852ab3d69129da76ba6c12b5b6769c",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 3,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/164f2d172934d7f2ae5e1c99a794846d8e226c3c/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/164f2d172934d7f2ae5e1c99a794846d8e226c3c/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=164f2d172934d7f2ae5e1c99a794846d8e226c3c",
+        "patch": "@@ -368,14 +368,11 @@ Value getmininginfo(const Array& params, bool fHelp)\n \n     Object obj;\n     obj.push_back(Pair(\"blocks\",        (int)nBestHeight));\n-    obj.push_back(Pair(\"currentblocksize\",(uint64_t)nLastBlockSize));\n-    obj.push_back(Pair(\"currentblocktx\",(uint64_t)nLastBlockTx));\n     obj.push_back(Pair(\"difficulty\",    (double)GetDifficulty()));\n     obj.push_back(Pair(\"errors\",        GetWarnings(\"statusbar\")));\n     obj.push_back(Pair(\"generate\",      (bool)fGenerateBitcoins));\n     obj.push_back(Pair(\"genproclimit\",  (int)(fLimitProcessors ? nLimitProcessors : -1)));\n     obj.push_back(Pair(\"hashespersec\",  gethashespersec(params, false)));\n-    obj.push_back(Pair(\"pooledtx\",      (uint64_t)nPooledTx));\n     obj.push_back(Pair(\"testnet\",       fTestNet));\n     return obj;\n }"
+      },
+      {
+        "sha": "3dc6c9ea7c94d678dfd4ae652d57f18f65852a5b",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 15,
+        "changes": 15,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/164f2d172934d7f2ae5e1c99a794846d8e226c3c/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/164f2d172934d7f2ae5e1c99a794846d8e226c3c/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=164f2d172934d7f2ae5e1c99a794846d8e226c3c",
+        "patch": "@@ -578,11 +578,8 @@ bool CTransaction::AcceptToMemoryPool(bool fCheckInputs, bool* pfMissingInputs)\n     return AcceptToMemoryPool(txdb, fCheckInputs, pfMissingInputs);\n }\n \n-uint64 nPooledTx = 0;\n-\n bool CTransaction::AddToMemoryPoolUnchecked()\n {\n-    printf(\"AcceptToMemoryPoolUnchecked(): size %lu\\n\",  mapTransactions.size());\n     // Add to memory pool without checking anything.  Don't call this directly,\n     // call AcceptToMemoryPool to properly check the transaction first.\n     CRITICAL_BLOCK(cs_mapTransactions)\n@@ -592,7 +589,6 @@ bool CTransaction::AddToMemoryPoolUnchecked()\n         for (int i = 0; i < vin.size(); i++)\n             mapNextTx[vin[i].prevout] = CInPoint(&mapTransactions[hash], i);\n         nTransactionsUpdated++;\n-        ++nPooledTx;\n     }\n     return true;\n }\n@@ -607,7 +603,6 @@ bool CTransaction::RemoveFromMemoryPool()\n             mapNextTx.erase(txin.prevout);\n         mapTransactions.erase(GetHash());\n         nTransactionsUpdated++;\n-        --nPooledTx;\n     }\n     return true;\n }\n@@ -2945,9 +2940,6 @@ class COrphan\n };\n \n \n-uint64 nLastBlockTx = 0;\n-uint64 nLastBlockSize = 0;\n-\n CBlock* CreateNewBlock(CReserveKey& reservekey)\n {\n     CBlockIndex* pindexPrev = pindexBest;\n@@ -3035,7 +3027,6 @@ CBlock* CreateNewBlock(CReserveKey& reservekey)\n         // Collect transactions into block\n         map<uint256, CTxIndex> mapTestPool;\n         uint64 nBlockSize = 1000;\n-        uint64 nBlockTx = 0;\n         int nBlockSigOps1 = 100; // pre-0.6 count of sigOps\n         int nBlockSigOps2 = 100; // post-0.6 count of sigOps\n         while (!mapPriority.empty())\n@@ -3082,7 +3073,6 @@ CBlock* CreateNewBlock(CReserveKey& reservekey)\n             // Added\n             pblock->vtx.push_back(tx);\n             nBlockSize += nTxSize;\n-            ++nBlockTx;\n             nBlockSigOps1 += nTxSigOps1;\n             nBlockSigOps2 += nTxSigOps2;\n \n@@ -3101,11 +3091,6 @@ CBlock* CreateNewBlock(CReserveKey& reservekey)\n                 }\n             }\n         }\n-\n-        nLastBlockTx = nBlockTx;\n-        nLastBlockSize = nBlockSize;\n-        printf(\"CreateNewBlock(): total size %lu\\n\", nBlockSize);\n-\n     }\n     pblock->vtx[0].vout[0].nValue = GetBlockValue(pindexPrev->nHeight+1, nFees);\n "
+      },
+      {
+        "sha": "0aac9556a9f56d5ebab0d14608a42aedf54ec729",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 3,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/164f2d172934d7f2ae5e1c99a794846d8e226c3c/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/164f2d172934d7f2ae5e1c99a794846d8e226c3c/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=164f2d172934d7f2ae5e1c99a794846d8e226c3c",
+        "patch": "@@ -62,10 +62,7 @@ extern CBigNum bnBestChainWork;\n extern CBigNum bnBestInvalidWork;\n extern uint256 hashBestChain;\n extern CBlockIndex* pindexBest;\n-extern uint64 nPooledTx;\n extern unsigned int nTransactionsUpdated;\n-extern uint64 nLastBlockTx;\n-extern uint64 nLastBlockSize;\n extern double dHashesPerSec;\n extern int64 nHPSTimerStart;\n extern int64 nTimeBestReceived;"
+      }
+    ]
+  },
+  {
+    "sha": "af10d0d65f527d39a2b9c6e994b58a2d02e058f2",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphZjEwZDBkNjVmNTI3ZDM5YTJiOWM2ZTk5NGI1OGEyZDAyZTA1OGYy",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-01-18T20:17:04Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-01-18T20:17:04Z"
+      },
+      "message": "Readd nPooledTx and nLastBlockTx in a reasonable way.",
+      "tree": {
+        "sha": "2325ea19abaf11c028a25fead50832dc50e71253",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/2325ea19abaf11c028a25fead50832dc50e71253"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/af10d0d65f527d39a2b9c6e994b58a2d02e058f2",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/af10d0d65f527d39a2b9c6e994b58a2d02e058f2",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/af10d0d65f527d39a2b9c6e994b58a2d02e058f2",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/af10d0d65f527d39a2b9c6e994b58a2d02e058f2/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "164f2d172934d7f2ae5e1c99a794846d8e226c3c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/164f2d172934d7f2ae5e1c99a794846d8e226c3c",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/164f2d172934d7f2ae5e1c99a794846d8e226c3c"
+      }
+    ],
+    "stats": {
+      "total": 50,
+      "additions": 35,
+      "deletions": 15
+    },
+    "files": [
+      {
+        "sha": "17c5f94031d856ae490c795fbf2066a626b5d7a8",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 29,
+        "deletions": 15,
+        "changes": 44,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/af10d0d65f527d39a2b9c6e994b58a2d02e058f2/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/af10d0d65f527d39a2b9c6e994b58a2d02e058f2/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=af10d0d65f527d39a2b9c6e994b58a2d02e058f2",
+        "patch": "@@ -43,6 +43,9 @@ static std::string strRPCUserColonPass;\n static int64 nWalletUnlockTime;\n static CCriticalSection cs_nWalletUnlockTime;\n \n+static CBlock* pLastBlockReturned;\n+static CCriticalSection cs_pLastBlockReturned;\n+\n extern Value dumpprivkey(const Array& params, bool fHelp);\n extern Value importprivkey(const Array& params, bool fHelp);\n \n@@ -367,12 +370,18 @@ Value getmininginfo(const Array& params, bool fHelp)\n             \"Returns an object containing mining-related information.\");\n \n     Object obj;\n+    CRITICAL_BLOCK(cs_pLastBlockReturned)\n+    {\n+        if (pLastBlockReturned)\n+            obj.push_back(Pair(\"currentblocktx\",(uint64_t)pLastBlockReturned->vtx.size()));\n+    }\n     obj.push_back(Pair(\"blocks\",        (int)nBestHeight));\n     obj.push_back(Pair(\"difficulty\",    (double)GetDifficulty()));\n     obj.push_back(Pair(\"errors\",        GetWarnings(\"statusbar\")));\n     obj.push_back(Pair(\"generate\",      (bool)fGenerateBitcoins));\n     obj.push_back(Pair(\"genproclimit\",  (int)(fLimitProcessors ? nLimitProcessors : -1)));\n     obj.push_back(Pair(\"hashespersec\",  gethashespersec(params, false)));\n+    obj.push_back(Pair(\"pooledtx\",      (uint64_t)GetPooledTxSize()));\n     obj.push_back(Pair(\"testnet\",       fTestNet));\n     return obj;\n }\n@@ -1753,6 +1762,7 @@ Value validateaddress(const Array& params, bool fHelp)\n     return ret;\n }\n \n+\n Value getwork(const Array& params, bool fHelp)\n {\n     if (fHelp || params.size() > 1)\n@@ -1786,23 +1796,27 @@ Value getwork(const Array& params, bool fHelp)\n         if (pindexPrev != pindexBest ||\n             (nTransactionsUpdated != nTransactionsUpdatedLast && GetTime() - nStart > 60))\n         {\n-            if (pindexPrev != pindexBest)\n+            CRITICAL_BLOCK(cs_pLastBlockReturned)\n             {\n-                // Deallocate old blocks since they're obsolete now\n-                mapNewBlock.clear();\n-                BOOST_FOREACH(CBlock* pblock, vNewBlock)\n-                    delete pblock;\n-                vNewBlock.clear();\n+                if (pindexPrev != pindexBest)\n+                {\n+                    // Deallocate old blocks since they're obsolete now\n+                    mapNewBlock.clear();\n+                    BOOST_FOREACH(CBlock* pblock, vNewBlock)\n+                        delete pblock;\n+                    vNewBlock.clear();\n+                }\n+                nTransactionsUpdatedLast = nTransactionsUpdated;\n+                pindexPrev = pindexBest;\n+                nStart = GetTime();\n+\n+                // Create new block\n+                pblock = CreateNewBlock(reservekey);\n+                pLastBlockReturned = pblock;\n+                if (!pblock)\n+                    throw JSONRPCError(-7, \"Out of memory\");\n+                vNewBlock.push_back(pblock);\n             }\n-            nTransactionsUpdatedLast = nTransactionsUpdated;\n-            pindexPrev = pindexBest;\n-            nStart = GetTime();\n-\n-            // Create new block\n-            pblock = CreateNewBlock(reservekey);\n-            if (!pblock)\n-                throw JSONRPCError(-7, \"Out of memory\");\n-            vNewBlock.push_back(pblock);\n         }\n \n         // Update nTime"
+      },
+      {
+        "sha": "d57af0f45ee2743a744b530769f256d89057845f",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 0,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/af10d0d65f527d39a2b9c6e994b58a2d02e058f2/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/af10d0d65f527d39a2b9c6e994b58a2d02e058f2/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=af10d0d65f527d39a2b9c6e994b58a2d02e058f2",
+        "patch": "@@ -709,6 +709,11 @@ int CTxIndex::GetDepthInMainChain() const\n     return 1 + nBestHeight - pindex->nHeight;\n }\n \n+uint64_t GetPooledTxSize()\n+{\n+    return mapTransactions.size();\n+}\n+\n \n \n "
+      },
+      {
+        "sha": "f43eec9187248c4fedffc927afe645867dfe4f09",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/af10d0d65f527d39a2b9c6e994b58a2d02e058f2/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/af10d0d65f527d39a2b9c6e994b58a2d02e058f2/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=af10d0d65f527d39a2b9c6e994b58a2d02e058f2",
+        "patch": "@@ -106,6 +106,7 @@ unsigned int ComputeMinWork(unsigned int nBase, int64 nTime);\n int GetNumBlocksOfPeers();\n bool IsInitialBlockDownload();\n std::string GetWarnings(std::string strFor);\n+uint64_t GetPooledTxSize();\n \n \n "
+      }
+    ]
+  }
+]

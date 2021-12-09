@@ -1,0 +1,194 @@
+[
+  {
+    "sha": "390274abda45fb8df2fd798d528c6b87dc62c482",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozOTAyNzRhYmRhNDVmYjhkZjJmZDc5OGQ1MjhjNmI4N2RjNjJjNDgy",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-05-23T05:53:43Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-05-24T16:09:14Z"
+      },
+      "message": "Split CTxDB into three databases: CBlockIdxDB, CMetaDB and CTxDB\n\nblkindex.dat is overloaded to store three different datasets within a\nsingle key/value database:\n\n    1. uint256 hash -> CBlockIndex\n    2. uint256 hash -> CTxIndex\n    3. miscellaneous metadata associated with the block chain\n\nSplit into three files, blkhash.dat, txhash.dat and blkmeta.dat, stored in\nthe blockchain/ subdirectory.  blk????.dat storage is also moved into\nthe new blockchain/ subdirectory.",
+      "tree": {
+        "sha": "ce138b9a241f9daa9c3cdb1b696ca45138922692",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/ce138b9a241f9daa9c3cdb1b696ca45138922692"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/390274abda45fb8df2fd798d528c6b87dc62c482",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/390274abda45fb8df2fd798d528c6b87dc62c482",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/390274abda45fb8df2fd798d528c6b87dc62c482",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/390274abda45fb8df2fd798d528c6b87dc62c482/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "8e154e4d742530f0836a4e5fedd2b086f51499eb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8e154e4d742530f0836a4e5fedd2b086f51499eb",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/8e154e4d742530f0836a4e5fedd2b086f51499eb"
+      }
+    ],
+    "stats": {
+      "total": 328,
+      "additions": 239,
+      "deletions": 89
+    },
+    "files": [
+      {
+        "sha": "2d2829ab3a7fe4cb334651545d405a5f2b2d991e",
+        "filename": "src/db.cpp",
+        "status": "modified",
+        "additions": 44,
+        "deletions": 39,
+        "changes": 83,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/390274abda45fb8df2fd798d528c6b87dc62c482/src/db.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/390274abda45fb8df2fd798d528c6b87dc62c482/src/db.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.cpp?ref=390274abda45fb8df2fd798d528c6b87dc62c482",
+        "patch": "@@ -172,7 +172,9 @@ CDB::CDB(const char *pszFile, const char* pszMode) :\n \n static bool IsChainFile(std::string strFile)\n {\n-    if (strFile == \"blkindex.dat\")\n+    if (strFile == \"blockchain/blkmeta.dat\" ||\n+        strFile == \"blockchain/blkhash.dat\" ||\n+        strFile == \"blockchain/txhash.dat\")\n         return true;\n \n     return false;\n@@ -371,13 +373,13 @@ bool CTxDB::ReadTxIndex(uint256 hash, CTxIndex& txindex)\n {\n     assert(!fClient);\n     txindex.SetNull();\n-    return Read(make_pair(string(\"tx\"), hash), txindex);\n+    return Read(hash, txindex);\n }\n \n bool CTxDB::UpdateTxIndex(uint256 hash, const CTxIndex& txindex)\n {\n     assert(!fClient);\n-    return Write(make_pair(string(\"tx\"), hash), txindex);\n+    return Write(hash, txindex);\n }\n \n bool CTxDB::AddTxIndex(const CTransaction& tx, const CDiskTxPos& pos, int nHeight)\n@@ -387,24 +389,24 @@ bool CTxDB::AddTxIndex(const CTransaction& tx, const CDiskTxPos& pos, int nHeigh\n     // Add to tx index\n     uint256 hash = tx.GetHash();\n     CTxIndex txindex(pos, tx.vout.size());\n-    return Write(make_pair(string(\"tx\"), hash), txindex);\n+    return Write(hash, txindex);\n }\n \n bool CTxDB::EraseTxIndex(const CTransaction& tx)\n {\n     assert(!fClient);\n     uint256 hash = tx.GetHash();\n \n-    return Erase(make_pair(string(\"tx\"), hash));\n+    return Erase(hash);\n }\n \n bool CTxDB::ContainsTx(uint256 hash)\n {\n     assert(!fClient);\n-    return Exists(make_pair(string(\"tx\"), hash));\n+    return Exists(hash);\n }\n \n-bool CTxDB::ReadOwnerTxes(uint160 hash160, int nMinHeight, vector<CTransaction>& vtx)\n+bool CMetaDB::ReadOwnerTxes(uint160 hash160, int nMinHeight, vector<CTransaction>& vtx)\n {\n     assert(!fClient);\n     vtx.clear();\n@@ -490,27 +492,22 @@ bool CTxDB::ReadDiskTx(COutPoint outpoint, CTransaction& tx)\n     return ReadDiskTx(outpoint.hash, tx, txindex);\n }\n \n-bool CTxDB::WriteBlockIndex(const CDiskBlockIndex& blockindex)\n-{\n-    return Write(make_pair(string(\"blockindex\"), blockindex.GetBlockHash()), blockindex);\n-}\n-\n-bool CTxDB::ReadHashBestChain(uint256& hashBestChain)\n+bool CMetaDB::ReadHashBestChain(uint256& hashBestChain)\n {\n     return Read(string(\"hashBestChain\"), hashBestChain);\n }\n \n-bool CTxDB::WriteHashBestChain(uint256 hashBestChain)\n+bool CMetaDB::WriteHashBestChain(uint256 hashBestChain)\n {\n     return Write(string(\"hashBestChain\"), hashBestChain);\n }\n \n-bool CTxDB::ReadBestInvalidWork(CBigNum& bnBestInvalidWork)\n+bool CMetaDB::ReadBestInvalidWork(CBigNum& bnBestInvalidWork)\n {\n     return Read(string(\"bnBestInvalidWork\"), bnBestInvalidWork);\n }\n \n-bool CTxDB::WriteBestInvalidWork(CBigNum bnBestInvalidWork)\n+bool CMetaDB::WriteBestInvalidWork(CBigNum bnBestInvalidWork)\n {\n     return Write(string(\"bnBestInvalidWork\"), bnBestInvalidWork);\n }\n@@ -535,11 +532,8 @@ CBlockIndex static * InsertBlockIndex(uint256 hash)\n     return pindexNew;\n }\n \n-bool CTxDB::LoadBlockIndex()\n+bool CMetaDB::LoadBlockIndex()\n {\n-    if (!LoadBlockIndexGuts())\n-        return false;\n-\n     if (fRequestShutdown)\n         return true;\n \n@@ -603,11 +597,12 @@ bool CTxDB::LoadBlockIndex()\n         {\n             pair<unsigned int, unsigned int> pos = make_pair(pindex->nFile, pindex->nBlockPos);\n             mapBlockPos[pos] = pindex;\n+            CTxDB txdb;                  // ugh; at least Satoshi did it first\n             BOOST_FOREACH(const CTransaction &tx, block.vtx)\n             {\n                 uint256 hashTx = tx.GetHash();\n                 CTxIndex txindex;\n-                if (ReadTxIndex(hashTx, txindex))\n+                if (txdb.ReadTxIndex(hashTx, txindex))\n                 {\n                     // check level 3: checker transaction hashes\n                     if (nCheckLevel>2 || pindex->nFile != txindex.pos.nFile || pindex->nBlockPos != txindex.pos.nBlockPos)\n@@ -678,7 +673,7 @@ bool CTxDB::LoadBlockIndex()\n                      BOOST_FOREACH(const CTxIn &txin, tx.vin)\n                      {\n                           CTxIndex txindex;\n-                          if (ReadTxIndex(txin.prevout.hash, txindex))\n+                          if (txdb.ReadTxIndex(txin.prevout.hash, txindex))\n                               if (txindex.vSpent.size()-1 < txin.prevout.n || txindex.vSpent[txin.prevout.n].IsNull())\n                               {\n                                   printf(\"LoadBlockIndex(): *** found unspent prevout %s:%i in %s\\n\", txin.prevout.hash.ToString().c_str(), txin.prevout.n, hashTx.ToString().c_str());\n@@ -696,33 +691,46 @@ bool CTxDB::LoadBlockIndex()\n         CBlock block;\n         if (!block.ReadFromDisk(pindexFork))\n             return error(\"LoadBlockIndex() : block.ReadFromDisk failed\");\n+\n+        CBlockIdxDB blkidxdb;              // ugh; Satoshi did it first :)\n         CTxDB txdb;\n-        block.SetBestChain(txdb, pindexFork);\n+        CMetaDB metadb;\n+        block.SetBestChain(blkidxdb, txdb, metadb, pindexFork);\n     }\n \n     return true;\n }\n \n \n+//\n+// CBlockIdxDB\n+//\n+\n+bool CBlockIdxDB::WriteBlockIndex(const CDiskBlockIndex& blockindex)\n+{\n+    uint256 hash = blockindex.GetBlockHash();\n+    return Write(hash, blockindex, true);  // is overwrite really ok here?\n+}\n+\n+bool CBlockIdxDB::EraseBlockIndex(uint256 hash)\n+{\n+    return Erase(hash);\n+}\n \n-bool CTxDB::LoadBlockIndexGuts()\n+bool CBlockIdxDB::LoadBlockIndex()\n {\n     // Get database cursor\n     Dbc* pcursor = GetCursor();\n     if (!pcursor)\n         return false;\n \n     // Load mapBlockIndex\n-    unsigned int fFlags = DB_SET_RANGE;\n     loop\n     {\n         // Read next record\n         CDataStream ssKey(SER_DISK, CLIENT_VERSION);\n-        if (fFlags == DB_SET_RANGE)\n-            ssKey << make_pair(string(\"blockindex\"), uint256(0));\n         CDataStream ssValue(SER_DISK, CLIENT_VERSION);\n-        int ret = ReadAtCursor(pcursor, ssKey, ssValue, fFlags);\n-        fFlags = DB_NEXT;\n+        int ret = ReadAtCursor(pcursor, ssKey, ssValue);\n         if (ret == DB_NOTFOUND)\n             break;\n         else if (ret != 0)\n@@ -731,11 +739,10 @@ bool CTxDB::LoadBlockIndexGuts()\n         // Unserialize\n \n         try {\n-        string strType;\n-        ssKey >> strType;\n-        if (strType == \"blockindex\" && !fRequestShutdown)\n-        {\n+            uint256 hashKey;\n             CDiskBlockIndex diskindex;\n+\n+            ssKey >> hashKey;\n             ssValue >> diskindex;\n \n             // Construct block index object\n@@ -757,15 +764,13 @@ bool CTxDB::LoadBlockIndexGuts()\n \n             if (!pindexNew->CheckIndex())\n                 return error(\"LoadBlockIndex() : CheckIndex failed at %d\", pindexNew->nHeight);\n-        }\n-        else\n-        {\n-            break; // if shutdown requested or finished loading block index\n-        }\n         }    // try\n         catch (std::exception &e) {\n-            return error(\"%s() : deserialize error\", __PRETTY_FUNCTION__);\n+            printf(\"%s() : deserialize error, ignoring\", __PRETTY_FUNCTION__);\n         }\n+\n+        if (fRequestShutdown)\n+            break;\n     }\n     pcursor->close();\n "
+      },
+      {
+        "sha": "57879de0a1aaa95d76bb621f4078ec8c95505062",
+        "filename": "src/db.h",
+        "status": "modified",
+        "additions": 48,
+        "deletions": 11,
+        "changes": 59,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/390274abda45fb8df2fd798d528c6b87dc62c482/src/db.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/390274abda45fb8df2fd798d528c6b87dc62c482/src/db.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.h?ref=390274abda45fb8df2fd798d528c6b87dc62c482",
+        "patch": "@@ -273,6 +273,22 @@ class CDB\n         return (ret == 0);\n     }\n \n+    bool TxnSetActive(DbTxn *newActive)\n+    {\n+        if (!pdb || activeTxn)\n+            return false;\n+        activeTxn = newActive;\n+        return true;\n+    }\n+\n+    bool TxnClearActive()\n+    {\n+        if (!pdb || !activeTxn)\n+            return false;\n+        activeTxn = NULL;\n+        return true;\n+    }\n+\n     bool ReadVersion(int& nVersion)\n     {\n         nVersion = 0;\n@@ -289,15 +305,30 @@ class CDB\n \n \n \n+/** Access to block chain metadata database (blkmeta.dat) */\n+class CMetaDB : public CDB\n+{\n+public:\n+    CMetaDB(const char* pszMode=\"r+\") : CDB(\"blockchain/blkmeta.dat\", pszMode) { }\n+private:\n+    CMetaDB(const CMetaDB&);\n+    void operator=(const CMetaDB&);\n+public:\n+    bool ReadOwnerTxes(uint160 hash160, int nHeight, std::vector<CTransaction>& vtx);\n+    bool ReadHashBestChain(uint256& hashBestChain);\n+    bool WriteHashBestChain(uint256 hashBestChain);\n+    bool ReadBestInvalidWork(CBigNum& bnBestInvalidWork);\n+    bool WriteBestInvalidWork(CBigNum bnBestInvalidWork);\n+    bool LoadBlockIndex();\n+};\n \n \n \n-\n-/** Access to the transaction database (blkindex.dat) */\n+/** Access to the transaction database (txhash.dat) */\n class CTxDB : public CDB\n {\n public:\n-    CTxDB(const char* pszMode=\"r+\") : CDB(\"blkindex.dat\", pszMode) { }\n+    CTxDB(const char* pszMode=\"r+\") : CDB(\"blockchain/txhash.dat\", pszMode) { }\n private:\n     CTxDB(const CTxDB&);\n     void operator=(const CTxDB&);\n@@ -307,19 +338,25 @@ class CTxDB : public CDB\n     bool AddTxIndex(const CTransaction& tx, const CDiskTxPos& pos, int nHeight);\n     bool EraseTxIndex(const CTransaction& tx);\n     bool ContainsTx(uint256 hash);\n-    bool ReadOwnerTxes(uint160 hash160, int nHeight, std::vector<CTransaction>& vtx);\n     bool ReadDiskTx(uint256 hash, CTransaction& tx, CTxIndex& txindex);\n     bool ReadDiskTx(uint256 hash, CTransaction& tx);\n     bool ReadDiskTx(COutPoint outpoint, CTransaction& tx, CTxIndex& txindex);\n     bool ReadDiskTx(COutPoint outpoint, CTransaction& tx);\n-    bool WriteBlockIndex(const CDiskBlockIndex& blockindex);\n-    bool ReadHashBestChain(uint256& hashBestChain);\n-    bool WriteHashBestChain(uint256 hashBestChain);\n-    bool ReadBestInvalidWork(CBigNum& bnBestInvalidWork);\n-    bool WriteBestInvalidWork(CBigNum bnBestInvalidWork);\n-    bool LoadBlockIndex();\n+};\n+\n+\n+/** Access to the block chain index (blkhash.dat) */\n+class CBlockIdxDB : public CDB\n+{\n+public:\n+    CBlockIdxDB(const char* pszMode=\"r+\") : CDB(\"blockchain/blkhash.dat\", pszMode) {}\n private:\n-    bool LoadBlockIndexGuts();\n+    CBlockIdxDB(const CBlockIdxDB&);\n+    void operator=(const CBlockIdxDB&);\n+public:\n+    bool LoadBlockIndex();\n+    bool WriteBlockIndex(const CDiskBlockIndex& blockindex);\n+    bool EraseBlockIndex(uint256 hash);\n };\n \n "
+      },
+      {
+        "sha": "c2e65afd3947f02d23f4f0067ecfef4d4f7cffa1",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 40,
+        "deletions": 3,
+        "changes": 43,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/390274abda45fb8df2fd798d528c6b87dc62c482/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/390274abda45fb8df2fd798d528c6b87dc62c482/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=390274abda45fb8df2fd798d528c6b87dc62c482",
+        "patch": "@@ -191,6 +191,34 @@ bool static Bind(const CService &addr) {\n     return true;\n }\n \n+static bool WantChainUpgrade()\n+{\n+    filesystem::path pathOld = GetDataDir() / \"blk0001.dat\";\n+    filesystem::path pathNew = GetDataDir() / \"blockchain\" / \"blk0001.dat\";\n+\n+    // if new db exists, no upgrade needed\n+    if (filesystem::exists(pathNew))\n+        return false;\n+\n+    // if old db missing, no upgrade possible\n+    if (!filesystem::exists(pathOld))\n+        return false;\n+\n+    return true;\n+}\n+\n+static void UpgradeBlockChain()\n+{\n+    filesystem::path pathOld = GetDataDir() / \"blk0001.dat\";\n+\n+    InitWarning(_(\"Upgrading and reindexing database.  This will take a LONG time.\"));\n+    printf(\"Upgrading and reindexing database.  This will take a LONG time.\\n\");\n+\n+    FILE *file = fopen(pathOld.string().c_str(), \"rb\");\n+    if (file)\n+        LoadExternalBlockFile(file);\n+}\n+\n // Core-specific options shared between UI and daemon\n std::string HelpMessage()\n {\n@@ -508,17 +536,23 @@ bool AppInit2()\n \n     if (GetBoolArg(\"-loadblockindextest\"))\n     {\n-        CTxDB txdb(\"r\");\n-        txdb.LoadBlockIndex();\n+        CBlockIdxDB blkidxdb(\"r\");\n+        blkidxdb.LoadBlockIndex();\n+\n+        CMetaDB metadb(\"r\");\n+        metadb.LoadBlockIndex();\n+\n         PrintBlockTree();\n         return false;\n     }\n \n+    bool fWantUpgrade = WantChainUpgrade();\n+\n     uiInterface.InitMessage(_(\"Loading block index...\"));\n     printf(\"Loading block index...\\n\");\n     nStart = GetTimeMillis();\n     if (!LoadBlockIndex())\n-        strErrors << _(\"Error loading blkindex.dat\") << \"\\n\";\n+        strErrors << _(\"Error loading block index\") << \"\\n\";\n \n     // as LoadBlockIndex can take several minutes, it's possible the user\n     // requested to kill bitcoin-qt during the last operation. If so, exit.\n@@ -638,6 +672,9 @@ bool AppInit2()\n \n     // ********************************************************* Step 8: import blocks\n \n+    if (fWantUpgrade)\n+        UpgradeBlockChain();\n+\n     if (mapArgs.count(\"-loadblock\"))\n     {\n         BOOST_FOREACH(string strFile, mapMultiArgs[\"-loadblock\"])"
+      },
+      {
+        "sha": "9a18aecefaf35c679adad17d08560e642633d400",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 98,
+        "deletions": 32,
+        "changes": 130,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/390274abda45fb8df2fd798d528c6b87dc62c482/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/390274abda45fb8df2fd798d528c6b87dc62c482/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=390274abda45fb8df2fd798d528c6b87dc62c482",
+        "patch": "@@ -959,7 +959,7 @@ void static InvalidChainFound(CBlockIndex* pindexNew)\n     if (pindexNew->bnChainWork > bnBestInvalidWork)\n     {\n         bnBestInvalidWork = pindexNew->bnChainWork;\n-        CTxDB().WriteBestInvalidWork(bnBestInvalidWork);\n+        CMetaDB().WriteBestInvalidWork(bnBestInvalidWork);\n         uiInterface.NotifyBlocksChanged();\n     }\n     printf(\"InvalidChainFound: invalid block=%s  height=%d  work=%s\\n\", pindexNew->GetBlockHash().ToString().substr(0,20).c_str(), pindexNew->nHeight, pindexNew->bnChainWork.ToString().c_str());\n@@ -1282,7 +1282,8 @@ bool CTransaction::ClientConnectInputs()\n \n \n \n-bool CBlock::DisconnectBlock(CTxDB& txdb, CBlockIndex* pindex)\n+bool CBlock::DisconnectBlock(CBlockIdxDB& blkidxdb, CTxDB& txdb,\n+                             CBlockIndex* pindex)\n {\n     // Disconnect in reverse order\n     for (int i = vtx.size()-1; i >= 0; i--)\n@@ -1295,14 +1296,15 @@ bool CBlock::DisconnectBlock(CTxDB& txdb, CBlockIndex* pindex)\n     {\n         CDiskBlockIndex blockindexPrev(pindex->pprev);\n         blockindexPrev.hashNext = 0;\n-        if (!txdb.WriteBlockIndex(blockindexPrev))\n+        if (!blkidxdb.WriteBlockIndex(blockindexPrev))\n             return error(\"DisconnectBlock() : WriteBlockIndex failed\");\n     }\n \n     return true;\n }\n \n-bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex)\n+bool CBlock::ConnectBlock(CBlockIdxDB& blkidxdb, CTxDB& txdb,\n+                          CBlockIndex* pindex)\n {\n     // Check it again in case a previous version let a bad block in\n     if (!CheckBlock())\n@@ -1393,7 +1395,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex)\n     {\n         CDiskBlockIndex blockindexPrev(pindex->pprev);\n         blockindexPrev.hashNext = pindex->GetBlockHash();\n-        if (!txdb.WriteBlockIndex(blockindexPrev))\n+        if (!blkidxdb.WriteBlockIndex(blockindexPrev))\n             return error(\"ConnectBlock() : WriteBlockIndex failed\");\n     }\n \n@@ -1404,7 +1406,8 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex)\n     return true;\n }\n \n-bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)\n+bool static Reorganize(CBlockIdxDB& blkidxdb, CTxDB& txdb, CMetaDB& metadb,\n+                       DbTxn *txn, CBlockIndex* pindexNew)\n {\n     printf(\"REORGANIZE\\n\");\n \n@@ -1443,7 +1446,7 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)\n         CBlock block;\n         if (!block.ReadFromDisk(pindex))\n             return error(\"Reorganize() : ReadFromDisk for disconnect failed\");\n-        if (!block.DisconnectBlock(txdb, pindex))\n+        if (!block.DisconnectBlock(blkidxdb, txdb, pindex))\n             return error(\"Reorganize() : DisconnectBlock %s failed\", pindex->GetBlockHash().ToString().substr(0,20).c_str());\n \n         // Queue memory transactions to resurrect\n@@ -1460,7 +1463,7 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)\n         CBlock block;\n         if (!block.ReadFromDisk(pindex))\n             return error(\"Reorganize() : ReadFromDisk for connect failed\");\n-        if (!block.ConnectBlock(txdb, pindex))\n+        if (!block.ConnectBlock(blkidxdb, txdb, pindex))\n         {\n             // Invalid block\n             return error(\"Reorganize() : ConnectBlock %s failed\", pindex->GetBlockHash().ToString().substr(0,20).c_str());\n@@ -1470,11 +1473,17 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)\n         BOOST_FOREACH(const CTransaction& tx, block.vtx)\n             vDelete.push_back(tx);\n     }\n-    if (!txdb.WriteHashBestChain(pindexNew->GetBlockHash()))\n+    if (!metadb.WriteHashBestChain(pindexNew->GetBlockHash()))\n         return error(\"Reorganize() : WriteHashBestChain failed\");\n \n     // Make sure it's successfully written to disk before changing memory structure\n-    if (!txdb.TxnCommit())\n+    if (!blkidxdb.TxnClearActive())\n+        printf(\"CBlockIdxDB::TxnClearActive failed\\n\");\n+    if (!txdb.TxnClearActive())\n+        printf(\"CTxDB::TxnClearActive failed\\n\");\n+    if (!metadb.TxnClearActive())\n+        printf(\"CMetaDB::TxnClearActive failed\\n\");\n+    if (txn->commit(0) != 0)\n         return error(\"Reorganize() : TxnCommit failed\");\n \n     // Disconnect shorter branch\n@@ -1502,18 +1511,34 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)\n \n \n // Called from inside SetBestChain: attaches a block to the new best chain being built\n-bool CBlock::SetBestChainInner(CTxDB& txdb, CBlockIndex *pindexNew)\n+bool CBlock::SetBestChainInner(CBlockIdxDB& blkidxdb, CTxDB& txdb,\n+                               CMetaDB& metadb, DbTxn *txn,\n+                               CBlockIndex *pindexNew)\n {\n     uint256 hash = GetHash();\n \n     // Adding to current best branch\n-    if (!ConnectBlock(txdb, pindexNew) || !txdb.WriteHashBestChain(hash))\n+    if (!ConnectBlock(blkidxdb, txdb, pindexNew) || !metadb.WriteHashBestChain(hash))\n     {\n-        txdb.TxnAbort();\n+        if (!blkidxdb.TxnClearActive())\n+            printf(\"CBlockIdxDB::TxnClearActive failed\\n\");\n+        if (!txdb.TxnClearActive())\n+            printf(\"CTxDB::TxnClearActive failed\\n\");\n+        if (!metadb.TxnClearActive())\n+            printf(\"CMetaDB::TxnClearActive failed\\n\");\n+        txn->abort();\n+\n         InvalidChainFound(pindexNew);\n         return false;\n     }\n-    if (!txdb.TxnCommit())\n+\n+    if (!blkidxdb.TxnClearActive())\n+        printf(\"CBlockIdxDB::TxnClearActive failed\\n\");\n+    if (!txdb.TxnClearActive())\n+        printf(\"CTxDB::TxnClearActive failed\\n\");\n+    if (!metadb.TxnClearActive())\n+        printf(\"CMetaDB::TxnClearActive failed\\n\");\n+    if (txn->commit(0) != 0)\n         return error(\"SetBestChain() : TxnCommit failed\");\n \n     // Add to current best branch\n@@ -1526,23 +1551,38 @@ bool CBlock::SetBestChainInner(CTxDB& txdb, CBlockIndex *pindexNew)\n     return true;\n }\n \n-bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)\n+bool CBlock::SetBestChain(CBlockIdxDB& blkidxdb, CTxDB& txdb, CMetaDB& metadb, CBlockIndex* pindexNew)\n {\n     uint256 hash = GetHash();\n \n-    if (!txdb.TxnBegin())\n+    DbTxn *txn = bitdb.TxnBegin();\n+    if (!txn)\n         return error(\"SetBestChain() : TxnBegin failed\");\n+    if (!blkidxdb.TxnSetActive(txn))\n+        printf(\"CBlockIdxDB::TxnSetActive failed\\n\");\n+    if (!txdb.TxnSetActive(txn))\n+        printf(\"CTxDB::TxnSetActive failed\\n\");\n+    if (!metadb.TxnSetActive(txn))\n+        printf(\"CMetaDB::TxnSetActive failed\\n\");\n \n     if (pindexGenesisBlock == NULL && hash == hashGenesisBlock)\n     {\n-        txdb.WriteHashBestChain(hash);\n-        if (!txdb.TxnCommit())\n+        metadb.WriteHashBestChain(hash);\n+\n+        if (!blkidxdb.TxnClearActive())\n+            printf(\"CBlockIdxDB::TxnClearActive failed\\n\");\n+        if (!txdb.TxnClearActive())\n+            printf(\"CTxDB::TxnClearActive failed\\n\");\n+        if (!metadb.TxnClearActive())\n+            printf(\"CMetaDB::TxnClearActive failed\\n\");\n+        if (txn->commit(0) != 0)\n             return error(\"SetBestChain() : TxnCommit failed\");\n+\n         pindexGenesisBlock = pindexNew;\n     }\n     else if (hashPrevBlock == hashBestChain)\n     {\n-        if (!SetBestChainInner(txdb, pindexNew))\n+        if (!SetBestChainInner(blkidxdb, txdb, metadb, txn, pindexNew))\n             return error(\"SetBestChain() : SetBestChainInner failed\");\n     }\n     else\n@@ -1565,9 +1605,15 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)\n             printf(\"Postponing %i reconnects\\n\", vpindexSecondary.size());\n \n         // Switch to new best branch\n-        if (!Reorganize(txdb, pindexIntermediate))\n-        {\n-            txdb.TxnAbort();\n+        if (!Reorganize(blkidxdb, txdb, metadb, txn, pindexIntermediate))\n+        {\n+            if (!blkidxdb.TxnClearActive())\n+                printf(\"CBlockIdxDB::TxnClearActive failed\\n\");\n+            if (!txdb.TxnClearActive())\n+                printf(\"CTxDB::TxnClearActive failed\\n\");\n+            if (!metadb.TxnClearActive())\n+                printf(\"CMetaDB::TxnClearActive failed\\n\");\n+            txn->abort();\n             InvalidChainFound(pindexNew);\n             return error(\"SetBestChain() : Reorganize failed\");\n         }\n@@ -1581,12 +1627,14 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)\n                 printf(\"SetBestChain() : ReadFromDisk failed\\n\");\n                 break;\n             }\n-            if (!txdb.TxnBegin()) {\n+\n+            txn = bitdb.TxnBegin();\n+            if (!txn) {\n                 printf(\"SetBestChain() : TxnBegin 2 failed\\n\");\n                 break;\n             }\n             // errors now are not fatal, we still did a reorganisation to a new chain in a valid way\n-            if (!block.SetBestChainInner(txdb, pindex))\n+            if (!block.SetBestChainInner(blkidxdb, txdb, metadb, txn, pindex))\n                 break;\n         }\n     }\n@@ -1641,19 +1689,23 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos)\n     }\n     pindexNew->bnChainWork = (pindexNew->pprev ? pindexNew->pprev->bnChainWork : 0) + pindexNew->GetBlockWork();\n \n-    CTxDB txdb;\n-    if (!txdb.TxnBegin())\n+    CBlockIdxDB blkidxdb;\n+    if (!blkidxdb.TxnBegin())\n         return false;\n-    txdb.WriteBlockIndex(CDiskBlockIndex(pindexNew));\n-    if (!txdb.TxnCommit())\n+    blkidxdb.WriteBlockIndex(CDiskBlockIndex(pindexNew));\n+    if (!blkidxdb.TxnCommit())\n         return false;\n \n+    CTxDB txdb;\n+    CMetaDB metadb;\n+\n     // New best\n     if (pindexNew->bnChainWork > bnBestChainWork)\n-        if (!SetBestChain(txdb, pindexNew))\n+        if (!SetBestChain(blkidxdb, txdb, metadb, pindexNew))\n             return false;\n \n     txdb.Close();\n+    blkidxdb.Close();\n \n     if (pindexNew == pindexBest)\n     {\n@@ -1885,9 +1937,13 @@ FILE* OpenBlockFile(unsigned int nFile, unsigned int nBlockPos, const char* pszM\n {\n     if ((nFile < 1) || (nFile == (unsigned int) -1))\n         return NULL;\n-    FILE* file = fopen((GetDataDir() / strprintf(\"blk%04d.dat\", nFile)).string().c_str(), pszMode);\n+\n+    filesystem::path pathBlockFn =\n+        GetDataDir() / \"blockchain\" / strprintf(\"blk%04d.dat\", nFile);\n+    FILE* file = fopen(pathBlockFn.string().c_str(), pszMode);\n     if (!file)\n         return NULL;\n+\n     if (nBlockPos != 0 && !strchr(pszMode, 'a') && !strchr(pszMode, 'w'))\n     {\n         if (fseek(file, nBlockPos, SEEK_SET) != 0)\n@@ -1935,11 +1991,21 @@ bool LoadBlockIndex(bool fAllowNew)\n     }\n \n     //\n-    // Load block index\n+    // Load block hashes index\n+    //\n+    CBlockIdxDB blkidxdb(\"cr\");\n+    if (!blkidxdb.LoadBlockIndex())\n+        return false;\n+    blkidxdb.Close();\n+\n+    //\n+    // Load TX index\n     //\n     CTxDB txdb(\"cr\");\n-    if (!txdb.LoadBlockIndex())\n+    CMetaDB metadb(\"cr\");\n+    if (!metadb.LoadBlockIndex())\n         return false;\n+    metadb.Close();\n     txdb.Close();\n \n     //"
+      },
+      {
+        "sha": "75f6526e5fd39b400210b9991734d1369662ec8e",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 4,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/390274abda45fb8df2fd798d528c6b87dc62c482/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/390274abda45fb8df2fd798d528c6b87dc62c482/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=390274abda45fb8df2fd798d528c6b87dc62c482",
+        "patch": "@@ -12,6 +12,8 @@\n \n #include <list>\n \n+class DbTxn;\n+\n class CWallet;\n class CBlock;\n class CBlockIndex;\n@@ -76,7 +78,9 @@ static const uint64 nMinDiskSpace = 52428800;\n \n \n class CReserveKey;\n+class CBlockIdxDB;\n class CTxDB;\n+class CMetaDB;\n class CTxIndex;\n \n void RegisterWallet(CWallet* pwalletIn);\n@@ -1012,16 +1016,16 @@ class CBlock\n     }\n \n \n-    bool DisconnectBlock(CTxDB& txdb, CBlockIndex* pindex);\n-    bool ConnectBlock(CTxDB& txdb, CBlockIndex* pindex);\n+    bool DisconnectBlock(CBlockIdxDB& blkidxdb, CTxDB& txdb, CBlockIndex* pindex);\n+    bool ConnectBlock(CBlockIdxDB& blkidxdb, CTxDB& txdb, CBlockIndex* pindex);\n     bool ReadFromDisk(const CBlockIndex* pindex, bool fReadTransactions=true);\n-    bool SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew);\n+    bool SetBestChain(CBlockIdxDB& blkidxdb, CTxDB& txdb, CMetaDB& metadb, CBlockIndex* pindexNew);\n     bool AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos);\n     bool CheckBlock() const;\n     bool AcceptBlock();\n \n private:\n-    bool SetBestChainInner(CTxDB& txdb, CBlockIndex *pindexNew);\n+    bool SetBestChainInner(CBlockIdxDB& blkidxdb, CTxDB& txdb, CMetaDB& metadb, DbTxn *txn, CBlockIndex *pindexNew);\n };\n \n "
+      },
+      {
+        "sha": "7b3b6fc8bc52c6cb8f3a1b2001921449b769d9f7",
+        "filename": "src/util.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/390274abda45fb8df2fd798d528c6b87dc62c482/src/util.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/390274abda45fb8df2fd798d528c6b87dc62c482/src/util.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/util.cpp?ref=390274abda45fb8df2fd798d528c6b87dc62c482",
+        "patch": "@@ -837,6 +837,7 @@ const boost::filesystem::path &GetDataDir(bool fNetSpecific)\n         path /= \"testnet\";\n \n     fs::create_directory(path);\n+    fs::create_directory(path / \"blockchain\");\n \n     cachedPath[fNetSpecific]=true;\n     return path;"
+      }
+    ]
+  },
+  {
+    "sha": "13f0a88a171656db8fb4d3d86184f1717b17dbf1",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxM2YwYTg4YTE3MTY1NmRiOGZiNGQzZDg2MTg0ZjE3MTdiMTdkYmYx",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-05-23T05:55:01Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-05-24T16:09:14Z"
+      },
+      "message": "Switch CTxDB and CBlockIdxDB from btree to hash within BDB.",
+      "tree": {
+        "sha": "5f5510ba4296f8285783dee7a9579701ba6f5ee3",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/5f5510ba4296f8285783dee7a9579701ba6f5ee3"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/13f0a88a171656db8fb4d3d86184f1717b17dbf1",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/13f0a88a171656db8fb4d3d86184f1717b17dbf1",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/13f0a88a171656db8fb4d3d86184f1717b17dbf1",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/13f0a88a171656db8fb4d3d86184f1717b17dbf1/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "390274abda45fb8df2fd798d528c6b87dc62c482",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/390274abda45fb8df2fd798d528c6b87dc62c482",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/390274abda45fb8df2fd798d528c6b87dc62c482"
+      }
+    ],
+    "stats": {
+      "total": 12,
+      "additions": 7,
+      "deletions": 5
+    },
+    "files": [
+      {
+        "sha": "4582716186279f959d97b277a48a944e88aa2093",
+        "filename": "src/db.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/13f0a88a171656db8fb4d3d86184f1717b17dbf1/src/db.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/13f0a88a171656db8fb4d3d86184f1717b17dbf1/src/db.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.cpp?ref=13f0a88a171656db8fb4d3d86184f1717b17dbf1",
+        "patch": "@@ -113,7 +113,7 @@ void CDBEnv::CheckpointLSN(std::string strFile)\n }\n \n \n-CDB::CDB(const char *pszFile, const char* pszMode) :\n+CDB::CDB(const char *pszFile, const char* pszMode, bool fHashDb) :\n     pdb(NULL), activeTxn(NULL)\n {\n     int ret;\n@@ -141,7 +141,7 @@ CDB::CDB(const char *pszFile, const char* pszMode) :\n             ret = pdb->open(NULL,      // Txn pointer\n                             pszFile,   // Filename\n                             \"main\",    // Logical db name\n-                            DB_BTREE,  // Database type\n+                            fHashDb ? DB_HASH : DB_BTREE,  // Database type\n                             nFlags,    // Flags\n                             0);\n "
+      },
+      {
+        "sha": "c8f3519b56641d073f64c07c0b4776dcc40d3bf4",
+        "filename": "src/db.h",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 3,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/13f0a88a171656db8fb4d3d86184f1717b17dbf1/src/db.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/13f0a88a171656db8fb4d3d86184f1717b17dbf1/src/db.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.h?ref=13f0a88a171656db8fb4d3d86184f1717b17dbf1",
+        "patch": "@@ -78,7 +78,7 @@ class CDB\n     DbTxn *activeTxn;\n     bool fReadOnly;\n \n-    explicit CDB(const char* pszFile, const char* pszMode=\"r+\");\n+    explicit CDB(const char* pszFile, const char* pszMode=\"r+\", bool fHashDb=false);\n     ~CDB() { Close(); }\n public:\n     void Close();\n@@ -328,7 +328,8 @@ class CMetaDB : public CDB\n class CTxDB : public CDB\n {\n public:\n-    CTxDB(const char* pszMode=\"r+\") : CDB(\"blockchain/txhash.dat\", pszMode) { }\n+    CTxDB(const char* pszMode=\"r+\") :\n+            CDB(\"blockchain/txhash.dat\", pszMode, true) { }\n private:\n     CTxDB(const CTxDB&);\n     void operator=(const CTxDB&);\n@@ -349,7 +350,8 @@ class CTxDB : public CDB\n class CBlockIdxDB : public CDB\n {\n public:\n-    CBlockIdxDB(const char* pszMode=\"r+\") : CDB(\"blockchain/blkhash.dat\", pszMode) {}\n+    CBlockIdxDB(const char* pszMode=\"r+\") :\n+            CDB(\"blockchain/blkhash.dat\", pszMode, true) {}\n private:\n     CBlockIdxDB(const CBlockIdxDB&);\n     void operator=(const CBlockIdxDB&);"
+      }
+    ]
+  }
+]

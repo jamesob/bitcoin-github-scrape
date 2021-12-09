@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "d9244f1e8dd49e5529e92d4ad12f755cf9dc4c36",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkOTI0NGYxZThkZDQ5ZTU1MjllOTJkNGFkMTJmNzU1Y2Y5ZGM0YzM2",
+    "commit": {
+      "author": {
+        "name": "R E Broadley",
+        "email": "github.com@esuza.com",
+        "date": "2021-06-21T21:25:16Z"
+      },
+      "committer": {
+        "name": "R E Broadley",
+        "email": "github.com@esuza.com",
+        "date": "2021-06-22T08:12:13Z"
+      },
+      "message": "Detect when GETBLOCKTXN requests are ignored.\n\n(Fixes #22295)",
+      "tree": {
+        "sha": "4d11e9737e3902c0db3052331a4f295dc3b1181d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/4d11e9737e3902c0db3052331a4f295dc3b1181d"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/d9244f1e8dd49e5529e92d4ad12f755cf9dc4c36",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d9244f1e8dd49e5529e92d4ad12f755cf9dc4c36",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/d9244f1e8dd49e5529e92d4ad12f755cf9dc4c36",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d9244f1e8dd49e5529e92d4ad12f755cf9dc4c36/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "672870ab7ba51b1fc40f263a1c71ebcf165b1229",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/672870ab7ba51b1fc40f263a1c71ebcf165b1229",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/672870ab7ba51b1fc40f263a1c71ebcf165b1229"
+      }
+    ],
+    "stats": {
+      "total": 26,
+      "additions": 23,
+      "deletions": 3
+    },
+    "files": [
+      {
+        "sha": "0f7059742b4ae994816191ef8b1d075ecad69a2d",
+        "filename": "src/net_processing.cpp",
+        "status": "modified",
+        "additions": 23,
+        "deletions": 3,
+        "changes": 26,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d9244f1e8dd49e5529e92d4ad12f755cf9dc4c36/src/net_processing.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d9244f1e8dd49e5529e92d4ad12f755cf9dc4c36/src/net_processing.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.cpp?ref=d9244f1e8dd49e5529e92d4ad12f755cf9dc4c36",
+        "patch": "@@ -631,6 +631,9 @@ struct CNodeState {\n     //! When the first entry in vBlocksInFlight started downloading. Don't care when vBlocksInFlight is empty.\n     std::chrono::microseconds m_downloading_since{0us};\n     int nBlocksInFlight{0};\n+    int nTxInFlight{0};\n+    //! How many TXs were in flight when we sent GETBLOCKTXN\n+    int nBlockAfterTXs{0};\n     //! Whether we consider this a preferred download peer.\n     bool fPreferredDownload{false};\n     //! Whether this peer wants invs or headers (when possible) for block announcements.\n@@ -3116,6 +3119,8 @@ void PeerManagerImpl::ProcessMessage(CNode& pfrom, const std::string& msg_type,\n         LOCK2(cs_main, g_cs_orphans);\n \n         CNodeState* nodestate = State(pfrom.GetId());\n+        nodestate->nTxInFlight--;\n+        if (nodestate->nBlockAfterTXs > 1) nodestate->nBlockAfterTXs--;\n \n         const uint256& hash = nodestate->m_wtxid_relay ? wtxid : txid;\n         pfrom.AddKnownTx(hash);\n@@ -3447,6 +3452,8 @@ void PeerManagerImpl::ProcessMessage(CNode& pfrom, const std::string& msg_type,\n                 } else {\n                     req.blockhash = pindex->GetBlockHash();\n                     m_connman.PushMessage(&pfrom, msgMaker.Make(NetMsgType::GETBLOCKTXN, req));\n+                    // If we get more TXs than currently in flight then we know the request has been ignored.\n+                    nodestate->nBlockAfterTXs = nodestate->nTxInFlight + 2; // Add 2 so that one more TX is requested.\n                 }\n             } else {\n                 // This block is either already in flight from a different\n@@ -3527,9 +3534,11 @@ void PeerManagerImpl::ProcessMessage(CNode& pfrom, const std::string& msg_type,\n     {\n         // Ignore blocktxn received while importing\n         if (fImporting || fReindex) {\n-            LogPrint(BCLog::NET, \"Unexpected blocktxn message received from peer %d\\n\", pfrom.GetId());\n+            LogPrint(BCLog::NET, \"Unexpected blocktxn message received from peer=%d\\n\", pfrom.GetId());\n             return;\n         }\n+        CNodeState *nodestate = State(pfrom.GetId());\n+        nodestate->nBlockAfterTXs = 0;\n \n         BlockTransactions resp;\n         vRecv >> resp;\n@@ -3891,6 +3900,9 @@ void PeerManagerImpl::ProcessMessage(CNode& pfrom, const std::string& msg_type,\n                 if (inv.IsGenTxMsg()) {\n                     // If we receive a NOTFOUND message for a tx we requested, mark the announcement for it as\n                     // completed in TxRequestTracker.\n+                    CNodeState *nodestate = State(pfrom.GetId());\n+                    nodestate->nTxInFlight--;\n+                    if (nodestate->nBlockAfterTXs > 1) nodestate->nBlockAfterTXs--;\n                     m_txrequest.ReceivedResponse(pfrom.GetId(), inv.hash);\n                 }\n             }\n@@ -4727,7 +4739,12 @@ bool PeerManagerImpl::SendMessages(CNode* pto)\n             // Stalling only triggers when the block download window cannot move. During normal steady state,\n             // the download window should be much larger than the to-be-downloaded set of blocks, so disconnection\n             // should only happen during initial block download.\n-            LogPrintf(\"Peer=%d is stalling block download, disconnecting\\n\", pto->GetId());\n+            LogPrintf(\"block download stalled. disconnecting peer=%d\\n\", pto->GetId());\n+            pto->fDisconnect = true;\n+            return true;\n+        }\n+        if (state.nBlockAfterTXs == 1) {\n+            LogPrintf(\"getblocktxn ignored. disconnecting peer=%d\\n\", pto->GetId());\n             pto->fDisconnect = true;\n             return true;\n         }\n@@ -4820,6 +4837,7 @@ bool PeerManagerImpl::SendMessages(CNode* pto)\n                     gtxid.GetHash().ToString(), pto->GetId());\n                 vGetData.emplace_back(gtxid.IsWtxid() ? MSG_WTX : (MSG_TX | GetFetchFlags(*pto)), gtxid.GetHash());\n                 if (vGetData.size() >= MAX_GETDATA_SZ) {\n+                    state.nTxInFlight += vGetData.size();\n                     m_connman.PushMessage(pto, msgMaker.Make(NetMsgType::GETDATA, vGetData));\n                     vGetData.clear();\n                 }\n@@ -4832,8 +4850,10 @@ bool PeerManagerImpl::SendMessages(CNode* pto)\n         }\n \n \n-        if (!vGetData.empty())\n+        if (!vGetData.empty()) {\n+            state.nTxInFlight += vGetData.size();\n             m_connman.PushMessage(pto, msgMaker.Make(NetMsgType::GETDATA, vGetData));\n+        }\n \n         MaybeSendFeefilter(*pto, current_time);\n     } // release cs_main"
+      }
+    ]
+  }
+]

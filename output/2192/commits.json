@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "903d146030e741441c288873ef3c682fb5019101",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5MDNkMTQ2MDMwZTc0MTQ0MWMyODg4NzNlZjNjNjgyZmI1MDE5MTAx",
+    "commit": {
+      "author": {
+        "name": "Mike Hearn",
+        "email": "hearn@google.com",
+        "date": "2013-01-19T17:48:26Z"
+      },
+      "committer": {
+        "name": "Mike Hearn",
+        "email": "hearn@google.com",
+        "date": "2013-01-19T17:48:26Z"
+      },
+      "message": "Add a notfound message to getdata that is sent if any transactions that aren't in the relayable set are requested.",
+      "tree": {
+        "sha": "f41e6b95b477bb618e8bc35599cbae4e5cdfcca3",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f41e6b95b477bb618e8bc35599cbae4e5cdfcca3"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/903d146030e741441c288873ef3c682fb5019101",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/903d146030e741441c288873ef3c682fb5019101",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/903d146030e741441c288873ef3c682fb5019101",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/903d146030e741441c288873ef3c682fb5019101/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "bd85cf3df786898fa0e1f584eca840d3ec05edb2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/bd85cf3df786898fa0e1f584eca840d3ec05edb2",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/bd85cf3df786898fa0e1f584eca840d3ec05edb2"
+      }
+    ],
+    "stats": {
+      "total": 18,
+      "additions": 17,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "d086473028f1dd6a0417e21f2c18b1ce239f3a78",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 17,
+        "deletions": 1,
+        "changes": 18,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/903d146030e741441c288873ef3c682fb5019101/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/903d146030e741441c288873ef3c682fb5019101/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=903d146030e741441c288873ef3c682fb5019101",
+        "patch": "@@ -3244,6 +3244,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n         if (fDebugNet || (vInv.size() != 1))\n             printf(\"received getdata (%\"PRIszu\" invsz)\\n\", vInv.size());\n \n+        vector<CInv> vNotFound;\n         BOOST_FOREACH(const CInv& inv, vInv)\n         {\n             if (fShutdown)\n@@ -3316,12 +3317,27 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n                         ss.reserve(1000);\n                         ss << tx;\n                         pfrom->PushMessage(\"tx\", ss);\n+                        pushed = true;\n                     }\n                 }\n+                if (!pushed) {\n+                    vNotFound.push_back(inv);\n+                }\n             }\n \n-            // Track requests for our stuff\n+            // Track requests for our stuff.\n             Inventory(inv.hash);\n+\n+            if (!vNotFound.empty()) {\n+                // Let the peer know that we didn't find what it asked for, so it doesn't\n+                // have to wait around forever. Currently only SPV clients actually care\n+                // about this message: it's needed when they are recursively walking the\n+                // dependencies of relevant unconfirmed transactions. SPV clients want to\n+                // do that because they want to know about (and store and rebroadcast and\n+                // risk analyze) the dependencies of transactions relevant to them, without\n+                // having to download the entire memory pool.\n+                pfrom->PushMessage(\"notfound\", vNotFound);\n+            }\n         }\n     }\n "
+      }
+    ]
+  }
+]

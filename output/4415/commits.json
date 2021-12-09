@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "e35b37b1b8252c3d3f66001ba1efccd263307add",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplMzViMzdiMWI4MjUyYzNkM2Y2NjAwMWJhMWVmY2NkMjYzMzA3YWRk",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-06-27T02:12:36Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-06-27T02:18:30Z"
+      },
+      "message": "RPC client: Simplify command line string-to-JSON-value conversion code\n\nBy default, all command line parameters are converted into JSON string\nvalues.  There is no need to manually specify the incoming type.\n\nA binary decision \"parse as string or JSON?\" is all that's necessary.\n\nConvert to a simple class, initialized at runtime startup, which offers\na quick lookup to answer \"parse as JSON?\" conversion question.\n\nFuture parameter conversions need only to indicate the method name\nand zero-based index of the parameter needing JSON parsing.",
+      "tree": {
+        "sha": "13591f78c28fc6fd247680c65d7fbbf943724228",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/13591f78c28fc6fd247680c65d7fbbf943724228"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/e35b37b1b8252c3d3f66001ba1efccd263307add",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e35b37b1b8252c3d3f66001ba1efccd263307add",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/e35b37b1b8252c3d3f66001ba1efccd263307add",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e35b37b1b8252c3d3f66001ba1efccd263307add/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "236ae8665efadf7b4456c0a9fbf204a5cb4ce9f4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/236ae8665efadf7b4456c0a9fbf204a5cb4ce9f4",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/236ae8665efadf7b4456c0a9fbf204a5cb4ce9f4"
+      }
+    ],
+    "stats": {
+      "total": 183,
+      "additions": 104,
+      "deletions": 79
+    },
+    "files": [
+      {
+        "sha": "501940a73026fe26b1ff6075d43de9d3d2f98a42",
+        "filename": "src/rpcclient.cpp",
+        "status": "modified",
+        "additions": 104,
+        "deletions": 79,
+        "changes": 183,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e35b37b1b8252c3d3f66001ba1efccd263307add/src/rpcclient.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e35b37b1b8252c3d3f66001ba1efccd263307add/src/rpcclient.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcclient.cpp?ref=e35b37b1b8252c3d3f66001ba1efccd263307add",
+        "patch": "@@ -3,6 +3,7 @@\n // Distributed under the MIT/X11 software license, see the accompanying\n // file COPYING or http://www.opensource.org/licenses/mit-license.php.\n \n+#include <set>\n #include \"rpcclient.h\"\n \n #include \"rpcprotocol.h\"\n@@ -15,94 +16,118 @@\n using namespace std;\n using namespace json_spirit;\n \n-template<typename T>\n-void ConvertTo(Value& value, bool fAllowNull=false)\n+class CRPCConvertParam\n {\n-    if (fAllowNull && value.type() == null_type)\n-        return;\n-    if (value.type() == str_type)\n-    {\n-        // reinterpret string as unquoted json value\n-        Value value2;\n-        string strJSON = value.get_str();\n-        if (!read_string(strJSON, value2))\n-            throw runtime_error(string(\"Error parsing JSON:\")+strJSON);\n-        ConvertTo<T>(value2, fAllowNull);\n-        value = value2;\n+public:\n+    std::string methodName;            // method whose params want conversion\n+    int paramIdx;                      // 0-based idx of param to convert\n+};\n+\n+static const CRPCConvertParam vRPCConvertParams[] =\n+{\n+    { \"stop\", 0 },\n+    { \"getaddednodeinfo\", 0 },\n+    { \"setgenerate\", 0 },\n+    { \"setgenerate\", 1 },\n+    { \"getnetworkhashps\", 0 },\n+    { \"getnetworkhashps\", 1 },\n+    { \"sendtoaddress\", 1 },\n+    { \"settxfee\", 0 },\n+    { \"getreceivedbyaddress\", 1 },\n+    { \"getreceivedbyaccount\", 1 },\n+    { \"listreceivedbyaddress\", 0 },\n+    { \"listreceivedbyaddress\", 1 },\n+    { \"listreceivedbyaccount\", 0 },\n+    { \"listreceivedbyaccount\", 1 },\n+    { \"getbalance\", 1 },\n+    { \"getblockhash\", 0 },\n+    { \"move\", 2 },\n+    { \"move\", 3 },\n+    { \"sendfrom\", 2 },\n+    { \"sendfrom\", 3 },\n+    { \"listtransactions\", 1 },\n+    { \"listtransactions\", 2 },\n+    { \"listaccounts\", 0 },\n+    { \"walletpassphrase\", 1 },\n+    { \"getblocktemplate\", 0 },\n+    { \"listsinceblock\", 1 },\n+    { \"sendmany\", 1 },\n+    { \"sendmany\", 2 },\n+    { \"addmultisigaddress\", 0 },\n+    { \"addmultisigaddress\", 1 },\n+    { \"createmultisig\", 0 },\n+    { \"createmultisig\", 1 },\n+    { \"listunspent\", 0 },\n+    { \"listunspent\", 1 },\n+    { \"listunspent\", 2 },\n+    { \"getblock\", 1 },\n+    { \"getrawtransaction\", 1 },\n+    { \"createrawtransaction\", 0 },\n+    { \"createrawtransaction\", 1 },\n+    { \"signrawtransaction\", 1 },\n+    { \"signrawtransaction\", 2 },\n+    { \"sendrawtransaction\", 1 },\n+    { \"gettxout\", 1 },\n+    { \"gettxout\", 2 },\n+    { \"lockunspent\", 0 },\n+    { \"lockunspent\", 1 },\n+    { \"importprivkey\", 2 },\n+    { \"verifychain\", 0 },\n+    { \"verifychain\", 1 },\n+    { \"keypoolrefill\", 0 },\n+    { \"getrawmempool\", 0 },\n+    { \"estimatefee\", 0 },\n+    { \"estimatepriority\", 0 },\n+};\n+\n+class CRPCConvertTable\n+{\n+private:\n+    std::set<std::pair<std::string, int> > members;\n+\n+public:\n+    CRPCConvertTable();\n+\n+    bool convert(const std::string& method, int idx) {\n+        return (members.count(std::make_pair(method, idx)) > 0);\n     }\n-    else\n-    {\n-        value = value.get_value<T>();\n+};\n+\n+CRPCConvertTable::CRPCConvertTable()\n+{\n+    const unsigned int n_elem =\n+        (sizeof(vRPCConvertParams) / sizeof(vRPCConvertParams[0]));\n+\n+    for (unsigned int i = 0; i < n_elem; i++) {\n+        members.insert(std::make_pair(vRPCConvertParams[i].methodName,\n+                                      vRPCConvertParams[i].paramIdx));\n     }\n }\n \n+static CRPCConvertTable rpcCvtTable;\n+\n // Convert strings to command-specific RPC representation\n Array RPCConvertValues(const std::string &strMethod, const std::vector<std::string> &strParams)\n {\n     Array params;\n-    BOOST_FOREACH(const std::string &param, strParams)\n-        params.push_back(param);\n-\n-    int n = params.size();\n-\n-    //\n-    // Special case non-string parameter types\n-    //\n-    if (strMethod == \"stop\"                   && n > 0) ConvertTo<bool>(params[0]);\n-    if (strMethod == \"getaddednodeinfo\"       && n > 0) ConvertTo<bool>(params[0]);\n-    if (strMethod == \"setgenerate\"            && n > 0) ConvertTo<bool>(params[0]);\n-    if (strMethod == \"setgenerate\"            && n > 1) ConvertTo<int64_t>(params[1]);\n-    if (strMethod == \"getnetworkhashps\"       && n > 0) ConvertTo<int64_t>(params[0]);\n-    if (strMethod == \"getnetworkhashps\"       && n > 1) ConvertTo<int64_t>(params[1]);\n-    if (strMethod == \"sendtoaddress\"          && n > 1) ConvertTo<double>(params[1]);\n-    if (strMethod == \"settxfee\"               && n > 0) ConvertTo<double>(params[0]);\n-    if (strMethod == \"getreceivedbyaddress\"   && n > 1) ConvertTo<int64_t>(params[1]);\n-    if (strMethod == \"getreceivedbyaccount\"   && n > 1) ConvertTo<int64_t>(params[1]);\n-    if (strMethod == \"listreceivedbyaddress\"  && n > 0) ConvertTo<int64_t>(params[0]);\n-    if (strMethod == \"listreceivedbyaddress\"  && n > 1) ConvertTo<bool>(params[1]);\n-    if (strMethod == \"listreceivedbyaccount\"  && n > 0) ConvertTo<int64_t>(params[0]);\n-    if (strMethod == \"listreceivedbyaccount\"  && n > 1) ConvertTo<bool>(params[1]);\n-    if (strMethod == \"getbalance\"             && n > 1) ConvertTo<int64_t>(params[1]);\n-    if (strMethod == \"getblockhash\"           && n > 0) ConvertTo<int64_t>(params[0]);\n-    if (strMethod == \"move\"                   && n > 2) ConvertTo<double>(params[2]);\n-    if (strMethod == \"move\"                   && n > 3) ConvertTo<int64_t>(params[3]);\n-    if (strMethod == \"sendfrom\"               && n > 2) ConvertTo<double>(params[2]);\n-    if (strMethod == \"sendfrom\"               && n > 3) ConvertTo<int64_t>(params[3]);\n-    if (strMethod == \"listtransactions\"       && n > 1) ConvertTo<int64_t>(params[1]);\n-    if (strMethod == \"listtransactions\"       && n > 2) ConvertTo<int64_t>(params[2]);\n-    if (strMethod == \"listaccounts\"           && n > 0) ConvertTo<int64_t>(params[0]);\n-    if (strMethod == \"walletpassphrase\"       && n > 1) ConvertTo<int64_t>(params[1]);\n-    if (strMethod == \"prioritisetransaction\"  && n > 1) ConvertTo<double>(params[1]);\n-    if (strMethod == \"prioritisetransaction\"  && n > 2) ConvertTo<int64_t>(params[2]);\n-    if (strMethod == \"getblocktemplate\"       && n > 0) ConvertTo<Object>(params[0]);\n-    if (strMethod == \"listsinceblock\"         && n > 1) ConvertTo<int64_t>(params[1]);\n-    if (strMethod == \"sendmany\"               && n > 1) ConvertTo<Object>(params[1]);\n-    if (strMethod == \"sendmany\"               && n > 2) ConvertTo<int64_t>(params[2]);\n-    if (strMethod == \"addmultisigaddress\"     && n > 0) ConvertTo<int64_t>(params[0]);\n-    if (strMethod == \"addmultisigaddress\"     && n > 1) ConvertTo<Array>(params[1]);\n-    if (strMethod == \"createmultisig\"         && n > 0) ConvertTo<int64_t>(params[0]);\n-    if (strMethod == \"createmultisig\"         && n > 1) ConvertTo<Array>(params[1]);\n-    if (strMethod == \"listunspent\"            && n > 0) ConvertTo<int64_t>(params[0]);\n-    if (strMethod == \"listunspent\"            && n > 1) ConvertTo<int64_t>(params[1]);\n-    if (strMethod == \"listunspent\"            && n > 2) ConvertTo<Array>(params[2]);\n-    if (strMethod == \"getblock\"               && n > 1) ConvertTo<bool>(params[1]);\n-    if (strMethod == \"getrawtransaction\"      && n > 1) ConvertTo<int64_t>(params[1]);\n-    if (strMethod == \"createrawtransaction\"   && n > 0) ConvertTo<Array>(params[0]);\n-    if (strMethod == \"createrawtransaction\"   && n > 1) ConvertTo<Object>(params[1]);\n-    if (strMethod == \"signrawtransaction\"     && n > 1) ConvertTo<Array>(params[1], true);\n-    if (strMethod == \"signrawtransaction\"     && n > 2) ConvertTo<Array>(params[2], true);\n-    if (strMethod == \"sendrawtransaction\"     && n > 1) ConvertTo<bool>(params[1], true);\n-    if (strMethod == \"gettxout\"               && n > 1) ConvertTo<int64_t>(params[1]);\n-    if (strMethod == \"gettxout\"               && n > 2) ConvertTo<bool>(params[2]);\n-    if (strMethod == \"lockunspent\"            && n > 0) ConvertTo<bool>(params[0]);\n-    if (strMethod == \"lockunspent\"            && n > 1) ConvertTo<Array>(params[1]);\n-    if (strMethod == \"importprivkey\"          && n > 2) ConvertTo<bool>(params[2]);\n-    if (strMethod == \"verifychain\"            && n > 0) ConvertTo<int64_t>(params[0]);\n-    if (strMethod == \"verifychain\"            && n > 1) ConvertTo<int64_t>(params[1]);\n-    if (strMethod == \"keypoolrefill\"          && n > 0) ConvertTo<int64_t>(params[0]);\n-    if (strMethod == \"getrawmempool\"          && n > 0) ConvertTo<bool>(params[0]);\n-    if (strMethod == \"estimatefee\"            && n > 0) ConvertTo<boost::int64_t>(params[0]);\n-    if (strMethod == \"estimatepriority\"       && n > 0) ConvertTo<boost::int64_t>(params[0]);\n+\n+    for (unsigned int idx = 0; idx < strParams.size(); idx++) {\n+        const std::string& strVal = strParams[idx];\n+\n+        // insert string value directly\n+        if (!rpcCvtTable.convert(strMethod, idx)) {\n+            params.push_back(strVal);\n+        }\n+\n+        // parse string as JSON, insert bool/number/object/etc. value\n+        else {\n+            Value jVal;\n+            if (!read_string(strVal, jVal))\n+                throw runtime_error(string(\"Error parsing JSON:\")+strVal);\n+            params.push_back(jVal);\n+        }\n+\n+    }\n \n     return params;\n }"
+      }
+    ]
+  }
+]

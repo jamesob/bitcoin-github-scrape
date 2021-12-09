@@ -1,0 +1,86 @@
+[
+  {
+    "sha": "be942def4baac40b1031ba26491a24a55e1a6a6c",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiZTk0MmRlZjRiYWFjNDBiMTAzMWJhMjY0OTFhMjRhNTVlMWE2YTZj",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2015-01-15T08:13:32Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2015-08-10T12:12:15Z"
+      },
+      "message": "[Qt] add verifySize() function to PaymentServer\n\n- add static verifySize() function to PaymentServer and move the logging\n  on error into the function\n- also use the new function in the unit test\n- the function checks if the size is allowed as per BIP70",
+      "tree": {
+        "sha": "78f382f60b7caf81d71ecde2a6eebc563d5379df",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/78f382f60b7caf81d71ecde2a6eebc563d5379df"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/be942def4baac40b1031ba26491a24a55e1a6a6c",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/be942def4baac40b1031ba26491a24a55e1a6a6c",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/be942def4baac40b1031ba26491a24a55e1a6a6c",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/be942def4baac40b1031ba26491a24a55e1a6a6c/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "c0f66ce44abdc44ddbff892720d5b85f6a95436d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c0f66ce44abdc44ddbff892720d5b85f6a95436d",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c0f66ce44abdc44ddbff892720d5b85f6a95436d"
+      }
+    ],
+    "stats": {
+      "total": 43,
+      "additions": 25,
+      "deletions": 18
+    },
+    "files": [
+      {
+        "sha": "d966036019a3d7250134868c7f6016fd01c1f507",
+        "filename": "src/qt/paymentserver.cpp",
+        "status": "modified",
+        "additions": 20,
+        "deletions": 14,
+        "changes": 34,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/be942def4baac40b1031ba26491a24a55e1a6a6c/src/qt/paymentserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/be942def4baac40b1031ba26491a24a55e1a6a6c/src/qt/paymentserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.cpp?ref=be942def4baac40b1031ba26491a24a55e1a6a6c",
+        "patch": "@@ -509,12 +509,7 @@ bool PaymentServer::readPaymentRequestFromFile(const QString& filename, PaymentR\n     }\n \n     // BIP70 DoS protection\n-    if (f.size() > BIP70_MAX_PAYMENTREQUEST_SIZE) {\n-        qWarning() << QString(\"PaymentServer::%1: Payment request %2 is too large (%3 bytes, allowed %4 bytes).\")\n-            .arg(__func__)\n-            .arg(filename)\n-            .arg(f.size())\n-            .arg(BIP70_MAX_PAYMENTREQUEST_SIZE);\n+    if (!verifySize(f.size())) {\n         return false;\n     }\n \n@@ -685,14 +680,13 @@ void PaymentServer::netRequestFinished(QNetworkReply* reply)\n     reply->deleteLater();\n \n     // BIP70 DoS protection\n-    if (reply->size() > BIP70_MAX_PAYMENTREQUEST_SIZE) {\n-        QString msg = tr(\"Payment request %1 is too large (%2 bytes, allowed %3 bytes).\")\n-            .arg(reply->request().url().toString())\n-            .arg(reply->size())\n-            .arg(BIP70_MAX_PAYMENTREQUEST_SIZE);\n-\n-        qWarning() << QString(\"PaymentServer::%1:\").arg(__func__) << msg;\n-        Q_EMIT message(tr(\"Payment request DoS protection\"), msg, CClientUIInterface::MSG_ERROR);\n+    if (!verifySize(reply->size())) {\n+        Q_EMIT message(tr(\"Payment request rejected\"),\n+            tr(\"Payment request %1 is too large (%2 bytes, allowed %3 bytes).\")\n+                .arg(reply->request().url().toString())\n+                .arg(reply->size())\n+                .arg(BIP70_MAX_PAYMENTREQUEST_SIZE),\n+            CClientUIInterface::MSG_ERROR);\n         return;\n     }\n \n@@ -790,6 +784,18 @@ bool PaymentServer::verifyExpired(const payments::PaymentDetails& requestDetails\n     return fVerified;\n }\n \n+bool PaymentServer::verifySize(qint64 requestSize)\n+{\n+    bool fVerified = (requestSize <= BIP70_MAX_PAYMENTREQUEST_SIZE);\n+    if (!fVerified) {\n+        qWarning() << QString(\"PaymentServer::%1: Payment request too large (%2 bytes, allowed %3 bytes).\")\n+            .arg(__func__)\n+            .arg(requestSize)\n+            .arg(BIP70_MAX_PAYMENTREQUEST_SIZE);\n+    }\n+    return fVerified;\n+}\n+\n bool PaymentServer::verifyAmount(const CAmount& requestAmount)\n {\n     bool fVerified = MoneyRange(requestAmount);"
+      },
+      {
+        "sha": "fa120a435c15ddefa079349af2c8c5b0f94f3137",
+        "filename": "src/qt/paymentserver.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 3,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/be942def4baac40b1031ba26491a24a55e1a6a6c/src/qt/paymentserver.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/be942def4baac40b1031ba26491a24a55e1a6a6c/src/qt/paymentserver.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.h?ref=be942def4baac40b1031ba26491a24a55e1a6a6c",
+        "patch": "@@ -88,13 +88,12 @@ class PaymentServer : public QObject\n     // OptionsModel is used for getting proxy settings and display unit\n     void setOptionsModel(OptionsModel *optionsModel);\n \n-    // This is now public, because we use it in paymentservertests.cpp\n-    static bool readPaymentRequestFromFile(const QString& filename, PaymentRequestPlus& request);\n-\n     // Verify that the payment request network matches the client network\n     static bool verifyNetwork(const payments::PaymentDetails& requestDetails);\n     // Verify if the payment request is expired\n     static bool verifyExpired(const payments::PaymentDetails& requestDetails);\n+    // Verify the payment request size is valid as per BIP70\n+    static bool verifySize(qint64 requestSize);\n     // Verify the payment request amount is valid\n     static bool verifyAmount(const CAmount& requestAmount);\n \n@@ -131,6 +130,7 @@ private Q_SLOTS:\n     bool eventFilter(QObject *object, QEvent *event);\n \n private:\n+    static bool readPaymentRequestFromFile(const QString& filename, PaymentRequestPlus& request);\n     bool processPaymentRequest(const PaymentRequestPlus& request, SendCoinsRecipient& recipient);\n     void fetchRequest(const QUrl& url);\n "
+      },
+      {
+        "sha": "fa5696325d7a2fe92a30c38618ef46ab84176700",
+        "filename": "src/qt/test/paymentservertests.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 1,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/be942def4baac40b1031ba26491a24a55e1a6a6c/src/qt/test/paymentservertests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/be942def4baac40b1031ba26491a24a55e1a6a6c/src/qt/test/paymentservertests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/test/paymentservertests.cpp?ref=be942def4baac40b1031ba26491a24a55e1a6a6c",
+        "patch": "@@ -185,7 +185,8 @@ void PaymentServerTests::paymentServerTests()\n     tempFile.open();\n     tempFile.write((const char*)randData, sizeof(randData));\n     tempFile.close();\n-    QCOMPARE(PaymentServer::readPaymentRequestFromFile(tempFile.fileName(), r.paymentRequest), false);\n+    // compares 50001 <= BIP70_MAX_PAYMENTREQUEST_SIZE == false\n+    QCOMPARE(PaymentServer::verifySize(tempFile.size()), false);\n \n     // Payment request with amount overflow (amount is set to 21000001 BTC):\n     data = DecodeBase64(paymentrequest5_cert2_BASE64);"
+      }
+    ]
+  }
+]

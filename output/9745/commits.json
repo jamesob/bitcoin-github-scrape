@@ -1,0 +1,98 @@
+[
+  {
+    "sha": "a72b32a7dc3af80d446552c509df9d0e907d1039",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphNzJiMzJhN2RjM2FmODBkNDQ2NTUyYzUwOWRmOWQwZTkwN2QxMDM5",
+    "commit": {
+      "author": {
+        "name": "Takashi Mitsuta",
+        "email": "knhn1117@gmail.com",
+        "date": "2017-02-12T08:41:40Z"
+      },
+      "committer": {
+        "name": "Takashi Mitsuta",
+        "email": "knhn1117@gmail.com",
+        "date": "2017-02-12T08:41:40Z"
+      },
+      "message": "Add getconfirmations to rpc command",
+      "tree": {
+        "sha": "1e8d5b59adcbd4b95fc3642230c79ac5fc106554",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/1e8d5b59adcbd4b95fc3642230c79ac5fc106554"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a72b32a7dc3af80d446552c509df9d0e907d1039",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a72b32a7dc3af80d446552c509df9d0e907d1039",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a72b32a7dc3af80d446552c509df9d0e907d1039",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a72b32a7dc3af80d446552c509df9d0e907d1039/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "d978c41e1ec4fcf2c4d096f09af035f9e8a7ad81",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d978c41e1ec4fcf2c4d096f09af035f9e8a7ad81",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/d978c41e1ec4fcf2c4d096f09af035f9e8a7ad81"
+      }
+    ],
+    "stats": {
+      "total": 52,
+      "additions": 52,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "e9e54670c97f5ad4252539920fa8d02cc6d64374",
+        "filename": "qa/rpc-tests/rawtransactions.py",
+        "status": "modified",
+        "additions": 14,
+        "deletions": 0,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a72b32a7dc3af80d446552c509df9d0e907d1039/qa/rpc-tests/rawtransactions.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a72b32a7dc3af80d446552c509df9d0e907d1039/qa/rpc-tests/rawtransactions.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/qa/rpc-tests/rawtransactions.py?ref=a72b32a7dc3af80d446552c509df9d0e907d1039",
+        "patch": "@@ -10,6 +10,7 @@\n #    - sendrawtransaction\n #    - decoderawtransaction\n #    - getrawtransaction\n+#    - getconfirmations\n \"\"\"\n \n from test_framework.test_framework import BitcoinTestFramework\n@@ -189,5 +190,18 @@ def run_test(self):\n         decrawtx= self.nodes[0].decoderawtransaction(rawtx)\n         assert_equal(decrawtx['vin'][0]['sequence'], 4294967294)\n \n+        # getconfirmations tests\n+        # 1. valid parameters - supply unconfirmed txid\n+        addr4 = self.nodes[0].getnewaddress()\n+        txId2 = self.nodes[0].sendtoaddress(addr4, 0.0001)\n+        assert_equal(self.nodes[0].getconfirmations(txId2), 0)\n+\n+        # 2. valid parameters - supply confirmed txid\n+        self.nodes[0].generate(1)\n+        assert_equal(self.nodes[0].getconfirmations(txId2), 1)\n+\n+        # 3. invalid parameters - supply non-existent txid\n+        assert_raises(JSONRPCException, self.nodes[1].getconfirmations, \"1d1d4e24ed99057e84c3f80fd8fbec79ed9e1acee37da269356ecea000000000\")\n+\n if __name__ == '__main__':\n     RawTransactionsTest().main()"
+      },
+      {
+        "sha": "1cfac593eef1bac35c90cd2f718893bbb9f81c90",
+        "filename": "src/rpc/client.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a72b32a7dc3af80d446552c509df9d0e907d1039/src/rpc/client.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a72b32a7dc3af80d446552c509df9d0e907d1039/src/rpc/client.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/client.cpp?ref=a72b32a7dc3af80d446552c509df9d0e907d1039",
+        "patch": "@@ -83,6 +83,7 @@ static const CRPCConvertParam vRPCConvertParams[] =\n     { \"getblockheader\", 1, \"verbose\" },\n     { \"gettransaction\", 1, \"include_watchonly\" },\n     { \"getrawtransaction\", 1, \"verbose\" },\n+    { \"getconfirmations\", 1, \"txid\" },\n     { \"createrawtransaction\", 0, \"transactions\" },\n     { \"createrawtransaction\", 1, \"outputs\" },\n     { \"createrawtransaction\", 2, \"locktime\" },"
+      },
+      {
+        "sha": "afe76592ad3c2917ec7e24fed96bc8b05fb1080a",
+        "filename": "src/rpc/rawtransaction.cpp",
+        "status": "modified",
+        "additions": 34,
+        "deletions": 0,
+        "changes": 34,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a72b32a7dc3af80d446552c509df9d0e907d1039/src/rpc/rawtransaction.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a72b32a7dc3af80d446552c509df9d0e907d1039/src/rpc/rawtransaction.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/rawtransaction.cpp?ref=a72b32a7dc3af80d446552c509df9d0e907d1039",
+        "patch": "@@ -123,6 +123,39 @@ void TxToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& entry)\n     }\n }\n \n+UniValue getconfirmations(const JSONRPCRequest& request)\n+{\n+    if (request.fHelp || request.params.size() != 1)\n+        throw runtime_error(\n+                \"getconfirmations \\\"txid\\\"\\n\"\n+                        \"\\nReturns the number of transaction confirmations.\\n\"\n+                        \"\\nResult:\\n\"\n+                        \"n    (numeric) The number of confirmations\\n\"\n+                        \"\\nExamples:\\n\"\n+                + HelpExampleCli(\"getconfirmations\", \"\\\"txid\\\"\")\n+                + HelpExampleRpc(\"getconfirmations\", \"\\\"txid\\\"\")\n+        );\n+\n+    LOCK(cs_main);\n+\n+    uint256 hash;\n+    hash.SetHex(request.params[0].get_str());\n+\n+    CTransactionRef tx;\n+    uint256 hashBlock;\n+    if (!GetTransaction(hash, tx, Params().GetConsensus(), hashBlock, true))\n+        throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string(\"No such mempool or blockchain transaction\"));\n+\n+    BlockMap::iterator mi = mapBlockIndex.find(hashBlock);\n+    if (mi != mapBlockIndex.end() && (*mi).second) {\n+        CBlockIndex *pindex = (*mi).second;\n+        if (chainActive.Contains(pindex)) {\n+            return 1 + chainActive.Height() - pindex->nHeight;\n+        }\n+    }\n+    return 0;\n+}\n+\n UniValue getrawtransaction(const JSONRPCRequest& request)\n {\n     if (request.fHelp || request.params.size() < 1 || request.params.size() > 2)\n@@ -933,6 +966,7 @@ static const CRPCCommand commands[] =\n { //  category              name                      actor (function)         okSafeMode\n   //  --------------------- ------------------------  -----------------------  ----------\n     { \"rawtransactions\",    \"getrawtransaction\",      &getrawtransaction,      true,  {\"txid\",\"verbose\"} },\n+    { \"rawtransactions\",    \"getconfirmations\",       &getconfirmations,       true,  {\"txid\"} },\n     { \"rawtransactions\",    \"createrawtransaction\",   &createrawtransaction,   true,  {\"transactions\",\"outputs\",\"locktime\"} },\n     { \"rawtransactions\",    \"decoderawtransaction\",   &decoderawtransaction,   true,  {\"hexstring\"} },\n     { \"rawtransactions\",    \"decodescript\",           &decodescript,           true,  {\"hexstring\"} },"
+      },
+      {
+        "sha": "f21a98cbbdbf9184509ef67a9c0591cc187321c4",
+        "filename": "src/test/rpc_tests.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a72b32a7dc3af80d446552c509df9d0e907d1039/src/test/rpc_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a72b32a7dc3af80d446552c509df9d0e907d1039/src/test/rpc_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/rpc_tests.cpp?ref=a72b32a7dc3af80d446552c509df9d0e907d1039",
+        "patch": "@@ -49,6 +49,9 @@ BOOST_AUTO_TEST_CASE(rpc_rawparams)\n     BOOST_CHECK_THROW(CallRPC(\"getrawtransaction not_hex\"), std::runtime_error);\n     BOOST_CHECK_THROW(CallRPC(\"getrawtransaction a3b807410df0b60fcb9736768df5823938b2f838694939ba45f3c0a1bff150ed not_int\"), std::runtime_error);\n \n+    BOOST_CHECK_THROW(CallRPC(\"getconfirmations\"), std::runtime_error);\n+    BOOST_CHECK_THROW(CallRPC(\"getconfirmations not_hex\"), std::runtime_error);\n+\n     BOOST_CHECK_THROW(CallRPC(\"createrawtransaction\"), std::runtime_error);\n     BOOST_CHECK_THROW(CallRPC(\"createrawtransaction null null\"), std::runtime_error);\n     BOOST_CHECK_THROW(CallRPC(\"createrawtransaction not_array\"), std::runtime_error);"
+      }
+    ]
+  }
+]

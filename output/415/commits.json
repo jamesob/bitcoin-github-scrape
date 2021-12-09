@@ -1,0 +1,254 @@
+[
+  {
+    "sha": "a4d98b650bc4d644c6188ea50891a80061bb0c8b",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphNGQ5OGI2NTBiYzRkNjQ0YzYxODhlYTUwODkxYTgwMDYxYmIwYzhi",
+    "commit": {
+      "author": {
+        "name": "coderrr",
+        "email": "coderrr.contact@gmail.com",
+        "date": "2012-03-22T17:34:32Z"
+      },
+      "committer": {
+        "name": "coderrr",
+        "email": "coderrr.contact@gmail.com",
+        "date": "2012-03-23T09:44:42Z"
+      },
+      "message": "    Coin Control features\n\n    Hidden by default, can be enabled through display options dialog\n    Restrict sending to only use specific source address(es)\n    Show which addresses have already been linked together",
+      "tree": {
+        "sha": "9f8383b95a97d44c7f49cb562fe90138c73b27ae",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/9f8383b95a97d44c7f49cb562fe90138c73b27ae"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a4d98b650bc4d644c6188ea50891a80061bb0c8b",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a4d98b650bc4d644c6188ea50891a80061bb0c8b",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a4d98b650bc4d644c6188ea50891a80061bb0c8b",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a4d98b650bc4d644c6188ea50891a80061bb0c8b/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "44b69cf25e73ff164e15c9ca2027c5b871151e32",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/44b69cf25e73ff164e15c9ca2027c5b871151e32",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/44b69cf25e73ff164e15c9ca2027c5b871151e32"
+      }
+    ],
+    "stats": {
+      "total": 504,
+      "additions": 478,
+      "deletions": 26
+    },
+    "files": [
+      {
+        "sha": "d4699f7c1e8fe3f571e8414c21c212af4c9f1dee",
+        "filename": "bitcoin-qt.pro",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a4d98b650bc4d644c6188ea50891a80061bb0c8b/bitcoin-qt.pro",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a4d98b650bc4d644c6188ea50891a80061bb0c8b/bitcoin-qt.pro",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/bitcoin-qt.pro?ref=a4d98b650bc4d644c6188ea50891a80061bb0c8b",
+        "patch": "@@ -96,6 +96,7 @@ HEADERS += src/qt/bitcoingui.h \\\n     src/qt/addresstablemodel.h \\\n     src/qt/optionsdialog.h \\\n     src/qt/sendcoinsdialog.h \\\n+    src/qt/coincontrolpage.h \\\n     src/qt/addressbookpage.h \\\n     src/qt/messagepage.h \\\n     src/qt/aboutdialog.h \\\n@@ -161,6 +162,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \\\n     src/qt/addresstablemodel.cpp \\\n     src/qt/optionsdialog.cpp \\\n     src/qt/sendcoinsdialog.cpp \\\n+    src/qt/coincontrolpage.cpp \\\n     src/qt/addressbookpage.cpp \\\n     src/qt/messagepage.cpp \\\n     src/qt/aboutdialog.cpp \\"
+      },
+      {
+        "sha": "264ed053757b5fff04178901d5fc5c9c3ef687c5",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 59,
+        "deletions": 22,
+        "changes": 81,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=a4d98b650bc4d644c6188ea50891a80061bb0c8b",
+        "patch": "@@ -566,38 +566,74 @@ Value settxfee(const Array& params, bool fHelp)\n \n Value sendtoaddress(const Array& params, bool fHelp)\n {\n-    if (pwalletMain->IsCrypted() && (fHelp || params.size() < 2 || params.size() > 4))\n+    string crypt_usage = pwalletMain->IsCrypted() ? \"\\nrequires wallet passphrase to be set with walletpassphrase first\" : \"\";\n+\n+    if (fHelp || params.size() < 2 || params.size() > 4)\n         throw runtime_error(\n-            \"sendtoaddress <bitcoinaddress> <amount> [comment] [comment-to]\\n\"\n-            \"<amount> is a real and is rounded to the nearest 0.00000001\\n\"\n-            \"requires wallet passphrase to be set with walletpassphrase first\");\n-    if (!pwalletMain->IsCrypted() && (fHelp || params.size() < 2 || params.size() > 4))\n+            \"sendtoaddress <bitcoinaddress>[:<sendfromaddress1>[,<sendfromaddress2>[,...]]] <amount> [comment] [comment-to]\\n\"\n+            \"<amount> is a real and is rounded to the nearest 0.00000001\" + crypt_usage);\n+\n+    string strAddress = params[0].get_str();\n+    vector<string> splitAddresses;\n+    boost::split(splitAddresses, strAddress, boost::is_any_of(\":\"));\n+\n+    if (splitAddresses.size() > 2)\n         throw runtime_error(\n-            \"sendtoaddress <bitcoinaddress> <amount> [comment] [comment-to]\\n\"\n-            \"<amount> is a real and is rounded to the nearest 0.00000001\");\n+            \"sendtoaddress <bitcoinaddress>[:<sendfromaddress1>[,<sendfromaddress2>[,...]]] <amount> [comment] [comment-to]\\n\"\n+            \"<amount> is a real and is rounded to the nearest 0.00000001\" + crypt_usage);\n \n-    CBitcoinAddress address(params[0].get_str());\n+    strAddress = splitAddresses[0];\n+    if (splitAddresses.size() == 2)  pwalletMain->setSendFromAddressRestriction(splitAddresses[1]);\n+\n+    CBitcoinAddress address(strAddress);\n     if (!address.IsValid())\n         throw JSONRPCError(-5, \"Invalid bitcoin address\");\n \n-    // Amount\n-    int64 nAmount = AmountFromValue(params[1]);\n-\n-    // Wallet comments\n-    CWalletTx wtx;\n-    if (params.size() > 2 && params[2].type() != null_type && !params[2].get_str().empty())\n-        wtx.mapValue[\"comment\"] = params[2].get_str();\n-    if (params.size() > 3 && params[3].type() != null_type && !params[3].get_str().empty())\n-        wtx.mapValue[\"to\"]      = params[3].get_str();\n-\n     if (pwalletMain->IsLocked())\n         throw JSONRPCError(-13, \"Error: Please enter the wallet passphrase with walletpassphrase first.\");\n \n-    string strError = pwalletMain->SendMoneyToBitcoinAddress(address, nAmount, wtx);\n-    if (strError != \"\")\n-        throw JSONRPCError(-4, strError);\n+    try {\n+      // Amount\n+      int64 nAmount = AmountFromValue(params[1]);\n+      // Wallet comments\n+      CWalletTx wtx;\n+      if (params.size() > 2 && params[2].type() != null_type && !params[2].get_str().empty())\n+          wtx.mapValue[\"comment\"] = params[2].get_str();\n+      if (params.size() > 3 && params[3].type() != null_type && !params[3].get_str().empty())\n+          wtx.mapValue[\"to\"]      = params[3].get_str();\n \n-    return wtx.GetHash().GetHex();\n+      string strError = pwalletMain->SendMoneyToBitcoinAddress(strAddress, nAmount, wtx);\n+      if (strError != \"\")\n+          throw JSONRPCError(-4, strError);\n+\n+      pwalletMain->clearSendFromAddressRestriction();\n+\n+      return wtx.GetHash().GetHex();\n+    } catch (...) {\n+      pwalletMain->clearSendFromAddressRestriction();\n+      throw;\n+    }\n+}\n+\n+Value listaddressgroupings(const Array& params, bool fHelp)\n+{\n+  if (fHelp)  throw runtime_error(\"listaddressgroupings\");\n+  Array jsonGroupings;\n+  map<string, int64> balances = pwalletMain->GetAddressBalances();\n+  BOOST_FOREACH(set<string> grouping, pwalletMain->GetAddressGroupings()) {\n+    Array jsonGrouping;\n+    BOOST_FOREACH(string address, grouping) {\n+      Array addressInfo;\n+      addressInfo.push_back(address);\n+      addressInfo.push_back(ValueFromAmount(balances[address]));\n+      CRITICAL_BLOCK(pwalletMain->cs_wallet)\n+        if (pwalletMain->mapAddressBook.find(CBitcoinAddress(address)) != pwalletMain->mapAddressBook.end())\n+          addressInfo.push_back(pwalletMain->mapAddressBook.find(CBitcoinAddress(address))->second);\n+      jsonGrouping.push_back(addressInfo);\n+    }\n+    jsonGroupings.push_back(jsonGrouping);\n+  }\n+  return jsonGroupings;\n }\n \n Value signmessage(const Array& params, bool fHelp)\n@@ -2056,6 +2092,7 @@ pair<string, rpcfn_type> pCallTable[] =\n     make_pair(\"getblockhash\",           &getblockhash),\n     make_pair(\"gettransaction\",         &gettransaction),\n     make_pair(\"listtransactions\",       &listtransactions),\n+    make_pair(\"listaddressgroupings\",   &listaddressgroupings),\n     make_pair(\"signmessage\",            &signmessage),\n     make_pair(\"verifymessage\",          &verifymessage),\n     make_pair(\"getwork\",                &getwork),"
+      },
+      {
+        "sha": "a666a8a059ec93efc63930a53a8ef74d1656f1e8",
+        "filename": "src/headers.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/headers.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/headers.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/headers.h?ref=a4d98b650bc4d644c6188ea50891a80061bb0c8b",
+        "patch": "@@ -51,6 +51,9 @@\n #include <deque>\n #include <map>\n \n+#include <boost/algorithm/string.hpp>\n+#include <boost/lambda/lambda.hpp>\n+\n #ifdef WIN32\n #include <windows.h>\n #include <winsock2.h>"
+      },
+      {
+        "sha": "49a733f31aba38ea13b8908a8b07d1c70f605802",
+        "filename": "src/qt/bitcoingui.cpp",
+        "status": "modified",
+        "additions": 40,
+        "deletions": 0,
+        "changes": 40,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/qt/bitcoingui.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/qt/bitcoingui.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoingui.cpp?ref=a4d98b650bc4d644c6188ea50891a80061bb0c8b",
+        "patch": "@@ -23,6 +23,8 @@\n #include \"guiconstants.h\"\n #include \"askpassphrasedialog.h\"\n #include \"notificator.h\"\n+#include \"coincontrolpage.h\"\n+#include \"guiutil.h\"\n \n #ifdef Q_WS_MAC\n #include \"macdockiconhandler.h\"\n@@ -49,6 +51,7 @@\n #include <QFileDialog>\n #include <QDesktopServices>\n #include <QTimer>\n+#include <QTableWidget>\n \n #include <QDragEnterEvent>\n #include <QUrl>\n@@ -103,6 +106,8 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):\n \n     sendCoinsPage = new SendCoinsDialog(this);\n \n+    coinControlPage = new CoinControlPage(this);\n+    coinControlPage->setFont(GUIUtil::bitcoinAddressFont());\n     messagePage = new MessagePage(this);\n \n     centralWidget = new QStackedWidget(this);\n@@ -111,6 +116,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):\n     centralWidget->addWidget(addressBookPage);\n     centralWidget->addWidget(receiveCoinsPage);\n     centralWidget->addWidget(sendCoinsPage);\n+    centralWidget->addWidget(coinControlPage);\n #ifdef FIRST_CLASS_MESSAGING\n     centralWidget->addWidget(messagePage);\n #endif\n@@ -203,6 +209,12 @@ void BitcoinGUI::createActions()\n     sendCoinsAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_2));\n     tabGroup->addAction(sendCoinsAction);\n \n+    coinControlAction = new QAction(QIcon(\":/icons/history\"), tr(\"&Coin Control\"), this);\n+    coinControlAction->setToolTip(tr(\"See address linkages\"));\n+    coinControlAction->setCheckable(true);\n+    coinControlAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_6));\n+    tabGroup->addAction(coinControlAction);\n+\n     messageAction = new QAction(QIcon(\":/icons/edit\"), tr(\"Sign &message\"), this);\n     messageAction->setToolTip(tr(\"Prove you control an address\"));\n #ifdef FIRST_CLASS_MESSAGING\n@@ -222,6 +234,7 @@ void BitcoinGUI::createActions()\n     connect(sendCoinsAction, SIGNAL(triggered()), this, SLOT(gotoSendCoinsPage()));\n     connect(messageAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));\n     connect(messageAction, SIGNAL(triggered()), this, SLOT(gotoMessagePage()));\n+    connect(coinControlAction, SIGNAL(triggered()), this, SLOT(gotoCoinControlPage()));\n \n     quitAction = new QAction(QIcon(\":/icons/quit\"), tr(\"E&xit\"), this);\n     quitAction->setToolTip(tr(\"Quit application\"));\n@@ -301,6 +314,7 @@ void BitcoinGUI::createToolBars()\n #ifdef FIRST_CLASS_MESSAGING\n     toolbar->addAction(messageAction);\n #endif\n+    toolbar->addAction(coinControlAction);\n \n     QToolBar *toolbar2 = addToolBar(tr(\"Actions toolbar\"));\n     toolbar2->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);\n@@ -367,6 +381,14 @@ void BitcoinGUI::setWalletModel(WalletModel *walletModel)\n         // Ask for passphrase if needed\n         connect(walletModel, SIGNAL(requireUnlock()), this, SLOT(unlockWallet()));\n     }\n+\n+    connect(walletModel->getOptionsModel(), SIGNAL(coinControlFeaturesChanged(bool)), this, SLOT(toggleCoinControlTab(bool)));\n+    toggleCoinControlTab(walletModel->getOptionsModel()->getCoinControlFeatures());\n+}\n+\n+void BitcoinGUI::toggleCoinControlTab(bool show)\n+{\n+    coinControlAction->setVisible(show);\n }\n \n void BitcoinGUI::createTrayIcon()\n@@ -680,13 +702,31 @@ void BitcoinGUI::gotoReceiveCoinsPage()\n \n void BitcoinGUI::gotoSendCoinsPage()\n {\n+    if (!coinControlPage->selectedAddresses().empty()) {\n+      sendCoinsPage->setSendFromAddress(coinControlPage->selectedAddresses());\n+      coinControlPage->clearSelection();\n+    }\n+\n+    show();  // TODOcoderrr: still need this?\n+\n     sendCoinsAction->setChecked(true);\n     centralWidget->setCurrentWidget(sendCoinsPage);\n \n     exportAction->setEnabled(false);\n     disconnect(exportAction, SIGNAL(triggered()), 0, 0);\n }\n \n+void BitcoinGUI::gotoCoinControlPage()\n+{\n+    show();\n+    coinControlAction->setChecked(true);\n+    centralWidget->setCurrentWidget(coinControlPage);\n+    coinControlPage->UpdateTable();\n+\n+    exportAction->setEnabled(false);\n+    disconnect(exportAction, SIGNAL(triggered()), 0, 0);\n+}\n+\n void BitcoinGUI::gotoMessagePage()\n {\n #ifdef FIRST_CLASS_MESSAGING"
+      },
+      {
+        "sha": "8598f5b6761fd5e94a148d1d48b5122445588c9e",
+        "filename": "src/qt/bitcoingui.h",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 2,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/qt/bitcoingui.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/qt/bitcoingui.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoingui.h?ref=a4d98b650bc4d644c6188ea50891a80061bb0c8b",
+        "patch": "@@ -12,6 +12,7 @@ class OverviewPage;\n class AddressBookPage;\n class SendCoinsDialog;\n class MessagePage;\n+class CoinControlPage;\n class Notificator;\n \n QT_BEGIN_NAMESPACE\n@@ -64,6 +65,7 @@ class BitcoinGUI : public QMainWindow\n     AddressBookPage *receiveCoinsPage;\n     SendCoinsDialog *sendCoinsPage;\n     MessagePage *messagePage;\n+    CoinControlPage *coinControlPage;\n \n     QLabel *labelEncryptionIcon;\n     QLabel *labelConnectionsIcon;\n@@ -87,6 +89,7 @@ class BitcoinGUI : public QMainWindow\n     QAction *backupWalletAction;\n     QAction *changePassphraseAction;\n     QAction *aboutQtAction;\n+    QAction *coinControlAction;\n \n     QSystemTrayIcon *trayIcon;\n     Notificator *notificator;\n@@ -104,6 +107,9 @@ class BitcoinGUI : public QMainWindow\n     void createTrayIcon();\n \n public slots:\n+    /** Switch to send coins page */\n+    void gotoSendCoinsPage();\n+\n     /** Set number of connections shown in the UI */\n     void setNumConnections(int count);\n     /** Set number of blocks shown in the UI */\n@@ -141,8 +147,8 @@ private slots:\n     void gotoAddressBookPage();\n     /** Switch to receive coins page */\n     void gotoReceiveCoinsPage();\n-    /** Switch to send coins page */\n-    void gotoSendCoinsPage();\n+    /** Switch to coin control page */\n+    void gotoCoinControlPage();\n \n     /** Show configuration dialog */\n     void optionsClicked();\n@@ -168,6 +174,7 @@ private slots:\n \n     /** Show window if hidden, unminimize when minimized */\n     void showNormalIfMinimized();\n+    void toggleCoinControlTab(bool);\n };\n \n #endif"
+      },
+      {
+        "sha": "7a7848fe85e9bc74e94b1d244b9270df07a74dce",
+        "filename": "src/qt/coincontrolpage.cpp",
+        "status": "added",
+        "additions": 111,
+        "deletions": 0,
+        "changes": 111,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/qt/coincontrolpage.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/qt/coincontrolpage.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/coincontrolpage.cpp?ref=a4d98b650bc4d644c6188ea50891a80061bb0c8b",
+        "patch": "@@ -0,0 +1,111 @@\n+#include \"bitcoingui.h\"\n+#include \"sendcoinsdialog.h\"\n+#include \"ui_sendcoinsdialog.h\"\n+#include \"walletmodel.h\"\n+#include \"bitcoinunits.h\"\n+#include \"addressbookpage.h\"\n+#include \"coincontrolpage.h\"\n+#include \"optionsmodel.h\"\n+#include \"sendcoinsentry.h\"\n+#include \"guiutil.h\"\n+#include \"askpassphrasedialog.h\"\n+\n+\n+#include \"headers.h\"\n+#include \"db.h\"\n+#include \"net.h\"\n+#include \"init.h\"\n+\n+#include <QApplication>\n+#include <QMessageBox>\n+#include <QLocale>\n+#include <QTextDocument>\n+#include <QTableWidget>\n+\n+using namespace std;\n+\n+CoinControlPage::CoinControlPage(QWidget *parent) :\n+    QWidget(parent)\n+{\n+    gui = (BitcoinGUI *)parent;\n+\n+    QHBoxLayout *hlayout = new QHBoxLayout(this);\n+\n+    QStringList headers;\n+    headers << \"Address\" << \"Label\" << \"Balance\" << \"Balance Minus Tx Fee\";\n+    table = new QTableWidget(this);\n+    table->setColumnCount(4);\n+    table->setHorizontalHeaderLabels(headers);\n+    table->verticalHeader()->setVisible(false);\n+    table->setEditTriggers(QAbstractItemView::NoEditTriggers);\n+    table->horizontalHeader()->setResizeMode(QHeaderView::ResizeToContents);\n+    table->setSelectionBehavior(QAbstractItemView::SelectRows);\n+    \n+    connect(table, SIGNAL(itemDoubleClicked(QTableWidgetItem *)), this, SLOT(sendFromSelectedAddress(QTableWidgetItem *)));\n+\n+    hlayout->addWidget(table);\n+}\n+\n+std::string CoinControlPage::selectedAddresses()\n+{\n+  std::string addresses;\n+  BOOST_FOREACH(QTableWidgetItem *i, table->selectedItems()) {\n+    if (i->column() != 0)  continue;\n+    std::string text = ((QString)i->text()).toStdString();\n+    if (CBitcoinAddress(text).IsValid())  addresses += text + \";\";\n+  }\n+  if (addresses.size() > 0)  addresses.resize(addresses.size()-1);\n+  return addresses;\n+}\n+\n+void CoinControlPage::clearSelection()\n+{\n+  table->clearSelection();\n+}\n+\n+void CoinControlPage::sendFromSelectedAddress(QTableWidgetItem *item)\n+{\n+  if (selectedAddresses().size() == 0 )  return;\n+  gui->gotoSendCoinsPage();\n+}\n+\n+void CoinControlPage::UpdateTable() {\n+  map<string, int64> balances = pwalletMain->GetAddressBalances();\n+  set< set<string> > groupings = pwalletMain->GetAddressGroupings();\n+  set< set<string> > nonZeroGroupings;\n+\n+  BOOST_FOREACH(set<string> addresses, groupings)\n+    BOOST_FOREACH(string address, addresses)\n+      if (balances[address] > 0)\n+        nonZeroGroupings.insert(addresses);\n+\n+  table->setRowCount(0);\n+\n+  BOOST_FOREACH(set<string> addresses, nonZeroGroupings) {\n+    vector<string> sortedAddresses(addresses.begin(), addresses.end());\n+    sort(sortedAddresses.begin(), sortedAddresses.end(), boost::lambda::var(balances)[boost::lambda::_1] < boost::lambda::var(balances)[boost::lambda::_2]);\n+\n+    BOOST_FOREACH(string address, sortedAddresses) {\n+      int64 balance = balances[address];\n+\n+      table->insertRow(0);\n+      table->setItem(0, 0, new QTableWidgetItem(QString::fromStdString(address)));\n+\n+      CRITICAL_BLOCK(pwalletMain->cs_wallet)\n+        if (pwalletMain->mapAddressBook.find(CBitcoinAddress(address)) != pwalletMain->mapAddressBook.end())\n+          table->setItem(0, 1, new QTableWidgetItem(QString::fromStdString(pwalletMain->mapAddressBook.find(CBitcoinAddress(address))->second)));\n+\n+      if (balance > 0) {\n+        table->setItem(0, 2, new QTableWidgetItem(QString::fromStdString(strprintf(\"%\"PRI64d\".%08\"PRI64d, balance/COIN, balance%COIN))));\n+        if (balance-MIN_TX_FEE < 0)\n+          table->setItem(0, 3, new QTableWidgetItem(QString::fromStdString(\"less than 0\")));\n+        else\n+          table->setItem(0, 3, new QTableWidgetItem(QString::fromStdString(strprintf(\"%\"PRI64d\".%08\"PRI64d, (balance-MIN_TX_FEE)/COIN, (balance-MIN_TX_FEE)%COIN))));\n+      } else {\n+        table->setItem(0, 2, new QTableWidgetItem(QString::fromStdString(\"-\")));\n+        table->setItem(0, 3, new QTableWidgetItem(QString::fromStdString(\"-\")));\n+      }\n+    }\n+    table->insertRow(0);\n+  }\n+}"
+      },
+      {
+        "sha": "ac783652c2df09aa3b9167a94a9fb887d5cfc2d3",
+        "filename": "src/qt/coincontrolpage.h",
+        "status": "added",
+        "additions": 26,
+        "deletions": 0,
+        "changes": 26,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/qt/coincontrolpage.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/qt/coincontrolpage.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/coincontrolpage.h?ref=a4d98b650bc4d644c6188ea50891a80061bb0c8b",
+        "patch": "@@ -0,0 +1,26 @@\n+#ifndef COINCONTROLPAGE_H\n+#define COINCONTROLPAGE_H\n+\n+class BitcoinGUI;\n+\n+#include <QWidget>\n+#include <QTableWidget>\n+\n+class CoinControlPage : public QWidget {\n+  Q_OBJECT\n+\n+public:\n+  CoinControlPage(QWidget *parent);\n+  void UpdateTable();\n+  std::string selectedAddresses();\n+  void clearSelection();\n+\n+private:\n+  QTableWidget *table;\n+  BitcoinGUI *gui;\n+\n+private slots:\n+  void sendFromSelectedAddress(QTableWidgetItem *item);\n+};\n+\n+#endif"
+      },
+      {
+        "sha": "dede6375cd906098b8dc0a91fe3fe71895be07d7",
+        "filename": "src/qt/forms/sendcoinsdialog.ui",
+        "status": "modified",
+        "additions": 28,
+        "deletions": 1,
+        "changes": 29,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/qt/forms/sendcoinsdialog.ui",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/qt/forms/sendcoinsdialog.ui",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/forms/sendcoinsdialog.ui?ref=a4d98b650bc4d644c6188ea50891a80061bb0c8b",
+        "patch": "@@ -25,7 +25,7 @@\n         <x>0</x>\n         <y>0</y>\n         <width>666</width>\n-        <height>165</height>\n+        <height>122</height>\n        </rect>\n       </property>\n       <layout class=\"QVBoxLayout\" name=\"verticalLayout_2\">\n@@ -56,6 +56,33 @@\n      </widget>\n     </widget>\n    </item>\n+   <item>\n+    <layout class=\"QHBoxLayout\" name=\"sendFromLayout\">\n+     <property name=\"topMargin\">\n+      <number>0</number>\n+     </property>\n+     <item>\n+      <widget class=\"QLabel\" name=\"labelSendFrom\">\n+       <property name=\"text\">\n+        <string>Send From:</string>\n+       </property>\n+      </widget>\n+     </item>\n+     <item>\n+      <widget class=\"QLineEdit\" name=\"sendFrom\">\n+       <property name=\"inputMask\">\n+        <string/>\n+       </property>\n+       <property name=\"text\">\n+        <string/>\n+       </property>\n+       <property name=\"placeholderText\">\n+        <string>Restrict client to only send from these Bitcoin addresses</string>\n+       </property>\n+      </widget>\n+     </item>\n+    </layout>\n+   </item>\n    <item>\n     <layout class=\"QHBoxLayout\" name=\"horizontalLayout\">\n      <item>"
+      },
+      {
+        "sha": "7467fd1ae912f75c632a57d6f17326dc95d51fd1",
+        "filename": "src/qt/optionsdialog.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 0,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/qt/optionsdialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/qt/optionsdialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/optionsdialog.cpp?ref=a4d98b650bc4d644c6188ea50891a80061bb0c8b",
+        "patch": "@@ -58,6 +58,7 @@ class DisplayOptionsPage : public QWidget\n private:\n     QValueComboBox *unit;\n     QCheckBox *display_addresses;\n+    QCheckBox *coin_control_features;\n signals:\n \n public slots:\n@@ -281,6 +282,9 @@ DisplayOptionsPage::DisplayOptionsPage(QWidget *parent):\n     display_addresses = new QCheckBox(tr(\"Display addresses in transaction list\"), this);\n     layout->addWidget(display_addresses);\n \n+    coin_control_features = new QCheckBox(tr(\"Display coin control features\"), this);\n+    layout->addWidget(coin_control_features);\n+\n     layout->addStretch();\n \n     setLayout(layout);\n@@ -290,4 +294,5 @@ void DisplayOptionsPage::setMapper(MonitoredDataMapper *mapper)\n {\n     mapper->addMapping(unit, OptionsModel::DisplayUnit);\n     mapper->addMapping(display_addresses, OptionsModel::DisplayAddresses);\n+    mapper->addMapping(coin_control_features, OptionsModel::CoinControlFeatures);\n }"
+      },
+      {
+        "sha": "22567cc3835d083f5ddb3d4d610a139b006d14f7",
+        "filename": "src/qt/optionsmodel.cpp",
+        "status": "modified",
+        "additions": 14,
+        "deletions": 1,
+        "changes": 15,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/qt/optionsmodel.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/qt/optionsmodel.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/optionsmodel.cpp?ref=a4d98b650bc4d644c6188ea50891a80061bb0c8b",
+        "patch": "@@ -21,6 +21,7 @@ void OptionsModel::Init()\n     fMinimizeToTray = settings.value(\"fMinimizeToTray\", false).toBool();\n     fMinimizeOnClose = settings.value(\"fMinimizeOnClose\", false).toBool();\n     nTransactionFee = settings.value(\"nTransactionFee\").toLongLong();\n+    bCoinControlFeatures = settings.value(\"bCoinControlFeatures\", false).toBool();\n \n     // These are shared with core bitcoin; we want\n     // command-line options to override the GUI settings:\n@@ -54,7 +55,7 @@ bool OptionsModel::Upgrade()\n         }\n     }\n     QList<QString> boolOptions;\n-    boolOptions << \"bDisplayAddresses\" << \"fMinimizeToTray\" << \"fMinimizeOnClose\" << \"fUseProxy\" << \"fUseUPnP\";\n+    boolOptions << \"bDisplayAddresses\" << \"bCoinControlFeatures\" << \"fMinimizeToTray\" << \"fMinimizeOnClose\" << \"fUseProxy\" << \"fUseUPnP\";\n     foreach(QString key, boolOptions)\n     {\n         bool value = false;\n@@ -121,6 +122,8 @@ QVariant OptionsModel::data(const QModelIndex & index, int role) const\n             return QVariant(nDisplayUnit);\n         case DisplayAddresses:\n             return QVariant(bDisplayAddresses);\n+        case CoinControlFeatures:\n+            return QVariant(bCoinControlFeatures);\n         default:\n             return QVariant();\n         }\n@@ -202,6 +205,11 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in\n             bDisplayAddresses = value.toBool();\n             settings.setValue(\"bDisplayAddresses\", bDisplayAddresses);\n             }\n+        case CoinControlFeatures: {\n+            bCoinControlFeatures = value.toBool();\n+            settings.setValue(\"bCoinControlFeatures\", bCoinControlFeatures);\n+            emit coinControlFeaturesChanged(bCoinControlFeatures);\n+            }\n         default:\n             break;\n         }\n@@ -235,3 +243,8 @@ bool OptionsModel::getDisplayAddresses()\n {\n     return bDisplayAddresses;\n }\n+\n+bool OptionsModel::getCoinControlFeatures()\n+{\n+  return bCoinControlFeatures;\n+}"
+      },
+      {
+        "sha": "7a749f441eed3eb657efaada96385e7a243ed572",
+        "filename": "src/qt/optionsmodel.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 0,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/qt/optionsmodel.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/qt/optionsmodel.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/optionsmodel.h?ref=a4d98b650bc4d644c6188ea50891a80061bb0c8b",
+        "patch": "@@ -26,6 +26,7 @@ class OptionsModel : public QAbstractListModel\n         Fee, // qint64\n         DisplayUnit, // BitcoinUnits::Unit\n         DisplayAddresses, // bool\n+        CoinControlFeatures, // bool\n         OptionIDRowCount\n     };\n \n@@ -44,13 +45,16 @@ class OptionsModel : public QAbstractListModel\n     bool getMinimizeOnClose();\n     int getDisplayUnit();\n     bool getDisplayAddresses();\n+    bool getCoinControlFeatures();\n private:\n     int nDisplayUnit;\n     bool bDisplayAddresses;\n     bool fMinimizeToTray;\n     bool fMinimizeOnClose;\n+    bool bCoinControlFeatures;\n signals:\n     void displayUnitChanged(int unit);\n+    void coinControlFeaturesChanged(bool);\n \n public slots:\n "
+      },
+      {
+        "sha": "38286f4e745e06860edc88b02c3e7bc9c77d396c",
+        "filename": "src/qt/sendcoinsdialog.cpp",
+        "status": "modified",
+        "additions": 17,
+        "deletions": 0,
+        "changes": 17,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/qt/sendcoinsdialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/qt/sendcoinsdialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/sendcoinsdialog.cpp?ref=a4d98b650bc4d644c6188ea50891a80061bb0c8b",
+        "patch": "@@ -32,6 +32,13 @@ SendCoinsDialog::SendCoinsDialog(QWidget *parent) :\n     connect(ui->clearButton, SIGNAL(clicked()), this, SLOT(clear()));\n \n     fNewRecipientAllowed = true;\n+\n+    ui->sendFrom->setFont(GUIUtil::bitcoinAddressFont());\n+}\n+\n+void SendCoinsDialog::setSendFromAddress(std::string address)\n+{\n+  ui->sendFrom->setText(QString::fromStdString(address));\n }\n \n void SendCoinsDialog::setModel(WalletModel *model)\n@@ -50,6 +57,8 @@ void SendCoinsDialog::setModel(WalletModel *model)\n     {\n         setBalance(model->getBalance(), model->getUnconfirmedBalance());\n         connect(model, SIGNAL(balanceChanged(qint64, qint64)), this, SLOT(setBalance(qint64, qint64)));\n+        connect(model->getOptionsModel(), SIGNAL(coinControlFeaturesChanged(bool)), this, SLOT(toggleSendFrom(bool)));\n+        toggleSendFrom(model->getOptionsModel()->getCoinControlFeatures());\n     }\n }\n \n@@ -58,6 +67,13 @@ SendCoinsDialog::~SendCoinsDialog()\n     delete ui;\n }\n \n+void SendCoinsDialog::toggleSendFrom(bool show)\n+{\n+    ui->labelSendFrom->setVisible(show);\n+    ui->sendFrom->setVisible(show);\n+    if (!show)  ui->sendFrom->clear();\n+}\n+\n void SendCoinsDialog::on_sendButton_clicked()\n {\n     QList<SendCoinsRecipient> recipients;\n@@ -115,6 +131,7 @@ void SendCoinsDialog::on_sendButton_clicked()\n         return;\n     }\n \n+    model->setSendFromAddressRestriction(((QString)ui->sendFrom->text()).toStdString());\n     WalletModel::SendCoinsReturn sendstatus = model->sendCoins(recipients);\n     switch(sendstatus.status)\n     {"
+      },
+      {
+        "sha": "6df50b101208e6d9cc3f1a9dd08b29b23891f264",
+        "filename": "src/qt/sendcoinsdialog.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 0,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/qt/sendcoinsdialog.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/qt/sendcoinsdialog.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/sendcoinsdialog.h?ref=a4d98b650bc4d644c6188ea50891a80061bb0c8b",
+        "patch": "@@ -2,10 +2,12 @@\n #define SENDCOINSDIALOG_H\n \n #include <QDialog>\n+#include <QLineEdit>\n \n namespace Ui {\n     class SendCoinsDialog;\n }\n+class CWallet;\n class WalletModel;\n class SendCoinsEntry;\n class SendCoinsRecipient;\n@@ -30,6 +32,7 @@ class SendCoinsDialog : public QDialog\n     QWidget *setupTabChain(QWidget *prev);\n \n     void pasteEntry(const SendCoinsRecipient &rv);\n+    void setSendFromAddress(std::string address);\n     void handleURL(const QString &url);\n \n public slots:\n@@ -47,6 +50,7 @@ public slots:\n \n private slots:\n     void on_sendButton_clicked();\n+    void toggleSendFrom(bool);\n \n     void removeEntry(SendCoinsEntry* entry);\n };"
+      },
+      {
+        "sha": "7318bab95a88b6fa09777f3671ef29b56a17db43",
+        "filename": "src/qt/walletmodel.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 0,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/qt/walletmodel.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/qt/walletmodel.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/walletmodel.cpp?ref=a4d98b650bc4d644c6188ea50891a80061bb0c8b",
+        "patch": "@@ -240,6 +240,11 @@ bool WalletModel::changePassphrase(const SecureString &oldPass, const SecureStri\n     return retval;\n }\n \n+void WalletModel::setSendFromAddressRestriction(std::string addresses)\n+{\n+  wallet->setSendFromAddressRestriction(addresses);\n+}\n+\n bool WalletModel::backupWallet(const QString &filename)\n {\n     return BackupWallet(*wallet, filename.toLocal8Bit().data());"
+      },
+      {
+        "sha": "51b67b765a081e94b935f9c86e417edde7d3e77b",
+        "filename": "src/qt/walletmodel.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/qt/walletmodel.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/qt/walletmodel.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/walletmodel.h?ref=a4d98b650bc4d644c6188ea50891a80061bb0c8b",
+        "patch": "@@ -80,6 +80,9 @@ class WalletModel : public QObject\n     // Wallet backup\n     bool backupWallet(const QString &filename);\n \n+    // Only allow client to send from specific address(es)\n+    void setSendFromAddressRestriction(std::string addresses);\n+\n     // RAI object for unlocking wallet, returned by requestUnlock()\n     class UnlockContext\n     {"
+      },
+      {
+        "sha": "07bf018ac1956e19feb74308bf5c9ec6eabd0dbe",
+        "filename": "src/wallet.cpp",
+        "status": "modified",
+        "additions": 132,
+        "deletions": 0,
+        "changes": 132,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.cpp?ref=a4d98b650bc4d644c6188ea50891a80061bb0c8b",
+        "patch": "@@ -15,6 +15,25 @@ using namespace std;\n // mapWallet\n //\n \n+void CWallet::setSendFromAddressRestriction(string addresses)\n+{\n+  boost::trim(addresses);\n+  if (addresses.empty())\n+      this->sendFromAddressRestriction.clear();\n+  else\n+      boost::split(sendFromAddressRestriction, addresses, boost::is_any_of(\";,\"));\n+}\n+\n+void CWallet::setSendFromAddressRestriction(set<string> addresses)\n+{\n+  sendFromAddressRestriction = addresses;\n+}\n+\n+void CWallet::clearSendFromAddressRestriction()\n+{\n+  sendFromAddressRestriction.clear();\n+}\n+\n std::vector<unsigned char> CWallet::GenerateNewKey()\n {\n     bool fCompressed = true; // default to compressed public keys\n@@ -887,6 +906,9 @@ bool CWallet::SelectCoinsMinConf(int64 nTargetValue, int nConfMine, int nConfThe\n                 if (n <= 0)\n                     continue;\n \n+                if (!this->sendFromAddressRestriction.empty() && !this->sendFromAddressRestriction.count(((CWalletTx *)pcoin)->GetAddressOfTxOut(i)))\n+                    continue;\n+\n                 pair<int64,pair<const CWalletTx*,unsigned int> > coin = make_pair(n,make_pair(pcoin,i));\n \n                 if (n == nTargetValue)\n@@ -1483,6 +1505,116 @@ int64 CWallet::GetOldestKeyPoolTime()\n     return keypool.nTime;\n }\n \n+std::map<std::string, int64> CWallet::GetAddressBalances()\n+{\n+  map<string, int64> balances;\n+\n+  CRITICAL_BLOCK(cs_wallet)\n+  {\n+    BOOST_FOREACH(PAIRTYPE(uint256, CWalletTx) walletEntry, mapWallet) {\n+      CWalletTx *pcoin = &walletEntry.second;\n+\n+      if (!pcoin->IsFinal() || !pcoin->IsConfirmed())\n+        continue;\n+\n+      if (pcoin->IsCoinBase() && pcoin->GetBlocksToMaturity() > 0)\n+        continue;\n+\n+      int nDepth = pcoin->GetDepthInMainChain();\n+      if (nDepth < (pcoin->IsFromMe() ? 0 : 1))\n+        continue;\n+\n+      for (int i = 0; i < pcoin->vout.size(); i++)\n+      {\n+        if (!IsMine(pcoin->vout[i]))\n+          continue;\n+\n+        int64 n = pcoin->IsSpent(i) ? 0 : pcoin->vout[i].nValue;\n+\n+        string addr = pcoin->GetAddressOfTxOut(i);\n+        if (!balances.count(addr))  balances[addr] = 0;\n+        balances[addr] += n;\n+      }\n+    }\n+  }\n+\n+  return balances;\n+}\n+\n+set< set<string> > CWallet::GetAddressGroupings()\n+{\n+  map< string, set<string> > groupings;\n+\n+  BOOST_FOREACH(PAIRTYPE(uint256, CWalletTx) walletEntry, mapWallet) {\n+    CWalletTx *pcoin = &walletEntry.second;\n+\n+    if (!pcoin->IsFinal() || !pcoin->IsConfirmed())\n+      continue;\n+\n+    if (pcoin->IsCoinBase() && pcoin->GetBlocksToMaturity() > 0)\n+      continue;\n+\n+    int nDepth = pcoin->GetDepthInMainChain();\n+    if (nDepth < (pcoin->IsFromMe() ? 0 : 1))\n+      continue;\n+\n+    if (pcoin->vin.size() > 0 && IsMine(pcoin->vin[0])) {\n+      // group all in addrs with eachother\n+      BOOST_FOREACH(CTxIn txin1, pcoin->vin) {\n+        BOOST_FOREACH(CTxIn txin2, pcoin->vin) {\n+          CWalletTx tx1 = mapWallet[txin1.prevout.hash];\n+          CWalletTx tx2 = mapWallet[txin2.prevout.hash];\n+          string addr1 = tx1.GetAddressOfTxOut(txin1.prevout.n);\n+          string addr2 = tx2.GetAddressOfTxOut(txin2.prevout.n);\n+          groupings[addr1].insert(addr2);\n+        }\n+      }\n+\n+      // group change with first in addr, only need to group w first cuz all in addrs already grouped\n+      BOOST_FOREACH(CTxOut txout, pcoin->vout) {\n+        if (IsChange(txout)) {\n+          CWalletTx tx = mapWallet[pcoin->vin[0].prevout.hash];\n+          string addr = tx.GetAddressOfTxOut(pcoin->vin[0].prevout.n);\n+          CBitcoinAddress txoutAddr;\n+          ExtractAddress(txout.scriptPubKey, txoutAddr);\n+          groupings[addr].insert(txoutAddr.ToString());\n+        }\n+      }\n+    }\n+\n+    // group lone addrs by themselves\n+    for (int i = 0; i < pcoin->vout.size(); i++) {\n+      if (!IsMine(pcoin->vout[i]))  continue;\n+      string addr = pcoin->GetAddressOfTxOut(i);\n+      groupings[addr].insert(addr);\n+    }\n+  }\n+\n+  set<string> addresses;\n+  BOOST_FOREACH(PAIRTYPE(string, set<string>) grouping, groupings)\n+    addresses.insert(grouping.first);\n+\n+  BOOST_FOREACH(string address, addresses) {\n+    set<string> expanded;\n+    ExpandGrouping(groupings, address, expanded);\n+    BOOST_FOREACH(string addr, expanded)  groupings[addr] = expanded;\n+  }\n+\n+  set< set<string> > uniqueGroupings;\n+  BOOST_FOREACH(PAIRTYPE(string, set<string>) grouping, groupings)\n+    uniqueGroupings.insert(grouping.second);\n+  \n+  return uniqueGroupings;\n+}\n+\n+void CWallet::ExpandGrouping(map< string, set<string> > &groupings, string address, set<string> &expanded)\n+{\n+  if (expanded.count(address))  return;\n+  expanded.insert(address);\n+  BOOST_FOREACH(string expandAddress, groupings[address])\n+    ExpandGrouping(groupings, expandAddress, expanded);\n+}\n+\n vector<unsigned char> CReserveKey::GetReservedKey()\n {\n     if (nIndex == -1)"
+      },
+      {
+        "sha": "a7c1f898773d627952b959184b56a196b4420d1e",
+        "filename": "src/wallet.h",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 0,
+        "changes": 16,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/wallet.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a4d98b650bc4d644c6188ea50891a80061bb0c8b/src/wallet.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.h?ref=a4d98b650bc4d644c6188ea50891a80061bb0c8b",
+        "patch": "@@ -65,6 +65,12 @@ class CWallet : public CCryptoKeyStore\n \n     std::vector<unsigned char> vchDefaultKey;\n \n+    std::set<std::string> sendFromAddressRestriction;\n+\n+    void setSendFromAddressRestriction(std::string addresses);\n+    void setSendFromAddressRestriction(std::set<std::string> addresses);\n+    void clearSendFromAddressRestriction();\n+\n     // keystore implementation\n     // Generate a new key\n     std::vector<unsigned char> GenerateNewKey();\n@@ -113,6 +119,10 @@ class CWallet : public CCryptoKeyStore\n     int64 GetOldestKeyPoolTime();\n     void GetAllReserveAddresses(std::set<CBitcoinAddress>& setAddress);\n \n+    void ExpandGrouping(std::map< std::string, std::set<std::string> > &groupings, std::string address, std::set<std::string> &expanded);\n+    std::set< std::set<std::string> > GetAddressGroupings();\n+    std::map<std::string, int64> GetAddressBalances();\n+\n     bool IsMine(const CTxIn& txin) const;\n     int64 GetDebit(const CTxIn& txin) const;\n     bool IsMine(const CTxOut& txout) const\n@@ -539,6 +549,12 @@ class CWalletTx : public CMerkleTx\n         return true;\n     }\n \n+    std::string GetAddressOfTxOut(int n) {\n+        CBitcoinAddress addr;\n+        ExtractAddress(vout[n].scriptPubKey, addr);\n+        return addr.ToString();\n+    }\n+\n     bool WriteToDisk();\n \n     int64 GetTxTime() const;"
+      }
+    ]
+  }
+]

@@ -1,0 +1,254 @@
+[
+  {
+    "sha": "93e447b631440aee505a7c884a59c0885f9d968c",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5M2U0NDdiNjMxNDQwYWVlNTA1YTdjODg0YTU5YzA4ODVmOWQ5Njhj",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-04-11T16:38:03Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-04-12T16:11:56Z"
+      },
+      "message": "BIP 0031: pong message\n\nAdd a pong message that is sent in reply to a ping. It echoes back a nonce\nfield that is now added to the ping message. Send a nonce of zero in ping\nmessages.\n\nOriginal author: Mike Hearn @ Google\n\nModified Mike's change to introduce a mild form of protocol documentation in\nversion.h.",
+      "tree": {
+        "sha": "f181ad15e894d774e2a0a505bf3b8dbcc9594a63",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f181ad15e894d774e2a0a505bf3b8dbcc9594a63"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/93e447b631440aee505a7c884a59c0885f9d968c",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/93e447b631440aee505a7c884a59c0885f9d968c",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/93e447b631440aee505a7c884a59c0885f9d968c",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/93e447b631440aee505a7c884a59c0885f9d968c/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "940e22fd81af29dee6c07e413de1b446a21712b0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/940e22fd81af29dee6c07e413de1b446a21712b0",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/940e22fd81af29dee6c07e413de1b446a21712b0"
+      }
+    ],
+    "stats": {
+      "total": 31,
+      "additions": 28,
+      "deletions": 3
+    },
+    "files": [
+      {
+        "sha": "fbe9232ac03d016101e93ee4102802b51bee345a",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 25,
+        "deletions": 3,
+        "changes": 28,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/93e447b631440aee505a7c884a59c0885f9d968c/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/93e447b631440aee505a7c884a59c0885f9d968c/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=93e447b631440aee505a7c884a59c0885f9d968c",
+        "patch": "@@ -2652,6 +2652,23 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n \n     else if (strCommand == \"ping\")\n     {\n+        if (pfrom->nVersion > BIP0031_VERSION)\n+        {\n+            uint64 nonce = 0;\n+            vRecv >> nonce;\n+            // Echo the message back with the nonce. This allows for two useful features:\n+            //\n+            // 1) A remote node can quickly check if the connection is operational\n+            // 2) Remote nodes can measure the latency of the network thread. If this node\n+            //    is overloaded it won't respond to pings quickly and the remote node can\n+            //    avoid sending us more work, like chain download requests.\n+            //\n+            // The nonce stops the remote getting confused between different pings: without\n+            // it, if the remote node sends a ping once per second and this node takes 5\n+            // seconds to respond to each, the 5th ping the remote sends would appear to\n+            // return very quickly.\n+            pfrom->PushMessage(\"pong\", nonce);\n+        }\n     }\n \n \n@@ -2814,9 +2831,14 @@ bool SendMessages(CNode* pto, bool fSendTrickle)\n         if (pto->nVersion == 0)\n             return true;\n \n-        // Keep-alive ping\n-        if (pto->nLastSend && GetTime() - pto->nLastSend > 30 * 60 && pto->vSend.empty())\n-            pto->PushMessage(\"ping\");\n+        // Keep-alive ping. We send a nonce of zero because we don't use it anywhere \n+        // right now.\n+        if (pto->nLastSend && GetTime() - pto->nLastSend > 30 * 60 && pto->vSend.empty()) {\n+            if (pto->nVersion > BIP0031_VERSION)\n+                pto->PushMessage(\"ping\", 0);\n+            else\n+                pto->PushMessage(\"ping\");\n+        }\n \n         // Resend wallet transactions that haven't gotten in a block yet\n         ResendWalletTransactions();"
+      },
+      {
+        "sha": "e0e216aad451609f980d0cc2c9d43580c8a3a062",
+        "filename": "src/version.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/93e447b631440aee505a7c884a59c0885f9d968c/src/version.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/93e447b631440aee505a7c884a59c0885f9d968c/src/version.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/version.h?ref=93e447b631440aee505a7c884a59c0885f9d968c",
+        "patch": "@@ -11,4 +11,7 @@ extern const std::string CLIENT_BUILD;\n extern const std::string CLIENT_DATE;\n extern const int         CLIENT_VERSION;\n \n+// BIP 0031, pong message, is enabled for all versions AFTER this one\n+const int BIP0031_VERSION = 60000;\n+\n #endif"
+      }
+    ]
+  },
+  {
+    "sha": "b87c0fc4403040185b625d1b21bbff0cb7c828d7",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiODdjMGZjNDQwMzA0MDE4NWI2MjVkMWIyMWJiZmYwY2I3YzgyOGQ3",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jeff@garzik.org",
+        "date": "2012-04-12T16:23:58Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-04-12T16:23:58Z"
+      },
+      "message": "version.h: separate client, net sections.  Move more constants to this file.\n\n* move PROTOCOL_VERSION to version.h\n\n* move CLIENT_VERSION* to version.h, make available past cpp stage\n\n* clearly separate client, network version portions of version.h",
+      "tree": {
+        "sha": "087f87f514d5b0af5ec7b0b73b875fe4086e926e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/087f87f514d5b0af5ec7b0b73b875fe4086e926e"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/b87c0fc4403040185b625d1b21bbff0cb7c828d7",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b87c0fc4403040185b625d1b21bbff0cb7c828d7",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/b87c0fc4403040185b625d1b21bbff0cb7c828d7",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b87c0fc4403040185b625d1b21bbff0cb7c828d7/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "93e447b631440aee505a7c884a59c0885f9d968c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/93e447b631440aee505a7c884a59c0885f9d968c",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/93e447b631440aee505a7c884a59c0885f9d968c"
+      }
+    ],
+    "stats": {
+      "total": 37,
+      "additions": 23,
+      "deletions": 14
+    },
+    "files": [
+      {
+        "sha": "d34f3e557ceb5f8bed32aef8fc728abeb9785148",
+        "filename": "src/serialize.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 2,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b87c0fc4403040185b625d1b21bbff0cb7c828d7/src/serialize.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b87c0fc4403040185b625d1b21bbff0cb7c828d7/src/serialize.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/serialize.h?ref=b87c0fc4403040185b625d1b21bbff0cb7c828d7",
+        "patch": "@@ -20,6 +20,7 @@\n #include <boost/tuple/tuple_io.hpp>\n \n #include \"allocators.h\"\n+#include \"version.h\"\n \n typedef long long  int64;\n typedef unsigned long long  uint64;\n@@ -29,8 +30,6 @@ class CDataStream;\n class CAutoFile;\n static const unsigned int MAX_SIZE = 0x02000000;\n \n-static const int PROTOCOL_VERSION = 60000;\n-\n // Used to bypass the rule against non-const reference to temporary\n // where it makes sense with wrappers such as CFlatData or CTxDB\n template<typename T>"
+      },
+      {
+        "sha": "0c1e8bfa8028715886caac6d6265c016bcd4ee0d",
+        "filename": "src/version.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 10,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b87c0fc4403040185b625d1b21bbff0cb7c828d7/src/version.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b87c0fc4403040185b625d1b21bbff0cb7c828d7/src/version.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/version.cpp?ref=b87c0fc4403040185b625d1b21bbff0cb7c828d7",
+        "patch": "@@ -11,18 +11,8 @@\n const std::string CLIENT_NAME(\"Satoshi\");\n \n // Client version number\n-#define CLIENT_VERSION_MAJOR          0\n-#define CLIENT_VERSION_MINOR          6\n-#define CLIENT_VERSION_REVISION       0\n-#define CLIENT_VERSION_BUILD         99\n #define CLIENT_VERSION_SUFFIX   \"-beta\"\n \n-const int CLIENT_VERSION = 1000000 * CLIENT_VERSION_MAJOR\n-                         +   10000 * CLIENT_VERSION_MINOR \n-                         +     100 * CLIENT_VERSION_REVISION\n-                         +       1 * CLIENT_VERSION_BUILD;\n-\n-\n \n // The following part of the code determines the CLIENT_BUILD variable.\n // Several mechanisms are used for this:"
+      },
+      {
+        "sha": "1ea1a0dbbb04ceb72f933779c87b12b0bcb813ca",
+        "filename": "src/version.h",
+        "status": "modified",
+        "additions": 22,
+        "deletions": 2,
+        "changes": 24,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b87c0fc4403040185b625d1b21bbff0cb7c828d7/src/version.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b87c0fc4403040185b625d1b21bbff0cb7c828d7/src/version.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/version.h?ref=b87c0fc4403040185b625d1b21bbff0cb7c828d7",
+        "patch": "@@ -6,12 +6,32 @@\n \n #include <string>\n \n+//\n+// client versioning\n+//\n+\n+static const int CLIENT_VERSION_MAJOR       =  0;\n+static const int CLIENT_VERSION_MINOR       =  6;\n+static const int CLIENT_VERSION_REVISION    =  0;\n+static const int CLIENT_VERSION_BUILD       = 99;\n+\n+static const int CLIENT_VERSION =\n+                           1000000 * CLIENT_VERSION_MAJOR\n+                         +   10000 * CLIENT_VERSION_MINOR \n+                         +     100 * CLIENT_VERSION_REVISION\n+                         +       1 * CLIENT_VERSION_BUILD;\n+\n extern const std::string CLIENT_NAME;\n extern const std::string CLIENT_BUILD;\n extern const std::string CLIENT_DATE;\n-extern const int         CLIENT_VERSION;\n+\n+//\n+// network protocol versioning\n+//\n+\n+static const int PROTOCOL_VERSION = 60000;\n \n // BIP 0031, pong message, is enabled for all versions AFTER this one\n-const int BIP0031_VERSION = 60000;\n+static const int BIP0031_VERSION = 60000;\n \n #endif"
+      }
+    ]
+  },
+  {
+    "sha": "8b09cd3a4db2d712e91826d44a0e777478b450c6",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4YjA5Y2QzYTRkYjJkNzEyZTkxODI2ZDQ0YTBlNzc3NDc4YjQ1MGM2",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jeff@garzik.org",
+        "date": "2012-04-13T00:07:49Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-04-13T00:07:49Z"
+      },
+      "message": "Replace several network protocol version numbers with named constants\nstored in version.h.\n\nAlso, a minor CAddress code reformat while we're in there, fixing\nsome incorrect indentation.",
+      "tree": {
+        "sha": "805a27b103f0c4a5da60ac7196bcc13a65930c42",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/805a27b103f0c4a5da60ac7196bcc13a65930c42"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/8b09cd3a4db2d712e91826d44a0e777478b450c6",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8b09cd3a4db2d712e91826d44a0e777478b450c6",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/8b09cd3a4db2d712e91826d44a0e777478b450c6",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8b09cd3a4db2d712e91826d44a0e777478b450c6/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "b87c0fc4403040185b625d1b21bbff0cb7c828d7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b87c0fc4403040185b625d1b21bbff0cb7c828d7",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b87c0fc4403040185b625d1b21bbff0cb7c828d7"
+      }
+    ],
+    "stats": {
+      "total": 33,
+      "additions": 23,
+      "deletions": 10
+    },
+    "files": [
+      {
+        "sha": "b270fd0cc75894edfc4632af0cc370d3f8e59d43",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 5,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8b09cd3a4db2d712e91826d44a0e777478b450c6/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8b09cd3a4db2d712e91826d44a0e777478b450c6/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=8b09cd3a4db2d712e91826d44a0e777478b450c6",
+        "patch": "@@ -2185,7 +2185,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n         CAddress addrFrom;\n         uint64 nNonce = 1;\n         vRecv >> pfrom->nVersion >> pfrom->nServices >> nTime >> addrMe;\n-        if (pfrom->nVersion < 209)\n+        if (pfrom->nVersion < MIN_PROTO_VERSION)\n         {\n             // Since February 20, 2012, the protocol is initiated at version 209,\n             // and earlier versions are no longer supported\n@@ -2235,7 +2235,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n             }\n \n             // Get recent addresses\n-            if (pfrom->nVersion >= 31402 || addrman.size() < 1000)\n+            if (pfrom->nVersion >= CADDR_TIME_VERSION || addrman.size() < 1000)\n             {\n                 pfrom->PushMessage(\"getaddr\");\n                 pfrom->fGetAddr = true;\n@@ -2252,7 +2252,8 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n         // Ask the first connected node for block updates\n         static int nAskedForBlocks = 0;\n         if (!pfrom->fClient &&\n-            (pfrom->nVersion < 32000 || pfrom->nVersion >= 32400) &&\n+            (pfrom->nVersion < NOBLKS_VERSION_START ||\n+\t     pfrom->nVersion >= NOBLKS_VERSION_END) &&\n              (nAskedForBlocks < 1 || vNodes.size() <= 1))\n         {\n             nAskedForBlocks++;\n@@ -2294,7 +2295,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n         vRecv >> vAddr;\n \n         // Don't want addr from older versions unless seeding\n-        if (pfrom->nVersion < 31402 && addrman.size() > 1000)\n+        if (pfrom->nVersion < CADDR_TIME_VERSION && addrman.size() > 1000)\n             return true;\n         if (vAddr.size() > 1000)\n         {\n@@ -2331,7 +2332,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n                     multimap<uint256, CNode*> mapMix;\n                     BOOST_FOREACH(CNode* pnode, vNodes)\n                     {\n-                        if (pnode->nVersion < 31402)\n+                        if (pnode->nVersion < CADDR_TIME_VERSION)\n                             continue;\n                         unsigned int nPointer;\n                         memcpy(&nPointer, &pnode, sizeof(nPointer));"
+      },
+      {
+        "sha": "bb2d455d90563fc4ecdd6488683193f35bb01596",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8b09cd3a4db2d712e91826d44a0e777478b450c6/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8b09cd3a4db2d712e91826d44a0e777478b450c6/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=8b09cd3a4db2d712e91826d44a0e777478b450c6",
+        "patch": "@@ -163,8 +163,8 @@ class CNode\n         hSocket = hSocketIn;\n         vSend.SetType(SER_NETWORK);\n         vRecv.SetType(SER_NETWORK);\n-        vSend.SetVersion(209);\n-        vRecv.SetVersion(209);\n+        vSend.SetVersion(MIN_PROTO_VERSION);\n+        vRecv.SetVersion(MIN_PROTO_VERSION);\n         nLastSend = 0;\n         nLastRecv = 0;\n         nLastSendEmpty = GetTime();"
+      },
+      {
+        "sha": "a820563d0809681f11fb5078745bca3d6fd2f8bf",
+        "filename": "src/protocol.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 3,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8b09cd3a4db2d712e91826d44a0e777478b450c6/src/protocol.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8b09cd3a4db2d712e91826d44a0e777478b450c6/src/protocol.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/protocol.h?ref=8b09cd3a4db2d712e91826d44a0e777478b450c6",
+        "patch": "@@ -79,9 +79,10 @@ class CAddress : public CService\n              if (fRead)\n                  pthis->Init();\n              if (nType & SER_DISK)\n-             READWRITE(nVersion);\n-             if ((nType & SER_DISK) || (nVersion >= 31402 && !(nType & SER_GETHASH)))\n-             READWRITE(nTime);\n+                 READWRITE(nVersion);\n+             if ((nType & SER_DISK) ||\n+                 (nVersion >= CADDR_TIME_VERSION && !(nType & SER_GETHASH)))\n+                 READWRITE(nTime);\n              READWRITE(nServices);\n              READWRITE(*pip);\n             )"
+      },
+      {
+        "sha": "d71041574f9eb1c5606ff21efaf8244ea1e2b602",
+        "filename": "src/version.h",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 0,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8b09cd3a4db2d712e91826d44a0e777478b450c6/src/version.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8b09cd3a4db2d712e91826d44a0e777478b450c6/src/version.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/version.h?ref=8b09cd3a4db2d712e91826d44a0e777478b450c6",
+        "patch": "@@ -31,6 +31,17 @@ extern const std::string CLIENT_DATE;\n \n static const int PROTOCOL_VERSION = 60000;\n \n+// earlier versions not supported as of Feb 2012, and are disconnected\n+static const int MIN_PROTO_VERSION = 209;\n+\n+// nTime field added to CAddress, starting with this version;\n+// if possible, avoid requesting addresses nodes older than this\n+static const int CADDR_TIME_VERSION = 31402;\n+\n+// only request blocks from nodes outside this range of versions\n+static const int NOBLKS_VERSION_START = 32000;\n+static const int NOBLKS_VERSION_END = 32400;\n+\n // BIP 0031, pong message, is enabled for all versions AFTER this one\n static const int BIP0031_VERSION = 60000;\n "
+      }
+    ]
+  }
+]

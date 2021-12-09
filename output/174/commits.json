@@ -1,0 +1,254 @@
+[
+  {
+    "sha": "0960c077ec934133c2ff250aaed37aa8c372d9da",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowOTYwYzA3N2VjOTM0MTMzYzJmZjI1MGFhZWQzN2FhOGMzNzJkOWRh",
+    "commit": {
+      "author": {
+        "name": "Khalahan",
+        "email": "khal@bitcoin-contact.org",
+        "date": "2011-04-20T17:19:43Z"
+      },
+      "committer": {
+        "name": "Khalahan",
+        "email": "khal@bitcoin-contact.org",
+        "date": "2011-04-20T17:55:36Z"
+      },
+      "message": "Send payments to emails, urls and domains in GUI",
+      "tree": {
+        "sha": "4e6bea87acbcd1f881b7c65d8d6aebe9c39d991d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/4e6bea87acbcd1f881b7c65d8d6aebe9c39d991d"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/0960c077ec934133c2ff250aaed37aa8c372d9da",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0960c077ec934133c2ff250aaed37aa8c372d9da",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/0960c077ec934133c2ff250aaed37aa8c372d9da",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0960c077ec934133c2ff250aaed37aa8c372d9da/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "b37f09aa2e80b17028ad7fe1e87362c0f07c7406",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b37f09aa2e80b17028ad7fe1e87362c0f07c7406",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b37f09aa2e80b17028ad7fe1e87362c0f07c7406"
+      }
+    ],
+    "stats": {
+      "total": 187,
+      "additions": 187,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "ca9cd637edfe7aeb2da206c1c9786832f6987734",
+        "filename": "net.cpp",
+        "status": "modified",
+        "additions": 131,
+        "deletions": 0,
+        "changes": 131,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0960c077ec934133c2ff250aaed37aa8c372d9da/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0960c077ec934133c2ff250aaed37aa8c372d9da/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/net.cpp?ref=0960c077ec934133c2ff250aaed37aa8c372d9da",
+        "patch": "@@ -3,6 +3,10 @@\n // file license.txt or http://www.opensource.org/licenses/mit-license.php.\n \n #include \"headers.h\"\n+#include \"json/json_spirit_reader_template.h\"\n+#include \"json/json_spirit_writer_template.h\"\n+#include \"json/json_spirit_utils.h\"\n+using namespace json_spirit;\n \n #ifdef USE_UPNP\n #include <miniupnpc/miniwget.h>\n@@ -266,8 +270,135 @@ void ThreadGetMyExternalIP(void* parg)\n     }\n }\n \n+bool GetHTTPRequest(const CAddress& addrConnect, const char* pszGet, const char* pszKeyword, string& sRet)\n+{\n+    SOCKET hSocket;\n+    if (!ConnectSocket(addrConnect, hSocket))\n+        return error(\"GetHTTPRequest() : connection to %s failed\", addrConnect.ToString().c_str());\n+\n+    send(hSocket, pszGet, strlen(pszGet), MSG_NOSIGNAL);\n+\n+    string strLine;\n+    while (RecvLine(hSocket, strLine))\n+    {\n+        if (strLine.empty()) // HTTP response is separated from headers by blank line\n+        {\n+            loop\n+            {\n+                if (!RecvLine(hSocket, strLine))\n+                {\n+                    closesocket(hSocket);\n+                    return false;\n+                }\n+                if (pszKeyword == NULL)\n+                    break;\n+                if (strLine.find(pszKeyword) != -1)\n+                {\n+                    strLine = strLine.substr(strLine.find(pszKeyword) + strlen(pszKeyword));\n+                    break;\n+                }\n+            }\n+            closesocket(hSocket);\n+            sRet = strLine;\n+            return true;\n+            \n+            /*if (strLine.find(\"<\") != -1)\n+                strLine = strLine.substr(0, strLine.find(\"<\"));\n+            strLine = strLine.substr(strspn(strLine.c_str(), \" \\t\\n\\r\"));\n+            while (strLine.size() > 0 && isspace(strLine[strLine.size()-1]))\n+                strLine.resize(strLine.size()-1);\n+            CAddress addr(strLine.c_str());\n+            printf(\"GetMyExternalIP() received [%s] %s\\n\", strLine.c_str(), addr.ToString().c_str());\n+            if (addr.ip == 0 || addr.ip == INADDR_NONE || !addr.IsRoutable())\n+                return false;\n+            ipRet = addr.ip;\n+            return true;*/\n+        }\n+    }\n+    closesocket(hSocket);\n+    return error(\"GetHTTPRequest() : connection closed\");\n+}\n+\n+void GetBitcoinAddressFromURL(string strUrl, string& strLabel, string& strAddress)\n+{\n+    size_t nPosA, nPosB;\n+    string strDomain, strRequestUri, strReturn;\n+    \n+    // verify if url\n+    if (strUrl.substr(0, 4) != \"http\")\n+        return;\n+\n+    // parse url\n+    nPosA = strUrl.find(':') + 3;\n+    nPosB = strUrl.find('/', nPosA);\n+    if (nPosB != -1)\n+    {\n+        strDomain = strUrl.substr(nPosA, nPosB - nPosA);\n+        strRequestUri = strUrl.substr(nPosB, strUrl.length() - nPosB);\n+    }\n+    else\n+    {\n+        strDomain = strUrl.substr(nPosA, strUrl.length() - nPosA);\n+        strRequestUri = \"/\";\n+    }\n \n+    // default request for a domain name\n+    if (strRequestUri == \"/\")\n+    {\n+        strRequestUri.append(\"bitcoin-address.txt\");\n+    }\n+    \n+    // get ip address\n+    CAddress addrConnect;\n+    const char* pszGet;\n+    const char* pszKeyword;\n+    struct hostent* phostent = gethostbyname(strDomain.c_str());\n+    if (phostent && phostent->h_addr_list && phostent->h_addr_list[0])\n+        addrConnect = CAddress(*(u_long*)phostent->h_addr_list[0], htons(80));\n+    else\n+        return;\n+    \n+    // make request and ask for json\n+    ostringstream s;\n+    s << \"GET \" << strRequestUri << \" HTTP/1.1\\r\\n\"\n+      << \"Host: \" << strDomain << \"\\r\\n\"\n+      << \"User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)\\r\\n\"\n+      << \"Accept: application/json\\r\\n\"\n+      << \"Connection: close\\r\\n\"\n+      << \"\\r\\n\";\n+    pszKeyword = NULL;\n+    GetHTTPRequest(addrConnect, s.str().c_str(), pszKeyword, strReturn);\n+\n+    Value valReturn;\n+    if (!read_string(strReturn, valReturn) || valReturn.type() != obj_type)\n+    {\n+        // check for \"default\" subdomain www as fallback\n+        if(strDomain.substr(0, 4) != \"www.\")\n+        {\n+            strUrl.insert(nPosA, \"www.\");\n+            GetBitcoinAddressFromURL(strUrl, strLabel, strAddress);\n+        }\n+        return;\n+    }\n+    \n+    // convert response to object\n+    const Object& request = valReturn.get_obj();\n+    \n+    // return if error exists\n+    Value valError = find_value(request, \"error\");\n+    if (valError.type() != null_type & valError.get_str() != \"\")\n+        return;\n \n+    // set address if exists\n+    Value valAddress = find_value(request, \"address\");\n+    if (valAddress.type() != null_type)\n+        strAddress = valAddress.get_str().c_str();\n+    \n+    // set label if exists\n+    Value valLabel = find_value(request, \"label\");\n+    if (valLabel.type() != null_type)\n+        strLabel = valLabel.get_str().c_str();\n+}\n \n \n bool AddAddress(CAddress addr, int64 nTimePenalty)"
+      },
+      {
+        "sha": "e7e8d1cf1827893ea79310badb2e139de2a2bb7a",
+        "filename": "net.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0960c077ec934133c2ff250aaed37aa8c372d9da/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0960c077ec934133c2ff250aaed37aa8c372d9da/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/net.h?ref=0960c077ec934133c2ff250aaed37aa8c372d9da",
+        "patch": "@@ -24,6 +24,8 @@ enum\n \n bool ConnectSocket(const CAddress& addrConnect, SOCKET& hSocketRet);\n bool GetMyExternalIP(unsigned int& ipRet);\n+bool GetHTTPRequest(const CAddress& addrConnect, const char* pszGet, const char* pszKeyword, string& sRet);\n+void GetBitcoinAddressFromURL(string strUrl, string& strLabel, string& strAddress);\n bool AddAddress(CAddress addr, int64 nTimePenalty=0);\n void AddressCurrentlyConnected(const CAddress& addr);\n CNode* FindNode(unsigned int ip);"
+      },
+      {
+        "sha": "3d3779c7fb8bb7073a109971ef4b2c4413b73638",
+        "filename": "ui.cpp",
+        "status": "modified",
+        "additions": 54,
+        "deletions": 0,
+        "changes": 54,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0960c077ec934133c2ff250aaed37aa8c372d9da/ui.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0960c077ec934133c2ff250aaed37aa8c372d9da/ui.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/ui.cpp?ref=0960c077ec934133c2ff250aaed37aa8c372d9da",
+        "patch": "@@ -1942,6 +1942,60 @@ void CSendDialog::OnButtonSend(wxCommandEvent& event)\n         // Parse bitcoin address\n         uint160 hash160;\n         bool fBitcoinAddress = AddressToHash160(strAddress, hash160);\n+        \n+        // Not a bitcoin address\n+        if (!fBitcoinAddress)\n+        {\n+            // Parse IP address\n+               CAddress addr(strAddress);\n+               if (addr.IsValid())\n+               {\n+                // nothing\n+            }\n+            else if (strAddress.substr(0, 4) != \"http\")\n+            {\n+                // email address\n+                size_t nPosA = strAddress.find(\"@\");\n+                if (nPosA != -1 && strAddress.find(\".\", nPosA) != -1)\n+                {\n+                    strAddress = \"http://\" + strAddress.substr(nPosA + 1, strAddress.length() - nPosA - 1)\n+                        + \"/bitcoin-address-\" + strAddress.substr(0, nPosA) + \".txt\";\n+                }\n+                // domain name\n+                else if (nPosA == -1 && strAddress.find(\".\") != -1)\n+                {\n+                    strAddress = \"http://\" + strAddress;\n+                }\n+            }\n+\n+            // url\n+            if (strAddress.substr(0, 4) == \"http\")\n+            {\n+                string strLabel, strUrl;\n+                strUrl = strAddress;\n+                strAddress = \"\";\n+                GetBitcoinAddressFromURL(strUrl, strLabel, strAddress);\n+                fBitcoinAddress = AddressToHash160(strAddress, hash160);\n+\n+                if (fBitcoinAddress)\n+                {\n+                    int nRet = wxMessageBox(\n+                        string(_(\"Label\")) + \" : \" + strLabel + \"\\n\" +\n+                        string(_(\"Address\")) + \" : \" + strAddress + \"\\n\\n\" +\n+                        string(_(\"Add to address book and send coins ?\")),\n+                        _(\"Send Coins\"),\n+                        wxYES_NO|wxCANCEL);\n+                    if (nRet == wxYES)\n+                    {\n+                        SetAddressBookName(strAddress, strLabel);\n+                    }\n+                    else if (nRet == wxCANCEL)\n+                    {\n+                        return;\n+                    }\n+                }\n+            }\n+        }\n \n         if (fBitcoinAddress)\n         {"
+      }
+    ]
+  },
+  {
+    "sha": "7f811500bff79dcec5fb8a9bc26db91faa2860d9",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3ZjgxMTUwMGJmZjc5ZGNlYzVmYjhhOWJjMjZkYjkxZmFhMjg2MGQ5",
+    "commit": {
+      "author": {
+        "name": "Khalahan",
+        "email": "khal@bitcoin-contact.org",
+        "date": "2011-04-21T21:46:41Z"
+      },
+      "committer": {
+        "name": "Khalahan",
+        "email": "khal@bitcoin-contact.org",
+        "date": "2011-04-21T21:46:41Z"
+      },
+      "message": "Use HTTPS only for fetching addresses",
+      "tree": {
+        "sha": "939c399c69680b51f3a9faa0efe714d9573e7658",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/939c399c69680b51f3a9faa0efe714d9573e7658"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/7f811500bff79dcec5fb8a9bc26db91faa2860d9",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7f811500bff79dcec5fb8a9bc26db91faa2860d9",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/7f811500bff79dcec5fb8a9bc26db91faa2860d9",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7f811500bff79dcec5fb8a9bc26db91faa2860d9/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "0960c077ec934133c2ff250aaed37aa8c372d9da",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0960c077ec934133c2ff250aaed37aa8c372d9da",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/0960c077ec934133c2ff250aaed37aa8c372d9da"
+      }
+    ],
+    "stats": {
+      "total": 124,
+      "additions": 53,
+      "deletions": 71
+    },
+    "files": [
+      {
+        "sha": "c8fca5b1a3141f6003b89a9d65b4484e5c3f85ac",
+        "filename": "net.cpp",
+        "status": "modified",
+        "additions": 19,
+        "deletions": 69,
+        "changes": 88,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7f811500bff79dcec5fb8a9bc26db91faa2860d9/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7f811500bff79dcec5fb8a9bc26db91faa2860d9/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/net.cpp?ref=7f811500bff79dcec5fb8a9bc26db91faa2860d9",
+        "patch": "@@ -6,6 +6,7 @@\n #include \"json/json_spirit_reader_template.h\"\n #include \"json/json_spirit_writer_template.h\"\n #include \"json/json_spirit_utils.h\"\n+#include <boost/xpressive/xpressive_dynamic.hpp>\n using namespace json_spirit;\n \n #ifdef USE_UPNP\n@@ -270,55 +271,6 @@ void ThreadGetMyExternalIP(void* parg)\n     }\n }\n \n-bool GetHTTPRequest(const CAddress& addrConnect, const char* pszGet, const char* pszKeyword, string& sRet)\n-{\n-    SOCKET hSocket;\n-    if (!ConnectSocket(addrConnect, hSocket))\n-        return error(\"GetHTTPRequest() : connection to %s failed\", addrConnect.ToString().c_str());\n-\n-    send(hSocket, pszGet, strlen(pszGet), MSG_NOSIGNAL);\n-\n-    string strLine;\n-    while (RecvLine(hSocket, strLine))\n-    {\n-        if (strLine.empty()) // HTTP response is separated from headers by blank line\n-        {\n-            loop\n-            {\n-                if (!RecvLine(hSocket, strLine))\n-                {\n-                    closesocket(hSocket);\n-                    return false;\n-                }\n-                if (pszKeyword == NULL)\n-                    break;\n-                if (strLine.find(pszKeyword) != -1)\n-                {\n-                    strLine = strLine.substr(strLine.find(pszKeyword) + strlen(pszKeyword));\n-                    break;\n-                }\n-            }\n-            closesocket(hSocket);\n-            sRet = strLine;\n-            return true;\n-            \n-            /*if (strLine.find(\"<\") != -1)\n-                strLine = strLine.substr(0, strLine.find(\"<\"));\n-            strLine = strLine.substr(strspn(strLine.c_str(), \" \\t\\n\\r\"));\n-            while (strLine.size() > 0 && isspace(strLine[strLine.size()-1]))\n-                strLine.resize(strLine.size()-1);\n-            CAddress addr(strLine.c_str());\n-            printf(\"GetMyExternalIP() received [%s] %s\\n\", strLine.c_str(), addr.ToString().c_str());\n-            if (addr.ip == 0 || addr.ip == INADDR_NONE || !addr.IsRoutable())\n-                return false;\n-            ipRet = addr.ip;\n-            return true;*/\n-        }\n-    }\n-    closesocket(hSocket);\n-    return error(\"GetHTTPRequest() : connection closed\");\n-}\n-\n void GetBitcoinAddressFromURL(string strUrl, string& strLabel, string& strAddress)\n {\n     size_t nPosA, nPosB;\n@@ -341,45 +293,43 @@ void GetBitcoinAddressFromURL(string strUrl, string& strLabel, string& strAddres\n         strDomain = strUrl.substr(nPosA, strUrl.length() - nPosA);\n         strRequestUri = \"/\";\n     }\n+    \n+    // check domain name\n+    using namespace boost::xpressive;\n+    sregex re = sregex::compile(\"^[a-z._-]+([a-z])+$\", regex_constants::icase);\n+    if (!regex_search(strDomain, re))\n+\t\treturn;\n \n     // default request for a domain name\n     if (strRequestUri == \"/\")\n     {\n-        strRequestUri.append(\"bitcoin-address.txt\");\n+        strRequestUri.append(\"bitcoin-address-domain.json\");\n     }\n     \n-    // get ip address\n-    CAddress addrConnect;\n-    const char* pszGet;\n-    const char* pszKeyword;\n-    struct hostent* phostent = gethostbyname(strDomain.c_str());\n-    if (phostent && phostent->h_addr_list && phostent->h_addr_list[0])\n-        addrConnect = CAddress(*(u_long*)phostent->h_addr_list[0], htons(80));\n-    else\n-        return;\n-    \n     // make request and ask for json\n-    ostringstream s;\n-    s << \"GET \" << strRequestUri << \" HTTP/1.1\\r\\n\"\n+    ostringstream sRequest;\n+    sRequest << \"GET \" << strRequestUri << \" HTTP/1.1\\r\\n\"\n       << \"Host: \" << strDomain << \"\\r\\n\"\n       << \"User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)\\r\\n\"\n       << \"Accept: application/json\\r\\n\"\n       << \"Connection: close\\r\\n\"\n       << \"\\r\\n\";\n-    pszKeyword = NULL;\n-    GetHTTPRequest(addrConnect, s.str().c_str(), pszKeyword, strReturn);\n-\n-    Value valReturn;\n-    if (!read_string(strReturn, valReturn) || valReturn.type() != obj_type)\n+    int nStatus = RequestHTTPS(strDomain.c_str(), sRequest.str(), strReturn);\n+    \n+    if(nStatus < 200 || nStatus >= 300)\n     {\n         // check for \"default\" subdomain www as fallback\n-        if(strDomain.substr(0, 4) != \"www.\")\n+        if(strDomain.substr(0, 4) != \"www.\" && nStatus != 0)\n         {\n             strUrl.insert(nPosA, \"www.\");\n             GetBitcoinAddressFromURL(strUrl, strLabel, strAddress);\n         }\n         return;\n-    }\n+\t}\n+    \n+    Value valReturn;\n+    if (!read_string(strReturn, valReturn) || valReturn.type() != obj_type)\n+        return;\n     \n     // convert response to object\n     const Object& request = valReturn.get_obj();"
+      },
+      {
+        "sha": "e8a614f43d4d9f9ec13f91ff6fed929e028b4868",
+        "filename": "net.h",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 1,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7f811500bff79dcec5fb8a9bc26db91faa2860d9/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7f811500bff79dcec5fb8a9bc26db91faa2860d9/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/net.h?ref=7f811500bff79dcec5fb8a9bc26db91faa2860d9",
+        "patch": "@@ -24,7 +24,6 @@ enum\n \n bool ConnectSocket(const CAddress& addrConnect, SOCKET& hSocketRet);\n bool GetMyExternalIP(unsigned int& ipRet);\n-bool GetHTTPRequest(const CAddress& addrConnect, const char* pszGet, const char* pszKeyword, string& sRet);\n void GetBitcoinAddressFromURL(string strUrl, string& strLabel, string& strAddress);\n bool AddAddress(CAddress addr, int64 nTimePenalty=0);\n void AddressCurrentlyConnected(const CAddress& addr);"
+      },
+      {
+        "sha": "fafbb275b3558eee2951f8982664676b9cbbb6f5",
+        "filename": "rpc.cpp",
+        "status": "modified",
+        "additions": 32,
+        "deletions": 0,
+        "changes": 32,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7f811500bff79dcec5fb8a9bc26db91faa2860d9/rpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7f811500bff79dcec5fb8a9bc26db91faa2860d9/rpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/rpc.cpp?ref=7f811500bff79dcec5fb8a9bc26db91faa2860d9",
+        "patch": "@@ -2016,7 +2016,39 @@ Object CallRPC(const string& strMethod, const Array& params)\n     return reply;\n }\n \n+int RequestHTTPS(const string strDomain, const string strRequest, string& strReturn)\n+{\n+#ifndef USE_SSL\n+\treturn 0;\n+#else\n+\t// check if domain has an ip\n+\tCAddress addrConnect;\n+    struct hostent* phostent = gethostbyname(strDomain.c_str());\n+    if (phostent && phostent->h_addr_list && phostent->h_addr_list[0])\n+        addrConnect = CAddress(*(u_long*)phostent->h_addr_list[0], htons(80));\n+    else\n+        return 0;\n+\n+    // Connect to addrConnect\n+    asio::io_service io_service;\n+    ssl::context context(io_service, ssl::context::sslv23);\n+    context.set_options(ssl::context::no_sslv2);\n+    SSLStream sslStream(io_service, context);\n+    SSLIOStreamDevice d(sslStream, true);\n+    iostreams::stream<SSLIOStreamDevice> stream(d);\n+    if (!d.connect(addrConnect.ToStringIP(), \"443\"))\n+        return 0;\n+#endif\n+\n+    // Send request\n+    stream << strRequest << std::flush;\n \n+    // Receive reply\n+    map<string, string> mapHeaders;\n+    int nStatus = ReadHTTP(stream, mapHeaders, strReturn);\n+\n+\treturn nStatus;\n+}\n \n \n template<typename T>"
+      },
+      {
+        "sha": "65e82f4bb982658bfb4be9790ccc43faa0d6148d",
+        "filename": "rpc.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7f811500bff79dcec5fb8a9bc26db91faa2860d9/rpc.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7f811500bff79dcec5fb8a9bc26db91faa2860d9/rpc.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/rpc.h?ref=7f811500bff79dcec5fb8a9bc26db91faa2860d9",
+        "patch": "@@ -4,3 +4,4 @@\n \n void ThreadRPCServer(void* parg);\n int CommandLineRPC(int argc, char *argv[]);\n+int RequestHTTPS(const string strDomain, const string strRequest, string& strReturn);"
+      },
+      {
+        "sha": "92a11e1c256c2f277eff1f54bd10e521390c0b93",
+        "filename": "ui.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7f811500bff79dcec5fb8a9bc26db91faa2860d9/ui.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7f811500bff79dcec5fb8a9bc26db91faa2860d9/ui.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/ui.cpp?ref=7f811500bff79dcec5fb8a9bc26db91faa2860d9",
+        "patch": "@@ -1959,7 +1959,7 @@ void CSendDialog::OnButtonSend(wxCommandEvent& event)\n                 if (nPosA != -1 && strAddress.find(\".\", nPosA) != -1)\n                 {\n                     strAddress = \"http://\" + strAddress.substr(nPosA + 1, strAddress.length() - nPosA - 1)\n-                        + \"/bitcoin-address-\" + strAddress.substr(0, nPosA) + \".txt\";\n+                        + \"/bitcoin-address/\" + strAddress.substr(0, nPosA) + \".json\";\n                 }\n                 // domain name\n                 else if (nPosA == -1 && strAddress.find(\".\") != -1)"
+      }
+    ]
+  },
+  {
+    "sha": "73521116a11dcb658a9a7ab67550f24fafa72032",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3MzUyMTExNmExMWRjYjY1OGE5YTdhYjY3NTUwZjI0ZmFmYTcyMDMy",
+    "commit": {
+      "author": {
+        "name": "Khalahan",
+        "email": "khal@bitcoin-contact.org",
+        "date": "2011-04-23T12:00:36Z"
+      },
+      "committer": {
+        "name": "Khalahan",
+        "email": "khal@bitcoin-contact.org",
+        "date": "2011-04-23T12:00:36Z"
+      },
+      "message": "Check certificate against local certs",
+      "tree": {
+        "sha": "02dbb657de114a467f23efe44ab3a8ca463cb23f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/02dbb657de114a467f23efe44ab3a8ca463cb23f"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/73521116a11dcb658a9a7ab67550f24fafa72032",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/73521116a11dcb658a9a7ab67550f24fafa72032",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/73521116a11dcb658a9a7ab67550f24fafa72032",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/73521116a11dcb658a9a7ab67550f24fafa72032/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "7f811500bff79dcec5fb8a9bc26db91faa2860d9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7f811500bff79dcec5fb8a9bc26db91faa2860d9",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/7f811500bff79dcec5fb8a9bc26db91faa2860d9"
+      }
+    ],
+    "stats": {
+      "total": 21,
+      "additions": 18,
+      "deletions": 3
+    },
+    "files": [
+      {
+        "sha": "31122b868560be0df7e5219ed48ef8807570e79f",
+        "filename": "rpc.cpp",
+        "status": "modified",
+        "additions": 18,
+        "deletions": 3,
+        "changes": 21,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/73521116a11dcb658a9a7ab67550f24fafa72032/rpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/73521116a11dcb658a9a7ab67550f24fafa72032/rpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/rpc.cpp?ref=73521116a11dcb658a9a7ab67550f24fafa72032",
+        "patch": "@@ -2025,22 +2025,37 @@ int RequestHTTPS(const string strDomain, const string strRequest, string& strRet\n \tCAddress addrConnect;\n     struct hostent* phostent = gethostbyname(strDomain.c_str());\n     if (phostent && phostent->h_addr_list && phostent->h_addr_list[0])\n-        addrConnect = CAddress(*(u_long*)phostent->h_addr_list[0], htons(80));\n+        addrConnect = CAddress(*(u_long*)phostent->h_addr_list[0], htons(443));\n     else\n         return 0;\n \n     // Connect to addrConnect\n     asio::io_service io_service;\n     ssl::context context(io_service, ssl::context::sslv23);\n     context.set_options(ssl::context::no_sslv2);\n+    string strCaPath;\n+#ifdef __WXMSW__\n+\tstrCaPath = \"\";\n+#elseifdef __WXMAC_OSX__\n+\tstrCaPath = \"\";\n+#else\n+\tstrCaPath = \"/etc/ssl/certs/\";\n+#endif\n+\tif(strCaPath != \"\")\n+\t\tcontext.add_verify_path(strCaPath);\n+    context.set_verify_mode(ssl::context::verify_peer || ssl::context::verify_fail_if_no_peer_cert);\n+    \n     SSLStream sslStream(io_service, context);\n     SSLIOStreamDevice d(sslStream, true);\n     iostreams::stream<SSLIOStreamDevice> stream(d);\n-    if (!d.connect(addrConnect.ToStringIP(), \"443\"))\n+    \n+\n+    \n+    if (!d.connect(addrConnect.ToStringIP(), addrConnect.ToStringPort()))\n         return 0;\n #endif\n \n-    // Send request\n+    // Send request to the SSL stream\n     stream << strRequest << std::flush;\n \n     // Receive reply"
+      }
+    ]
+  }
+]

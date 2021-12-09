@@ -1,0 +1,112 @@
+[
+  {
+    "sha": "704672f36da19535aa81d0dbf950c696809ba0dd",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3MDQ2NzJmMzZkYTE5NTM1YWE4MWQwZGJmOTUwYzY5NjgwOWJhMGRk",
+    "commit": {
+      "author": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2014-03-19T05:30:43Z"
+      },
+      "committer": {
+        "name": "Luke Dashjr",
+        "email": "luke-jr+git@utopios.org",
+        "date": "2014-06-26T14:49:31Z"
+      },
+      "message": "Split up EvalScript into EvalScriptState::Start and ::Step, so single-stepping can be done",
+      "tree": {
+        "sha": "ef33d10b9849813f23c71f0a1a5ca4b9db59b5fb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/ef33d10b9849813f23c71f0a1a5ca4b9db59b5fb"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/704672f36da19535aa81d0dbf950c696809ba0dd",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/704672f36da19535aa81d0dbf950c696809ba0dd",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/704672f36da19535aa81d0dbf950c696809ba0dd",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/704672f36da19535aa81d0dbf950c696809ba0dd/comments",
+    "author": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "luke-jr",
+      "id": 1095675,
+      "node_id": "MDQ6VXNlcjEwOTU2NzU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1095675?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/luke-jr",
+      "html_url": "https://github.com/luke-jr",
+      "followers_url": "https://api.github.com/users/luke-jr/followers",
+      "following_url": "https://api.github.com/users/luke-jr/following{/other_user}",
+      "gists_url": "https://api.github.com/users/luke-jr/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/luke-jr/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/luke-jr/subscriptions",
+      "organizations_url": "https://api.github.com/users/luke-jr/orgs",
+      "repos_url": "https://api.github.com/users/luke-jr/repos",
+      "events_url": "https://api.github.com/users/luke-jr/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/luke-jr/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "343feecf562a39e7d898ece2fd745fcb9d4c90e9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/343feecf562a39e7d898ece2fd745fcb9d4c90e9",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/343feecf562a39e7d898ece2fd745fcb9d4c90e9"
+      }
+    ],
+    "stats": {
+      "total": 80,
+      "additions": 66,
+      "deletions": 14
+    },
+    "files": [
+      {
+        "sha": "5f464cf9cb983dab0f58dbe7adc27a3622eeccbf",
+        "filename": "src/script.cpp",
+        "status": "modified",
+        "additions": 46,
+        "deletions": 14,
+        "changes": 60,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/704672f36da19535aa81d0dbf950c696809ba0dd/src/script.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/704672f36da19535aa81d0dbf950c696809ba0dd/src/script.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script.cpp?ref=704672f36da19535aa81d0dbf950c696809ba0dd",
+        "patch": "@@ -301,21 +301,58 @@ bool IsCanonicalSignature(const valtype &vchSig, unsigned int flags) {\n \n bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, const CTransaction& txTo, unsigned int nIn, unsigned int flags, int nHashType)\n {\n-    CScript::const_iterator pc = script.begin();\n+    EvalScriptState ess(stack, script, txTo, nIn, flags, nHashType);\n+    if (!ess.Start())\n+        return false;\n+\n+    bool fEof = false;\n+    while (!fEof)\n+    {\n+        if (!ess.Step(fEof))\n+            return false;\n+    }\n+\n+    return true;\n+}\n+\n+EvalScriptState::EvalScriptState(std::vector<std::vector<unsigned char> >& stack, const CScript& script, const CTransaction& txTo, unsigned int _nIn, unsigned int _flags, int _nHashType)\n+: pstack(&stack), pscript(&script), ptxTo(&txTo), nIn(_nIn), flags(_flags), nHashType(_nHashType),\n+vfExec(), altstack(), nOpCount(0)\n+{\n+    pbegincodehash = pc = script.begin();\n+}\n+\n+bool EvalScriptState::Start()\n+{\n+    if (pscript->size() > 10000)\n+        return false;\n+    return true;\n+}\n+\n+bool EvalScriptState::Step(bool & fEof)\n+{\n+    std::vector<std::vector<unsigned char> > & stack = *pstack;\n+    const CScript & script = *pscript;\n+    const CTransaction & txTo = *ptxTo;\n+    unsigned int & nIn = this->nIn;\n+    unsigned int & flags = this->flags;\n+    int & nHashType = this->nHashType;\n+\n+    CScript::const_iterator & pc = this->pc;\n     CScript::const_iterator pend = script.end();\n-    CScript::const_iterator pbegincodehash = script.begin();\n+    CScript::const_iterator & pbegincodehash = this->pbegincodehash;\n     opcodetype opcode;\n     valtype vchPushValue;\n-    vector<bool> vfExec;\n-    vector<valtype> altstack;\n-    if (script.size() > 10000)\n-        return false;\n-    int nOpCount = 0;\n+    vector<bool> & vfExec = this->vfExec;\n+    vector<valtype> & altstack = this->altstack;\n+    int & nOpCount = this->nOpCount;\n+\n+    fEof = !(pc < pend);\n+    if (fEof)\n+        return vfExec.empty();\n \n     try\n     {\n-        while (pc < pend)\n-        {\n             bool fExec = !count(vfExec.begin(), vfExec.end(), false);\n \n             //\n@@ -953,17 +990,12 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co\n             // Size limits\n             if (stack.size() + altstack.size() > 1000)\n                 return false;\n-        }\n     }\n     catch (...)\n     {\n         return false;\n     }\n \n-\n-    if (!vfExec.empty())\n-        return false;\n-\n     return true;\n }\n "
+      },
+      {
+        "sha": "864a610490cd969dcda0d8bb355d97e4b93e5333",
+        "filename": "src/script.h",
+        "status": "modified",
+        "additions": 20,
+        "deletions": 0,
+        "changes": 20,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/704672f36da19535aa81d0dbf950c696809ba0dd/src/script.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/704672f36da19535aa81d0dbf950c696809ba0dd/src/script.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script.h?ref=704672f36da19535aa81d0dbf950c696809ba0dd",
+        "patch": "@@ -797,6 +797,26 @@ class CScriptCompressor\n bool IsCanonicalPubKey(const std::vector<unsigned char> &vchPubKey, unsigned int flags);\n bool IsCanonicalSignature(const std::vector<unsigned char> &vchSig, unsigned int flags);\n \n+class EvalScriptState {\n+public:\n+    std::vector<std::vector<unsigned char> > *pstack;\n+    const CScript *pscript;\n+    const CTransaction *ptxTo;\n+    unsigned int nIn;\n+    unsigned int flags;\n+    int nHashType;\n+\n+    CScript::const_iterator pc;\n+    CScript::const_iterator pbegincodehash;\n+    std::vector<bool> vfExec;\n+    std::vector<std::vector<unsigned char> > altstack;\n+    int nOpCount;\n+\n+    EvalScriptState(std::vector<std::vector<unsigned char> >& stack, const CScript& script, const CTransaction& txTo, unsigned int nIn, unsigned int flags, int nHashType);\n+    bool Start();\n+    bool Step(bool & fEof);\n+};\n+\n bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& script, const CTransaction& txTo, unsigned int nIn, unsigned int flags, int nHashType);\n bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<std::vector<unsigned char> >& vSolutionsRet);\n int ScriptSigArgsExpected(txnouttype t, const std::vector<std::vector<unsigned char> >& vSolutions);"
+      }
+    ]
+  }
+]

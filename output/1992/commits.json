@@ -1,0 +1,182 @@
+[
+  {
+    "sha": "0f8a6477825fbaad0d37233bdd3011d748f607ab",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowZjhhNjQ3NzgyNWZiYWFkMGQzNzIzM2JkZDMwMTFkNzQ4ZjYwN2Fi",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-11-08T18:38:49Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-11-09T11:53:53Z"
+      },
+      "message": "don't use memset() in privacy/security relevant code parts\n\nAs memset() can be optimized out by a compiler it should not be used in\nprivacy/security relevant code parts. OpenSSL provides the safe\nOPENSSL_cleanse() function in crypto.h, which perfectly does the job of\nclean and overwrite data.\n\nFor details see: http://www.viva64.com/en/b/0178/\n\n- change memset() to OPENSSL_cleanse() where appropriate\n- change a hard-coded number from netbase.cpp into a sizeof()",
+      "tree": {
+        "sha": "e4ef0256d9b5bccac47b3e9c901960d403bbdcbe",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/e4ef0256d9b5bccac47b3e9c901960d403bbdcbe"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/0f8a6477825fbaad0d37233bdd3011d748f607ab",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0f8a6477825fbaad0d37233bdd3011d748f607ab",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/0f8a6477825fbaad0d37233bdd3011d748f607ab",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0f8a6477825fbaad0d37233bdd3011d748f607ab/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "16d9d61f99c2e081585e6634d25da3523804eabf",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/16d9d61f99c2e081585e6634d25da3523804eabf",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/16d9d61f99c2e081585e6634d25da3523804eabf"
+      }
+    ],
+    "stats": {
+      "total": 23,
+      "additions": 13,
+      "deletions": 10
+    },
+    "files": [
+      {
+        "sha": "eb2aed6721798629e190c92252db2aef214b7723",
+        "filename": "src/allocators.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 2,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0f8a6477825fbaad0d37233bdd3011d748f607ab/src/allocators.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0f8a6477825fbaad0d37233bdd3011d748f607ab/src/allocators.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/allocators.h?ref=0f8a6477825fbaad0d37233bdd3011d748f607ab",
+        "patch": "@@ -9,6 +9,7 @@\n #include <string>\n #include <boost/thread/mutex.hpp>\n #include <map>\n+#include <openssl/crypto.h> // for OPENSSL_cleanse()\n \n #ifdef WIN32\n #ifdef _WIN32_WINNT\n@@ -212,7 +213,7 @@ struct secure_allocator : public std::allocator<T>\n     {\n         if (p != NULL)\n         {\n-            memset(p, 0, sizeof(T) * n);\n+            OPENSSL_cleanse(p, sizeof(T) * n);\n             LockedPageManager::instance.UnlockRange(p, sizeof(T) * n);\n         }\n         std::allocator<T>::deallocate(p, n);\n@@ -246,7 +247,7 @@ struct zero_after_free_allocator : public std::allocator<T>\n     void deallocate(T* p, std::size_t n)\n     {\n         if (p != NULL)\n-            memset(p, 0, sizeof(T) * n);\n+            OPENSSL_cleanse(p, sizeof(T) * n);\n         std::allocator<T>::deallocate(p, n);\n     }\n };"
+      },
+      {
+        "sha": "309d35f5d9bd9ec55c034aee56121a8db4096dde",
+        "filename": "src/base58.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 2,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0f8a6477825fbaad0d37233bdd3011d748f607ab/src/base58.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0f8a6477825fbaad0d37233bdd3011d748f607ab/src/base58.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/base58.h?ref=0f8a6477825fbaad0d37233bdd3011d748f607ab",
+        "patch": "@@ -17,6 +17,8 @@\n \n #include <string>\n #include <vector>\n+#include <openssl/crypto.h> // for OPENSSL_cleanse()\n+\n #include \"bignum.h\"\n #include \"key.h\"\n #include \"script.h\"\n@@ -190,7 +192,7 @@ class CBase58Data\n     {\n         // zero the memory, as it may contain sensitive data\n         if (!vchData.empty())\n-            memset(&vchData[0], 0, vchData.size());\n+            OPENSSL_cleanse(&vchData[0], vchData.size());\n     }\n \n     void SetData(int nVersionIn, const void* pdata, size_t nSize)\n@@ -221,7 +223,7 @@ class CBase58Data\n         vchData.resize(vchTemp.size() - 1);\n         if (!vchData.empty())\n             memcpy(&vchData[0], &vchTemp[1], vchData.size());\n-        memset(&vchTemp[0], 0, vchTemp.size());\n+        OPENSSL_cleanse(&vchTemp[0], vchData.size());\n         return true;\n     }\n "
+      },
+      {
+        "sha": "a2b62a87c8151e2c72adab1709a9d3d23652a543",
+        "filename": "src/crypter.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0f8a6477825fbaad0d37233bdd3011d748f607ab/src/crypter.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0f8a6477825fbaad0d37233bdd3011d748f607ab/src/crypter.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/crypter.cpp?ref=0f8a6477825fbaad0d37233bdd3011d748f607ab",
+        "patch": "@@ -24,8 +24,8 @@ bool CCrypter::SetKeyFromPassphrase(const SecureString& strKeyData, const std::v\n \n     if (i != (int)WALLET_CRYPTO_KEY_SIZE)\n     {\n-        memset(&chKey, 0, sizeof chKey);\n-        memset(&chIV, 0, sizeof chIV);\n+        OPENSSL_cleanse(chKey, sizeof(chKey));\n+        OPENSSL_cleanse(chIV, sizeof(chIV));\n         return false;\n     }\n "
+      },
+      {
+        "sha": "6f75170baccfb1b702159b269e59e5d1f729c1bf",
+        "filename": "src/crypter.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0f8a6477825fbaad0d37233bdd3011d748f607ab/src/crypter.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0f8a6477825fbaad0d37233bdd3011d748f607ab/src/crypter.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/crypter.h?ref=0f8a6477825fbaad0d37233bdd3011d748f607ab",
+        "patch": "@@ -76,8 +76,8 @@ class CCrypter\n \n     void CleanKey()\n     {\n-        memset(&chKey, 0, sizeof chKey);\n-        memset(&chIV, 0, sizeof chIV);\n+        OPENSSL_cleanse(chKey, sizeof(chKey));\n+        OPENSSL_cleanse(chIV, sizeof(chIV));\n         fKeySet = false;\n     }\n "
+      },
+      {
+        "sha": "9e7307204a00dae5d38f310530a889d5ee01e4ff",
+        "filename": "src/netbase.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0f8a6477825fbaad0d37233bdd3011d748f607ab/src/netbase.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0f8a6477825fbaad0d37233bdd3011d748f607ab/src/netbase.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/netbase.cpp?ref=0f8a6477825fbaad0d37233bdd3011d748f607ab",
+        "patch": "@@ -545,7 +545,7 @@ bool ConnectSocketByName(CService &addr, SOCKET& hSocketRet, const char *pszDest\n \n void CNetAddr::Init()\n {\n-    memset(ip, 0, 16);\n+    memset(ip, 0, sizeof(ip));\n }\n \n void CNetAddr::SetIP(const CNetAddr& ipIn)"
+      },
+      {
+        "sha": "03014a5da04948ef67746ccae89449a0b615e7cd",
+        "filename": "src/util.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0f8a6477825fbaad0d37233bdd3011d748f607ab/src/util.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0f8a6477825fbaad0d37233bdd3011d748f607ab/src/util.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/util.cpp?ref=0f8a6477825fbaad0d37233bdd3011d748f607ab",
+        "patch": "@@ -156,7 +156,7 @@ void RandAddSeedPerfmon()\n     if (ret == ERROR_SUCCESS)\n     {\n         RAND_add(pdata, nSize, nSize/100.0);\n-        memset(pdata, 0, nSize);\n+        OPENSSL_cleanse(pdata, nSize);\n         printf(\"RandAddSeed() %lu bytes\\n\", nSize);\n     }\n #endif"
+      }
+    ]
+  },
+  {
+    "sha": "d0b0925be9f94068deb98940103a7b8a8c56f027",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkMGIwOTI1YmU5Zjk0MDY4ZGViOTg5NDAxMDNhN2I4YThjNTZmMDI3",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-11-09T11:50:59Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-11-09T18:25:20Z"
+      },
+      "message": "make CBase58Data class use zero_after_free_allocator\n\n- this way there is no need for an explicit destructor, who does the same\n  thing anyway",
+      "tree": {
+        "sha": "7b70b1b67420fca905bfea179599954d0bad5ca8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/7b70b1b67420fca905bfea179599954d0bad5ca8"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/d0b0925be9f94068deb98940103a7b8a8c56f027",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d0b0925be9f94068deb98940103a7b8a8c56f027",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/d0b0925be9f94068deb98940103a7b8a8c56f027",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d0b0925be9f94068deb98940103a7b8a8c56f027/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "0f8a6477825fbaad0d37233bdd3011d748f607ab",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0f8a6477825fbaad0d37233bdd3011d748f607ab",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/0f8a6477825fbaad0d37233bdd3011d748f607ab"
+      }
+    ],
+    "stats": {
+      "total": 14,
+      "additions": 4,
+      "deletions": 10
+    },
+    "files": [
+      {
+        "sha": "be8a541f6735081534f6947e43e9101f46998b3c",
+        "filename": "src/base58.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 10,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d0b0925be9f94068deb98940103a7b8a8c56f027/src/base58.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d0b0925be9f94068deb98940103a7b8a8c56f027/src/base58.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/base58.h?ref=d0b0925be9f94068deb98940103a7b8a8c56f027",
+        "patch": "@@ -17,11 +17,11 @@\n \n #include <string>\n #include <vector>\n-#include <openssl/crypto.h> // for OPENSSL_cleanse()\n \n #include \"bignum.h\"\n #include \"key.h\"\n #include \"script.h\"\n+#include \"allocators.h\"\n \n static const char* pszBase58 = \"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz\";\n \n@@ -180,21 +180,15 @@ class CBase58Data\n     unsigned char nVersion;\n \n     // the actually encoded data\n-    std::vector<unsigned char> vchData;\n+    typedef std::vector<unsigned char, zero_after_free_allocator<unsigned char> > vector_uchar;\n+    vector_uchar vchData;\n \n     CBase58Data()\n     {\n         nVersion = 0;\n         vchData.clear();\n     }\n \n-    ~CBase58Data()\n-    {\n-        // zero the memory, as it may contain sensitive data\n-        if (!vchData.empty())\n-            OPENSSL_cleanse(&vchData[0], vchData.size());\n-    }\n-\n     void SetData(int nVersionIn, const void* pdata, size_t nSize)\n     {\n         nVersion = nVersionIn;\n@@ -459,4 +453,4 @@ class CBitcoinSecret : public CBase58Data\n     }\n };\n \n-#endif\n+#endif // BITCOIN_BASE58_H"
+      }
+    ]
+  }
+]

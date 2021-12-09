@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "46cbc0afa0060f0065dd48f8e7e20fe413f5b10c",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0NmNiYzBhZmEwMDYwZjAwNjVkZDQ4ZjhlN2UyMGZlNDEzZjViMTBj",
+    "commit": {
+      "author": {
+        "name": "Jo\u00e3o Fonseca",
+        "email": "jfonseca@uphold.com",
+        "date": "2017-03-07T12:18:56Z"
+      },
+      "committer": {
+        "name": "Jo\u00e3o Fonseca",
+        "email": "jfonseca@uphold.com",
+        "date": "2017-03-13T17:29:14Z"
+      },
+      "message": "Cache vout IsMine() value on `CWallet::AvailableCoins()`",
+      "tree": {
+        "sha": "3114e7be0902f2b51b7ef6e2ae6fe03c4533b861",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/3114e7be0902f2b51b7ef6e2ae6fe03c4533b861"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/46cbc0afa0060f0065dd48f8e7e20fe413f5b10c",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/46cbc0afa0060f0065dd48f8e7e20fe413f5b10c",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/46cbc0afa0060f0065dd48f8e7e20fe413f5b10c",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/46cbc0afa0060f0065dd48f8e7e20fe413f5b10c/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "8040ae6fc576e9504186f2ae3ff2c8125de1095c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8040ae6fc576e9504186f2ae3ff2c8125de1095c",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/8040ae6fc576e9504186f2ae3ff2c8125de1095c"
+      }
+    ],
+    "stats": {
+      "total": 11,
+      "additions": 9,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "2edef4b6bcdcab2ba9548d4205b44bea80955ede",
+        "filename": "src/wallet/wallet.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 2,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/46cbc0afa0060f0065dd48f8e7e20fe413f5b10c/src/wallet/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/46cbc0afa0060f0065dd48f8e7e20fe413f5b10c/src/wallet/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.cpp?ref=46cbc0afa0060f0065dd48f8e7e20fe413f5b10c",
+        "patch": "@@ -1952,6 +1952,8 @@ void CWallet::AvailableCoins(std::vector<COutput>& vCoins, bool fOnlySafe, const\n \n     {\n         LOCK2(cs_main, cs_wallet);\n+\n+        std::map<CScript, isminetype> mapOutputIsMine;\n         for (std::map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)\n         {\n             const uint256& wtxid = it->first;\n@@ -2010,8 +2012,13 @@ void CWallet::AvailableCoins(std::vector<COutput>& vCoins, bool fOnlySafe, const\n             }\n \n             for (unsigned int i = 0; i < pcoin->tx->vout.size(); i++) {\n-                isminetype mine = IsMine(pcoin->tx->vout[i]);\n-                if (!(IsSpent(wtxid, i)) && mine != ISMINE_NO &&\n+                auto inserted = mapOutputIsMine.emplace(pcoin->tx->vout[i].scriptPubKey, ISMINE_NO);\n+                if (inserted.second) {\n+                   inserted.first->second = IsMine(pcoin->tx->vout[i]);\n+                }\n+                isminetype mine = inserted.first->second;\n+\n+                if (mine != ISMINE_NO && !(IsSpent(wtxid, i)) &&\n                     !IsLockedCoin((*it).first, i) && (pcoin->tx->vout[i].nValue > 0 || fIncludeZeroValue) &&\n                     (!coinControl || !coinControl->HasSelected() || coinControl->fAllowOtherInputs || coinControl->IsSelected(COutPoint((*it).first, i))))\n                         vCoins.push_back(COutput(pcoin, i, nDepth,"
+      }
+    ]
+  }
+]

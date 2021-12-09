@@ -1,0 +1,74 @@
+[
+  {
+    "sha": "e21efd5de061cd005385932d3058b79323e4b217",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplMjFlZmQ1ZGUwNjFjZDAwNTM4NTkzMmQzMDU4Yjc5MzIzZTRiMjE3",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-04-04T08:40:03Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-05-20T13:18:38Z"
+      },
+      "message": "add benchmark for block/undo file reading/writing",
+      "tree": {
+        "sha": "127ea139f24799d3b2e922505ca4a4dee0b73cbc",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/127ea139f24799d3b2e922505ca4a4dee0b73cbc"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/e21efd5de061cd005385932d3058b79323e4b217",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e21efd5de061cd005385932d3058b79323e4b217",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/e21efd5de061cd005385932d3058b79323e4b217",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e21efd5de061cd005385932d3058b79323e4b217/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "9d97e83bf677ce595c6b2dc5d6805c2fcb1bc05b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9d97e83bf677ce595c6b2dc5d6805c2fcb1bc05b",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/9d97e83bf677ce595c6b2dc5d6805c2fcb1bc05b"
+      }
+    ],
+    "stats": {
+      "total": 30,
+      "additions": 25,
+      "deletions": 5
+    },
+    "files": [
+      {
+        "sha": "0db18f7e1a50f183a7b02bcbf68975eaccd18b2a",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 3,
+        "changes": 16,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e21efd5de061cd005385932d3058b79323e4b217/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e21efd5de061cd005385932d3058b79323e4b217/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=e21efd5de061cd005385932d3058b79323e4b217",
+        "patch": "@@ -1085,7 +1085,9 @@ bool GetTransaction(const uint256 &hash, CTransaction &txOut, uint256 &hashBlock\n \n bool WriteBlockToDisk(CBlock& block, CDiskBlockPos& pos)\n {\n-    // Open history file to append\n+    int64_t nStart = GetTimeMicros();\n+\n+    // Open block file to append\n     CAutoFile fileout = CAutoFile(OpenBlockFile(pos), SER_DISK, CLIENT_VERSION);\n     if (!fileout)\n         return error(\"WriteBlockToDisk : OpenBlockFile failed\");\n@@ -1106,14 +1108,19 @@ bool WriteBlockToDisk(CBlock& block, CDiskBlockPos& pos)\n     if (!IsInitialBlockDownload())\n         FileCommit(fileout);\n \n+    if (fBenchmark)\n+        LogPrintf(\"WriteBlockToDisk : Function executed in %.2fms\\n\", (GetTimeMicros() - nStart) * 0.001);\n+\n     return true;\n }\n \n bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos)\n {\n+    int64_t nStart = GetTimeMicros();\n+\n     block.SetNull();\n \n-    // Open history file to read\n+    // Open block file to read\n     CAutoFile filein = CAutoFile(OpenBlockFile(pos, true), SER_DISK, CLIENT_VERSION);\n     if (!filein)\n         return error(\"ReadBlockFromDisk : OpenBlockFile failed\");\n@@ -1130,6 +1137,9 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos)\n     if (!CheckProofOfWork(block.GetHash(), block.nBits))\n         return error(\"ReadBlockFromDisk : Errors in block header\");\n \n+    if (fBenchmark)\n+        LogPrintf(\"ReadBlockFromDisk : Function executed in %.2fms\\n\", (GetTimeMicros() - nStart) * 0.001);\n+\n     return true;\n }\n \n@@ -2533,7 +2543,7 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CBlockIndex** ppindex,\n         }\n     }\n \n-    // Write block to history file\n+    // Write block to block file\n     try {\n         unsigned int nBlockSize = ::GetSerializeSize(block, SER_DISK, CLIENT_VERSION);\n         CDiskBlockPos blockPos;"
+      },
+      {
+        "sha": "e1157ffa675fb90f78ed423c44226ad036703538",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 12,
+        "deletions": 2,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e21efd5de061cd005385932d3058b79323e4b217/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e21efd5de061cd005385932d3058b79323e4b217/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=e21efd5de061cd005385932d3058b79323e4b217",
+        "patch": "@@ -334,7 +334,9 @@ class CBlockUndo\n \n     bool WriteToDisk(CDiskBlockPos &pos, const uint256 &hashBlock)\n     {\n-        // Open history file to append\n+        int64_t nStart = GetTimeMicros();\n+\n+        // Open undo file to append\n         CAutoFile fileout = CAutoFile(OpenUndoFile(pos), SER_DISK, CLIENT_VERSION);\n         if (!fileout)\n             return error(\"CBlockUndo::WriteToDisk : OpenUndoFile failed\");\n@@ -361,12 +363,17 @@ class CBlockUndo\n         if (!IsInitialBlockDownload())\n             FileCommit(fileout);\n \n+        if (fBenchmark)\n+            LogPrintf(\"CBlockUndo::WriteToDisk : Function executed in %.2fms\\n\", (GetTimeMicros() - nStart) * 0.001);\n+\n         return true;\n     }\n \n     bool ReadFromDisk(const CDiskBlockPos &pos, const uint256 &hashBlock)\n     {\n-        // Open history file to read\n+        int64_t nStart = GetTimeMicros();\n+\n+        // Open undo file to read\n         CAutoFile filein = CAutoFile(OpenUndoFile(pos, true), SER_DISK, CLIENT_VERSION);\n         if (!filein)\n             return error(\"CBlockUndo::ReadFromDisk : OpenBlockFile failed\");\n@@ -388,6 +395,9 @@ class CBlockUndo\n         if (hashChecksum != hasher.GetHash())\n             return error(\"CBlockUndo::ReadFromDisk : Checksum mismatch\");\n \n+        if (fBenchmark)\n+            LogPrintf(\"CBlockUndo::ReadFromDisk : Function executed in %.2fms\\n\", (GetTimeMicros() - nStart) * 0.001);\n+\n         return true;\n     }\n };"
+      }
+    ]
+  }
+]

@@ -1,0 +1,160 @@
+[
+  {
+    "sha": "982670c333aff6d5660c18ed00931df764733529",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5ODI2NzBjMzMzYWZmNmQ1NjYwYzE4ZWQwMDkzMWRmNzY0NzMzNTI5",
+    "commit": {
+      "author": {
+        "name": "Alex Morcos",
+        "email": "morcos@chaincode.com",
+        "date": "2015-12-04T20:01:22Z"
+      },
+      "committer": {
+        "name": "Alex Morcos",
+        "email": "morcos@chaincode.com",
+        "date": "2016-03-16T20:11:46Z"
+      },
+      "message": "Add LockPoints\n\nObtain LockPoints to store in CTxMemPoolEntry and during a reorg, evaluate whether they are still valid and if not, recalculate them.",
+      "tree": {
+        "sha": "c30509abd3422e3e7fcdd10320885eabc5dac126",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/c30509abd3422e3e7fcdd10320885eabc5dac126"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/982670c333aff6d5660c18ed00931df764733529",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/982670c333aff6d5660c18ed00931df764733529",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/982670c333aff6d5660c18ed00931df764733529",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/982670c333aff6d5660c18ed00931df764733529/comments",
+    "author": {
+      "login": "morcos",
+      "id": 4360349,
+      "node_id": "MDQ6VXNlcjQzNjAzNDk=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4360349?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/morcos",
+      "html_url": "https://github.com/morcos",
+      "followers_url": "https://api.github.com/users/morcos/followers",
+      "following_url": "https://api.github.com/users/morcos/following{/other_user}",
+      "gists_url": "https://api.github.com/users/morcos/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/morcos/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/morcos/subscriptions",
+      "organizations_url": "https://api.github.com/users/morcos/orgs",
+      "repos_url": "https://api.github.com/users/morcos/repos",
+      "events_url": "https://api.github.com/users/morcos/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/morcos/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "morcos",
+      "id": 4360349,
+      "node_id": "MDQ6VXNlcjQzNjAzNDk=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4360349?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/morcos",
+      "html_url": "https://github.com/morcos",
+      "followers_url": "https://api.github.com/users/morcos/followers",
+      "following_url": "https://api.github.com/users/morcos/following{/other_user}",
+      "gists_url": "https://api.github.com/users/morcos/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/morcos/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/morcos/subscriptions",
+      "organizations_url": "https://api.github.com/users/morcos/orgs",
+      "repos_url": "https://api.github.com/users/morcos/repos",
+      "events_url": "https://api.github.com/users/morcos/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/morcos/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "8b70a64d62c6e64288762d062414cc979f880c54",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8b70a64d62c6e64288762d062414cc979f880c54",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/8b70a64d62c6e64288762d062414cc979f880c54"
+      }
+    ],
+    "stats": {
+      "total": 157,
+      "additions": 131,
+      "deletions": 26
+    },
+    "files": [
+      {
+        "sha": "525d9902b93ee802885ec4a39b3f739a516fb922",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 70,
+        "deletions": 19,
+        "changes": 89,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/982670c333aff6d5660c18ed00931df764733529/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/982670c333aff6d5660c18ed00931df764733529/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=982670c333aff6d5660c18ed00931df764733529",
+        "patch": "@@ -794,7 +794,25 @@ bool SequenceLocks(const CTransaction &tx, int flags, std::vector<int>* prevHeig\n     return EvaluateSequenceLocks(block, CalculateSequenceLocks(tx, flags, prevHeights, block));\n }\n \n-bool CheckSequenceLocks(const CTransaction &tx, int flags)\n+bool TestLockPointValidity(const LockPoints* lp)\n+{\n+    AssertLockHeld(cs_main);\n+    assert(lp);\n+    // If there are relative lock times then the maxInputBlock will be set\n+    // If there are no relative lock times, the LockPoints don't depend on the chain\n+    if (lp->maxInputBlock) {\n+        // Check whether chainActive is an extension of the block at which the LockPoints\n+        // calculation was valid.  If not LockPoints are no longer valid\n+        if (!chainActive.Contains(lp->maxInputBlock)) {\n+            return false;\n+        }\n+    }\n+\n+    // LockPoints still valid\n+    return true;\n+}\n+\n+bool CheckSequenceLocks(const CTransaction &tx, int flags, LockPoints* lp, bool useExistingLockPoints)\n {\n     AssertLockHeld(cs_main);\n     AssertLockHeld(mempool.cs);\n@@ -810,25 +828,57 @@ bool CheckSequenceLocks(const CTransaction &tx, int flags)\n     // *next* block, we need to use one more than chainActive.Height()\n     index.nHeight = tip->nHeight + 1;\n \n-    // pcoinsTip contains the UTXO set for chainActive.Tip()\n-    CCoinsViewMemPool viewMemPool(pcoinsTip, mempool);\n-    std::vector<int> prevheights;\n-    prevheights.resize(tx.vin.size());\n-    for (size_t txinIndex = 0; txinIndex < tx.vin.size(); txinIndex++) {\n-        const CTxIn& txin = tx.vin[txinIndex];\n-        CCoins coins;\n-        if (!viewMemPool.GetCoins(txin.prevout.hash, coins)) {\n-            return error(\"%s: Missing input\", __func__);\n+    std::pair<int, int64_t> lockPair;\n+    if (useExistingLockPoints) {\n+        assert(lp);\n+        lockPair.first = lp->height;\n+        lockPair.second = lp->time;\n+    }\n+    else {\n+        // pcoinsTip contains the UTXO set for chainActive.Tip()\n+        CCoinsViewMemPool viewMemPool(pcoinsTip, mempool);\n+        std::vector<int> prevheights;\n+        prevheights.resize(tx.vin.size());\n+        for (size_t txinIndex = 0; txinIndex < tx.vin.size(); txinIndex++) {\n+            const CTxIn& txin = tx.vin[txinIndex];\n+            CCoins coins;\n+            if (!viewMemPool.GetCoins(txin.prevout.hash, coins)) {\n+                return error(\"%s: Missing input\", __func__);\n+            }\n+            if (coins.nHeight == MEMPOOL_HEIGHT) {\n+                // Assume all mempool transaction confirm in the next block\n+                prevheights[txinIndex] = tip->nHeight + 1;\n+            } else {\n+                prevheights[txinIndex] = coins.nHeight;\n+            }\n         }\n-        if (coins.nHeight == MEMPOOL_HEIGHT) {\n-            // Assume all mempool transaction confirm in the next block\n-            prevheights[txinIndex] = tip->nHeight + 1;\n-        } else {\n-            prevheights[txinIndex] = coins.nHeight;\n+        lockPair = CalculateSequenceLocks(tx, flags, &prevheights, index);\n+        if (lp) {\n+            lp->height = lockPair.first;\n+            lp->time = lockPair.second;\n+            // Also store the hash of the block with the highest height of\n+            // all the blocks which have sequence locked prevouts.\n+            // This hash needs to still be on the chain\n+            // for these LockPoint calculations to be valid\n+            // Note: It is impossible to correctly calculate a maxInputBlock\n+            // if any of the sequence locked inputs depend on unconfirmed txs,\n+            // except in the special case where the relative lock time/height\n+            // is 0, which is equivalent to no sequence lock. Since we assume\n+            // input height of tip+1 for mempool txs and test the resulting\n+            // lockPair from CalculateSequenceLocks against tip+1.  We know\n+            // EvaluateSequenceLocks will fail if there was a non-zero sequence\n+            // lock on a mempool input, so we can use the return value of\n+            // CheckSequenceLocks to indicate the LockPoints validity\n+            int maxInputHeight = 0;\n+            BOOST_FOREACH(int height, prevheights) {\n+                // Can ignore mempool inputs since we'll fail if they had non-zero locks\n+                if (height != tip->nHeight+1) {\n+                    maxInputHeight = std::max(maxInputHeight, height);\n+                }\n+            }\n+            lp->maxInputBlock = tip->GetAncestor(maxInputHeight);\n         }\n     }\n-\n-    std::pair<int, int64_t> lockPair = CalculateSequenceLocks(tx, flags, &prevheights, index);\n     return EvaluateSequenceLocks(index, lockPair);\n }\n \n@@ -1017,6 +1067,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState& state, const C\n         CCoinsViewCache view(&dummy);\n \n         CAmount nValueIn = 0;\n+        LockPoints lp;\n         {\n         LOCK(pool.cs);\n         CCoinsViewMemPool viewMemPool(pcoinsTip, pool);\n@@ -1060,7 +1111,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState& state, const C\n         // be mined yet.\n         // Must keep pool.cs for this unless we change CheckSequenceLocks to take a\n         // CoinsViewCache instead of create its own\n-        if (!CheckSequenceLocks(tx, STANDARD_LOCKTIME_VERIFY_FLAGS))\n+        if (!CheckSequenceLocks(tx, STANDARD_LOCKTIME_VERIFY_FLAGS, &lp))\n             return state.DoS(0, false, REJECT_NONSTANDARD, \"non-BIP68-final\");\n         }\n \n@@ -1092,7 +1143,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState& state, const C\n             }\n         }\n \n-        CTxMemPoolEntry entry(tx, nFees, GetTime(), dPriority, chainActive.Height(), pool.HasNoInputsOf(tx), inChainInputValue, fSpendsCoinbase, nSigOps);\n+        CTxMemPoolEntry entry(tx, nFees, GetTime(), dPriority, chainActive.Height(), pool.HasNoInputsOf(tx), inChainInputValue, fSpendsCoinbase, nSigOps, lp);\n         unsigned int nSize = entry.GetTxSize();\n \n         // Check that the transaction doesn't have an excessive number of"
+      },
+      {
+        "sha": "85ec60ac61b4c411e4743ebb040cd83ad6a87d92",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 1,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/982670c333aff6d5660c18ed00931df764733529/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/982670c333aff6d5660c18ed00931df764733529/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=982670c333aff6d5660c18ed00931df764733529",
+        "patch": "@@ -39,6 +39,7 @@ class CValidationInterface;\n class CValidationState;\n \n struct CNodeStateStats;\n+struct LockPoints;\n \n /** Default for accepting alerts from the P2P network. */\n static const bool DEFAULT_ALERTS = true;\n@@ -368,6 +369,11 @@ bool IsFinalTx(const CTransaction &tx, int nBlockHeight, int64_t nBlockTime);\n  */\n bool CheckFinalTx(const CTransaction &tx, int flags = -1);\n \n+/**\n+ * Test whether the LockPoints height and time are still valid on the current chain\n+ */\n+bool TestLockPointValidity(const LockPoints* lp);\n+\n /**\n  * Check if transaction is final per BIP 68 sequence numbers and can be included in a block.\n  * Consensus critical. Takes as input a list of heights at which tx's inputs (in order) confirmed.\n@@ -378,10 +384,14 @@ bool SequenceLocks(const CTransaction &tx, int flags, std::vector<int>* prevHeig\n  * Check if transaction will be BIP 68 final in the next block to be created.\n  *\n  * Simulates calling SequenceLocks() with data from the tip of the current active chain.\n+ * Optionally stores in LockPoints the resulting height and time calculated and the hash\n+ * of the block needed for calculation or skips the calculation and uses the LockPoints\n+ * passed in for evaluation.\n+ * The LockPoints should not be considered valid if CheckSequenceLocks returns false.\n  *\n  * See consensus/consensus.h for flag definitions.\n  */\n-bool CheckSequenceLocks(const CTransaction &tx, int flags);\n+bool CheckSequenceLocks(const CTransaction &tx, int flags, LockPoints* lp = NULL, bool useExistingLockPoints = false);\n \n /**\n  * Closure representing one script verification"
+      },
+      {
+        "sha": "a272018cf1678ea7203e56e3b4632cafbd42ec19",
+        "filename": "src/test/test_bitcoin.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/982670c333aff6d5660c18ed00931df764733529/src/test/test_bitcoin.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/982670c333aff6d5660c18ed00931df764733529/src/test/test_bitcoin.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/test_bitcoin.cpp?ref=982670c333aff6d5660c18ed00931df764733529",
+        "patch": "@@ -151,7 +151,7 @@ CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(CMutableTransaction &tx, CTxMemPo\n     CAmount inChainValue = hasNoDependencies ? txn.GetValueOut() : 0;\n \n     return CTxMemPoolEntry(txn, nFee, nTime, dPriority, nHeight,\n-                           hasNoDependencies, inChainValue, spendsCoinbase, sigOpCount);\n+                           hasNoDependencies, inChainValue, spendsCoinbase, sigOpCount, lp);\n }\n \n void Shutdown(void* parg)"
+      },
+      {
+        "sha": "769ae5a13252b9c8a98792354fa2156b580117f9",
+        "filename": "src/test/test_bitcoin.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 1,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/982670c333aff6d5660c18ed00931df764733529/src/test/test_bitcoin.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/982670c333aff6d5660c18ed00931df764733529/src/test/test_bitcoin.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/test_bitcoin.h?ref=982670c333aff6d5660c18ed00931df764733529",
+        "patch": "@@ -9,6 +9,7 @@\n #include \"key.h\"\n #include \"pubkey.h\"\n #include \"txdb.h\"\n+#include \"txmempool.h\"\n \n #include <boost/filesystem.hpp>\n #include <boost/thread.hpp>\n@@ -71,7 +72,8 @@ struct TestMemPoolEntryHelper\n     bool hadNoDependencies;\n     bool spendsCoinbase;\n     unsigned int sigOpCount;\n-    \n+    LockPoints lp;\n+\n     TestMemPoolEntryHelper() :\n         nFee(0), nTime(0), dPriority(0.0), nHeight(1),\n         hadNoDependencies(false), spendsCoinbase(false), sigOpCount(1) { }"
+      },
+      {
+        "sha": "5f814749b71ffe4705af8848d9abef35da0d97c8",
+        "filename": "src/txmempool.cpp",
+        "status": "modified",
+        "additions": 15,
+        "deletions": 3,
+        "changes": 18,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/982670c333aff6d5660c18ed00931df764733529/src/txmempool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/982670c333aff6d5660c18ed00931df764733529/src/txmempool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.cpp?ref=982670c333aff6d5660c18ed00931df764733529",
+        "patch": "@@ -22,10 +22,10 @@ using namespace std;\n CTxMemPoolEntry::CTxMemPoolEntry(const CTransaction& _tx, const CAmount& _nFee,\n                                  int64_t _nTime, double _entryPriority, unsigned int _entryHeight,\n                                  bool poolHasNoInputsOf, CAmount _inChainInputValue,\n-                                 bool _spendsCoinbase, unsigned int _sigOps):\n+                                 bool _spendsCoinbase, unsigned int _sigOps, LockPoints lp):\n     tx(_tx), nFee(_nFee), nTime(_nTime), entryPriority(_entryPriority), entryHeight(_entryHeight),\n     hadNoDependencies(poolHasNoInputsOf), inChainInputValue(_inChainInputValue),\n-    spendsCoinbase(_spendsCoinbase), sigOpCount(_sigOps)\n+    spendsCoinbase(_spendsCoinbase), sigOpCount(_sigOps), lockPoints(lp)\n {\n     nTxSize = ::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION);\n     nModSize = tx.CalculateModifiedSize(nTxSize);\n@@ -61,6 +61,11 @@ void CTxMemPoolEntry::UpdateFeeDelta(int64_t newFeeDelta)\n     feeDelta = newFeeDelta;\n }\n \n+void CTxMemPoolEntry::UpdateLockPoints(const LockPoints& lp)\n+{\n+    lockPoints = lp;\n+}\n+\n // Update the given tx for any in-mempool descendants.\n // Assumes that setMemPoolChildren is correct for the given tx and all\n // descendants.\n@@ -506,7 +511,11 @@ void CTxMemPool::removeForReorg(const CCoinsViewCache *pcoins, unsigned int nMem\n     list<CTransaction> transactionsToRemove;\n     for (indexed_transaction_set::const_iterator it = mapTx.begin(); it != mapTx.end(); it++) {\n         const CTransaction& tx = it->GetTx();\n-        if (!CheckFinalTx(tx, flags) || !CheckSequenceLocks(tx, flags)) {\n+        LockPoints lp = it->GetLockPoints();\n+        bool validLP =  TestLockPointValidity(&lp);\n+        if (!CheckFinalTx(tx, flags) || !CheckSequenceLocks(tx, flags, &lp, validLP)) {\n+            // Note if CheckSequenceLocks fails the LockPoints may still be invalid\n+            // So it's critical that we remove the tx and not depend on the LockPoints.\n             transactionsToRemove.push_back(tx);\n         } else if (it->GetSpendsCoinbase()) {\n             BOOST_FOREACH(const CTxIn& txin, tx.vin) {\n@@ -521,6 +530,9 @@ void CTxMemPool::removeForReorg(const CCoinsViewCache *pcoins, unsigned int nMem\n                 }\n             }\n         }\n+        if (!validLP) {\n+            mapTx.modify(it, update_lock_points(lp));\n+        }\n     }\n     BOOST_FOREACH(const CTransaction& tx, transactionsToRemove) {\n         list<CTransaction> removed;"
+      },
+      {
+        "sha": "5997346b022bb558cc1cbf3df172a44bee22df77",
+        "filename": "src/txmempool.h",
+        "status": "modified",
+        "additions": 31,
+        "deletions": 1,
+        "changes": 32,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/982670c333aff6d5660c18ed00931df764733529/src/txmempool.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/982670c333aff6d5660c18ed00931df764733529/src/txmempool.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.h?ref=982670c333aff6d5660c18ed00931df764733529",
+        "patch": "@@ -19,6 +19,7 @@\n #include \"boost/multi_index/ordered_index.hpp\"\n \n class CAutoFile;\n+class CBlockIndex;\n \n inline double AllowFreeThreshold()\n {\n@@ -35,6 +36,21 @@ inline bool AllowFree(double dPriority)\n /** Fake height value used in CCoins to signify they are only in the memory pool (since 0.8) */\n static const unsigned int MEMPOOL_HEIGHT = 0x7FFFFFFF;\n \n+struct LockPoints\n+{\n+    // Will be set to the blockchain height and median time past\n+    // values that would be necessary to satisfy all relative locktime\n+    // constraints (BIP68) of this tx given our view of block chain history\n+    int height;\n+    int64_t time;\n+    // As long as the current chain descends from the highest height block\n+    // containing one of the inputs used in the calculation, then the cached\n+    // values are still valid even after a reorg.\n+    CBlockIndex* maxInputBlock;\n+\n+    LockPoints() : height(0), time(0), maxInputBlock(NULL) { }\n+};\n+\n class CTxMemPool;\n \n /** \\class CTxMemPoolEntry\n@@ -70,6 +86,7 @@ class CTxMemPoolEntry\n     bool spendsCoinbase; //! keep track of transactions that spend a coinbase\n     unsigned int sigOpCount; //! Legacy sig ops plus P2SH sig op count\n     int64_t feeDelta; //! Used for determining the priority of the transaction for mining in a block\n+    LockPoints lockPoints; //! Track the height and time at which tx was final\n \n     // Information about descendants of this transaction that are in the\n     // mempool; if we remove this transaction we must remove all of these\n@@ -84,7 +101,7 @@ class CTxMemPoolEntry\n     CTxMemPoolEntry(const CTransaction& _tx, const CAmount& _nFee,\n                     int64_t _nTime, double _entryPriority, unsigned int _entryHeight,\n                     bool poolHasNoInputsOf, CAmount _inChainInputValue, bool spendsCoinbase,\n-                    unsigned int nSigOps);\n+                    unsigned int nSigOps, LockPoints lp);\n     CTxMemPoolEntry(const CTxMemPoolEntry& other);\n \n     const CTransaction& GetTx() const { return this->tx; }\n@@ -101,12 +118,15 @@ class CTxMemPoolEntry\n     unsigned int GetSigOpCount() const { return sigOpCount; }\n     int64_t GetModifiedFee() const { return nFee + feeDelta; }\n     size_t DynamicMemoryUsage() const { return nUsageSize; }\n+    const LockPoints& GetLockPoints() const { return lockPoints; }\n \n     // Adjusts the descendant state, if this entry is not dirty.\n     void UpdateState(int64_t modifySize, CAmount modifyFee, int64_t modifyCount);\n     // Updates the fee delta used for mining priority score, and the\n     // modified fees with descendants.\n     void UpdateFeeDelta(int64_t feeDelta);\n+    // Update the LockPoints after a reorg\n+    void UpdateLockPoints(const LockPoints& lp);\n \n     /** We can set the entry to be dirty if doing the full calculation of in-\n      *  mempool descendants will be too expensive, which can potentially happen\n@@ -154,6 +174,16 @@ struct update_fee_delta\n     int64_t feeDelta;\n };\n \n+struct update_lock_points\n+{\n+    update_lock_points(const LockPoints& _lp) : lp(_lp) { }\n+\n+    void operator() (CTxMemPoolEntry &e) { e.UpdateLockPoints(lp); }\n+\n+private:\n+    const LockPoints& lp;\n+};\n+\n // extracts a TxMemPoolEntry's transaction hash\n struct mempoolentry_txid\n {"
+      }
+    ]
+  }
+]

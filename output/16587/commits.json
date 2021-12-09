@@ -1,0 +1,74 @@
+[
+  {
+    "sha": "6576a8765f67716aa6b87a2f0296fbac5956bec0",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2NTc2YTg3NjVmNjc3MTZhYTZiODdhMmYwMjk2ZmJhYzU5NTZiZWMw",
+    "commit": {
+      "author": {
+        "name": "Antoine Riard",
+        "email": "ariard@student.42.fr",
+        "date": "2019-08-07T02:18:36Z"
+      },
+      "committer": {
+        "name": "Antoine Riard",
+        "email": "ariard@student.42.fr",
+        "date": "2019-08-15T15:02:55Z"
+      },
+      "message": "doc: Improve versionbits.h documentation",
+      "tree": {
+        "sha": "f9b0f28a59911d3265d8b2133e28d91fe4b1e791",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f9b0f28a59911d3265d8b2133e28d91fe4b1e791"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/6576a8765f67716aa6b87a2f0296fbac5956bec0",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6576a8765f67716aa6b87a2f0296fbac5956bec0",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/6576a8765f67716aa6b87a2f0296fbac5956bec0",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6576a8765f67716aa6b87a2f0296fbac5956bec0/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "00dad5e0e1ddd6047bd4ff0a3032aa8950817b5f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/00dad5e0e1ddd6047bd4ff0a3032aa8950817b5f",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/00dad5e0e1ddd6047bd4ff0a3032aa8950817b5f"
+      }
+    ],
+    "stats": {
+      "total": 29,
+      "additions": 22,
+      "deletions": 7
+    },
+    "files": [
+      {
+        "sha": "2285579cd9c81f63a3cd390bfab600e9b9fe39ea",
+        "filename": "src/versionbits.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 1,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6576a8765f67716aa6b87a2f0296fbac5956bec0/src/versionbits.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6576a8765f67716aa6b87a2f0296fbac5956bec0/src/versionbits.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/versionbits.cpp?ref=6576a8765f67716aa6b87a2f0296fbac5956bec0",
+        "patch": "@@ -94,7 +94,6 @@ ThresholdState AbstractThresholdConditionChecker::GetStateFor(const CBlockIndex*\n     return state;\n }\n \n-// return the numerical statistics of blocks signalling the specified BIP9 condition in this current period\n BIP9Stats AbstractThresholdConditionChecker::GetStateStatisticsFor(const CBlockIndex* pindex, const Consensus::Params& params) const\n {\n     BIP9Stats stats = {};"
+      },
+      {
+        "sha": "d8dda7d95becf2efd50adead8d251887ef33936c",
+        "filename": "src/versionbits.h",
+        "status": "modified",
+        "additions": 22,
+        "deletions": 6,
+        "changes": 28,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6576a8765f67716aa6b87a2f0296fbac5956bec0/src/versionbits.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6576a8765f67716aa6b87a2f0296fbac5956bec0/src/versionbits.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/versionbits.h?ref=6576a8765f67716aa6b87a2f0296fbac5956bec0",
+        "patch": "@@ -17,24 +17,35 @@ static const int32_t VERSIONBITS_TOP_MASK = 0xE0000000UL;\n /** Total bits available for versionbits */\n static const int32_t VERSIONBITS_NUM_BITS = 29;\n \n+/** BIP 9 defines a finite-state-machine to deploy a softfork in multiple stages.\n+ *  State transitions happen during retarget period if conditions are met\n+ *  In case of reorg, transitions can go backward. Without transition, state is\n+ *  inherited between periods. All blocks of a period share the same state.\n+ */\n enum class ThresholdState {\n-    DEFINED,\n-    STARTED,\n-    LOCKED_IN,\n-    ACTIVE,\n-    FAILED,\n+    DEFINED,   // First state that each softfork starts out as. The genesis block is by definition in this state for each deployment.\n+    STARTED,   // For blocks past the starttime.\n+    LOCKED_IN, // For one retarget period after the first retarget period with STARTED blocks of which at least threshold have the associated bit set in nVersion.\n+    ACTIVE,    // For all blocks after the LOCKED_IN retarget period (final state)\n+    FAILED,    // For all blocks once the first retarget period after the timeout time is hit, if LOCKED_IN wasn't already reached (final state)\n };\n \n // A map that gives the state for blocks whose height is a multiple of Period().\n // The map is indexed by the block's parent, however, so all keys in the map\n // will either be nullptr or a block with (height + 1) % Period() == 0.\n typedef std::map<const CBlockIndex*, ThresholdState> ThresholdConditionCache;\n \n+/** Display status of an in-progress BIP9 softfork */\n struct BIP9Stats {\n+    /** Length of blocks of the BIP9 signalling period */\n     int period;\n+    /** Number of blocks with the version bit set required to activate the softfork */\n     int threshold;\n+    /** Number of blocks elapsed since the beginning of the current period */\n     int elapsed;\n+    /** Number of blocks with the version bit set since the beginning of the current period */\n     int count;\n+    /** False if there are not enough blocks left in this period to pass activation threshold */\n     bool possible;\n };\n \n@@ -50,12 +61,17 @@ class AbstractThresholdConditionChecker {\n     virtual int Threshold(const Consensus::Params& params) const =0;\n \n public:\n+    /** Returns the numerical statistics of an in-progress BIP9 softfork in the current period */\n     BIP9Stats GetStateStatisticsFor(const CBlockIndex* pindex, const Consensus::Params& params) const;\n-    // Note that the functions below take a pindexPrev as input: they compute information for block B based on its parent.\n+    /** Returns the state for pindex A based on parent pindexPrev B. Applies any state transition if conditions are present.\n+     *  Caches state from first block of period. */\n     ThresholdState GetStateFor(const CBlockIndex* pindexPrev, const Consensus::Params& params, ThresholdConditionCache& cache) const;\n+    /** Returns the height since when the ThresholdState has started for pindex A based on parent pindexPrev B, all blocks of a period share the same */\n     int GetStateSinceHeightFor(const CBlockIndex* pindexPrev, const Consensus::Params& params, ThresholdConditionCache& cache) const;\n };\n \n+/** BIP 9 allows multiple softforks to be deployed in parallel. We cache per-period state for every one of them\n+ *  keyed by the bit position used to signal support. */\n struct VersionBitsCache\n {\n     ThresholdConditionCache caches[Consensus::MAX_VERSION_BITS_DEPLOYMENTS];"
+      }
+    ]
+  }
+]

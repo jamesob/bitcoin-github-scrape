@@ -1,0 +1,446 @@
+[
+  {
+    "sha": "001a53d7427dcbcceef3c6754d9cca19df6dafa1",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowMDFhNTNkNzQyN2RjYmNjZWVmM2M2NzU0ZDljY2ExOWRmNmRhZmEx",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-06-24T12:27:32Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-07-09T07:42:18Z"
+      },
+      "message": "add GetRandBytes() as wrapper for RAND_bytes()\n\n- add a small wrapper in util around RAND_bytes() and replace with\n  GetRandBytes() in the code to log errors from calling RAND_bytes()\n- remove OpenSSL header rand.h where no longer needed",
+      "tree": {
+        "sha": "c599b2ecf2358276c8b86524348954b06c5757c4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/c599b2ecf2358276c8b86524348954b06c5757c4"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/001a53d7427dcbcceef3c6754d9cca19df6dafa1",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/001a53d7427dcbcceef3c6754d9cca19df6dafa1",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/001a53d7427dcbcceef3c6754d9cca19df6dafa1",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/001a53d7427dcbcceef3c6754d9cca19df6dafa1/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "2ee918d1214d0027285bb7558c237888d6ee175b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2ee918d1214d0027285bb7558c237888d6ee175b",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/2ee918d1214d0027285bb7558c237888d6ee175b"
+      }
+    ],
+    "stats": {
+      "total": 61,
+      "additions": 31,
+      "deletions": 30
+    },
+    "files": [
+      {
+        "sha": "c012e3deef8e457a3d90323f11dcd358362dcfe6",
+        "filename": "src/addrman.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 3,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/001a53d7427dcbcceef3c6754d9cca19df6dafa1/src/addrman.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/001a53d7427dcbcceef3c6754d9cca19df6dafa1/src/addrman.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/addrman.h?ref=001a53d7427dcbcceef3c6754d9cca19df6dafa1",
+        "patch": "@@ -16,8 +16,6 @@\n #include <stdint.h>\n #include <vector>\n \n-#include <openssl/rand.h>\n-\n /** Extended statistics about a CAddress */\n class CAddrInfo : public CAddress\n {\n@@ -384,7 +382,7 @@ class CAddrMan\n     CAddrMan() : vRandom(0), vvTried(ADDRMAN_TRIED_BUCKET_COUNT, std::vector<int>(0)), vvNew(ADDRMAN_NEW_BUCKET_COUNT, std::set<int>())\n     {\n          nKey.resize(32);\n-         RAND_bytes(&nKey[0], 32);\n+         GetRandBytes(&nKey[0], 32);\n \n          nIdCount = 0;\n          nTried = 0;"
+      },
+      {
+        "sha": "a253f8666abcd7a02be58e927bb5f0580358c4a3",
+        "filename": "src/key.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 6,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/001a53d7427dcbcceef3c6754d9cca19df6dafa1/src/key.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/001a53d7427dcbcceef3c6754d9cca19df6dafa1/src/key.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/key.cpp?ref=001a53d7427dcbcceef3c6754d9cca19df6dafa1",
+        "patch": "@@ -1,11 +1,11 @@\n-// Copyright (c) 2009-2013 The Bitcoin developers\n+// Copyright (c) 2009-2014 The Bitcoin developers\n // Distributed under the MIT/X11 software license, see the accompanying\n // file COPYING or http://www.opensource.org/licenses/mit-license.php.\n \n #include \"key.h\"\n \n #include \"crypto/sha2.h\"\n-#include <openssl/rand.h>\n+#include \"random.h\"\n \n #ifdef USE_SECP256K1\n #include <secp256k1.h>\n@@ -194,7 +194,7 @@ class CECKey {\n         if (d2i_ECPrivateKey(&pkey, &pbegin, privkey.size())) {\n             if(fSkipCheck)\n                 return true;\n-            \n+\n             // d2i_ECPrivateKey returns true if parsing succeeds.\n             // This doesn't necessarily mean the key is valid.\n             if (EC_KEY_check_key(pkey))\n@@ -412,7 +412,7 @@ bool CKey::CheckSignatureElement(const unsigned char *vch, int len, bool half) {\n \n void CKey::MakeNewKey(bool fCompressedIn) {\n     do {\n-        RAND_bytes(vch, sizeof(vch));\n+        GetRandBytes(vch, sizeof(vch));\n     } while (!Check(vch));\n     fValid = true;\n     fCompressed = fCompressedIn;\n@@ -745,5 +745,3 @@ bool ECC_InitSanityCheck() {\n     return true;\n #endif\n }\n-\n-"
+      },
+      {
+        "sha": "8225d73d8d9f50f45123135747575473c6d1411f",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/001a53d7427dcbcceef3c6754d9cca19df6dafa1/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/001a53d7427dcbcceef3c6754d9cca19df6dafa1/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=001a53d7427dcbcceef3c6754d9cca19df6dafa1",
+        "patch": "@@ -4370,7 +4370,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)\n         if (pingSend) {\n             uint64_t nonce = 0;\n             while (nonce == 0) {\n-                RAND_bytes((unsigned char*)&nonce, sizeof(nonce));\n+                GetRandBytes((unsigned char*)&nonce, sizeof(nonce));\n             }\n             pto->fPingQueued = false;\n             pto->nPingUsecStart = GetTimeMicros();"
+      },
+      {
+        "sha": "0e663aea83a1552476a7307ae7621d3f92719a79",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/001a53d7427dcbcceef3c6754d9cca19df6dafa1/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/001a53d7427dcbcceef3c6754d9cca19df6dafa1/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=001a53d7427dcbcceef3c6754d9cca19df6dafa1",
+        "patch": "@@ -546,7 +546,7 @@ void CNode::PushVersion()\n     int64_t nTime = (fInbound ? GetAdjustedTime() : GetTime());\n     CAddress addrYou = (addr.IsRoutable() && !IsProxy(addr) ? addr : CAddress(CService(\"0.0.0.0\",0)));\n     CAddress addrMe = GetLocalAddress(&addr);\n-    RAND_bytes((unsigned char*)&nLocalHostNonce, sizeof(nLocalHostNonce));\n+    GetRandBytes((unsigned char*)&nLocalHostNonce, sizeof(nLocalHostNonce));\n     if (fLogIPs)\n         LogPrint(\"net\", \"send version message: version %d, blocks=%d, us=%s, them=%s, peer=%d\\n\", PROTOCOL_VERSION, nBestHeight, addrMe.ToString(), addrYou.ToString(), id);\n     else\n@@ -1931,7 +1931,7 @@ bool CAddrDB::Write(const CAddrMan& addr)\n {\n     // Generate random temporary filename\n     unsigned short randv = 0;\n-    RAND_bytes((unsigned char *)&randv, sizeof(randv));\n+    GetRandBytes((unsigned char*)&randv, sizeof(randv));\n     std::string tmpfn = strprintf(\"peers.dat.%04x\", randv);\n \n     // serialize addresses, checksum data up to that point, then append csum"
+      },
+      {
+        "sha": "e0c96d88fad440db6dc0e9ae71696a7caea7acf0",
+        "filename": "src/rpcserver.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/001a53d7427dcbcceef3c6754d9cca19df6dafa1/src/rpcserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/001a53d7427dcbcceef3c6754d9cca19df6dafa1/src/rpcserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcserver.cpp?ref=001a53d7427dcbcceef3c6754d9cca19df6dafa1",
+        "patch": "@@ -531,7 +531,7 @@ void StartRPCThreads()\n          (mapArgs[\"-rpcuser\"] == mapArgs[\"-rpcpassword\"])) && Params().RequireRPCPassword())\n     {\n         unsigned char rand_pwd[32];\n-        RAND_bytes(rand_pwd, 32);\n+        GetRandBytes(rand_pwd, 32);\n         string strWhatAmI = \"To use bitcoind\";\n         if (mapArgs.count(\"-server\"))\n             strWhatAmI = strprintf(_(\"To use the %s option\"), \"\\\"-server\\\"\");"
+      },
+      {
+        "sha": "8f2a1bd73db2d14fff7dd4c86a07b4d8728844a7",
+        "filename": "src/util.cpp",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 13,
+        "changes": 29,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/001a53d7427dcbcceef3c6754d9cca19df6dafa1/src/util.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/001a53d7427dcbcceef3c6754d9cca19df6dafa1/src/util.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/util.cpp?ref=001a53d7427dcbcceef3c6754d9cca19df6dafa1",
+        "patch": "@@ -69,6 +69,7 @@\n #include <boost/program_options/detail/config_file.hpp>\n #include <boost/program_options/parsers.hpp>\n #include <openssl/crypto.h>\n+#include <openssl/err.h>\n #include <openssl/rand.h>\n \n // Work around clang compilation problem in Boost 1.46:\n@@ -141,12 +142,14 @@ class CInit\n }\n instance_of_cinit;\n \n-\n-\n-\n-\n-\n-\n+bool GetRandBytes(unsigned char *buf, int num)\n+{\n+    if (RAND_bytes(buf, num) == 0) {\n+        LogPrint(\"rand\", \"%s : OpenSSL RAND_bytes() failed with error: %s\\n\", __func__, ERR_error_string(ERR_get_error(), NULL));\n+        return false;\n+    }\n+    return true;\n+}\n \n void RandAddSeed()\n {\n@@ -207,9 +210,9 @@ uint64_t GetRand(uint64_t nMax)\n     // to give every possible output value an equal possibility\n     uint64_t nRange = (std::numeric_limits<uint64_t>::max() / nMax) * nMax;\n     uint64_t nRand = 0;\n-    do\n-        RAND_bytes((unsigned char*)&nRand, sizeof(nRand));\n-    while (nRand >= nRange);\n+    do {\n+        GetRandBytes((unsigned char*)&nRand, sizeof(nRand));\n+    } while (nRand >= nRange);\n     return (nRand % nMax);\n }\n \n@@ -221,7 +224,7 @@ int GetRandInt(int nMax)\n uint256 GetRandHash()\n {\n     uint256 hash;\n-    RAND_bytes((unsigned char*)&hash, sizeof(hash));\n+    GetRandBytes((unsigned char*)&hash, sizeof(hash));\n     return hash;\n }\n \n@@ -1196,18 +1199,18 @@ uint32_t insecure_rand_Rz = 11;\n uint32_t insecure_rand_Rw = 11;\n void seed_insecure_rand(bool fDeterministic)\n {\n-    //The seed values have some unlikely fixed points which we avoid.\n+    // The seed values have some unlikely fixed points which we avoid.\n     if(fDeterministic)\n     {\n         insecure_rand_Rz = insecure_rand_Rw = 11;\n     } else {\n         uint32_t tmp;\n         do {\n-            RAND_bytes((unsigned char*)&tmp, 4);\n+            GetRandBytes((unsigned char*)&tmp, 4);\n         } while(tmp == 0 || tmp == 0x9068ffffU);\n         insecure_rand_Rz = tmp;\n         do {\n-            RAND_bytes((unsigned char*)&tmp, 4);\n+            GetRandBytes((unsigned char*)&tmp, 4);\n         } while(tmp == 0 || tmp == 0x464fffffU);\n         insecure_rand_Rw = tmp;\n     }"
+      },
+      {
+        "sha": "d0108ee77fd3525a11868a1798016d039f5035c6",
+        "filename": "src/util.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/001a53d7427dcbcceef3c6754d9cca19df6dafa1/src/util.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/001a53d7427dcbcceef3c6754d9cca19df6dafa1/src/util.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/util.h?ref=001a53d7427dcbcceef3c6754d9cca19df6dafa1",
+        "patch": "@@ -103,6 +103,7 @@ extern bool fLogTimestamps;\n extern bool fLogIPs;\n extern volatile bool fReopenDebugLog;\n \n+bool GetRandBytes(unsigned char *buf, int num);\n void RandAddSeed();\n void RandAddSeedPerfmon();\n void SetupEnvironment();"
+      },
+      {
+        "sha": "d61f01d096eac2ca5a6591b57a3fcda46c3508b2",
+        "filename": "src/wallet.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 4,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/001a53d7427dcbcceef3c6754d9cca19df6dafa1/src/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/001a53d7427dcbcceef3c6754d9cca19df6dafa1/src/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.cpp?ref=001a53d7427dcbcceef3c6754d9cca19df6dafa1",
+        "patch": "@@ -12,7 +12,6 @@\n #include \"timedata.h\"\n \n #include <boost/algorithm/string/replace.hpp>\n-#include <openssl/rand.h>\n \n using namespace std;\n \n@@ -384,13 +383,15 @@ bool CWallet::EncryptWallet(const SecureString& strWalletPassphrase)\n     RandAddSeedPerfmon();\n \n     vMasterKey.resize(WALLET_CRYPTO_KEY_SIZE);\n-    RAND_bytes(&vMasterKey[0], WALLET_CRYPTO_KEY_SIZE);\n+    if (!GetRandBytes(&vMasterKey[0], WALLET_CRYPTO_KEY_SIZE))\n+        return false;\n \n     CMasterKey kMasterKey;\n-\n     RandAddSeedPerfmon();\n+\n     kMasterKey.vchSalt.resize(WALLET_CRYPTO_SALT_SIZE);\n-    RAND_bytes(&kMasterKey.vchSalt[0], WALLET_CRYPTO_SALT_SIZE);\n+    if (!GetRandBytes(&kMasterKey.vchSalt[0], WALLET_CRYPTO_SALT_SIZE))\n+        return false;\n \n     CCrypter crypter;\n     int64_t nStartTime = GetTimeMillis();"
+      }
+    ]
+  },
+  {
+    "sha": "6354935c485d116e1965567561c197ab3fbc0e11",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2MzU0OTM1YzQ4NWQxMTZlMTk2NTU2NzU2MWMxOTdhYjNmYmMwZTEx",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-06-26T12:41:53Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-07-09T07:42:19Z"
+      },
+      "message": "move rand functions from util to new random.h/.cpp",
+      "tree": {
+        "sha": "9dc218c1ed2fad513df1cf309f5ecd271069067a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/9dc218c1ed2fad513df1cf309f5ecd271069067a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/6354935c485d116e1965567561c197ab3fbc0e11",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6354935c485d116e1965567561c197ab3fbc0e11",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/6354935c485d116e1965567561c197ab3fbc0e11",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6354935c485d116e1965567561c197ab3fbc0e11/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "001a53d7427dcbcceef3c6754d9cca19df6dafa1",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/001a53d7427dcbcceef3c6754d9cca19df6dafa1",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/001a53d7427dcbcceef3c6754d9cca19df6dafa1"
+      }
+    ],
+    "stats": {
+      "total": 405,
+      "additions": 220,
+      "deletions": 185
+    },
+    "files": [
+      {
+        "sha": "90e0a43bebd616580f909189a64ebae131f129f4",
+        "filename": "src/Makefile.am",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 2,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6354935c485d116e1965567561c197ab3fbc0e11/src/Makefile.am",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6354935c485d116e1965567561c197ab3fbc0e11/src/Makefile.am",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/Makefile.am?ref=6354935c485d116e1965567561c197ab3fbc0e11",
+        "patch": "@@ -91,6 +91,7 @@ BITCOIN_CORE_H = \\\n   noui.h \\\n   pow.h \\\n   protocol.h \\\n+  random.h \\\n   rpcclient.h \\\n   rpcprotocol.h \\\n   rpcserver.h \\\n@@ -197,14 +198,15 @@ libbitcoin_common_a_SOURCES = \\\n # backward-compatibility objects and their sanity checks are linked.\n libbitcoin_util_a_CPPFLAGS = $(BITCOIN_INCLUDES)\n libbitcoin_util_a_SOURCES = \\\n+  compat/glibc_sanity.cpp \\\n+  compat/glibcxx_sanity.cpp \\\n   chainparamsbase.cpp \\\n+  random.cpp \\\n   rpcprotocol.cpp \\\n   sync.cpp \\\n   uint256.cpp \\\n   util.cpp \\\n   version.cpp \\\n-  compat/glibc_sanity.cpp \\\n-  compat/glibcxx_sanity.cpp \\\n   $(BITCOIN_CORE_H)\n \n if GLIBC_BACK_COMPAT"
+      },
+      {
+        "sha": "a0dc134c4069fff7281791b7c27361e030415603",
+        "filename": "src/addrman.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6354935c485d116e1965567561c197ab3fbc0e11/src/addrman.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6354935c485d116e1965567561c197ab3fbc0e11/src/addrman.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/addrman.h?ref=6354935c485d116e1965567561c197ab3fbc0e11",
+        "patch": "@@ -7,6 +7,7 @@\n \n #include \"netbase.h\"\n #include \"protocol.h\"\n+#include \"random.h\"\n #include \"sync.h\"\n #include \"timedata.h\"\n #include \"util.h\""
+      },
+      {
+        "sha": "50977dc06b018f2b391b090f23650544601739c3",
+        "filename": "src/chainparams.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6354935c485d116e1965567561c197ab3fbc0e11/src/chainparams.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6354935c485d116e1965567561c197ab3fbc0e11/src/chainparams.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/chainparams.cpp?ref=6354935c485d116e1965567561c197ab3fbc0e11",
+        "patch": "@@ -6,6 +6,7 @@\n #include \"chainparams.h\"\n \n #include \"assert.h\"\n+#include \"random.h\"\n #include \"util.h\"\n \n #include <boost/assign/list_of.hpp>"
+      },
+      {
+        "sha": "21a2919f4a8308dcbb7de88f766ba61168623c55",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6354935c485d116e1965567561c197ab3fbc0e11/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6354935c485d116e1965567561c197ab3fbc0e11/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=6354935c485d116e1965567561c197ab3fbc0e11",
+        "patch": "@@ -13,6 +13,7 @@\n #include \"mruset.h\"\n #include \"netbase.h\"\n #include \"protocol.h\"\n+#include \"random.h\"\n #include \"sync.h\"\n #include \"uint256.h\"\n #include \"util.h\"\n@@ -26,7 +27,6 @@\n \n #include <boost/foreach.hpp>\n #include <boost/signals2/signal.hpp>\n-#include <openssl/rand.h>\n \n class CAddrMan;\n class CBlockIndex;"
+      },
+      {
+        "sha": "4c7f150f755cedba5f23154b8b8fc71e64d2084b",
+        "filename": "src/random.cpp",
+        "status": "added",
+        "additions": 140,
+        "deletions": 0,
+        "changes": 140,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6354935c485d116e1965567561c197ab3fbc0e11/src/random.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6354935c485d116e1965567561c197ab3fbc0e11/src/random.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/random.cpp?ref=6354935c485d116e1965567561c197ab3fbc0e11",
+        "patch": "@@ -0,0 +1,140 @@\n+// Copyright (c) 2009-2010 Satoshi Nakamoto\n+// Copyright (c) 2009-2014 The Bitcoin developers\n+// Distributed under the MIT/X11 software license, see the accompanying\n+// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+#include \"random.h\"\n+\n+#ifdef WIN32\n+#include \"compat.h\" // for Windows API\n+#endif\n+#include \"util.h\" // for LogPrint()\n+\n+#ifndef WIN32\n+#include <sys/time.h>\n+#endif\n+#include <cstring> // for memset()\n+\n+#include <openssl/crypto.h>\n+#include <openssl/err.h>\n+#include <openssl/rand.h>\n+\n+static inline int64_t GetPerformanceCounter()\n+{\n+    int64_t nCounter = 0;\n+#ifdef WIN32\n+    QueryPerformanceCounter((LARGE_INTEGER*)&nCounter);\n+#else\n+    timeval t;\n+    gettimeofday(&t, NULL);\n+    nCounter = (int64_t)(t.tv_sec * 1000000 + t.tv_usec);\n+#endif\n+    return nCounter;\n+}\n+\n+void RandAddSeed()\n+{\n+    // Seed with CPU performance counter\n+    int64_t nCounter = GetPerformanceCounter();\n+    RAND_add(&nCounter, sizeof(nCounter), 1.5);\n+    memset(&nCounter, 0, sizeof(nCounter));\n+}\n+\n+void RandAddSeedPerfmon()\n+{\n+    RandAddSeed();\n+\n+    // This can take up to 2 seconds, so only do it every 10 minutes\n+    static int64_t nLastPerfmon;\n+    if (GetTime() < nLastPerfmon + 10 * 60)\n+        return;\n+    nLastPerfmon = GetTime();\n+\n+#ifdef WIN32\n+    // Don't need this on Linux, OpenSSL automatically uses /dev/urandom\n+    // Seed with the entire set of perfmon data\n+    std::vector <unsigned char> vData(250000,0);\n+    long ret = 0;\n+    unsigned long nSize = 0;\n+    const size_t nMaxSize = 10000000; // Bail out at more than 10MB of performance data\n+    while (true)\n+    {\n+        nSize = vData.size();\n+        ret = RegQueryValueExA(HKEY_PERFORMANCE_DATA, \"Global\", NULL, NULL, begin_ptr(vData), &nSize);\n+        if (ret != ERROR_MORE_DATA || vData.size() >= nMaxSize)\n+            break;\n+        vData.resize(std::max((vData.size()*3)/2, nMaxSize)); // Grow size of buffer exponentially\n+    }\n+    RegCloseKey(HKEY_PERFORMANCE_DATA);\n+    if (ret == ERROR_SUCCESS)\n+    {\n+        RAND_add(begin_ptr(vData), nSize, nSize/100.0);\n+        OPENSSL_cleanse(begin_ptr(vData), nSize);\n+        LogPrint(\"rand\", \"%s: %lu bytes\\n\", __func__, nSize);\n+    } else {\n+        static bool warned = false; // Warn only once\n+        if (!warned)\n+        {\n+            LogPrintf(\"%s: Warning: RegQueryValueExA(HKEY_PERFORMANCE_DATA) failed with code %i\\n\", __func__, ret);\n+            warned = true;\n+        }\n+    }\n+#endif\n+}\n+\n+bool GetRandBytes(unsigned char *buf, int num)\n+{\n+    if (RAND_bytes(buf, num) != 1) {\n+        LogPrintf(\"%s: OpenSSL RAND_bytes() failed with error: %s\\n\", __func__, ERR_error_string(ERR_get_error(), NULL));\n+        return false;\n+    }\n+    return true;\n+}\n+\n+uint64_t GetRand(uint64_t nMax)\n+{\n+    if (nMax == 0)\n+        return 0;\n+\n+    // The range of the random source must be a multiple of the modulus\n+    // to give every possible output value an equal possibility\n+    uint64_t nRange = (std::numeric_limits<uint64_t>::max() / nMax) * nMax;\n+    uint64_t nRand = 0;\n+    do {\n+        GetRandBytes((unsigned char*)&nRand, sizeof(nRand));\n+    } while (nRand >= nRange);\n+    return (nRand % nMax);\n+}\n+\n+int GetRandInt(int nMax)\n+{\n+    return GetRand(nMax);\n+}\n+\n+uint256 GetRandHash()\n+{\n+    uint256 hash;\n+    GetRandBytes((unsigned char*)&hash, sizeof(hash));\n+    return hash;\n+}\n+\n+uint32_t insecure_rand_Rz = 11;\n+uint32_t insecure_rand_Rw = 11;\n+void seed_insecure_rand(bool fDeterministic)\n+{\n+    // The seed values have some unlikely fixed points which we avoid.\n+    if(fDeterministic)\n+    {\n+        insecure_rand_Rz = insecure_rand_Rw = 11;\n+    } else {\n+        uint32_t tmp;\n+        do {\n+            GetRandBytes((unsigned char*)&tmp, 4);\n+        } while(tmp == 0 || tmp == 0x9068ffffU);\n+        insecure_rand_Rz = tmp;\n+        do {\n+            GetRandBytes((unsigned char*)&tmp, 4);\n+        } while(tmp == 0 || tmp == 0x464fffffU);\n+        insecure_rand_Rw = tmp;\n+    }\n+}"
+      },
+      {
+        "sha": "a599b08478584c92c793c58214e8e1dfbd39026b",
+        "filename": "src/random.h",
+        "status": "added",
+        "additions": 49,
+        "deletions": 0,
+        "changes": 49,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6354935c485d116e1965567561c197ab3fbc0e11/src/random.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6354935c485d116e1965567561c197ab3fbc0e11/src/random.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/random.h?ref=6354935c485d116e1965567561c197ab3fbc0e11",
+        "patch": "@@ -0,0 +1,49 @@\n+// Copyright (c) 2009-2010 Satoshi Nakamoto\n+// Copyright (c) 2009-2014 The Bitcoin developers\n+// Distributed under the MIT/X11 software license, see the accompanying\n+// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+#ifndef BITCOIN_RANDOM_H\n+#define BITCOIN_RANDOM_H\n+\n+#include \"uint256.h\"\n+\n+#include <stdint.h>\n+\n+/**\n+ * Seed OpenSSL PRNG with additional entropy data\n+ */\n+void RandAddSeed();\n+void RandAddSeedPerfmon();\n+\n+/**\n+ * Functions to gather random data via the OpenSSL PRNG\n+ */\n+bool GetRandBytes(unsigned char *buf, int num);\n+uint64_t GetRand(uint64_t nMax);\n+int GetRandInt(int nMax);\n+uint256 GetRandHash();\n+\n+/**\n+ * Seed insecure_rand using the random pool.\n+ * @param Deterministic Use a determinstic seed\n+ */\n+void seed_insecure_rand(bool fDeterministic = false);\n+\n+/**\n+ * MWC RNG of George Marsaglia\n+ * This is intended to be fast. It has a period of 2^59.3, though the\n+ * least significant 16 bits only have a period of about 2^30.1.\n+ *\n+ * @return random value\n+ */\n+extern uint32_t insecure_rand_Rz;\n+extern uint32_t insecure_rand_Rw;\n+static inline uint32_t insecure_rand(void)\n+{\n+    insecure_rand_Rz = 36969 * (insecure_rand_Rz & 65535) + (insecure_rand_Rz >> 16);\n+    insecure_rand_Rw = 18000 * (insecure_rand_Rw & 65535) + (insecure_rand_Rw >> 16);\n+    return (insecure_rand_Rw << 16) + insecure_rand_Rz;\n+}\n+\n+#endif // BITCOIN_RANDOM_H"
+      },
+      {
+        "sha": "39ae001db8daa6e1e882ab20f25de7601632b73b",
+        "filename": "src/script.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 4,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6354935c485d116e1965567561c197ab3fbc0e11/src/script.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6354935c485d116e1965567561c197ab3fbc0e11/src/script.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script.cpp?ref=6354935c485d116e1965567561c197ab3fbc0e11",
+        "patch": "@@ -5,13 +5,14 @@\n \n #include \"script.h\"\n \n+#include \"crypto/ripemd160.h\"\n+#include \"crypto/sha1.h\"\n+#include \"crypto/sha2.h\"\n #include \"core.h\"\n #include \"hash.h\"\n #include \"key.h\"\n #include \"keystore.h\"\n-#include \"crypto/sha1.h\"\n-#include \"crypto/sha2.h\"\n-#include \"crypto/ripemd160.h\"\n+#include \"random.h\"\n #include \"sync.h\"\n #include \"uint256.h\"\n #include \"util.h\"\n@@ -1097,7 +1098,6 @@ uint256 SignatureHash(const CScript &scriptCode, const CTransaction& txTo, unsig\n // Valid signature cache, to avoid doing expensive ECDSA signature checking\n // twice for every transaction (once when accepted into memory pool, and\n // again when accepted into the block chain)\n-\n class CSignatureCache\n {\n private:"
+      },
+      {
+        "sha": "a9798623ea810d1061843c80fe891ebbdf8a20d3",
+        "filename": "src/test/canonical_tests.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 5,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6354935c485d116e1965567561c197ab3fbc0e11/src/test/canonical_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6354935c485d116e1965567561c197ab3fbc0e11/src/test/canonical_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/canonical_tests.cpp?ref=6354935c485d116e1965567561c197ab3fbc0e11",
+        "patch": "@@ -6,12 +6,11 @@\n // Unit tests for canonical signatures\n //\n \n-\n-\n-#include \"script.h\"\n-#include \"util.h\"\n #include \"data/sig_noncanonical.json.h\"\n #include \"data/sig_canonical.json.h\"\n+#include \"random.h\"\n+#include \"script.h\"\n+#include \"util.h\"\n \n #include <boost/foreach.hpp>\n #include <boost/test/unit_test.hpp>\n@@ -21,7 +20,6 @@\n using namespace std;\n using namespace json_spirit;\n \n-\n // In script_tests.cpp\n extern Array read_json(const std::string& jsondata);\n "
+      },
+      {
+        "sha": "a17278b80396f479d3a85f8ecb38b01474737eb1",
+        "filename": "src/test/crypto_tests.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6354935c485d116e1965567561c197ab3fbc0e11/src/test/crypto_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6354935c485d116e1965567561c197ab3fbc0e11/src/test/crypto_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/crypto_tests.cpp?ref=6354935c485d116e1965567561c197ab3fbc0e11",
+        "patch": "@@ -5,6 +5,7 @@\n #include \"crypto/ripemd160.h\"\n #include \"crypto/sha1.h\"\n #include \"crypto/sha2.h\"\n+#include \"random.h\"\n #include \"util.h\"\n \n #include <vector>"
+      },
+      {
+        "sha": "547cd1090c5818feb7bca0b3f121122fadd3c558",
+        "filename": "src/test/mruset_tests.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6354935c485d116e1965567561c197ab3fbc0e11/src/test/mruset_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6354935c485d116e1965567561c197ab3fbc0e11/src/test/mruset_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/mruset_tests.cpp?ref=6354935c485d116e1965567561c197ab3fbc0e11",
+        "patch": "@@ -4,6 +4,7 @@\n \n #include \"mruset.h\"\n \n+#include \"random.h\"\n #include \"util.h\"\n \n #include <set>"
+      },
+      {
+        "sha": "b99797fccb11197b790155a9b106c2083e7479ce",
+        "filename": "src/test/sighash_tests.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 8,
+        "changes": 16,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6354935c485d116e1965567561c197ab3fbc0e11/src/test/sighash_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6354935c485d116e1965567561c197ab3fbc0e11/src/test/sighash_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/sighash_tests.cpp?ref=6354935c485d116e1965567561c197ab3fbc0e11",
+        "patch": "@@ -2,15 +2,16 @@\n // Distributed under the MIT/X11 software license, see the accompanying\n // file COPYING or http://www.opensource.org/licenses/mit-license.php.\n \n-#include <boost/test/unit_test.hpp>\n-#include <iostream>\n-\n+#include \"data/sighash.json.h\"\n #include \"main.h\"\n-#include \"util.h\"\n+#include \"random.h\"\n #include \"serialize.h\"\n+#include \"util.h\"\n #include \"version.h\"\n-#include \"data/sighash.json.h\"\n \n+#include <iostream>\n+\n+#include <boost/test/unit_test.hpp>\n #include \"json/json_spirit_reader_template.h\"\n #include \"json/json_spirit_utils.h\"\n #include \"json/json_spirit_writer_template.h\"\n@@ -118,7 +119,7 @@ BOOST_AUTO_TEST_SUITE(sighash_tests)\n BOOST_AUTO_TEST_CASE(sighash_test)\n {\n     seed_insecure_rand(false);\n-  \n+\n     #if defined(PRINT_SIGHASH_JSON)\n     std::cout << \"[\\n\";\n     std::cout << \"\\t[\\\"raw_transaction, script, input_index, hashType, signature_hash (result)\\\"],\\n\";\n@@ -205,10 +206,9 @@ BOOST_AUTO_TEST_CASE(sighash_from_data)\n           BOOST_ERROR(\"Bad test, couldn't deserialize data: \" << strTest);\n           continue;\n         }\n-        \n+\n         sh = SignatureHash(scriptCode, tx, nIn, nHashType);\n         BOOST_CHECK_MESSAGE(sh.GetHex() == sigHashHex, strTest);\n     }\n }\n BOOST_AUTO_TEST_SUITE_END()\n-"
+      },
+      {
+        "sha": "a123f1d197fdb0330ab72ac256f65cc4c269ded5",
+        "filename": "src/test/skiplist_tests.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 3,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6354935c485d116e1965567561c197ab3fbc0e11/src/test/skiplist_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6354935c485d116e1965567561c197ab3fbc0e11/src/test/skiplist_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/skiplist_tests.cpp?ref=6354935c485d116e1965567561c197ab3fbc0e11",
+        "patch": "@@ -2,11 +2,13 @@\n // Distributed under the MIT/X11 software license, see the accompanying\n // file COPYING or http://www.opensource.org/licenses/mit-license.php.\n \n-#include <boost/test/unit_test.hpp>\n-#include <vector>\n #include \"main.h\"\n+#include \"random.h\"\n #include \"util.h\"\n \n+#include <vector>\n+\n+#include <boost/test/unit_test.hpp>\n \n #define SKIPLIST_LENGTH 300000\n \n@@ -98,4 +100,3 @@ BOOST_AUTO_TEST_CASE(getlocator_test)\n }\n \n BOOST_AUTO_TEST_SUITE_END()\n-"
+      },
+      {
+        "sha": "443b5853b20560964867314731896598f3bf4d59",
+        "filename": "src/test/test_bitcoin.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 3,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6354935c485d116e1965567561c197ab3fbc0e11/src/test/test_bitcoin.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6354935c485d116e1965567561c197ab3fbc0e11/src/test/test_bitcoin.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/test_bitcoin.cpp?ref=6354935c485d116e1965567561c197ab3fbc0e11",
+        "patch": "@@ -4,9 +4,8 @@\n \n #define BOOST_TEST_MODULE Bitcoin Test Suite\n \n-\n-\n #include \"main.h\"\n+#include \"random.h\"\n #include \"txdb.h\"\n #include \"ui_interface.h\"\n #include \"util.h\"\n@@ -89,4 +88,3 @@ bool ShutdownRequested()\n {\n   return false;\n }\n-"
+      },
+      {
+        "sha": "068b9f29c8118163dee28d50443de19cbf02df1b",
+        "filename": "src/test/util_tests.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6354935c485d116e1965567561c197ab3fbc0e11/src/test/util_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6354935c485d116e1965567561c197ab3fbc0e11/src/test/util_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/util_tests.cpp?ref=6354935c485d116e1965567561c197ab3fbc0e11",
+        "patch": "@@ -4,6 +4,7 @@\n \n #include \"util.h\"\n \n+#include \"random.h\"\n #include \"sync.h\"\n \n #include <stdint.h>"
+      },
+      {
+        "sha": "ce31619ecabcd000e443a31692aa1849be76618b",
+        "filename": "src/util.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 108,
+        "changes": 109,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6354935c485d116e1965567561c197ab3fbc0e11/src/util.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6354935c485d116e1965567561c197ab3fbc0e11/src/util.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/util.cpp?ref=6354935c485d116e1965567561c197ab3fbc0e11",
+        "patch": "@@ -6,6 +6,7 @@\n #include \"util.h\"\n \n #include \"chainparamsbase.h\"\n+#include \"random.h\"\n #include \"sync.h\"\n #include \"uint256.h\"\n #include \"version.h\"\n@@ -69,7 +70,6 @@\n #include <boost/program_options/detail/config_file.hpp>\n #include <boost/program_options/parsers.hpp>\n #include <openssl/crypto.h>\n-#include <openssl/err.h>\n #include <openssl/rand.h>\n \n // Work around clang compilation problem in Boost 1.46:\n@@ -142,92 +142,6 @@ class CInit\n }\n instance_of_cinit;\n \n-bool GetRandBytes(unsigned char *buf, int num)\n-{\n-    if (RAND_bytes(buf, num) == 0) {\n-        LogPrint(\"rand\", \"%s : OpenSSL RAND_bytes() failed with error: %s\\n\", __func__, ERR_error_string(ERR_get_error(), NULL));\n-        return false;\n-    }\n-    return true;\n-}\n-\n-void RandAddSeed()\n-{\n-    // Seed with CPU performance counter\n-    int64_t nCounter = GetPerformanceCounter();\n-    RAND_add(&nCounter, sizeof(nCounter), 1.5);\n-    memset(&nCounter, 0, sizeof(nCounter));\n-}\n-\n-void RandAddSeedPerfmon()\n-{\n-    RandAddSeed();\n-\n-    // This can take up to 2 seconds, so only do it every 10 minutes\n-    static int64_t nLastPerfmon;\n-    if (GetTime() < nLastPerfmon + 10 * 60)\n-        return;\n-    nLastPerfmon = GetTime();\n-\n-#ifdef WIN32\n-    // Don't need this on Linux, OpenSSL automatically uses /dev/urandom\n-    // Seed with the entire set of perfmon data\n-    std::vector <unsigned char> vData(250000,0);\n-    long ret = 0;\n-    unsigned long nSize = 0;\n-    const size_t nMaxSize = 10000000; // Bail out at more than 10MB of performance data\n-    while (true)\n-    {\n-        nSize = vData.size();\n-        ret = RegQueryValueExA(HKEY_PERFORMANCE_DATA, \"Global\", NULL, NULL, begin_ptr(vData), &nSize);\n-        if (ret != ERROR_MORE_DATA || vData.size() >= nMaxSize)\n-            break;\n-        vData.resize(std::max((vData.size()*3)/2, nMaxSize)); // Grow size of buffer exponentially\n-    }\n-    RegCloseKey(HKEY_PERFORMANCE_DATA);\n-    if (ret == ERROR_SUCCESS)\n-    {\n-        RAND_add(begin_ptr(vData), nSize, nSize/100.0);\n-        OPENSSL_cleanse(begin_ptr(vData), nSize);\n-        LogPrint(\"rand\", \"%s: %lu bytes\\n\", __func__, nSize);\n-    } else {\n-        static bool warned = false; // Warn only once\n-        if (!warned)\n-        {\n-            LogPrintf(\"%s: Warning: RegQueryValueExA(HKEY_PERFORMANCE_DATA) failed with code %i\\n\", __func__, ret);\n-            warned = true;\n-        }\n-    }\n-#endif\n-}\n-\n-uint64_t GetRand(uint64_t nMax)\n-{\n-    if (nMax == 0)\n-        return 0;\n-\n-    // The range of the random source must be a multiple of the modulus\n-    // to give every possible output value an equal possibility\n-    uint64_t nRange = (std::numeric_limits<uint64_t>::max() / nMax) * nMax;\n-    uint64_t nRand = 0;\n-    do {\n-        GetRandBytes((unsigned char*)&nRand, sizeof(nRand));\n-    } while (nRand >= nRange);\n-    return (nRand % nMax);\n-}\n-\n-int GetRandInt(int nMax)\n-{\n-    return GetRand(nMax);\n-}\n-\n-uint256 GetRandHash()\n-{\n-    uint256 hash;\n-    GetRandBytes((unsigned char*)&hash, sizeof(hash));\n-    return hash;\n-}\n-\n // LogPrintf() has been broken a couple of times now\n // by well-meaning people adding mutexes in the most straightforward way.\n // It breaks because it may be called by global destructors during shutdown.\n@@ -1195,27 +1109,6 @@ void SetMockTime(int64_t nMockTimeIn)\n     nMockTime = nMockTimeIn;\n }\n \n-uint32_t insecure_rand_Rz = 11;\n-uint32_t insecure_rand_Rw = 11;\n-void seed_insecure_rand(bool fDeterministic)\n-{\n-    // The seed values have some unlikely fixed points which we avoid.\n-    if(fDeterministic)\n-    {\n-        insecure_rand_Rz = insecure_rand_Rw = 11;\n-    } else {\n-        uint32_t tmp;\n-        do {\n-            GetRandBytes((unsigned char*)&tmp, 4);\n-        } while(tmp == 0 || tmp == 0x9068ffffU);\n-        insecure_rand_Rz = tmp;\n-        do {\n-            GetRandBytes((unsigned char*)&tmp, 4);\n-        } while(tmp == 0 || tmp == 0x464fffffU);\n-        insecure_rand_Rw = tmp;\n-    }\n-}\n-\n string FormatVersion(int nVersion)\n {\n     if (nVersion%100 == 0)"
+      },
+      {
+        "sha": "db2005337b20d2b68c6945d420d83856346f1a30",
+        "filename": "src/util.h",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 51,
+        "changes": 51,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6354935c485d116e1965567561c197ab3fbc0e11/src/util.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6354935c485d116e1965567561c197ab3fbc0e11/src/util.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/util.h?ref=6354935c485d116e1965567561c197ab3fbc0e11",
+        "patch": "@@ -90,8 +90,6 @@ inline void MilliSleep(int64_t n)\n #endif\n }\n \n-\n-\n extern std::map<std::string, std::string> mapArgs;\n extern std::map<std::string, std::vector<std::string> > mapMultiArgs;\n extern bool fDebug;\n@@ -103,9 +101,6 @@ extern bool fLogTimestamps;\n extern bool fLogIPs;\n extern volatile bool fReopenDebugLog;\n \n-bool GetRandBytes(unsigned char *buf, int num);\n-void RandAddSeed();\n-void RandAddSeedPerfmon();\n void SetupEnvironment();\n \n /* Return true if log accepts specified category */\n@@ -188,23 +183,12 @@ boost::filesystem::path GetSpecialFolderPath(int nFolder, bool fCreate = true);\n #endif\n boost::filesystem::path GetTempPath();\n void ShrinkDebugFile();\n-int GetRandInt(int nMax);\n-uint64_t GetRand(uint64_t nMax);\n-uint256 GetRandHash();\n int64_t GetTime();\n void SetMockTime(int64_t nMockTimeIn);\n std::string FormatFullVersion();\n std::string FormatSubVersion(const std::string& name, int nClientVersion, const std::vector<std::string>& comments);\n void runCommand(std::string strCommand);\n \n-\n-\n-\n-\n-\n-\n-\n-\n inline std::string i64tostr(int64_t n)\n {\n     return strprintf(\"%d\", n);\n@@ -290,19 +274,6 @@ inline std::string HexStr(const T& vch, bool fSpaces=false)\n  */\n std::string FormatParagraph(const std::string in, size_t width=79, size_t indent=0);\n \n-inline int64_t GetPerformanceCounter()\n-{\n-    int64_t nCounter = 0;\n-#ifdef WIN32\n-    QueryPerformanceCounter((LARGE_INTEGER*)&nCounter);\n-#else\n-    timeval t;\n-    gettimeofday(&t, NULL);\n-    nCounter = (int64_t) t.tv_sec * 1000000 + t.tv_usec;\n-#endif\n-    return nCounter;\n-}\n-\n inline int64_t GetTimeMillis()\n {\n     return (boost::posix_time::ptime(boost::posix_time::microsec_clock::universal_time()) -\n@@ -371,28 +342,6 @@ bool SoftSetArg(const std::string& strArg, const std::string& strValue);\n  */\n bool SoftSetBoolArg(const std::string& strArg, bool fValue);\n \n-/**\n- * MWC RNG of George Marsaglia\n- * This is intended to be fast. It has a period of 2^59.3, though the\n- * least significant 16 bits only have a period of about 2^30.1.\n- *\n- * @return random value\n- */\n-extern uint32_t insecure_rand_Rz;\n-extern uint32_t insecure_rand_Rw;\n-static inline uint32_t insecure_rand(void)\n-{\n-    insecure_rand_Rz = 36969 * (insecure_rand_Rz & 65535) + (insecure_rand_Rz >> 16);\n-    insecure_rand_Rw = 18000 * (insecure_rand_Rw & 65535) + (insecure_rand_Rw >> 16);\n-    return (insecure_rand_Rw << 16) + insecure_rand_Rz;\n-}\n-\n-/**\n- * Seed insecure_rand using the random pool.\n- * @param Deterministic Use a determinstic seed\n- */\n-void seed_insecure_rand(bool fDeterministic=false);\n-\n /**\n  * Timing-attack-resistant comparison.\n  * Takes time proportional to length"
+      }
+    ]
+  },
+  {
+    "sha": "4eedf4ffeea6a3734f245f785a8d82d69634dccd",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0ZWVkZjRmZmVlYTZhMzczNGYyNDVmNzg1YThkODJkNjk2MzRkY2Nk",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-07-09T07:43:55Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-07-09T07:43:55Z"
+      },
+      "message": "make RandAddSeed() use OPENSSL_cleanse()\n\n- removes the cstring include and is also used in RandAddSeedPerfmon()",
+      "tree": {
+        "sha": "0d603cac2ef5d06f54ba315932a1f4d67853f11a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/0d603cac2ef5d06f54ba315932a1f4d67853f11a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/4eedf4ffeea6a3734f245f785a8d82d69634dccd",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4eedf4ffeea6a3734f245f785a8d82d69634dccd",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/4eedf4ffeea6a3734f245f785a8d82d69634dccd",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4eedf4ffeea6a3734f245f785a8d82d69634dccd/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "6354935c485d116e1965567561c197ab3fbc0e11",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6354935c485d116e1965567561c197ab3fbc0e11",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/6354935c485d116e1965567561c197ab3fbc0e11"
+      }
+    ],
+    "stats": {
+      "total": 3,
+      "additions": 1,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "0d20d205ac645f4ba097ad45e79da4d3b566c6f7",
+        "filename": "src/random.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 2,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4eedf4ffeea6a3734f245f785a8d82d69634dccd/src/random.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4eedf4ffeea6a3734f245f785a8d82d69634dccd/src/random.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/random.cpp?ref=4eedf4ffeea6a3734f245f785a8d82d69634dccd",
+        "patch": "@@ -13,7 +13,6 @@\n #ifndef WIN32\n #include <sys/time.h>\n #endif\n-#include <cstring> // for memset()\n \n #include <openssl/crypto.h>\n #include <openssl/err.h>\n@@ -37,7 +36,7 @@ void RandAddSeed()\n     // Seed with CPU performance counter\n     int64_t nCounter = GetPerformanceCounter();\n     RAND_add(&nCounter, sizeof(nCounter), 1.5);\n-    memset(&nCounter, 0, sizeof(nCounter));\n+    OPENSSL_cleanse((void*)&nCounter, sizeof(nCounter));\n }\n \n void RandAddSeedPerfmon()"
+      }
+    ]
+  }
+]

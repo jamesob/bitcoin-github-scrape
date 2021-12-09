@@ -1,0 +1,74 @@
+[
+  {
+    "sha": "71ba4670fcd35209db230381bc8a63ac2d1cc22a",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3MWJhNDY3MGZjZDM1MjA5ZGIyMzAzODFiYzhhNjNhYzJkMWNjMjJh",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-10-30T14:37:41Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-10-30T21:47:51Z"
+      },
+      "message": "[Qt] sendcoinsdialog: convert QMessageBox usage to message()\n\n- add new processSendCoinsReturn() function, which parses the\n  status of WalletModel::SendCoinsReturn and generates a pair consisting\n  of a message and message flags\n- result is we only need one emit message() call\n- this change ensures that the GUI is shown for warnings/errors in\n  sendcoinsdialog, because of message() taking care of that for modal\n  messages\n- changes 2 warning message into error messages and removed \"Error:\"\n  in front of the actual error message string",
+      "tree": {
+        "sha": "b13f2ad7c262025f71410411f540a706847df623",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/b13f2ad7c262025f71410411f540a706847df623"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/71ba4670fcd35209db230381bc8a63ac2d1cc22a",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/71ba4670fcd35209db230381bc8a63ac2d1cc22a",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/71ba4670fcd35209db230381bc8a63ac2d1cc22a",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/71ba4670fcd35209db230381bc8a63ac2d1cc22a/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "033ffc4377f009d6b7529bf30591287b50d773df",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/033ffc4377f009d6b7529bf30591287b50d773df",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/033ffc4377f009d6b7529bf30591287b50d773df"
+      }
+    ],
+    "stats": {
+      "total": 118,
+      "additions": 65,
+      "deletions": 53
+    },
+    "files": [
+      {
+        "sha": "51304bc05ce74a12685e1cea325579c2f844cf71",
+        "filename": "src/qt/sendcoinsdialog.cpp",
+        "status": "modified",
+        "additions": 57,
+        "deletions": 51,
+        "changes": 108,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/71ba4670fcd35209db230381bc8a63ac2d1cc22a/src/qt/sendcoinsdialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/71ba4670fcd35209db230381bc8a63ac2d1cc22a/src/qt/sendcoinsdialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/sendcoinsdialog.cpp?ref=71ba4670fcd35209db230381bc8a63ac2d1cc22a",
+        "patch": "@@ -1,13 +1,13 @@\n #include \"sendcoinsdialog.h\"\n #include \"ui_sendcoinsdialog.h\"\n \n-#include \"walletmodel.h\"\n #include \"bitcoinunits.h\"\n #include \"optionsmodel.h\"\n #include \"sendcoinsentry.h\"\n #include \"guiutil.h\"\n #include \"askpassphrasedialog.h\"\n #include \"base58.h\"\n+#include \"ui_interface.h\"\n \n #include <QMessageBox>\n #include <QTextDocument>\n@@ -136,41 +136,9 @@ void SendCoinsDialog::on_sendButton_clicked()\n     // prepare transaction for getting txFee earlier\n     WalletModelTransaction currentTransaction(recipients);\n     WalletModel::SendCoinsReturn prepareStatus = model->prepareTransaction(currentTransaction);\n-\n-    QString strSendCoins = tr(\"Send Coins\");\n-    switch(prepareStatus.status)\n-    {\n-    case WalletModel::InvalidAddress:\n-        QMessageBox::warning(this, strSendCoins,\n-            tr(\"The recipient address is not valid, please recheck.\"));\n-        break;\n-    case WalletModel::InvalidAmount:\n-        QMessageBox::warning(this, strSendCoins,\n-            tr(\"The amount to pay must be larger than 0.\"));\n-        break;\n-    case WalletModel::AmountExceedsBalance:\n-        QMessageBox::warning(this, strSendCoins,\n-            tr(\"The amount exceeds your balance.\"));\n-        break;\n-    case WalletModel::AmountWithFeeExceedsBalance:\n-        QMessageBox::warning(this, strSendCoins,\n-            tr(\"The total exceeds your balance when the %1 transaction fee is included.\").\n-            arg(BitcoinUnits::formatWithUnit(model->getOptionsModel()->getDisplayUnit(), currentTransaction.getTransactionFee())));\n-        break;\n-    case WalletModel::DuplicateAddress:\n-        QMessageBox::warning(this, strSendCoins,\n-            tr(\"Duplicate address found, can only send to each address once per send operation.\"));\n-        break;\n-    case WalletModel::TransactionCreationFailed:\n-        QMessageBox::warning(this, strSendCoins,\n-            tr(\"Error: Transaction creation failed!\"));\n-        break;\n-    case WalletModel::TransactionCommitFailed:\n-    case WalletModel::OK:\n-    case WalletModel::Aborted: // User aborted, nothing to do\n-    default:\n-        break;\n-    }\n+    // process prepareStatus and on error generate message shown to user\n+    processSendCoinsReturn(prepareStatus,\n+        BitcoinUnits::formatWithUnit(model->getOptionsModel()->getDisplayUnit(), currentTransaction.getTransactionFee()));\n \n     if(prepareStatus.status != WalletModel::OK) {\n         fNewRecipientAllowed = true;\n@@ -208,19 +176,13 @@ void SendCoinsDialog::on_sendButton_clicked()\n     }\n \n     // now send the prepared transaction\n-    WalletModel::SendCoinsReturn sendstatus = model->sendCoins(currentTransaction);\n-    switch(sendstatus.status)\n+    WalletModel::SendCoinsReturn sendStatus = model->sendCoins(currentTransaction);\n+    // process sendStatus and on error generate message shown to user\n+    processSendCoinsReturn(sendStatus);\n+\n+    if (sendStatus.status == WalletModel::OK)\n     {\n-    case WalletModel::TransactionCommitFailed:\n-        QMessageBox::warning(this, strSendCoins,\n-            tr(\"Error: The transaction was rejected. This might happen if some of the coins in your wallet were already spent, such as if you used a copy of wallet.dat and coins were spent in the copy but not marked as spent here.\"));\n-        break;\n-    case WalletModel::OK:\n         accept();\n-        break;\n-    case WalletModel::Aborted: // User aborted, nothing to do\n-    default:\n-        break;\n     }\n     fNewRecipientAllowed = true;\n }\n@@ -356,16 +318,16 @@ bool SendCoinsDialog::handlePaymentRequest(const SendCoinsRecipient &rv)\n         const payments::PaymentDetails& details = rv.paymentRequest.getDetails();\n         if (details.has_expires() && (int64)details.expires() < GetTime())\n         {\n-            QMessageBox::warning(this, strSendCoins,\n-                tr(\"Payment request expired\"));\n+            emit message(strSendCoins, tr(\"Payment request expired\"),\n+                CClientUIInterface::MSG_WARNING);\n             return false;\n         }\n     }\n     else {\n         CBitcoinAddress address(rv.address.toStdString());\n         if (!address.IsValid()) {\n-            QMessageBox::warning(this, strSendCoins,\n-                tr(\"Invalid payment address %1\").arg(rv.address));\n+            emit message(strSendCoins, tr(\"Invalid payment address %1\").arg(rv.address),\n+                CClientUIInterface::MSG_WARNING);\n             return false;\n         }\n     }\n@@ -389,3 +351,47 @@ void SendCoinsDialog::updateDisplayUnit()\n {\n     setBalance(model->getBalance(), 0, 0);\n }\n+\n+void SendCoinsDialog::processSendCoinsReturn(const WalletModel::SendCoinsReturn &sendCoinsReturn, const QString &msgArg)\n+{\n+    QPair<QString, CClientUIInterface::MessageBoxFlags> msgParams;\n+    // Default to a warning message, override if error message is needed\n+    msgParams.second = CClientUIInterface::MSG_WARNING;\n+\n+    // This comment is specific to SendCoinsDialog usage of WalletModel::SendCoinsReturn.\n+    // WalletModel::TransactionCommitFailed is used only in WalletModel::sendCoins()\n+    // all others are used only in WalletModel::prepareTransaction()\n+    switch(sendCoinsReturn.status)\n+    {\n+    case WalletModel::InvalidAddress:\n+        msgParams.first = tr(\"The recipient address is not valid, please recheck.\");\n+        break;\n+    case WalletModel::InvalidAmount:\n+        msgParams.first = tr(\"The amount to pay must be larger than 0.\");\n+        break;\n+    case WalletModel::AmountExceedsBalance:\n+        msgParams.first = tr(\"The amount exceeds your balance.\");\n+        break;\n+    case WalletModel::AmountWithFeeExceedsBalance:\n+        msgParams.first = tr(\"The total exceeds your balance when the %1 transaction fee is included.\").arg(msgArg);\n+        break;\n+    case WalletModel::DuplicateAddress:\n+        msgParams.first = tr(\"Duplicate address found, can only send to each address once per send operation.\");\n+        break;\n+    case WalletModel::TransactionCreationFailed:\n+        msgParams.first = tr(\"Transaction creation failed!\");\n+        msgParams.second = CClientUIInterface::MSG_ERROR;\n+        break;\n+    case WalletModel::TransactionCommitFailed:\n+        msgParams.first = tr(\"The transaction was rejected! This might happen if some of the coins in your wallet were already spent, such as if you used a copy of wallet.dat and coins were spent in the copy but not marked as spent here.\");\n+        msgParams.second = CClientUIInterface::MSG_ERROR;\n+        break;\n+    // OK and Aborted are included to prevent a compiler warning.\n+    case WalletModel::OK:\n+    case WalletModel::Aborted:\n+    default:\n+        return;\n+    }\n+\n+    emit message(tr(\"Send Coins\"), msgParams.first, msgParams.second);\n+}"
+      },
+      {
+        "sha": "4e68e26731b70db43e7bb6b6eda88d3e1aeb603b",
+        "filename": "src/qt/sendcoinsdialog.h",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 2,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/71ba4670fcd35209db230381bc8a63ac2d1cc22a/src/qt/sendcoinsdialog.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/71ba4670fcd35209db230381bc8a63ac2d1cc22a/src/qt/sendcoinsdialog.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/sendcoinsdialog.h?ref=71ba4670fcd35209db230381bc8a63ac2d1cc22a",
+        "patch": "@@ -1,16 +1,17 @@\n #ifndef SENDCOINSDIALOG_H\n #define SENDCOINSDIALOG_H\n \n+#include \"walletmodel.h\"\n+\n #include <QDialog>\n #include <QVariant>\n+#include <QPair>\n \n namespace Ui {\n     class SendCoinsDialog;\n }\n-class WalletModel;\n class SendCoinsEntry;\n class SendCoinsRecipient;\n-class OptionsModel;\n \n QT_BEGIN_NAMESPACE\n class QUrl;\n@@ -48,6 +49,11 @@ public slots:\n     WalletModel *model;\n     bool fNewRecipientAllowed;\n \n+    // Process WalletModel::SendCoinsReturn and generate a pair consisting\n+    // of a message and message flags for use in emit message().\n+    // Additional parameter msgArg can be used via .arg(msgArg).\n+    void processSendCoinsReturn(const WalletModel::SendCoinsReturn &sendCoinsReturn, const QString &msgArg = QString());\n+\n private slots:\n     void on_sendButton_clicked();\n     void removeEntry(SendCoinsEntry* entry);"
+      }
+    ]
+  }
+]

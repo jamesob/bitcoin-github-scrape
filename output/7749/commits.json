@@ -1,0 +1,854 @@
+[
+  {
+    "sha": "3764dec36c815267174951a4c64e17c07ee6302f",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozNzY0ZGVjMzZjODE1MjY3MTc0OTUxYTRjNjRlMTdjMDdlZTYzMDJm",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-03-26T17:58:00Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-06-13T15:40:16Z"
+      },
+      "message": "Keep addrman's nService bits consistent with outbound observations",
+      "tree": {
+        "sha": "017bd6c2933f65f1b4ebbe34533e74c25e400dd0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/017bd6c2933f65f1b4ebbe34533e74c25e400dd0"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/3764dec36c815267174951a4c64e17c07ee6302f",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3764dec36c815267174951a4c64e17c07ee6302f",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/3764dec36c815267174951a4c64e17c07ee6302f",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3764dec36c815267174951a4c64e17c07ee6302f/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "44c1b1c9bb54082625c7ad76af25473abf79f866",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/44c1b1c9bb54082625c7ad76af25473abf79f866",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/44c1b1c9bb54082625c7ad76af25473abf79f866"
+      }
+    ],
+    "stats": {
+      "total": 33,
+      "additions": 33,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "d1e98d8ac090458f024f1a31a6e50d5143ee3fa4",
+        "filename": "src/addrman.cpp",
+        "status": "modified",
+        "additions": 18,
+        "deletions": 0,
+        "changes": 18,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3764dec36c815267174951a4c64e17c07ee6302f/src/addrman.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3764dec36c815267174951a4c64e17c07ee6302f/src/addrman.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/addrman.cpp?ref=3764dec36c815267174951a4c64e17c07ee6302f",
+        "patch": "@@ -502,6 +502,24 @@ void CAddrMan::Connected_(const CService& addr, int64_t nTime)\n         info.nTime = nTime;\n }\n \n+void CAddrMan::SetServices_(const CService& addr, uint64_t nServices)\n+{\n+    CAddrInfo* pinfo = Find(addr);\n+\n+    // if not found, bail out\n+    if (!pinfo)\n+        return;\n+\n+    CAddrInfo& info = *pinfo;\n+\n+    // check whether we are talking about the exact same CService (including same port)\n+    if (info != addr)\n+        return;\n+\n+    // update info\n+    info.nServices = nServices;\n+}\n+\n int CAddrMan::RandomInt(int nMax){\n     return GetRandInt(nMax);\n }"
+      },
+      {
+        "sha": "7e36e2228f39e5154da304433fb7cfbd14ca5beb",
+        "filename": "src/addrman.h",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 0,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3764dec36c815267174951a4c64e17c07ee6302f/src/addrman.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3764dec36c815267174951a4c64e17c07ee6302f/src/addrman.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/addrman.h?ref=3764dec36c815267174951a4c64e17c07ee6302f",
+        "patch": "@@ -256,6 +256,9 @@ class CAddrMan\n     //! Mark an entry as currently-connected-to.\n     void Connected_(const CService &addr, int64_t nTime);\n \n+    //! Update an entry's service bits.\n+    void SetServices_(const CService &addr, uint64_t nServices);\n+\n public:\n     /**\n      * serialized format:\n@@ -589,6 +592,14 @@ class CAddrMan\n         }\n     }\n \n+    void SetServices(const CService &addr, uint64_t nServices)\n+    {\n+        LOCK(cs);\n+        Check();\n+        SetServices_(addr, nServices);\n+        Check();\n+    }\n+\n };\n \n #endif // BITCOIN_ADDRMAN_H"
+      },
+      {
+        "sha": "ac89945bf263847f58841d5d62096579ca451f45",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 0,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3764dec36c815267174951a4c64e17c07ee6302f/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3764dec36c815267174951a4c64e17c07ee6302f/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=3764dec36c815267174951a4c64e17c07ee6302f",
+        "patch": "@@ -4612,6 +4612,10 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv,\n         CAddress addrFrom;\n         uint64_t nNonce = 1;\n         vRecv >> pfrom->nVersion >> pfrom->nServices >> nTime >> addrMe;\n+        if (!pfrom->fInbound)\n+        {\n+            addrman.SetServices(pfrom->addr, pfrom->nServices);\n+        }\n         if (pfrom->nVersion < MIN_PEER_PROTO_VERSION)\n         {\n             // disconnect from peers older than this proto version"
+      }
+    ]
+  },
+  {
+    "sha": "fc83f181530fb566726e5f3f4197fc5586d77fd8",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmYzgzZjE4MTUzMGZiNTY2NzI2ZTVmM2Y0MTk3ZmM1NTg2ZDc3ZmQ4",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-03-26T18:09:22Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-06-13T15:40:16Z"
+      },
+      "message": "Verify that outbound connections have expected services",
+      "tree": {
+        "sha": "f30fb7b98a910a7f28f6317b32d35591cfaad1a7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f30fb7b98a910a7f28f6317b32d35591cfaad1a7"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/fc83f181530fb566726e5f3f4197fc5586d77fd8",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fc83f181530fb566726e5f3f4197fc5586d77fd8",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/fc83f181530fb566726e5f3f4197fc5586d77fd8",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fc83f181530fb566726e5f3f4197fc5586d77fd8/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "3764dec36c815267174951a4c64e17c07ee6302f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3764dec36c815267174951a4c64e17c07ee6302f",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/3764dec36c815267174951a4c64e17c07ee6302f"
+      }
+    ],
+    "stats": {
+      "total": 15,
+      "additions": 15,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "7818056d2142d30148c136e33e15c44e0ef1335b",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 0,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fc83f181530fb566726e5f3f4197fc5586d77fd8/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fc83f181530fb566726e5f3f4197fc5586d77fd8/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=fc83f181530fb566726e5f3f4197fc5586d77fd8",
+        "patch": "@@ -4616,6 +4616,15 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv,\n         {\n             addrman.SetServices(pfrom->addr, pfrom->nServices);\n         }\n+        if (pfrom->nServicesExpected & ~pfrom->nServices)\n+        {\n+            LogPrint(\"net\", \"peer=%d does not offer the expected services (%08x offered, %08x expected); disconnecting\\n\", pfrom->id, pfrom->nServices, pfrom->nServicesExpected);\n+            pfrom->PushMessage(NetMsgType::REJECT, strCommand, REJECT_NONSTANDARD,\n+                               strprintf(\"Expected to offer services %08x\", pfrom->nServicesExpected));\n+            pfrom->fDisconnect = true;\n+            return false;\n+        }\n+\n         if (pfrom->nVersion < MIN_PEER_PROTO_VERSION)\n         {\n             // disconnect from peers older than this proto version"
+      },
+      {
+        "sha": "a0c2bd5091ce1e20a2b8ffe112b4225fdf5e3022",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 0,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fc83f181530fb566726e5f3f4197fc5586d77fd8/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fc83f181530fb566726e5f3f4197fc5586d77fd8/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=fc83f181530fb566726e5f3f4197fc5586d77fd8",
+        "patch": "@@ -71,6 +71,9 @@ namespace {\n \n const static std::string NET_MESSAGE_COMMAND_OTHER = \"*other*\";\n \n+/** Services this node implementation cares about */\n+static const uint64_t nRelevantServices = NODE_NETWORK;\n+\n //\n // Global state variables\n //\n@@ -409,6 +412,7 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool fCountFailure\n             vNodes.push_back(pnode);\n         }\n \n+        pnode->nServicesExpected = addrConnect.nServices & nRelevantServices;\n         pnode->nTimeConnected = GetTime();\n \n         return pnode;\n@@ -2325,6 +2329,7 @@ CNode::CNode(SOCKET hSocketIn, const CAddress& addrIn, const std::string& addrNa\n     filterInventoryKnown(50000, 0.000001)\n {\n     nServices = 0;\n+    nServicesExpected = 0;\n     hSocket = hSocketIn;\n     nRecvVersion = INIT_PROTO_VERSION;\n     nLastSend = 0;"
+      },
+      {
+        "sha": "445d25bf821bdbbe4f22f325ed1d1b781d29b83f",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fc83f181530fb566726e5f3f4197fc5586d77fd8/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fc83f181530fb566726e5f3f4197fc5586d77fd8/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=fc83f181530fb566726e5f3f4197fc5586d77fd8",
+        "patch": "@@ -317,6 +317,7 @@ class CNode\n public:\n     // socket\n     uint64_t nServices;\n+    uint64_t nServicesExpected;\n     SOCKET hSocket;\n     CDataStream ssSend;\n     size_t nSendSize; // total size of all vSendMsg entries"
+      }
+    ]
+  },
+  {
+    "sha": "5e7ab16d29ac66a5a5753dd4f59b6fb12e60654e",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1ZTdhYjE2ZDI5YWM2NmE1YTU3NTNkZDRmNTliNmZiMTJlNjA2NTRl",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-03-26T12:31:25Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-06-13T15:40:16Z"
+      },
+      "message": "Only store and connect to NODE_NETWORK nodes",
+      "tree": {
+        "sha": "bffac27c15553b6b5e32086d96bdf7deb701f0c4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/bffac27c15553b6b5e32086d96bdf7deb701f0c4"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/5e7ab16d29ac66a5a5753dd4f59b6fb12e60654e",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5e7ab16d29ac66a5a5753dd4f59b6fb12e60654e",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/5e7ab16d29ac66a5a5753dd4f59b6fb12e60654e",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5e7ab16d29ac66a5a5753dd4f59b6fb12e60654e/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "fc83f181530fb566726e5f3f4197fc5586d77fd8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fc83f181530fb566726e5f3f4197fc5586d77fd8",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/fc83f181530fb566726e5f3f4197fc5586d77fd8"
+      }
+    ],
+    "stats": {
+      "total": 7,
+      "additions": 7,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "bcaf095ab31419f153e1c4f74e9aae17ad49f08a",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5e7ab16d29ac66a5a5753dd4f59b6fb12e60654e/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5e7ab16d29ac66a5a5753dd4f59b6fb12e60654e/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=5e7ab16d29ac66a5a5753dd4f59b6fb12e60654e",
+        "patch": "@@ -4785,6 +4785,9 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv,\n         {\n             boost::this_thread::interruption_point();\n \n+            if (!(addr.nServices & NODE_NETWORK))\n+                continue;\n+\n             if (addr.nTime <= 100000000 || addr.nTime > nNow + 10 * 60)\n                 addr.nTime = nNow - 5 * 24 * 60 * 60;\n             pfrom->AddAddressKnown(addr);"
+      },
+      {
+        "sha": "395e1fe423bdaa2326607eb47d3645aa52149b28",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 0,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5e7ab16d29ac66a5a5753dd4f59b6fb12e60654e/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5e7ab16d29ac66a5a5753dd4f59b6fb12e60654e/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=5e7ab16d29ac66a5a5753dd4f59b6fb12e60654e",
+        "patch": "@@ -1596,6 +1596,10 @@ void ThreadOpenConnections()\n             if (IsLimited(addr))\n                 continue;\n \n+            // only connect to full nodes\n+            if (!(addr.nServices & NODE_NETWORK))\n+                continue;\n+\n             // only consider very recently tried nodes after 30 failed attempts\n             if (nANow - addr.nLastTry < 600 && nTries < 30)\n                 continue;"
+      }
+    ]
+  },
+  {
+    "sha": "15bf863219abe968ebe9e59fed4806c9fd07a58b",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxNWJmODYzMjE5YWJlOTY4ZWJlOWU1OWZlZDQ4MDZjOWZkMDdhNThi",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-05-25T15:18:37Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-06-13T15:40:16Z"
+      },
+      "message": "Don't require services in -addnode",
+      "tree": {
+        "sha": "0b232eb744a121b4679e078c8bb1849ec78ba298",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/0b232eb744a121b4679e078c8bb1849ec78ba298"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/15bf863219abe968ebe9e59fed4806c9fd07a58b",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/15bf863219abe968ebe9e59fed4806c9fd07a58b",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/15bf863219abe968ebe9e59fed4806c9fd07a58b",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/15bf863219abe968ebe9e59fed4806c9fd07a58b/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "5e7ab16d29ac66a5a5753dd4f59b6fb12e60654e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5e7ab16d29ac66a5a5753dd4f59b6fb12e60654e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/5e7ab16d29ac66a5a5753dd4f59b6fb12e60654e"
+      }
+    ],
+    "stats": {
+      "total": 127,
+      "additions": 64,
+      "deletions": 63
+    },
+    "files": [
+      {
+        "sha": "80ba7fce2288a43b928d94a0441258db4792b349",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 7,
+        "changes": 15,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/15bf863219abe968ebe9e59fed4806c9fd07a58b/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/15bf863219abe968ebe9e59fed4806c9fd07a58b/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=15bf863219abe968ebe9e59fed4806c9fd07a58b",
+        "patch": "@@ -162,7 +162,7 @@ static std::vector<CAddress> convertSeed6(const std::vector<SeedSpec6> &vSeedsIn\n     {\n         struct in6_addr ip;\n         memcpy(&ip, i->addr, sizeof(ip));\n-        CAddress addr(CService(ip, i->port));\n+        CAddress addr(CService(ip, i->port), NODE_NETWORK);\n         addr.nTime = GetTime() - GetRand(nOneWeek) - nOneWeek;\n         vSeedsOut.push_back(addr);\n     }\n@@ -179,9 +179,8 @@ CAddress GetLocalAddress(const CNetAddr *paddrPeer)\n     CService addr;\n     if (GetLocal(addr, paddrPeer))\n     {\n-        ret = CAddress(addr);\n+        ret = CAddress(addr, nLocalServices);\n     }\n-    ret.nServices = nLocalServices;\n     ret.nTime = GetAdjustedTime();\n     return ret;\n }\n@@ -465,7 +464,7 @@ void CNode::PushVersion()\n     int nBestHeight = GetNodeSignals().GetHeight().get_value_or(0);\n \n     int64_t nTime = (fInbound ? GetAdjustedTime() : GetTime());\n-    CAddress addrYou = (addr.IsRoutable() && !IsProxy(addr) ? addr : CAddress(CService(\"0.0.0.0\",0)));\n+    CAddress addrYou = (addr.IsRoutable() && !IsProxy(addr) ? addr : CAddress(CService(\"0.0.0.0\",0), addr.nServices));\n     CAddress addrMe = GetLocalAddress(&addr);\n     GetRandBytes((unsigned char*)&nLocalHostNonce, sizeof(nLocalHostNonce));\n     if (fLogIPs)\n@@ -1441,7 +1440,7 @@ void ThreadDNSAddressSeed()\n         } else {\n             std::vector<CNetAddr> vIPs;\n             std::vector<CAddress> vAdd;\n-            uint64_t requiredServiceBits = NODE_NETWORK;\n+            uint64_t requiredServiceBits = nRelevantServices;\n             if (LookupHost(seed.getHost(requiredServiceBits).c_str(), vIPs, 0, true))\n             {\n                 BOOST_FOREACH(const CNetAddr& ip, vIPs)\n@@ -1524,7 +1523,7 @@ void ThreadOpenConnections()\n             ProcessOneShot();\n             BOOST_FOREACH(const std::string& strAddr, mapMultiArgs[\"-connect\"])\n             {\n-                CAddress addr;\n+                CAddress addr(CService(), 0);\n                 OpenNetworkConnection(addr, false, NULL, strAddr.c_str());\n                 for (int i = 0; i < 10 && i < nLoop; i++)\n                 {\n@@ -1674,7 +1673,9 @@ void ThreadOpenAddedConnections()\n         BOOST_FOREACH(std::vector<CService>& vserv, lservAddressesToAdd)\n         {\n             CSemaphoreGrant grant(*semOutbound);\n-            OpenNetworkConnection(CAddress(vserv[i % vserv.size()]), false, &grant);\n+            /* We want -addnode to work even for nodes that don't provide all\n+             * wanted services, so pass in nServices=0 to CAddress. */\n+            OpenNetworkConnection(CAddress(vserv[i % vserv.size()], 0), false, &grant);\n             MilliSleep(500);\n         }\n         MilliSleep(120000); // Retry every 2 minutes"
+      },
+      {
+        "sha": "a46051b84f2e329c5730035361200c81f7d21d9c",
+        "filename": "src/protocol.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/15bf863219abe968ebe9e59fed4806c9fd07a58b/src/protocol.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/15bf863219abe968ebe9e59fed4806c9fd07a58b/src/protocol.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/protocol.cpp?ref=15bf863219abe968ebe9e59fed4806c9fd07a58b",
+        "patch": "@@ -141,7 +141,7 @@ CAddress::CAddress(CService ipIn, uint64_t nServicesIn) : CService(ipIn)\n \n void CAddress::Init()\n {\n-    nServices = NODE_NETWORK;\n+    nServices = 0;\n     nTime = 100000000;\n }\n "
+      },
+      {
+        "sha": "c3f819aaee88219b32c661974f0b3a437bef8770",
+        "filename": "src/protocol.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/15bf863219abe968ebe9e59fed4806c9fd07a58b/src/protocol.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/15bf863219abe968ebe9e59fed4806c9fd07a58b/src/protocol.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/protocol.h?ref=15bf863219abe968ebe9e59fed4806c9fd07a58b",
+        "patch": "@@ -251,7 +251,7 @@ class CAddress : public CService\n {\n public:\n     CAddress();\n-    explicit CAddress(CService ipIn, uint64_t nServicesIn = NODE_NETWORK);\n+    explicit CAddress(CService ipIn, uint64_t nServicesIn);\n \n     void Init();\n "
+      },
+      {
+        "sha": "dc019d6cf57462405e41ea02f6c61f1cc4bfce5a",
+        "filename": "src/test/DoS_tests.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 4,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/15bf863219abe968ebe9e59fed4806c9fd07a58b/src/test/DoS_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/15bf863219abe968ebe9e59fed4806c9fd07a58b/src/test/DoS_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/DoS_tests.cpp?ref=15bf863219abe968ebe9e59fed4806c9fd07a58b",
+        "patch": "@@ -45,15 +45,15 @@ BOOST_FIXTURE_TEST_SUITE(DoS_tests, TestingSetup)\n BOOST_AUTO_TEST_CASE(DoS_banning)\n {\n     CNode::ClearBanned();\n-    CAddress addr1(ip(0xa0b0c001));\n+    CAddress addr1(ip(0xa0b0c001), 0);\n     CNode dummyNode1(INVALID_SOCKET, addr1, \"\", true);\n     dummyNode1.nVersion = 1;\n     Misbehaving(dummyNode1.GetId(), 100); // Should get banned\n     SendMessages(&dummyNode1);\n     BOOST_CHECK(CNode::IsBanned(addr1));\n     BOOST_CHECK(!CNode::IsBanned(ip(0xa0b0c001|0x0000ff00))); // Different IP, not banned\n \n-    CAddress addr2(ip(0xa0b0c002));\n+    CAddress addr2(ip(0xa0b0c002), 0);\n     CNode dummyNode2(INVALID_SOCKET, addr2, \"\", true);\n     dummyNode2.nVersion = 1;\n     Misbehaving(dummyNode2.GetId(), 50);\n@@ -69,7 +69,7 @@ BOOST_AUTO_TEST_CASE(DoS_banscore)\n {\n     CNode::ClearBanned();\n     mapArgs[\"-banscore\"] = \"111\"; // because 11 is my favorite number\n-    CAddress addr1(ip(0xa0b0c001));\n+    CAddress addr1(ip(0xa0b0c001), 0);\n     CNode dummyNode1(INVALID_SOCKET, addr1, \"\", true);\n     dummyNode1.nVersion = 1;\n     Misbehaving(dummyNode1.GetId(), 100);\n@@ -90,7 +90,7 @@ BOOST_AUTO_TEST_CASE(DoS_bantime)\n     int64_t nStartTime = GetTime();\n     SetMockTime(nStartTime); // Overrides future calls to GetTime()\n \n-    CAddress addr(ip(0xa0b0c001));\n+    CAddress addr(ip(0xa0b0c001), 0);\n     CNode dummyNode(INVALID_SOCKET, addr, \"\", true);\n     dummyNode.nVersion = 1;\n "
+      },
+      {
+        "sha": "93c3eba7fe27d3659169e679d55dcc77dccefb3b",
+        "filename": "src/test/addrman_tests.cpp",
+        "status": "modified",
+        "additions": 46,
+        "deletions": 46,
+        "changes": 92,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/15bf863219abe968ebe9e59fed4806c9fd07a58b/src/test/addrman_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/15bf863219abe968ebe9e59fed4806c9fd07a58b/src/test/addrman_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/addrman_tests.cpp?ref=15bf863219abe968ebe9e59fed4806c9fd07a58b",
+        "patch": "@@ -68,22 +68,22 @@ BOOST_AUTO_TEST_CASE(addrman_simple)\n \n     // Test 2: Does Addrman::Add work as expected.\n     CService addr1 = CService(\"250.1.1.1\", 8333);\n-    addrman.Add(CAddress(addr1), source);\n+    addrman.Add(CAddress(addr1, 0), source);\n     BOOST_CHECK(addrman.size() == 1);\n     CAddrInfo addr_ret1 = addrman.Select();\n     BOOST_CHECK(addr_ret1.ToString() == \"250.1.1.1:8333\");\n \n     // Test 3: Does IP address deduplication work correctly.\n     //  Expected dup IP should not be added.\n     CService addr1_dup = CService(\"250.1.1.1\", 8333);\n-    addrman.Add(CAddress(addr1_dup), source);\n+    addrman.Add(CAddress(addr1_dup, 0), source);\n     BOOST_CHECK(addrman.size() == 1);\n \n \n     // Test 5: New table has one addr and we add a diff addr we should\n     //  have two addrs.\n     CService addr2 = CService(\"250.1.1.2\", 8333);\n-    addrman.Add(CAddress(addr2), source);\n+    addrman.Add(CAddress(addr2, 0), source);\n     BOOST_CHECK(addrman.size() == 2);\n \n     // Test 6: AddrMan::Clear() should empty the new table.\n@@ -106,18 +106,18 @@ BOOST_AUTO_TEST_CASE(addrman_ports)\n \n     // Test 7; Addr with same IP but diff port does not replace existing addr.\n     CService addr1 = CService(\"250.1.1.1\", 8333);\n-    addrman.Add(CAddress(addr1), source);\n+    addrman.Add(CAddress(addr1, 0), source);\n     BOOST_CHECK(addrman.size() == 1);\n \n     CService addr1_port = CService(\"250.1.1.1\", 8334);\n-    addrman.Add(CAddress(addr1_port), source);\n+    addrman.Add(CAddress(addr1_port, 0), source);\n     BOOST_CHECK(addrman.size() == 1);\n     CAddrInfo addr_ret2 = addrman.Select();\n     BOOST_CHECK(addr_ret2.ToString() == \"250.1.1.1:8333\");\n \n     // Test 8: Add same IP but diff port to tried table, it doesn't get added.\n     //  Perhaps this is not ideal behavior but it is the current behavior.\n-    addrman.Good(CAddress(addr1_port));\n+    addrman.Good(CAddress(addr1_port, 0));\n     BOOST_CHECK(addrman.size() == 1);\n     bool newOnly = true;\n     CAddrInfo addr_ret3 = addrman.Select(newOnly);\n@@ -136,15 +136,15 @@ BOOST_AUTO_TEST_CASE(addrman_select)\n \n     // Test 9: Select from new with 1 addr in new.\n     CService addr1 = CService(\"250.1.1.1\", 8333);\n-    addrman.Add(CAddress(addr1), source);\n+    addrman.Add(CAddress(addr1, 0), source);\n     BOOST_CHECK(addrman.size() == 1);\n \n     bool newOnly = true;\n     CAddrInfo addr_ret1 = addrman.Select(newOnly);\n     BOOST_CHECK(addr_ret1.ToString() == \"250.1.1.1:8333\");\n \n     // Test 10: move addr to tried, select from new expected nothing returned.\n-    addrman.Good(CAddress(addr1));\n+    addrman.Good(CAddress(addr1, 0));\n     BOOST_CHECK(addrman.size() == 1);\n     CAddrInfo addr_ret2 = addrman.Select(newOnly);\n     BOOST_CHECK(addr_ret2.ToString() == \"[::]:0\");\n@@ -160,21 +160,21 @@ BOOST_AUTO_TEST_CASE(addrman_select)\n     CService addr3 = CService(\"250.3.2.2\", 9999);\n     CService addr4 = CService(\"250.3.3.3\", 9999);\n \n-    addrman.Add(CAddress(addr2), CService(\"250.3.1.1\", 8333));\n-    addrman.Add(CAddress(addr3), CService(\"250.3.1.1\", 8333));\n-    addrman.Add(CAddress(addr4), CService(\"250.4.1.1\", 8333));\n+    addrman.Add(CAddress(addr2, 0), CService(\"250.3.1.1\", 8333));\n+    addrman.Add(CAddress(addr3, 0), CService(\"250.3.1.1\", 8333));\n+    addrman.Add(CAddress(addr4, 0), CService(\"250.4.1.1\", 8333));\n \n     // Add three addresses to tried table.\n     CService addr5 = CService(\"250.4.4.4\", 8333);\n     CService addr6 = CService(\"250.4.5.5\", 7777);\n     CService addr7 = CService(\"250.4.6.6\", 8333);\n \n-    addrman.Add(CAddress(addr5), CService(\"250.3.1.1\", 8333));\n-    addrman.Good(CAddress(addr5));\n-    addrman.Add(CAddress(addr6), CService(\"250.3.1.1\", 8333));\n-    addrman.Good(CAddress(addr6));\n-    addrman.Add(CAddress(addr7), CService(\"250.1.1.3\", 8333));\n-    addrman.Good(CAddress(addr7));\n+    addrman.Add(CAddress(addr5, 0), CService(\"250.3.1.1\", 8333));\n+    addrman.Good(CAddress(addr5, 0));\n+    addrman.Add(CAddress(addr6, 0), CService(\"250.3.1.1\", 8333));\n+    addrman.Good(CAddress(addr6, 0));\n+    addrman.Add(CAddress(addr7, 0), CService(\"250.1.1.3\", 8333));\n+    addrman.Good(CAddress(addr7, 0));\n \n     // Test 11: 6 addrs + 1 addr from last test = 7.\n     BOOST_CHECK(addrman.size() == 7);\n@@ -199,19 +199,19 @@ BOOST_AUTO_TEST_CASE(addrman_new_collisions)\n \n     for (unsigned int i = 1; i < 18; i++) {\n         CService addr = CService(\"250.1.1.\" + boost::to_string(i));\n-        addrman.Add(CAddress(addr), source);\n+        addrman.Add(CAddress(addr, 0), source);\n \n         //Test 13: No collision in new table yet.\n         BOOST_CHECK(addrman.size() == i);\n     }\n \n     //Test 14: new table collision!\n     CService addr1 = CService(\"250.1.1.18\");\n-    addrman.Add(CAddress(addr1), source);\n+    addrman.Add(CAddress(addr1, 0), source);\n     BOOST_CHECK(addrman.size() == 17);\n \n     CService addr2 = CService(\"250.1.1.19\");\n-    addrman.Add(CAddress(addr2), source);\n+    addrman.Add(CAddress(addr2, 0), source);\n     BOOST_CHECK(addrman.size() == 18);\n }\n \n@@ -228,8 +228,8 @@ BOOST_AUTO_TEST_CASE(addrman_tried_collisions)\n \n     for (unsigned int i = 1; i < 80; i++) {\n         CService addr = CService(\"250.1.1.\" + boost::to_string(i));\n-        addrman.Add(CAddress(addr), source);\n-        addrman.Good(CAddress(addr));\n+        addrman.Add(CAddress(addr, 0), source);\n+        addrman.Good(CAddress(addr, 0));\n \n         //Test 15: No collision in tried table yet.\n         BOOST_TEST_MESSAGE(addrman.size());\n@@ -238,11 +238,11 @@ BOOST_AUTO_TEST_CASE(addrman_tried_collisions)\n \n     //Test 16: tried table collision!\n     CService addr1 = CService(\"250.1.1.80\");\n-    addrman.Add(CAddress(addr1), source);\n+    addrman.Add(CAddress(addr1, 0), source);\n     BOOST_CHECK(addrman.size() == 79);\n \n     CService addr2 = CService(\"250.1.1.81\");\n-    addrman.Add(CAddress(addr2), source);\n+    addrman.Add(CAddress(addr2, 0), source);\n     BOOST_CHECK(addrman.size() == 80);\n }\n \n@@ -255,9 +255,9 @@ BOOST_AUTO_TEST_CASE(addrman_find)\n \n     BOOST_CHECK(addrman.size() == 0);\n \n-    CAddress addr1 = CAddress(CService(\"250.1.2.1\", 8333));\n-    CAddress addr2 = CAddress(CService(\"250.1.2.1\", 9999));\n-    CAddress addr3 = CAddress(CService(\"251.255.2.1\", 8333));\n+    CAddress addr1 = CAddress(CService(\"250.1.2.1\", 8333), 0);\n+    CAddress addr2 = CAddress(CService(\"250.1.2.1\", 9999), 0);\n+    CAddress addr3 = CAddress(CService(\"251.255.2.1\", 8333), 0);\n \n     CNetAddr source1 = CNetAddr(\"250.1.2.1\");\n     CNetAddr source2 = CNetAddr(\"250.1.2.2\");\n@@ -294,7 +294,7 @@ BOOST_AUTO_TEST_CASE(addrman_create)\n \n     BOOST_CHECK(addrman.size() == 0);\n \n-    CAddress addr1 = CAddress(CService(\"250.1.2.1\", 8333));\n+    CAddress addr1 = CAddress(CService(\"250.1.2.1\", 8333), 0);\n     CNetAddr source1 = CNetAddr(\"250.1.2.1\");\n \n     int nId;\n@@ -317,7 +317,7 @@ BOOST_AUTO_TEST_CASE(addrman_delete)\n \n     BOOST_CHECK(addrman.size() == 0);\n \n-    CAddress addr1 = CAddress(CService(\"250.1.2.1\", 8333));\n+    CAddress addr1 = CAddress(CService(\"250.1.2.1\", 8333), 0);\n     CNetAddr source1 = CNetAddr(\"250.1.2.1\");\n \n     int nId;\n@@ -344,15 +344,15 @@ BOOST_AUTO_TEST_CASE(addrman_getaddr)\n     vector<CAddress> vAddr1 = addrman.GetAddr();\n     BOOST_CHECK(vAddr1.size() == 0);\n \n-    CAddress addr1 = CAddress(CService(\"250.250.2.1\", 8333));\n+    CAddress addr1 = CAddress(CService(\"250.250.2.1\", 8333), 0);\n     addr1.nTime = GetAdjustedTime(); // Set time so isTerrible = false\n-    CAddress addr2 = CAddress(CService(\"250.251.2.2\", 9999));\n+    CAddress addr2 = CAddress(CService(\"250.251.2.2\", 9999), 0);\n     addr2.nTime = GetAdjustedTime();\n-    CAddress addr3 = CAddress(CService(\"251.252.2.3\", 8333));\n+    CAddress addr3 = CAddress(CService(\"251.252.2.3\", 8333), 0);\n     addr3.nTime = GetAdjustedTime();\n-    CAddress addr4 = CAddress(CService(\"252.253.3.4\", 8333));\n+    CAddress addr4 = CAddress(CService(\"252.253.3.4\", 8333), 0);\n     addr4.nTime = GetAdjustedTime();\n-    CAddress addr5 = CAddress(CService(\"252.254.4.5\", 8333));\n+    CAddress addr5 = CAddress(CService(\"252.254.4.5\", 8333), 0);\n     addr5.nTime = GetAdjustedTime();\n     CNetAddr source1 = CNetAddr(\"250.1.2.1\");\n     CNetAddr source2 = CNetAddr(\"250.2.3.3\");\n@@ -368,8 +368,8 @@ BOOST_AUTO_TEST_CASE(addrman_getaddr)\n     BOOST_CHECK(addrman.GetAddr().size() == 1); \n \n     // Test 24: Ensure GetAddr works with new and tried addresses.\n-    addrman.Good(CAddress(addr1));\n-    addrman.Good(CAddress(addr2));\n+    addrman.Good(CAddress(addr1, 0));\n+    addrman.Good(CAddress(addr2, 0));\n     BOOST_CHECK(addrman.GetAddr().size() == 1);\n \n     // Test 25: Ensure GetAddr still returns 23% when addrman has many addrs.\n@@ -378,7 +378,7 @@ BOOST_AUTO_TEST_CASE(addrman_getaddr)\n         int octet2 = (i / 256) % 256;\n         int octet3 = (i / (256 * 2)) % 256;\n         string strAddr = boost::to_string(octet1) + \".\" + boost::to_string(octet2) + \".\" + boost::to_string(octet3) + \".23\";\n-        CAddress addr = CAddress(CService(strAddr));\n+        CAddress addr = CAddress(CService(strAddr), 0);\n         \n         // Ensure that for all addrs in addrman, isTerrible == false.\n         addr.nTime = GetAdjustedTime();\n@@ -403,8 +403,8 @@ BOOST_AUTO_TEST_CASE(caddrinfo_get_tried_bucket)\n     // Set addrman addr placement to be deterministic.\n     addrman.MakeDeterministic();\n \n-    CAddress addr1 = CAddress(CService(\"250.1.1.1\", 8333));\n-    CAddress addr2 = CAddress(CService(\"250.1.1.1\", 9999));\n+    CAddress addr1 = CAddress(CService(\"250.1.1.1\", 8333), 0);\n+    CAddress addr2 = CAddress(CService(\"250.1.1.1\", 9999), 0);\n \n     CNetAddr source1 = CNetAddr(\"250.1.1.1\");\n \n@@ -431,7 +431,7 @@ BOOST_AUTO_TEST_CASE(caddrinfo_get_tried_bucket)\n     set<int> buckets;\n     for (int i = 0; i < 255; i++) {\n         CAddrInfo infoi = CAddrInfo(\n-            CAddress(CService(\"250.1.1.\" + boost::to_string(i))),\n+            CAddress(CService(\"250.1.1.\" + boost::to_string(i)), 0),\n             CNetAddr(\"250.1.1.\" + boost::to_string(i)));\n         int bucket = infoi.GetTriedBucket(nKey1);\n         buckets.insert(bucket);\n@@ -443,7 +443,7 @@ BOOST_AUTO_TEST_CASE(caddrinfo_get_tried_bucket)\n     buckets.clear();\n     for (int j = 0; j < 255; j++) {\n         CAddrInfo infoj = CAddrInfo(\n-            CAddress(CService(\"250.\" + boost::to_string(j) + \".1.1\")),\n+            CAddress(CService(\"250.\" + boost::to_string(j) + \".1.1\"), 0),\n             CNetAddr(\"250.\" + boost::to_string(j) + \".1.1\"));\n         int bucket = infoj.GetTriedBucket(nKey1);\n         buckets.insert(bucket);\n@@ -460,8 +460,8 @@ BOOST_AUTO_TEST_CASE(caddrinfo_get_new_bucket)\n     // Set addrman addr placement to be deterministic.\n     addrman.MakeDeterministic();\n \n-    CAddress addr1 = CAddress(CService(\"250.1.2.1\", 8333));\n-    CAddress addr2 = CAddress(CService(\"250.1.2.1\", 9999));\n+    CAddress addr1 = CAddress(CService(\"250.1.2.1\", 8333), 0);\n+    CAddress addr2 = CAddress(CService(\"250.1.2.1\", 9999), 0);\n \n     CNetAddr source1 = CNetAddr(\"250.1.2.1\");\n \n@@ -484,7 +484,7 @@ BOOST_AUTO_TEST_CASE(caddrinfo_get_new_bucket)\n     set<int> buckets;\n     for (int i = 0; i < 255; i++) {\n         CAddrInfo infoi = CAddrInfo(\n-            CAddress(CService(\"250.1.1.\" + boost::to_string(i))),\n+            CAddress(CService(\"250.1.1.\" + boost::to_string(i)), 0),\n             CNetAddr(\"250.1.1.\" + boost::to_string(i)));\n         int bucket = infoi.GetNewBucket(nKey1);\n         buckets.insert(bucket);\n@@ -497,7 +497,7 @@ BOOST_AUTO_TEST_CASE(caddrinfo_get_new_bucket)\n     for (int j = 0; j < 4 * 255; j++) {\n         CAddrInfo infoj = CAddrInfo(CAddress(\n                                         CService(\n-                                            boost::to_string(250 + (j / 255)) + \".\" + boost::to_string(j % 256) + \".1.1\")),\n+                                            boost::to_string(250 + (j / 255)) + \".\" + boost::to_string(j % 256) + \".1.1\"), 0),\n             CNetAddr(\"251.4.1.1\"));\n         int bucket = infoj.GetNewBucket(nKey1);\n         buckets.insert(bucket);\n@@ -509,7 +509,7 @@ BOOST_AUTO_TEST_CASE(caddrinfo_get_new_bucket)\n     buckets.clear();\n     for (int p = 0; p < 255; p++) {\n         CAddrInfo infoj = CAddrInfo(\n-            CAddress(CService(\"250.1.1.1\")),\n+            CAddress(CService(\"250.1.1.1\"), 0),\n             CNetAddr(\"250.\" + boost::to_string(p) + \".1.1\"));\n         int bucket = infoj.GetNewBucket(nKey1);\n         buckets.insert(bucket);"
+      },
+      {
+        "sha": "b3d848fcb1ecb102b1a223974cb4e03dc52a1889",
+        "filename": "src/test/net_tests.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 4,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/15bf863219abe968ebe9e59fed4806c9fd07a58b/src/test/net_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/15bf863219abe968ebe9e59fed4806c9fd07a58b/src/test/net_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/net_tests.cpp?ref=15bf863219abe968ebe9e59fed4806c9fd07a58b",
+        "patch": "@@ -51,7 +51,7 @@ class CAddrManCorrupted : public CAddrManSerializationMock\n         int nUBuckets = ADDRMAN_NEW_BUCKET_COUNT ^ (1 << 30);\n         s << nUBuckets;\n \n-        CAddress addr = CAddress(CService(\"252.1.1.1\", 7777));\n+        CAddress addr = CAddress(CService(\"252.1.1.1\", 7777), 0);\n         CAddrInfo info = CAddrInfo(addr, CNetAddr(\"252.2.2.2\"));\n         s << info;\n     }\n@@ -79,9 +79,9 @@ BOOST_AUTO_TEST_CASE(caddrdb_read)\n     CService addr3 = CService(\"250.7.3.3\", 9999);\n \n     // Add three addresses to new table.\n-    addrmanUncorrupted.Add(CAddress(addr1), CService(\"252.5.1.1\", 8333));\n-    addrmanUncorrupted.Add(CAddress(addr2), CService(\"252.5.1.1\", 8333));\n-    addrmanUncorrupted.Add(CAddress(addr3), CService(\"252.5.1.1\", 8333));\n+    addrmanUncorrupted.Add(CAddress(addr1, 0), CService(\"252.5.1.1\", 8333));\n+    addrmanUncorrupted.Add(CAddress(addr2, 0), CService(\"252.5.1.1\", 8333));\n+    addrmanUncorrupted.Add(CAddress(addr3, 0), CService(\"252.5.1.1\", 8333));\n \n     // Test that the de-serialization does not throw an exception.\n     CDataStream ssPeers1 = AddrmanToStream(addrmanUncorrupted);"
+      }
+    ]
+  },
+  {
+    "sha": "ee06e04369c37da21e048fda849cce2a1f066f84",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplZTA2ZTA0MzY5YzM3ZGEyMWUwNDhmZGE4NDljY2UyYTFmMDY2Zjg0",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-06-08T17:12:22Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-06-13T15:40:16Z"
+      },
+      "message": "Introduce enum ServiceFlags for service flags",
+      "tree": {
+        "sha": "e38a64000268b4c41c00184b3d2f9da118bd98ce",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/e38a64000268b4c41c00184b3d2f9da118bd98ce"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/ee06e04369c37da21e048fda849cce2a1f066f84",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ee06e04369c37da21e048fda849cce2a1f066f84",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/ee06e04369c37da21e048fda849cce2a1f066f84",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ee06e04369c37da21e048fda849cce2a1f066f84/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "15bf863219abe968ebe9e59fed4806c9fd07a58b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/15bf863219abe968ebe9e59fed4806c9fd07a58b",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/15bf863219abe968ebe9e59fed4806c9fd07a58b"
+      }
+    ],
+    "stats": {
+      "total": 172,
+      "additions": 89,
+      "deletions": 83
+    },
+    "files": [
+      {
+        "sha": "cebb1c8e5e70803baa2a43ca2ef2c581b3c7db89",
+        "filename": "src/addrman.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ee06e04369c37da21e048fda849cce2a1f066f84/src/addrman.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ee06e04369c37da21e048fda849cce2a1f066f84/src/addrman.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/addrman.cpp?ref=ee06e04369c37da21e048fda849cce2a1f066f84",
+        "patch": "@@ -263,7 +263,7 @@ bool CAddrMan::Add_(const CAddress& addr, const CNetAddr& source, int64_t nTimeP\n             pinfo->nTime = std::max((int64_t)0, addr.nTime - nTimePenalty);\n \n         // add services\n-        pinfo->nServices |= addr.nServices;\n+        pinfo->nServices = ServiceFlags(pinfo->nServices | addr.nServices);\n \n         // do not update if no new information is present\n         if (!addr.nTime || (pinfo->nTime && addr.nTime <= pinfo->nTime))\n@@ -502,7 +502,7 @@ void CAddrMan::Connected_(const CService& addr, int64_t nTime)\n         info.nTime = nTime;\n }\n \n-void CAddrMan::SetServices_(const CService& addr, uint64_t nServices)\n+void CAddrMan::SetServices_(const CService& addr, ServiceFlags nServices)\n {\n     CAddrInfo* pinfo = Find(addr);\n "
+      },
+      {
+        "sha": "1caf5407587975733bc3c4984dcc60a1bd2d5c18",
+        "filename": "src/addrman.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ee06e04369c37da21e048fda849cce2a1f066f84/src/addrman.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ee06e04369c37da21e048fda849cce2a1f066f84/src/addrman.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/addrman.h?ref=ee06e04369c37da21e048fda849cce2a1f066f84",
+        "patch": "@@ -257,7 +257,7 @@ class CAddrMan\n     void Connected_(const CService &addr, int64_t nTime);\n \n     //! Update an entry's service bits.\n-    void SetServices_(const CService &addr, uint64_t nServices);\n+    void SetServices_(const CService &addr, ServiceFlags nServices);\n \n public:\n     /**\n@@ -592,7 +592,7 @@ class CAddrMan\n         }\n     }\n \n-    void SetServices(const CService &addr, uint64_t nServices)\n+    void SetServices(const CService &addr, ServiceFlags nServices)\n     {\n         LOCK(cs);\n         Check();"
+      },
+      {
+        "sha": "c2ba9ae44babe77edf735589a7d27cd897a82269",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ee06e04369c37da21e048fda849cce2a1f066f84/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ee06e04369c37da21e048fda849cce2a1f066f84/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=ee06e04369c37da21e048fda849cce2a1f066f84",
+        "patch": "@@ -950,7 +950,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)\n     SetMockTime(GetArg(\"-mocktime\", 0)); // SetMockTime(0) is a no-op\n \n     if (GetBoolArg(\"-peerbloomfilters\", DEFAULT_PEERBLOOMFILTERS))\n-        nLocalServices |= NODE_BLOOM;\n+        nLocalServices = ServiceFlags(nLocalServices | NODE_BLOOM);\n \n     nMaxTipAge = GetArg(\"-maxtipage\", DEFAULT_MAX_TIP_AGE);\n \n@@ -1361,7 +1361,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)\n     // after any wallet rescanning has taken place.\n     if (fPruneMode) {\n         LogPrintf(\"Unsetting NODE_NETWORK on prune mode\\n\");\n-        nLocalServices &= ~NODE_NETWORK;\n+        nLocalServices = ServiceFlags(nLocalServices & ~NODE_NETWORK);\n         if (!fReindex) {\n             uiInterface.InitMessage(_(\"Pruning blockstore...\"));\n             PruneAndFlush();"
+      },
+      {
+        "sha": "c1569545b4e9f862301d6311bd0f50ded798591c",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 1,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ee06e04369c37da21e048fda849cce2a1f066f84/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ee06e04369c37da21e048fda849cce2a1f066f84/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=ee06e04369c37da21e048fda849cce2a1f066f84",
+        "patch": "@@ -4611,7 +4611,9 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv,\n         CAddress addrMe;\n         CAddress addrFrom;\n         uint64_t nNonce = 1;\n-        vRecv >> pfrom->nVersion >> pfrom->nServices >> nTime >> addrMe;\n+        uint64_t nServiceInt;\n+        vRecv >> pfrom->nVersion >> nServiceInt >> nTime >> addrMe;\n+        pfrom->nServices = ServiceFlags(nServiceInt);\n         if (!pfrom->fInbound)\n         {\n             addrman.SetServices(pfrom->addr, pfrom->nServices);"
+      },
+      {
+        "sha": "4661974d21561222b0937768c3de76aa327498c2",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 12,
+        "deletions": 12,
+        "changes": 24,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ee06e04369c37da21e048fda849cce2a1f066f84/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ee06e04369c37da21e048fda849cce2a1f066f84/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=ee06e04369c37da21e048fda849cce2a1f066f84",
+        "patch": "@@ -72,14 +72,14 @@ namespace {\n const static std::string NET_MESSAGE_COMMAND_OTHER = \"*other*\";\n \n /** Services this node implementation cares about */\n-static const uint64_t nRelevantServices = NODE_NETWORK;\n+static const ServiceFlags nRelevantServices = NODE_NETWORK;\n \n //\n // Global state variables\n //\n bool fDiscover = true;\n bool fListen = true;\n-uint64_t nLocalServices = NODE_NETWORK;\n+ServiceFlags nLocalServices = NODE_NETWORK;\n bool fRelayTxes = true;\n CCriticalSection cs_mapLocalHost;\n std::map<CNetAddr, LocalServiceInfo> mapLocalHost;\n@@ -175,7 +175,7 @@ static std::vector<CAddress> convertSeed6(const std::vector<SeedSpec6> &vSeedsIn\n // one by discovery.\n CAddress GetLocalAddress(const CNetAddr *paddrPeer)\n {\n-    CAddress ret(CService(\"0.0.0.0\",GetListenPort()),0);\n+    CAddress ret(CService(\"0.0.0.0\",GetListenPort()), NODE_NONE);\n     CService addr;\n     if (GetLocal(addr, paddrPeer))\n     {\n@@ -411,7 +411,7 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool fCountFailure\n             vNodes.push_back(pnode);\n         }\n \n-        pnode->nServicesExpected = addrConnect.nServices & nRelevantServices;\n+        pnode->nServicesExpected = ServiceFlags(addrConnect.nServices & nRelevantServices);\n         pnode->nTimeConnected = GetTime();\n \n         return pnode;\n@@ -464,14 +464,14 @@ void CNode::PushVersion()\n     int nBestHeight = GetNodeSignals().GetHeight().get_value_or(0);\n \n     int64_t nTime = (fInbound ? GetAdjustedTime() : GetTime());\n-    CAddress addrYou = (addr.IsRoutable() && !IsProxy(addr) ? addr : CAddress(CService(\"0.0.0.0\",0), addr.nServices));\n+    CAddress addrYou = (addr.IsRoutable() && !IsProxy(addr) ? addr : CAddress(CService(\"0.0.0.0\", 0), addr.nServices));\n     CAddress addrMe = GetLocalAddress(&addr);\n     GetRandBytes((unsigned char*)&nLocalHostNonce, sizeof(nLocalHostNonce));\n     if (fLogIPs)\n         LogPrint(\"net\", \"send version message: version %d, blocks=%d, us=%s, them=%s, peer=%d\\n\", PROTOCOL_VERSION, nBestHeight, addrMe.ToString(), addrYou.ToString(), id);\n     else\n         LogPrint(\"net\", \"send version message: version %d, blocks=%d, us=%s, peer=%d\\n\", PROTOCOL_VERSION, nBestHeight, addrMe.ToString(), id);\n-    PushMessage(NetMsgType::VERSION, PROTOCOL_VERSION, nLocalServices, nTime, addrYou, addrMe,\n+    PushMessage(NetMsgType::VERSION, PROTOCOL_VERSION, (uint64_t)nLocalServices, nTime, addrYou, addrMe,\n                 nLocalHostNonce, strSubVersion, nBestHeight, ::fRelayTxes);\n }\n \n@@ -1440,7 +1440,7 @@ void ThreadDNSAddressSeed()\n         } else {\n             std::vector<CNetAddr> vIPs;\n             std::vector<CAddress> vAdd;\n-            uint64_t requiredServiceBits = nRelevantServices;\n+            ServiceFlags requiredServiceBits = nRelevantServices;\n             if (LookupHost(seed.getHost(requiredServiceBits).c_str(), vIPs, 0, true))\n             {\n                 BOOST_FOREACH(const CNetAddr& ip, vIPs)\n@@ -1523,7 +1523,7 @@ void ThreadOpenConnections()\n             ProcessOneShot();\n             BOOST_FOREACH(const std::string& strAddr, mapMultiArgs[\"-connect\"])\n             {\n-                CAddress addr(CService(), 0);\n+                CAddress addr(CService(), NODE_NONE);\n                 OpenNetworkConnection(addr, false, NULL, strAddr.c_str());\n                 for (int i = 0; i < 10 && i < nLoop; i++)\n                 {\n@@ -1674,8 +1674,8 @@ void ThreadOpenAddedConnections()\n         {\n             CSemaphoreGrant grant(*semOutbound);\n             /* We want -addnode to work even for nodes that don't provide all\n-             * wanted services, so pass in nServices=0 to CAddress. */\n-            OpenNetworkConnection(CAddress(vserv[i % vserv.size()], 0), false, &grant);\n+             * wanted services, so pass in nServices=NODE_NONE to CAddress. */\n+            OpenNetworkConnection(CAddress(vserv[i % vserv.size()], NODE_NONE), false, &grant);\n             MilliSleep(500);\n         }\n         MilliSleep(120000); // Retry every 2 minutes\n@@ -2333,8 +2333,8 @@ CNode::CNode(SOCKET hSocketIn, const CAddress& addrIn, const std::string& addrNa\n     addrKnown(5000, 0.001),\n     filterInventoryKnown(50000, 0.000001)\n {\n-    nServices = 0;\n-    nServicesExpected = 0;\n+    nServices = NODE_NONE;\n+    nServicesExpected = NODE_NONE;\n     hSocket = hSocketIn;\n     nRecvVersion = INIT_PROTO_VERSION;\n     nLastSend = 0;"
+      },
+      {
+        "sha": "f5fb8faae2c42bd207b3f1adf68da7c37c07ea1c",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 4,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ee06e04369c37da21e048fda849cce2a1f066f84/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ee06e04369c37da21e048fda849cce2a1f066f84/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=ee06e04369c37da21e048fda849cce2a1f066f84",
+        "patch": "@@ -152,7 +152,7 @@ CAddress GetLocalAddress(const CNetAddr *paddrPeer = NULL);\n \n extern bool fDiscover;\n extern bool fListen;\n-extern uint64_t nLocalServices;\n+extern ServiceFlags nLocalServices;\n extern bool fRelayTxes;\n extern uint64_t nLocalHostNonce;\n extern CAddrMan addrman;\n@@ -186,7 +186,7 @@ class CNodeStats\n {\n public:\n     NodeId nodeid;\n-    uint64_t nServices;\n+    ServiceFlags nServices;\n     bool fRelayTxes;\n     int64_t nLastSend;\n     int64_t nLastRecv;\n@@ -316,8 +316,8 @@ class CNode\n {\n public:\n     // socket\n-    uint64_t nServices;\n-    uint64_t nServicesExpected;\n+    ServiceFlags nServices;\n+    ServiceFlags nServicesExpected;\n     SOCKET hSocket;\n     CDataStream ssSend;\n     size_t nSendSize; // total size of all vSendMsg entries"
+      },
+      {
+        "sha": "422ef6f6365129a0fc328684d767b961ab320d79",
+        "filename": "src/protocol.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ee06e04369c37da21e048fda849cce2a1f066f84/src/protocol.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ee06e04369c37da21e048fda849cce2a1f066f84/src/protocol.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/protocol.cpp?ref=ee06e04369c37da21e048fda849cce2a1f066f84",
+        "patch": "@@ -133,15 +133,15 @@ CAddress::CAddress() : CService()\n     Init();\n }\n \n-CAddress::CAddress(CService ipIn, uint64_t nServicesIn) : CService(ipIn)\n+CAddress::CAddress(CService ipIn, ServiceFlags nServicesIn) : CService(ipIn)\n {\n     Init();\n     nServices = nServicesIn;\n }\n \n void CAddress::Init()\n {\n-    nServices = 0;\n+    nServices = NODE_NONE;\n     nTime = 100000000;\n }\n "
+      },
+      {
+        "sha": "ab0a5817839b8fb5eef9bc78d60489c4e20e6a0f",
+        "filename": "src/protocol.h",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 4,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ee06e04369c37da21e048fda849cce2a1f066f84/src/protocol.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ee06e04369c37da21e048fda849cce2a1f066f84/src/protocol.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/protocol.h?ref=ee06e04369c37da21e048fda849cce2a1f066f84",
+        "patch": "@@ -223,7 +223,9 @@ extern const char *FEEFILTER;\n const std::vector<std::string> &getAllNetMessageTypes();\n \n /** nServices flags */\n-enum {\n+enum ServiceFlags : uint64_t {\n+    // Nothing\n+    NODE_NONE = 0,\n     // NODE_NETWORK means that the node is capable of serving the block chain. It is currently\n     // set by all Bitcoin Core nodes, and is unset by SPV clients or other peers that just want\n     // network services but don't provide them.\n@@ -251,7 +253,7 @@ class CAddress : public CService\n {\n public:\n     CAddress();\n-    explicit CAddress(CService ipIn, uint64_t nServicesIn);\n+    explicit CAddress(CService ipIn, ServiceFlags nServicesIn);\n \n     void Init();\n \n@@ -267,13 +269,15 @@ class CAddress : public CService\n         if ((nType & SER_DISK) ||\n             (nVersion >= CADDR_TIME_VERSION && !(nType & SER_GETHASH)))\n             READWRITE(nTime);\n-        READWRITE(nServices);\n+        uint64_t nServicesInt = nServices;\n+        READWRITE(nServicesInt);\n+        nServices = (ServiceFlags)nServicesInt;\n         READWRITE(*(CService*)this);\n     }\n \n     // TODO: make private (improves encapsulation)\n public:\n-    uint64_t nServices;\n+    ServiceFlags nServices;\n \n     // disk and network only\n     unsigned int nTime;"
+      },
+      {
+        "sha": "4a373fc60b653d9d82c1ca61a691ef9cee0794af",
+        "filename": "src/test/DoS_tests.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 4,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ee06e04369c37da21e048fda849cce2a1f066f84/src/test/DoS_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ee06e04369c37da21e048fda849cce2a1f066f84/src/test/DoS_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/DoS_tests.cpp?ref=ee06e04369c37da21e048fda849cce2a1f066f84",
+        "patch": "@@ -45,15 +45,15 @@ BOOST_FIXTURE_TEST_SUITE(DoS_tests, TestingSetup)\n BOOST_AUTO_TEST_CASE(DoS_banning)\n {\n     CNode::ClearBanned();\n-    CAddress addr1(ip(0xa0b0c001), 0);\n+    CAddress addr1(ip(0xa0b0c001), NODE_NONE);\n     CNode dummyNode1(INVALID_SOCKET, addr1, \"\", true);\n     dummyNode1.nVersion = 1;\n     Misbehaving(dummyNode1.GetId(), 100); // Should get banned\n     SendMessages(&dummyNode1);\n     BOOST_CHECK(CNode::IsBanned(addr1));\n     BOOST_CHECK(!CNode::IsBanned(ip(0xa0b0c001|0x0000ff00))); // Different IP, not banned\n \n-    CAddress addr2(ip(0xa0b0c002), 0);\n+    CAddress addr2(ip(0xa0b0c002), NODE_NONE);\n     CNode dummyNode2(INVALID_SOCKET, addr2, \"\", true);\n     dummyNode2.nVersion = 1;\n     Misbehaving(dummyNode2.GetId(), 50);\n@@ -69,7 +69,7 @@ BOOST_AUTO_TEST_CASE(DoS_banscore)\n {\n     CNode::ClearBanned();\n     mapArgs[\"-banscore\"] = \"111\"; // because 11 is my favorite number\n-    CAddress addr1(ip(0xa0b0c001), 0);\n+    CAddress addr1(ip(0xa0b0c001), NODE_NONE);\n     CNode dummyNode1(INVALID_SOCKET, addr1, \"\", true);\n     dummyNode1.nVersion = 1;\n     Misbehaving(dummyNode1.GetId(), 100);\n@@ -90,7 +90,7 @@ BOOST_AUTO_TEST_CASE(DoS_bantime)\n     int64_t nStartTime = GetTime();\n     SetMockTime(nStartTime); // Overrides future calls to GetTime()\n \n-    CAddress addr(ip(0xa0b0c001), 0);\n+    CAddress addr(ip(0xa0b0c001), NODE_NONE);\n     CNode dummyNode(INVALID_SOCKET, addr, \"\", true);\n     dummyNode.nVersion = 1;\n "
+      },
+      {
+        "sha": "b6cec24b5752a82fa0334b6e9b31b73d47608b2d",
+        "filename": "src/test/addrman_tests.cpp",
+        "status": "modified",
+        "additions": 46,
+        "deletions": 46,
+        "changes": 92,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ee06e04369c37da21e048fda849cce2a1f066f84/src/test/addrman_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ee06e04369c37da21e048fda849cce2a1f066f84/src/test/addrman_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/addrman_tests.cpp?ref=ee06e04369c37da21e048fda849cce2a1f066f84",
+        "patch": "@@ -68,22 +68,22 @@ BOOST_AUTO_TEST_CASE(addrman_simple)\n \n     // Test 2: Does Addrman::Add work as expected.\n     CService addr1 = CService(\"250.1.1.1\", 8333);\n-    addrman.Add(CAddress(addr1, 0), source);\n+    addrman.Add(CAddress(addr1, NODE_NONE), source);\n     BOOST_CHECK(addrman.size() == 1);\n     CAddrInfo addr_ret1 = addrman.Select();\n     BOOST_CHECK(addr_ret1.ToString() == \"250.1.1.1:8333\");\n \n     // Test 3: Does IP address deduplication work correctly.\n     //  Expected dup IP should not be added.\n     CService addr1_dup = CService(\"250.1.1.1\", 8333);\n-    addrman.Add(CAddress(addr1_dup, 0), source);\n+    addrman.Add(CAddress(addr1_dup, NODE_NONE), source);\n     BOOST_CHECK(addrman.size() == 1);\n \n \n     // Test 5: New table has one addr and we add a diff addr we should\n     //  have two addrs.\n     CService addr2 = CService(\"250.1.1.2\", 8333);\n-    addrman.Add(CAddress(addr2, 0), source);\n+    addrman.Add(CAddress(addr2, NODE_NONE), source);\n     BOOST_CHECK(addrman.size() == 2);\n \n     // Test 6: AddrMan::Clear() should empty the new table.\n@@ -106,18 +106,18 @@ BOOST_AUTO_TEST_CASE(addrman_ports)\n \n     // Test 7; Addr with same IP but diff port does not replace existing addr.\n     CService addr1 = CService(\"250.1.1.1\", 8333);\n-    addrman.Add(CAddress(addr1, 0), source);\n+    addrman.Add(CAddress(addr1, NODE_NONE), source);\n     BOOST_CHECK(addrman.size() == 1);\n \n     CService addr1_port = CService(\"250.1.1.1\", 8334);\n-    addrman.Add(CAddress(addr1_port, 0), source);\n+    addrman.Add(CAddress(addr1_port, NODE_NONE), source);\n     BOOST_CHECK(addrman.size() == 1);\n     CAddrInfo addr_ret2 = addrman.Select();\n     BOOST_CHECK(addr_ret2.ToString() == \"250.1.1.1:8333\");\n \n     // Test 8: Add same IP but diff port to tried table, it doesn't get added.\n     //  Perhaps this is not ideal behavior but it is the current behavior.\n-    addrman.Good(CAddress(addr1_port, 0));\n+    addrman.Good(CAddress(addr1_port, NODE_NONE));\n     BOOST_CHECK(addrman.size() == 1);\n     bool newOnly = true;\n     CAddrInfo addr_ret3 = addrman.Select(newOnly);\n@@ -136,15 +136,15 @@ BOOST_AUTO_TEST_CASE(addrman_select)\n \n     // Test 9: Select from new with 1 addr in new.\n     CService addr1 = CService(\"250.1.1.1\", 8333);\n-    addrman.Add(CAddress(addr1, 0), source);\n+    addrman.Add(CAddress(addr1, NODE_NONE), source);\n     BOOST_CHECK(addrman.size() == 1);\n \n     bool newOnly = true;\n     CAddrInfo addr_ret1 = addrman.Select(newOnly);\n     BOOST_CHECK(addr_ret1.ToString() == \"250.1.1.1:8333\");\n \n     // Test 10: move addr to tried, select from new expected nothing returned.\n-    addrman.Good(CAddress(addr1, 0));\n+    addrman.Good(CAddress(addr1, NODE_NONE));\n     BOOST_CHECK(addrman.size() == 1);\n     CAddrInfo addr_ret2 = addrman.Select(newOnly);\n     BOOST_CHECK(addr_ret2.ToString() == \"[::]:0\");\n@@ -160,21 +160,21 @@ BOOST_AUTO_TEST_CASE(addrman_select)\n     CService addr3 = CService(\"250.3.2.2\", 9999);\n     CService addr4 = CService(\"250.3.3.3\", 9999);\n \n-    addrman.Add(CAddress(addr2, 0), CService(\"250.3.1.1\", 8333));\n-    addrman.Add(CAddress(addr3, 0), CService(\"250.3.1.1\", 8333));\n-    addrman.Add(CAddress(addr4, 0), CService(\"250.4.1.1\", 8333));\n+    addrman.Add(CAddress(addr2, NODE_NONE), CService(\"250.3.1.1\", 8333));\n+    addrman.Add(CAddress(addr3, NODE_NONE), CService(\"250.3.1.1\", 8333));\n+    addrman.Add(CAddress(addr4, NODE_NONE), CService(\"250.4.1.1\", 8333));\n \n     // Add three addresses to tried table.\n     CService addr5 = CService(\"250.4.4.4\", 8333);\n     CService addr6 = CService(\"250.4.5.5\", 7777);\n     CService addr7 = CService(\"250.4.6.6\", 8333);\n \n-    addrman.Add(CAddress(addr5, 0), CService(\"250.3.1.1\", 8333));\n-    addrman.Good(CAddress(addr5, 0));\n-    addrman.Add(CAddress(addr6, 0), CService(\"250.3.1.1\", 8333));\n-    addrman.Good(CAddress(addr6, 0));\n-    addrman.Add(CAddress(addr7, 0), CService(\"250.1.1.3\", 8333));\n-    addrman.Good(CAddress(addr7, 0));\n+    addrman.Add(CAddress(addr5, NODE_NONE), CService(\"250.3.1.1\", 8333));\n+    addrman.Good(CAddress(addr5, NODE_NONE));\n+    addrman.Add(CAddress(addr6, NODE_NONE), CService(\"250.3.1.1\", 8333));\n+    addrman.Good(CAddress(addr6, NODE_NONE));\n+    addrman.Add(CAddress(addr7, NODE_NONE), CService(\"250.1.1.3\", 8333));\n+    addrman.Good(CAddress(addr7, NODE_NONE));\n \n     // Test 11: 6 addrs + 1 addr from last test = 7.\n     BOOST_CHECK(addrman.size() == 7);\n@@ -199,19 +199,19 @@ BOOST_AUTO_TEST_CASE(addrman_new_collisions)\n \n     for (unsigned int i = 1; i < 18; i++) {\n         CService addr = CService(\"250.1.1.\" + boost::to_string(i));\n-        addrman.Add(CAddress(addr, 0), source);\n+        addrman.Add(CAddress(addr, NODE_NONE), source);\n \n         //Test 13: No collision in new table yet.\n         BOOST_CHECK(addrman.size() == i);\n     }\n \n     //Test 14: new table collision!\n     CService addr1 = CService(\"250.1.1.18\");\n-    addrman.Add(CAddress(addr1, 0), source);\n+    addrman.Add(CAddress(addr1, NODE_NONE), source);\n     BOOST_CHECK(addrman.size() == 17);\n \n     CService addr2 = CService(\"250.1.1.19\");\n-    addrman.Add(CAddress(addr2, 0), source);\n+    addrman.Add(CAddress(addr2, NODE_NONE), source);\n     BOOST_CHECK(addrman.size() == 18);\n }\n \n@@ -228,8 +228,8 @@ BOOST_AUTO_TEST_CASE(addrman_tried_collisions)\n \n     for (unsigned int i = 1; i < 80; i++) {\n         CService addr = CService(\"250.1.1.\" + boost::to_string(i));\n-        addrman.Add(CAddress(addr, 0), source);\n-        addrman.Good(CAddress(addr, 0));\n+        addrman.Add(CAddress(addr, NODE_NONE), source);\n+        addrman.Good(CAddress(addr, NODE_NONE));\n \n         //Test 15: No collision in tried table yet.\n         BOOST_TEST_MESSAGE(addrman.size());\n@@ -238,11 +238,11 @@ BOOST_AUTO_TEST_CASE(addrman_tried_collisions)\n \n     //Test 16: tried table collision!\n     CService addr1 = CService(\"250.1.1.80\");\n-    addrman.Add(CAddress(addr1, 0), source);\n+    addrman.Add(CAddress(addr1, NODE_NONE), source);\n     BOOST_CHECK(addrman.size() == 79);\n \n     CService addr2 = CService(\"250.1.1.81\");\n-    addrman.Add(CAddress(addr2, 0), source);\n+    addrman.Add(CAddress(addr2, NODE_NONE), source);\n     BOOST_CHECK(addrman.size() == 80);\n }\n \n@@ -255,9 +255,9 @@ BOOST_AUTO_TEST_CASE(addrman_find)\n \n     BOOST_CHECK(addrman.size() == 0);\n \n-    CAddress addr1 = CAddress(CService(\"250.1.2.1\", 8333), 0);\n-    CAddress addr2 = CAddress(CService(\"250.1.2.1\", 9999), 0);\n-    CAddress addr3 = CAddress(CService(\"251.255.2.1\", 8333), 0);\n+    CAddress addr1 = CAddress(CService(\"250.1.2.1\", 8333), NODE_NONE);\n+    CAddress addr2 = CAddress(CService(\"250.1.2.1\", 9999), NODE_NONE);\n+    CAddress addr3 = CAddress(CService(\"251.255.2.1\", 8333), NODE_NONE);\n \n     CNetAddr source1 = CNetAddr(\"250.1.2.1\");\n     CNetAddr source2 = CNetAddr(\"250.1.2.2\");\n@@ -294,7 +294,7 @@ BOOST_AUTO_TEST_CASE(addrman_create)\n \n     BOOST_CHECK(addrman.size() == 0);\n \n-    CAddress addr1 = CAddress(CService(\"250.1.2.1\", 8333), 0);\n+    CAddress addr1 = CAddress(CService(\"250.1.2.1\", 8333), NODE_NONE);\n     CNetAddr source1 = CNetAddr(\"250.1.2.1\");\n \n     int nId;\n@@ -317,7 +317,7 @@ BOOST_AUTO_TEST_CASE(addrman_delete)\n \n     BOOST_CHECK(addrman.size() == 0);\n \n-    CAddress addr1 = CAddress(CService(\"250.1.2.1\", 8333), 0);\n+    CAddress addr1 = CAddress(CService(\"250.1.2.1\", 8333), NODE_NONE);\n     CNetAddr source1 = CNetAddr(\"250.1.2.1\");\n \n     int nId;\n@@ -344,15 +344,15 @@ BOOST_AUTO_TEST_CASE(addrman_getaddr)\n     vector<CAddress> vAddr1 = addrman.GetAddr();\n     BOOST_CHECK(vAddr1.size() == 0);\n \n-    CAddress addr1 = CAddress(CService(\"250.250.2.1\", 8333), 0);\n+    CAddress addr1 = CAddress(CService(\"250.250.2.1\", 8333), NODE_NONE);\n     addr1.nTime = GetAdjustedTime(); // Set time so isTerrible = false\n-    CAddress addr2 = CAddress(CService(\"250.251.2.2\", 9999), 0);\n+    CAddress addr2 = CAddress(CService(\"250.251.2.2\", 9999), NODE_NONE);\n     addr2.nTime = GetAdjustedTime();\n-    CAddress addr3 = CAddress(CService(\"251.252.2.3\", 8333), 0);\n+    CAddress addr3 = CAddress(CService(\"251.252.2.3\", 8333), NODE_NONE);\n     addr3.nTime = GetAdjustedTime();\n-    CAddress addr4 = CAddress(CService(\"252.253.3.4\", 8333), 0);\n+    CAddress addr4 = CAddress(CService(\"252.253.3.4\", 8333), NODE_NONE);\n     addr4.nTime = GetAdjustedTime();\n-    CAddress addr5 = CAddress(CService(\"252.254.4.5\", 8333), 0);\n+    CAddress addr5 = CAddress(CService(\"252.254.4.5\", 8333), NODE_NONE);\n     addr5.nTime = GetAdjustedTime();\n     CNetAddr source1 = CNetAddr(\"250.1.2.1\");\n     CNetAddr source2 = CNetAddr(\"250.2.3.3\");\n@@ -368,8 +368,8 @@ BOOST_AUTO_TEST_CASE(addrman_getaddr)\n     BOOST_CHECK(addrman.GetAddr().size() == 1); \n \n     // Test 24: Ensure GetAddr works with new and tried addresses.\n-    addrman.Good(CAddress(addr1, 0));\n-    addrman.Good(CAddress(addr2, 0));\n+    addrman.Good(CAddress(addr1, NODE_NONE));\n+    addrman.Good(CAddress(addr2, NODE_NONE));\n     BOOST_CHECK(addrman.GetAddr().size() == 1);\n \n     // Test 25: Ensure GetAddr still returns 23% when addrman has many addrs.\n@@ -378,7 +378,7 @@ BOOST_AUTO_TEST_CASE(addrman_getaddr)\n         int octet2 = (i / 256) % 256;\n         int octet3 = (i / (256 * 2)) % 256;\n         string strAddr = boost::to_string(octet1) + \".\" + boost::to_string(octet2) + \".\" + boost::to_string(octet3) + \".23\";\n-        CAddress addr = CAddress(CService(strAddr), 0);\n+        CAddress addr = CAddress(CService(strAddr), NODE_NONE);\n         \n         // Ensure that for all addrs in addrman, isTerrible == false.\n         addr.nTime = GetAdjustedTime();\n@@ -403,8 +403,8 @@ BOOST_AUTO_TEST_CASE(caddrinfo_get_tried_bucket)\n     // Set addrman addr placement to be deterministic.\n     addrman.MakeDeterministic();\n \n-    CAddress addr1 = CAddress(CService(\"250.1.1.1\", 8333), 0);\n-    CAddress addr2 = CAddress(CService(\"250.1.1.1\", 9999), 0);\n+    CAddress addr1 = CAddress(CService(\"250.1.1.1\", 8333), NODE_NONE);\n+    CAddress addr2 = CAddress(CService(\"250.1.1.1\", 9999), NODE_NONE);\n \n     CNetAddr source1 = CNetAddr(\"250.1.1.1\");\n \n@@ -431,7 +431,7 @@ BOOST_AUTO_TEST_CASE(caddrinfo_get_tried_bucket)\n     set<int> buckets;\n     for (int i = 0; i < 255; i++) {\n         CAddrInfo infoi = CAddrInfo(\n-            CAddress(CService(\"250.1.1.\" + boost::to_string(i)), 0),\n+            CAddress(CService(\"250.1.1.\" + boost::to_string(i)), NODE_NONE),\n             CNetAddr(\"250.1.1.\" + boost::to_string(i)));\n         int bucket = infoi.GetTriedBucket(nKey1);\n         buckets.insert(bucket);\n@@ -443,7 +443,7 @@ BOOST_AUTO_TEST_CASE(caddrinfo_get_tried_bucket)\n     buckets.clear();\n     for (int j = 0; j < 255; j++) {\n         CAddrInfo infoj = CAddrInfo(\n-            CAddress(CService(\"250.\" + boost::to_string(j) + \".1.1\"), 0),\n+            CAddress(CService(\"250.\" + boost::to_string(j) + \".1.1\"), NODE_NONE),\n             CNetAddr(\"250.\" + boost::to_string(j) + \".1.1\"));\n         int bucket = infoj.GetTriedBucket(nKey1);\n         buckets.insert(bucket);\n@@ -460,8 +460,8 @@ BOOST_AUTO_TEST_CASE(caddrinfo_get_new_bucket)\n     // Set addrman addr placement to be deterministic.\n     addrman.MakeDeterministic();\n \n-    CAddress addr1 = CAddress(CService(\"250.1.2.1\", 8333), 0);\n-    CAddress addr2 = CAddress(CService(\"250.1.2.1\", 9999), 0);\n+    CAddress addr1 = CAddress(CService(\"250.1.2.1\", 8333), NODE_NONE);\n+    CAddress addr2 = CAddress(CService(\"250.1.2.1\", 9999), NODE_NONE);\n \n     CNetAddr source1 = CNetAddr(\"250.1.2.1\");\n \n@@ -484,7 +484,7 @@ BOOST_AUTO_TEST_CASE(caddrinfo_get_new_bucket)\n     set<int> buckets;\n     for (int i = 0; i < 255; i++) {\n         CAddrInfo infoi = CAddrInfo(\n-            CAddress(CService(\"250.1.1.\" + boost::to_string(i)), 0),\n+            CAddress(CService(\"250.1.1.\" + boost::to_string(i)), NODE_NONE),\n             CNetAddr(\"250.1.1.\" + boost::to_string(i)));\n         int bucket = infoi.GetNewBucket(nKey1);\n         buckets.insert(bucket);\n@@ -497,7 +497,7 @@ BOOST_AUTO_TEST_CASE(caddrinfo_get_new_bucket)\n     for (int j = 0; j < 4 * 255; j++) {\n         CAddrInfo infoj = CAddrInfo(CAddress(\n                                         CService(\n-                                            boost::to_string(250 + (j / 255)) + \".\" + boost::to_string(j % 256) + \".1.1\"), 0),\n+                                            boost::to_string(250 + (j / 255)) + \".\" + boost::to_string(j % 256) + \".1.1\"), NODE_NONE),\n             CNetAddr(\"251.4.1.1\"));\n         int bucket = infoj.GetNewBucket(nKey1);\n         buckets.insert(bucket);\n@@ -509,7 +509,7 @@ BOOST_AUTO_TEST_CASE(caddrinfo_get_new_bucket)\n     buckets.clear();\n     for (int p = 0; p < 255; p++) {\n         CAddrInfo infoj = CAddrInfo(\n-            CAddress(CService(\"250.1.1.1\"), 0),\n+            CAddress(CService(\"250.1.1.1\"), NODE_NONE),\n             CNetAddr(\"250.\" + boost::to_string(p) + \".1.1\"));\n         int bucket = infoj.GetNewBucket(nKey1);\n         buckets.insert(bucket);"
+      },
+      {
+        "sha": "d005d6a1633e934975d5cd1ed11142bde214e527",
+        "filename": "src/test/net_tests.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 4,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ee06e04369c37da21e048fda849cce2a1f066f84/src/test/net_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ee06e04369c37da21e048fda849cce2a1f066f84/src/test/net_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/net_tests.cpp?ref=ee06e04369c37da21e048fda849cce2a1f066f84",
+        "patch": "@@ -51,7 +51,7 @@ class CAddrManCorrupted : public CAddrManSerializationMock\n         int nUBuckets = ADDRMAN_NEW_BUCKET_COUNT ^ (1 << 30);\n         s << nUBuckets;\n \n-        CAddress addr = CAddress(CService(\"252.1.1.1\", 7777), 0);\n+        CAddress addr = CAddress(CService(\"252.1.1.1\", 7777), NODE_NONE);\n         CAddrInfo info = CAddrInfo(addr, CNetAddr(\"252.2.2.2\"));\n         s << info;\n     }\n@@ -79,9 +79,9 @@ BOOST_AUTO_TEST_CASE(caddrdb_read)\n     CService addr3 = CService(\"250.7.3.3\", 9999);\n \n     // Add three addresses to new table.\n-    addrmanUncorrupted.Add(CAddress(addr1, 0), CService(\"252.5.1.1\", 8333));\n-    addrmanUncorrupted.Add(CAddress(addr2, 0), CService(\"252.5.1.1\", 8333));\n-    addrmanUncorrupted.Add(CAddress(addr3, 0), CService(\"252.5.1.1\", 8333));\n+    addrmanUncorrupted.Add(CAddress(addr1, NODE_NONE), CService(\"252.5.1.1\", 8333));\n+    addrmanUncorrupted.Add(CAddress(addr2, NODE_NONE), CService(\"252.5.1.1\", 8333));\n+    addrmanUncorrupted.Add(CAddress(addr3, NODE_NONE), CService(\"252.5.1.1\", 8333));\n \n     // Test that the de-serialization does not throw an exception.\n     CDataStream ssPeers1 = AddrmanToStream(addrmanUncorrupted);"
+      }
+    ]
+  },
+  {
+    "sha": "ecd7fd37c888f8ebc64cf3d92272975b37ae54ca",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplY2Q3ZmQzN2M4ODhmOGViYzY0Y2YzZDkyMjcyOTc1YjM3YWU1NGNh",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-06-13T14:01:21Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-06-13T15:40:16Z"
+      },
+      "message": "Introduce REQUIRED_SERVICES constant",
+      "tree": {
+        "sha": "f965abcecc43584d8f9f9a42629df169fdcc249e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f965abcecc43584d8f9f9a42629df169fdcc249e"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/ecd7fd37c888f8ebc64cf3d92272975b37ae54ca",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ecd7fd37c888f8ebc64cf3d92272975b37ae54ca",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/ecd7fd37c888f8ebc64cf3d92272975b37ae54ca",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ecd7fd37c888f8ebc64cf3d92272975b37ae54ca/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "ee06e04369c37da21e048fda849cce2a1f066f84",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ee06e04369c37da21e048fda849cce2a1f066f84",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/ee06e04369c37da21e048fda849cce2a1f066f84"
+      }
+    ],
+    "stats": {
+      "total": 6,
+      "additions": 4,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "62012bf56709fa1badacaf73ed6c80abbe37a1d2",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ecd7fd37c888f8ebc64cf3d92272975b37ae54ca/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ecd7fd37c888f8ebc64cf3d92272975b37ae54ca/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=ecd7fd37c888f8ebc64cf3d92272975b37ae54ca",
+        "patch": "@@ -4787,7 +4787,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv,\n         {\n             boost::this_thread::interruption_point();\n \n-            if (!(addr.nServices & NODE_NETWORK))\n+            if ((addr.nServices & REQUIRED_SERVICES) != REQUIRED_SERVICES)\n                 continue;\n \n             if (addr.nTime <= 100000000 || addr.nTime > nNow + 10 * 60)"
+      },
+      {
+        "sha": "a390eca776f52e68fbadab0b1492a2e5edff4eb9",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ecd7fd37c888f8ebc64cf3d92272975b37ae54ca/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ecd7fd37c888f8ebc64cf3d92272975b37ae54ca/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=ecd7fd37c888f8ebc64cf3d92272975b37ae54ca",
+        "patch": "@@ -1596,7 +1596,7 @@ void ThreadOpenConnections()\n                 continue;\n \n             // only connect to full nodes\n-            if (!(addr.nServices & NODE_NETWORK))\n+            if ((addr.nServices & REQUIRED_SERVICES) != REQUIRED_SERVICES)\n                 continue;\n \n             // only consider very recently tried nodes after 30 failed attempts"
+      },
+      {
+        "sha": "2aaca4888fde9427df5e9a1998dd699da889ab00",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ecd7fd37c888f8ebc64cf3d92272975b37ae54ca/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ecd7fd37c888f8ebc64cf3d92272975b37ae54ca/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=ecd7fd37c888f8ebc64cf3d92272975b37ae54ca",
+        "patch": "@@ -72,6 +72,8 @@ static const bool DEFAULT_FORCEDNSSEED = false;\n static const size_t DEFAULT_MAXRECEIVEBUFFER = 5 * 1000;\n static const size_t DEFAULT_MAXSENDBUFFER    = 1 * 1000;\n \n+static const ServiceFlags REQUIRED_SERVICES = NODE_NETWORK;\n+\n // NOTE: When adjusting this, update rpcnet:setban's help (\"24h\")\n static const unsigned int DEFAULT_MISBEHAVING_BANTIME = 60 * 60 * 24;  // Default 24-hour ban\n "
+      }
+    ]
+  }
+]

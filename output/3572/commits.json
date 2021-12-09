@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "f7257cfbd9f676367b7d65bb38557bc7620c5cf8",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmNzI1N2NmYmQ5ZjY3NjM2N2I3ZDY1YmIzODU1N2JjNzYyMGM1Y2Y4",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-01-22T13:41:24Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-04-01T07:41:49Z"
+      },
+      "message": "unified and better log/error messages for CDBEnv/CDB",
+      "tree": {
+        "sha": "0e52d5ee21dfaa6a31418470dcc188afd5a8cb32",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/0e52d5ee21dfaa6a31418470dcc188afd5a8cb32"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/f7257cfbd9f676367b7d65bb38557bc7620c5cf8",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f7257cfbd9f676367b7d65bb38557bc7620c5cf8",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/f7257cfbd9f676367b7d65bb38557bc7620c5cf8",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f7257cfbd9f676367b7d65bb38557bc7620c5cf8/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "d8dcfb9034131fec2bbf9791d8c49b546ce29043",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d8dcfb9034131fec2bbf9791d8c49b546ce29043",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/d8dcfb9034131fec2bbf9791d8c49b546ce29043"
+      }
+    ],
+    "stats": {
+      "total": 45,
+      "additions": 22,
+      "deletions": 23
+    },
+    "files": [
+      {
+        "sha": "eb40f3cc405692bb50f359dc81cf6af03296c00d",
+        "filename": "src/db.cpp",
+        "status": "modified",
+        "additions": 22,
+        "deletions": 23,
+        "changes": 45,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f7257cfbd9f676367b7d65bb38557bc7620c5cf8/src/db.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f7257cfbd9f676367b7d65bb38557bc7620c5cf8/src/db.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.cpp?ref=f7257cfbd9f676367b7d65bb38557bc7620c5cf8",
+        "patch": "@@ -42,7 +42,7 @@ void CDBEnv::EnvShutdown()\n     fDbEnvInit = false;\n     int ret = dbenv.close(0);\n     if (ret != 0)\n-        LogPrintf(\"EnvShutdown exception: %s (%d)\\n\", DbEnv::strerror(ret), ret);\n+        LogPrintf(\"CDBEnv::EnvShutdown : Error %d shutting down database environment: %s\\n\", ret, DbEnv::strerror(ret));\n     if (!fMockDb)\n         DbEnv(0).remove(path.string().c_str(), 0);\n }\n@@ -74,7 +74,7 @@ bool CDBEnv::Open(const boost::filesystem::path& pathIn)\n     filesystem::path pathLogDir = path / \"database\";\n     TryCreateDirectory(pathLogDir);\n     filesystem::path pathErrorFile = path / \"db.log\";\n-    LogPrintf(\"dbenv.open LogDir=%s ErrorFile=%s\\n\", pathLogDir.string(), pathErrorFile.string());\n+    LogPrintf(\"CDBEnv::Open : LogDir=%s ErrorFile=%s\\n\", pathLogDir.string(), pathErrorFile.string());\n \n     unsigned int nEnvFlags = 0;\n     if (GetBoolArg(\"-privdb\", true))\n@@ -101,7 +101,7 @@ bool CDBEnv::Open(const boost::filesystem::path& pathIn)\n                      nEnvFlags,\n                      S_IRUSR | S_IWUSR);\n     if (ret != 0)\n-        return error(\"CDB() : error %s (%d) opening database environment\", DbEnv::strerror(ret), ret);\n+        return error(\"CDBEnv::Open : Error %d opening database environment: %s\\n\", ret, DbEnv::strerror(ret));\n \n     fDbEnvInit = true;\n     fMockDb = false;\n@@ -111,11 +111,11 @@ bool CDBEnv::Open(const boost::filesystem::path& pathIn)\n void CDBEnv::MakeMock()\n {\n     if (fDbEnvInit)\n-        throw runtime_error(\"CDBEnv::MakeMock(): already initialized\");\n+        throw runtime_error(\"CDBEnv::MakeMock : Already initialized\");\n \n     boost::this_thread::interruption_point();\n \n-    LogPrint(\"db\", \"CDBEnv::MakeMock()\\n\");\n+    LogPrint(\"db\", \"CDBEnv::MakeMock\\n\");\n \n     dbenv.set_cachesize(1, 0, 1);\n     dbenv.set_lg_bsize(10485760*4);\n@@ -134,7 +134,7 @@ void CDBEnv::MakeMock()\n                      DB_PRIVATE,\n                      S_IRUSR | S_IWUSR);\n     if (ret > 0)\n-        throw runtime_error(strprintf(\"CDBEnv::MakeMock(): error %d opening database environment\", ret));\n+        throw runtime_error(strprintf(\"CDBEnv::MakeMock : Error %d opening database environment.\", ret));\n \n     fDbEnvInit = true;\n     fMockDb = true;\n@@ -172,16 +172,16 @@ bool CDBEnv::Salvage(std::string strFile, bool fAggressive,\n     int result = db.verify(strFile.c_str(), NULL, &strDump, flags);\n     if (result == DB_VERIFY_BAD)\n     {\n-        LogPrintf(\"Error: Salvage found errors, all data may not be recoverable.\\n\");\n+        LogPrintf(\"CDBEnv::Salvage : Database salvage found errors, all data may not be recoverable.\\n\");\n         if (!fAggressive)\n         {\n-            LogPrintf(\"Error: Rerun with aggressive mode to ignore errors and continue.\\n\");\n+            LogPrintf(\"CDBEnv::Salvage : Rerun with aggressive mode to ignore errors and continue.\\n\");\n             return false;\n         }\n     }\n     if (result != 0 && result != DB_VERIFY_BAD)\n     {\n-        LogPrintf(\"ERROR: db salvage failed: %d\\n\",result);\n+        LogPrintf(\"CDBEnv::Salvage : Database salvage failed with result %d.\\n\", result);\n         return false;\n     }\n \n@@ -237,7 +237,7 @@ CDB::CDB(const char *pszFile, const char* pszMode) :\n     {\n         LOCK(bitdb.cs_db);\n         if (!bitdb.Open(GetDataDir()))\n-            throw runtime_error(\"env open failed\");\n+            throw runtime_error(\"CDB : Failed to open database environment.\");\n \n         strFile = pszFile;\n         ++bitdb.mapFileUseCount[strFile];\n@@ -252,7 +252,7 @@ CDB::CDB(const char *pszFile, const char* pszMode) :\n                 DbMpoolFile*mpf = pdb->get_mpf();\n                 ret = mpf->set_flags(DB_MPOOL_NOFILE, 1);\n                 if (ret != 0)\n-                    throw runtime_error(strprintf(\"CDB() : failed to configure for no temp file backing for database %s\", pszFile));\n+                    throw runtime_error(strprintf(\"CDB : Failed to configure for no temp file backing for database %s\", pszFile));\n             }\n \n             ret = pdb->open(NULL,      // Txn pointer\n@@ -268,7 +268,7 @@ CDB::CDB(const char *pszFile, const char* pszMode) :\n                 pdb = NULL;\n                 --bitdb.mapFileUseCount[strFile];\n                 strFile = \"\";\n-                throw runtime_error(strprintf(\"CDB() : can't open database file %s, error %d\", pszFile, ret));\n+                throw runtime_error(strprintf(\"CDB : Error %d, can't open database %s\", ret, pszFile));\n             }\n \n             if (fCreate && !Exists(string(\"version\")))\n@@ -352,7 +352,7 @@ bool CDB::Rewrite(const string& strFile, const char* pszSkip)\n                 bitdb.mapFileUseCount.erase(strFile);\n \n                 bool fSuccess = true;\n-                LogPrintf(\"Rewriting %s...\\n\", strFile);\n+                LogPrintf(\"CDB::Rewrite : Rewriting %s...\\n\", strFile);\n                 string strFileRes = strFile + \".rewrite\";\n                 { // surround usage of db with extra {}\n                     CDB db(strFile.c_str(), \"r\");\n@@ -366,7 +366,7 @@ bool CDB::Rewrite(const string& strFile, const char* pszSkip)\n                                             0);\n                     if (ret > 0)\n                     {\n-                        LogPrintf(\"Cannot create database file %s\\n\", strFileRes);\n+                        LogPrintf(\"CDB::Rewrite : Can't create database file %s\\n\", strFileRes);\n                         fSuccess = false;\n                     }\n \n@@ -422,7 +422,7 @@ bool CDB::Rewrite(const string& strFile, const char* pszSkip)\n                         fSuccess = false;\n                 }\n                 if (!fSuccess)\n-                    LogPrintf(\"Rewriting of %s FAILED!\\n\", strFileRes);\n+                    LogPrintf(\"CDB::Rewrite : Failed to rewrite database file %s\\n\", strFileRes);\n                 return fSuccess;\n             }\n         }\n@@ -435,9 +435,8 @@ bool CDB::Rewrite(const string& strFile, const char* pszSkip)\n void CDBEnv::Flush(bool fShutdown)\n {\n     int64_t nStart = GetTimeMillis();\n-    // Flush log data to the actual data file\n-    //  on all files that are not in use\n-    LogPrint(\"db\", \"Flush(%s)%s\\n\", fShutdown ? \"true\" : \"false\", fDbEnvInit ? \"\" : \" db not started\");\n+    // Flush log data to the actual data file on all files that are not in use\n+    LogPrint(\"db\", \"CDBEnv::Flush : Flush(%s)%s\\n\", fShutdown ? \"true\" : \"false\", fDbEnvInit ? \"\" : \" database not started\");\n     if (!fDbEnvInit)\n         return;\n     {\n@@ -447,23 +446,23 @@ void CDBEnv::Flush(bool fShutdown)\n         {\n             string strFile = (*mi).first;\n             int nRefCount = (*mi).second;\n-            LogPrint(\"db\", \"%s refcount=%d\\n\", strFile, nRefCount);\n+            LogPrint(\"db\", \"CDBEnv::Flush : Flushing %s (refcount = %d)...\\n\", strFile, nRefCount);\n             if (nRefCount == 0)\n             {\n                 // Move log data to the dat file\n                 CloseDb(strFile);\n-                LogPrint(\"db\", \"%s checkpoint\\n\", strFile);\n+                LogPrint(\"db\", \"CDBEnv::Flush : %s checkpoint\\n\", strFile);\n                 dbenv.txn_checkpoint(0, 0, 0);\n-                LogPrint(\"db\", \"%s detach\\n\", strFile);\n+                LogPrint(\"db\", \"CDBEnv::Flush : %s detach\\n\", strFile);\n                 if (!fMockDb)\n                     dbenv.lsn_reset(strFile.c_str(), 0);\n-                LogPrint(\"db\", \"%s closed\\n\", strFile);\n+                LogPrint(\"db\", \"CDBEnv::Flush : %s closed\\n\", strFile);\n                 mapFileUseCount.erase(mi++);\n             }\n             else\n                 mi++;\n         }\n-        LogPrint(\"db\", \"DBFlush(%s)%s ended %15dms\\n\", fShutdown ? \"true\" : \"false\", fDbEnvInit ? \"\" : \" db not started\", GetTimeMillis() - nStart);\n+        LogPrint(\"db\", \"CDBEnv::Flush : Flush(%s)%s took %15dms\\n\", fShutdown ? \"true\" : \"false\", fDbEnvInit ? \"\" : \" database not started\", GetTimeMillis() - nStart);\n         if (fShutdown)\n         {\n             char** listp;"
+      }
+    ]
+  }
+]

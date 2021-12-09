@@ -1,0 +1,74 @@
+[
+  {
+    "sha": "f41d58966995fe69df433fa684117fae74a56e66",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmNDFkNTg5NjY5OTVmZTY5ZGY0MzNmYTY4NDExN2ZhZTc0YTU2ZTY2",
+    "commit": {
+      "author": {
+        "name": "Antoine Riard",
+        "email": "ariard@student.42.fr",
+        "date": "2019-12-10T23:08:21Z"
+      },
+      "committer": {
+        "name": "Antoine Riard",
+        "email": "ariard@student.42.fr",
+        "date": "2019-12-18T18:31:32Z"
+      },
+      "message": "Document better -keypool as a look-ahead safety mechanism\n\nIf after a backup, an address is issued beyond the initial\nkeypool range and none of the addresses in this range\nis seen onchain, if a wallet is restored from backup, even in\ncase of rescan, funds may be loss due to the look-ahead\nbuffer not being incremented and so restored wallet not detecting\nonchain out-of-range address as derived from its seed.\n\nThis scenario is theoretically unavoidable due to the requirement\nof the keypool to have a max size. However, given the default\nkeypool size, this is unlikely. Document better keypool size\nimplications to avoid user setting a too low value.",
+      "tree": {
+        "sha": "d33b90c0f525fcead4a12777766da32b60fa0e3a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/d33b90c0f525fcead4a12777766da32b60fa0e3a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/f41d58966995fe69df433fa684117fae74a56e66",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f41d58966995fe69df433fa684117fae74a56e66",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/f41d58966995fe69df433fa684117fae74a56e66",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f41d58966995fe69df433fa684117fae74a56e66/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "3d6752779f0504e6435fe682f0c06c60b5c4c33b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3d6752779f0504e6435fe682f0c06c60b5c4c33b",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/3d6752779f0504e6435fe682f0c06c60b5c4c33b"
+      }
+    ],
+    "stats": {
+      "total": 7,
+      "additions": 6,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "2ebc9aba399f465d5f21364ef8c2ee7e58b80c0e",
+        "filename": "src/wallet/init.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f41d58966995fe69df433fa684117fae74a56e66/src/wallet/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f41d58966995fe69df433fa684117fae74a56e66/src/wallet/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/init.cpp?ref=f41d58966995fe69df433fa684117fae74a56e66",
+        "patch": "@@ -46,7 +46,7 @@ void WalletInit::AddWalletOptions() const\n \n     gArgs.AddArg(\"-fallbackfee=<amt>\", strprintf(\"A fee rate (in %s/kB) that will be used when fee estimation has insufficient data. 0 to entirely disable the fallbackfee feature. (default: %s)\",\n                                                                CURRENCY_UNIT, FormatMoney(DEFAULT_FALLBACK_FEE)), ArgsManager::ALLOW_ANY, OptionsCategory::WALLET);\n-    gArgs.AddArg(\"-keypool=<n>\", strprintf(\"Set key pool size to <n> (default: %u)\", DEFAULT_KEYPOOL_SIZE), ArgsManager::ALLOW_ANY, OptionsCategory::WALLET);\n+    gArgs.AddArg(\"-keypool=<n>\", strprintf(\"Set key pool size to <n> (default: %u). Warning: Smaller sizes may increase the risk of losing funds when restoring from an old backup, if none of the addresses in the original keypool have been used.\", DEFAULT_KEYPOOL_SIZE), ArgsManager::ALLOW_ANY, OptionsCategory::WALLET);\n     gArgs.AddArg(\"-maxtxfee=<amt>\", strprintf(\"Maximum total fees (in %s) to use in a single wallet transaction; setting this too low may abort large transactions (default: %s)\",\n         CURRENCY_UNIT, FormatMoney(DEFAULT_TRANSACTION_MAXFEE)), ArgsManager::ALLOW_ANY, OptionsCategory::DEBUG_TEST);\n     gArgs.AddArg(\"-mintxfee=<amt>\", strprintf(\"Fees (in %s/kB) smaller than this are considered zero fee for transaction creation (default: %s)\","
+      },
+      {
+        "sha": "31547ec4d45b132fead5f3c8d6cbf063ea2527a4",
+        "filename": "src/wallet/scriptpubkeyman.h",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 0,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f41d58966995fe69df433fa684117fae74a56e66/src/wallet/scriptpubkeyman.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f41d58966995fe69df433fa684117fae74a56e66/src/wallet/scriptpubkeyman.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/scriptpubkeyman.h?ref=f41d58966995fe69df433fa684117fae74a56e66",
+        "patch": "@@ -72,6 +72,11 @@ std::vector<CKeyID> GetAffectedKeys(const CScript& spk, const SigningProvider& p\n  * keys (by default 1000) ahead of the last used key and scans for the\n  * addresses of those keys.  This avoids the risk of not seeing transactions\n  * involving the wallet's addresses, or of re-using the same address.\n+ * In the unlikely case where none of the addresses in the `gap limit` are\n+ * used on-chain, the look-ahead will not be incremented to keep\n+ * a constant size and addresses beyond this range will not be detected by an\n+ * old backup. For this reason, it is not recommended to decrease keypool size\n+ * lower than default value.\n  *\n  * The HD-split wallet feature added a second keypool (commit: 02592f4c). There\n  * is an external keypool (for addresses to hand out) and an internal keypool"
+      }
+    ]
+  }
+]

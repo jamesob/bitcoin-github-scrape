@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "48c011489b047389e7c1c3aa8634de5133ec5b5c",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0OGMwMTE0ODliMDQ3Mzg5ZTdjMWMzYWE4NjM0ZGU1MTMzZWM1YjVj",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-10-08T12:23:57Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-10-11T13:34:05Z"
+      },
+      "message": "don't touch addressbook when using secure payment-requests\n\n- fixes #3006 by preventing addressbook changes when using\n  secure payment-requests\n\nsq",
+      "tree": {
+        "sha": "404a65b922bfa5581258ef56d6a7d691240b7ab7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/404a65b922bfa5581258ef56d6a7d691240b7ab7"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/48c011489b047389e7c1c3aa8634de5133ec5b5c",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/48c011489b047389e7c1c3aa8634de5133ec5b5c",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/48c011489b047389e7c1c3aa8634de5133ec5b5c",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/48c011489b047389e7c1c3aa8634de5133ec5b5c/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "56c0ba7a0f893c71eb871b95f36c18e37407bf00",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/56c0ba7a0f893c71eb871b95f36c18e37407bf00",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/56c0ba7a0f893c71eb871b95f36c18e37407bf00"
+      }
+    ],
+    "stats": {
+      "total": 32,
+      "additions": 18,
+      "deletions": 14
+    },
+    "files": [
+      {
+        "sha": "360f6a40142890c6c9c2c189c169e0f093f38fd0",
+        "filename": "src/qt/walletmodel.cpp",
+        "status": "modified",
+        "additions": 18,
+        "deletions": 14,
+        "changes": 32,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/48c011489b047389e7c1c3aa8634de5133ec5b5c/src/qt/walletmodel.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/48c011489b047389e7c1c3aa8634de5133ec5b5c/src/qt/walletmodel.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/walletmodel.cpp?ref=48c011489b047389e7c1c3aa8634de5133ec5b5c",
+        "patch": "@@ -258,22 +258,26 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(WalletModelTransaction &tran\n     // and emit coinsSent signal for each recipient\n     foreach(const SendCoinsRecipient &rcp, transaction.getRecipients())\n     {\n-        std::string strAddress = rcp.address.toStdString();\n-        CTxDestination dest = CBitcoinAddress(strAddress).Get();\n-        std::string strLabel = rcp.label.toStdString();\n+        // Don't touch the address book when we have a secure payment-request\n+        if (rcp.authenticatedMerchant.isEmpty())\n         {\n-            LOCK(wallet->cs_wallet);\n-\n-            std::map<CTxDestination, CAddressBookData>::iterator mi = wallet->mapAddressBook.find(dest);\n-\n-            // Check if we have a new address or an updated label\n-            if (mi == wallet->mapAddressBook.end())\n-            {\n-                wallet->SetAddressBook(dest, strLabel, \"send\");\n-            }\n-            else if (mi->second.name != strLabel)\n+            std::string strAddress = rcp.address.toStdString();\n+            CTxDestination dest = CBitcoinAddress(strAddress).Get();\n+            std::string strLabel = rcp.label.toStdString();\n             {\n-                wallet->SetAddressBook(dest, strLabel, \"\"); // \"\" means don't change purpose\n+                LOCK(wallet->cs_wallet);\n+\n+                std::map<CTxDestination, CAddressBookData>::iterator mi = wallet->mapAddressBook.find(dest);\n+\n+                // Check if we have a new address or an updated label\n+                if (mi == wallet->mapAddressBook.end())\n+                {\n+                    wallet->SetAddressBook(dest, strLabel, \"send\");\n+                }\n+                else if (mi->second.name != strLabel)\n+                {\n+                    wallet->SetAddressBook(dest, strLabel, \"\"); // \"\" means don't change purpose\n+                }\n             }\n         }\n         emit coinsSent(wallet, rcp, transaction_array);"
+      }
+    ]
+  }
+]

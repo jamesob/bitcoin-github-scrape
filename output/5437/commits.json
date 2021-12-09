@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "ccd056a30db0ba5e04b858a682907b378e464d34",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjY2QwNTZhMzBkYjBiYTVlMDRiODU4YTY4MjkwN2IzNzhlNDY0ZDM0",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-12-07T11:57:11Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-12-09T11:08:52Z"
+      },
+      "message": "add missing CAutoFile::IsNull() check in main\n\n- also use __func__ in error messages related to block files\n- minor comment changes and remove space after function name in log\n  messages in touched functions",
+      "tree": {
+        "sha": "818d6a4c2b4ea056507c869e163580016f577a03",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/818d6a4c2b4ea056507c869e163580016f577a03"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/ccd056a30db0ba5e04b858a682907b378e464d34",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ccd056a30db0ba5e04b858a682907b378e464d34",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/ccd056a30db0ba5e04b858a682907b378e464d34",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ccd056a30db0ba5e04b858a682907b378e464d34/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "4b5b263ac0ee44fe432a713b444df9880cfce4a2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4b5b263ac0ee44fe432a713b444df9880cfce4a2",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/4b5b263ac0ee44fe432a713b444df9880cfce4a2"
+      }
+    ],
+    "stats": {
+      "total": 28,
+      "additions": 15,
+      "deletions": 13
+    },
+    "files": [
+      {
+        "sha": "dd45db4e9e856f0926c096c92c330ca2a1c9fc54",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 15,
+        "deletions": 13,
+        "changes": 28,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ccd056a30db0ba5e04b858a682907b378e464d34/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ccd056a30db0ba5e04b858a682907b378e464d34/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=ccd056a30db0ba5e04b858a682907b378e464d34",
+        "patch": "@@ -1079,17 +1079,19 @@ bool GetTransaction(const uint256 &hash, CTransaction &txOut, uint256 &hashBlock\n             CDiskTxPos postx;\n             if (pblocktree->ReadTxIndex(hash, postx)) {\n                 CAutoFile file(OpenBlockFile(postx, true), SER_DISK, CLIENT_VERSION);\n+                if (file.IsNull())\n+                    return error(\"%s: OpenBlockFile failed\", __func__);\n                 CBlockHeader header;\n                 try {\n                     file >> header;\n                     fseek(file.Get(), postx.nTxOffset, SEEK_CUR);\n                     file >> txOut;\n                 } catch (std::exception &e) {\n-                    return error(\"%s : Deserialize or I/O error - %s\", __func__, e.what());\n+                    return error(\"%s: Deserialize or I/O error - %s\", __func__, e.what());\n                 }\n                 hashBlock = header.GetHash();\n                 if (txOut.GetHash() != hash)\n-                    return error(\"%s : txid mismatch\", __func__);\n+                    return error(\"%s: txid mismatch\", __func__);\n                 return true;\n             }\n         }\n@@ -1135,10 +1137,10 @@ bool GetTransaction(const uint256 &hash, CTransaction &txOut, uint256 &hashBlock\n \n bool WriteBlockToDisk(CBlock& block, CDiskBlockPos& pos)\n {\n-    // Open history file to append\n+    // Open block file to append\n     CAutoFile fileout(OpenBlockFile(pos), SER_DISK, CLIENT_VERSION);\n     if (fileout.IsNull())\n-        return error(\"WriteBlockToDisk : OpenBlockFile failed\");\n+        return error(\"%s: OpenBlockFile failed\", __func__);\n \n     // Write index header\n     unsigned int nSize = fileout.GetSerializeSize(block);\n@@ -1147,7 +1149,7 @@ bool WriteBlockToDisk(CBlock& block, CDiskBlockPos& pos)\n     // Write block\n     long fileOutPos = ftell(fileout.Get());\n     if (fileOutPos < 0)\n-        return error(\"WriteBlockToDisk : ftell failed\");\n+        return error(\"%s: ftell failed\", __func__);\n     pos.nPos = (unsigned int)fileOutPos;\n     fileout << block;\n \n@@ -1158,22 +1160,22 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos)\n {\n     block.SetNull();\n \n-    // Open history file to read\n+    // Open block file to read\n     CAutoFile filein(OpenBlockFile(pos, true), SER_DISK, CLIENT_VERSION);\n     if (filein.IsNull())\n-        return error(\"ReadBlockFromDisk : OpenBlockFile failed\");\n+        return error(\"%s: OpenBlockFile failed\", __func__);\n \n     // Read block\n     try {\n         filein >> block;\n     }\n     catch (std::exception &e) {\n-        return error(\"%s : Deserialize or I/O error - %s\", __func__, e.what());\n+        return error(\"%s: Deserialize or I/O error - %s\", __func__, e.what());\n     }\n \n     // Check the header\n     if (!CheckProofOfWork(block.GetHash(), block.nBits))\n-        return error(\"ReadBlockFromDisk : Errors in block header\");\n+        return error(\"%s: Errors in block header\", __func__);\n \n     return true;\n }\n@@ -4540,10 +4542,10 @@ bool CBlockUndo::WriteToDisk(CDiskBlockPos &pos, const uint256 &hashBlock)\n \n bool CBlockUndo::ReadFromDisk(const CDiskBlockPos &pos, const uint256 &hashBlock)\n {\n-    // Open history file to read\n+    // Open undo file to read\n     CAutoFile filein(OpenUndoFile(pos, true), SER_DISK, CLIENT_VERSION);\n     if (filein.IsNull())\n-        return error(\"CBlockUndo::ReadFromDisk : OpenBlockFile failed\");\n+        return error(\"%s: OpenBlockFile failed\", __func__);\n \n     // Read block\n     uint256 hashChecksum;\n@@ -4552,15 +4554,15 @@ bool CBlockUndo::ReadFromDisk(const CDiskBlockPos &pos, const uint256 &hashBlock\n         filein >> hashChecksum;\n     }\n     catch (std::exception &e) {\n-        return error(\"%s : Deserialize or I/O error - %s\", __func__, e.what());\n+        return error(\"%s: Deserialize or I/O error - %s\", __func__, e.what());\n     }\n \n     // Verify checksum\n     CHashWriter hasher(SER_GETHASH, PROTOCOL_VERSION);\n     hasher << hashBlock;\n     hasher << *this;\n     if (hashChecksum != hasher.GetHash())\n-        return error(\"CBlockUndo::ReadFromDisk : Checksum mismatch\");\n+        return error(\"%s: Checksum mismatch\", __func__);\n \n     return true;\n }"
+      }
+    ]
+  }
+]

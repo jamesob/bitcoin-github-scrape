@@ -1,0 +1,134 @@
+[
+  {
+    "sha": "765c0b364d41e9a251c3f88cbe203645854fd790",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3NjVjMGIzNjRkNDFlOWEyNTFjM2Y4OGNiZTIwMzY0NTg1NGZkNzkw",
+    "commit": {
+      "author": {
+        "name": "Antoine Riard",
+        "email": "ariard@student.42.fr",
+        "date": "2019-03-26T16:46:22Z"
+      },
+      "committer": {
+        "name": "Antoine Riard",
+        "email": "ariard@student.42.fr",
+        "date": "2019-03-27T22:29:48Z"
+      },
+      "message": "refactor: combine Chain::findFirstBlockWithTime/findFirstBlockWithTimeAndHeight\n\nAs suggested in #14711, pass height to CChain::FindEarliestAtLeast to\nsimplify Chain interface by combining findFirstBlockWithTime and\nfindFirstBlockWithTimeAndHeight into one\n\nExtend findearliestatleast_edge_test in consequence",
+      "tree": {
+        "sha": "6d6daaaba9d8f8f22eddaf4882f5c26db82b71c5",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/6d6daaaba9d8f8f22eddaf4882f5c26db82b71c5"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/765c0b364d41e9a251c3f88cbe203645854fd790",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/765c0b364d41e9a251c3f88cbe203645854fd790",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/765c0b364d41e9a251c3f88cbe203645854fd790",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/765c0b364d41e9a251c3f88cbe203645854fd790/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "8a8b03ecd2218dcdbcbf3127f2fa94f0f0da4698",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8a8b03ecd2218dcdbcbf3127f2fa94f0f0da4698",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/8a8b03ecd2218dcdbcbf3127f2fa94f0f0da4698"
+      }
+    ],
+    "stats": {
+      "total": 98,
+      "additions": 44,
+      "deletions": 54
+    },
+    "files": [
+      {
+        "sha": "5520d8149a1c2c46683cf6d709f930a5b927e1c2",
+        "filename": "src/chain.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 3,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/765c0b364d41e9a251c3f88cbe203645854fd790/src/chain.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/765c0b364d41e9a251c3f88cbe203645854fd790/src/chain.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/chain.cpp?ref=765c0b364d41e9a251c3f88cbe203645854fd790",
+        "patch": "@@ -59,10 +59,11 @@ const CBlockIndex *CChain::FindFork(const CBlockIndex *pindex) const {\n     return pindex;\n }\n \n-CBlockIndex* CChain::FindEarliestAtLeast(int64_t nTime) const\n+CBlockIndex* CChain::FindEarliestAtLeast(int64_t nTime, int height) const\n {\n-    std::vector<CBlockIndex*>::const_iterator lower = std::lower_bound(vChain.begin(), vChain.end(), nTime,\n-        [](CBlockIndex* pBlock, const int64_t& time) -> bool { return pBlock->GetBlockTimeMax() < time; });\n+    std::pair<int64_t, int> blockparams = std::make_pair(nTime, height);\n+    std::vector<CBlockIndex*>::const_iterator lower = std::lower_bound(vChain.begin(), vChain.end(), blockparams,\n+        [](CBlockIndex* pBlock, const std::pair<int64_t, int>& blockparams) -> bool { return pBlock->GetBlockTimeMax() < blockparams.first || pBlock->nHeight < blockparams.second; });\n     return (lower == vChain.end() ? nullptr : *lower);\n }\n "
+      },
+      {
+        "sha": "dd9cc2a598a8b004ccc4c412088114f7fa105e01",
+        "filename": "src/chain.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/765c0b364d41e9a251c3f88cbe203645854fd790/src/chain.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/765c0b364d41e9a251c3f88cbe203645854fd790/src/chain.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/chain.h?ref=765c0b364d41e9a251c3f88cbe203645854fd790",
+        "patch": "@@ -465,8 +465,8 @@ class CChain {\n     /** Find the last common block between this chain and a block index entry. */\n     const CBlockIndex *FindFork(const CBlockIndex *pindex) const;\n \n-    /** Find the earliest block with timestamp equal or greater than the given. */\n-    CBlockIndex* FindEarliestAtLeast(int64_t nTime) const;\n+    /** Find the earliest block with timestamp equal or greater than the given time and height equal or greater than the given height. */\n+    CBlockIndex* FindEarliestAtLeast(int64_t nTime, int height) const;\n };\n \n #endif // BITCOIN_CHAIN_H"
+      },
+      {
+        "sha": "fb3f8b62e365d4b002b3cbc644541cafa9ebf100",
+        "filename": "src/interfaces/chain.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 16,
+        "changes": 18,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/765c0b364d41e9a251c3f88cbe203645854fd790/src/interfaces/chain.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/765c0b364d41e9a251c3f88cbe203645854fd790/src/interfaces/chain.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/interfaces/chain.cpp?ref=765c0b364d41e9a251c3f88cbe203645854fd790",
+        "patch": "@@ -83,29 +83,15 @@ class LockImpl : public Chain::Lock\n         CBlockIndex* block = ::chainActive[height];\n         return block && ((block->nStatus & BLOCK_HAVE_DATA) != 0) && block->nTx > 0;\n     }\n-    Optional<int> findFirstBlockWithTime(int64_t time, uint256* hash) override\n+    Optional<int> findFirstBlockWithTimeAndHeight(int64_t time, int height, uint256* hash) override\n     {\n-        CBlockIndex* block = ::chainActive.FindEarliestAtLeast(time);\n+        CBlockIndex* block = ::chainActive.FindEarliestAtLeast(time, height);\n         if (block) {\n             if (hash) *hash = block->GetBlockHash();\n             return block->nHeight;\n         }\n         return nullopt;\n     }\n-    Optional<int> findFirstBlockWithTimeAndHeight(int64_t time, int height) override\n-    {\n-        // TODO: Could update CChain::FindEarliestAtLeast() to take a height\n-        // parameter and use it with std::lower_bound() to make this\n-        // implementation more efficient and allow combining\n-        // findFirstBlockWithTime and findFirstBlockWithTimeAndHeight into one\n-        // method.\n-        for (CBlockIndex* block = ::chainActive[height]; block; block = ::chainActive.Next(block)) {\n-            if (block->GetBlockTime() >= time) {\n-                return block->nHeight;\n-            }\n-        }\n-        return nullopt;\n-    }\n     Optional<int> findPruned(int start_height, Optional<int> stop_height) override\n     {\n         if (::fPruneMode) {"
+      },
+      {
+        "sha": "069d0f78225d1d13447a9fc826dfbd6a69a413d3",
+        "filename": "src/interfaces/chain.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 13,
+        "changes": 17,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/765c0b364d41e9a251c3f88cbe203645854fd790/src/interfaces/chain.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/765c0b364d41e9a251c3f88cbe203645854fd790/src/interfaces/chain.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/interfaces/chain.h?ref=765c0b364d41e9a251c3f88cbe203645854fd790",
+        "patch": "@@ -100,21 +100,12 @@ class Chain\n         //! pruned), and contains transactions.\n         virtual bool haveBlockOnDisk(int height) = 0;\n \n-        //! Return height of the first block in the chain with timestamp equal\n-        //! or greater than the given time, or nullopt if there is no block with\n-        //! a high enough timestamp. Also return the block hash as an optional\n-        //! output parameter (to avoid the cost of a second lookup in case this\n-        //! information is needed.)\n-        virtual Optional<int> findFirstBlockWithTime(int64_t time, uint256* hash) = 0;\n-\n         //! Return height of the first block in the chain with timestamp equal\n         //! or greater than the given time and height equal or greater than the\n-        //! given height, or nullopt if there is no such block.\n-        //!\n-        //! Calling this with height 0 is equivalent to calling\n-        //! findFirstBlockWithTime, but less efficient because it requires a\n-        //! linear instead of a binary search.\n-        virtual Optional<int> findFirstBlockWithTimeAndHeight(int64_t time, int height) = 0;\n+        //! given height, or nullopt if there is no block with a high enough\n+        //! timestamp and height. Also return the block hash as an optional output parameter\n+        //! (to avoid the cost of a second lookup in case this information is needed.)\n+        virtual Optional<int> findFirstBlockWithTimeAndHeight(int64_t time, int height, uint256* hash) = 0;\n \n         //! Return height of last block in the specified range which is pruned, or\n         //! nullopt if no block in the range is pruned. Range is inclusive."
+      },
+      {
+        "sha": "a95927fc27d5bde6d1ac756cbdd58a78f9379b20",
+        "filename": "src/rpc/blockchain.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/765c0b364d41e9a251c3f88cbe203645854fd790/src/rpc/blockchain.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/765c0b364d41e9a251c3f88cbe203645854fd790/src/rpc/blockchain.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/blockchain.cpp?ref=765c0b364d41e9a251c3f88cbe203645854fd790",
+        "patch": "@@ -1007,7 +1007,7 @@ static UniValue pruneblockchain(const JSONRPCRequest& request)\n     // too low to be a block time (corresponds to timestamp from Sep 2001).\n     if (heightParam > 1000000000) {\n         // Add a 2 hour buffer to include blocks which might have had old timestamps\n-        CBlockIndex* pindex = chainActive.FindEarliestAtLeast(heightParam - TIMESTAMP_WINDOW);\n+        CBlockIndex* pindex = chainActive.FindEarliestAtLeast(heightParam - TIMESTAMP_WINDOW, 0);\n         if (!pindex) {\n             throw JSONRPCError(RPC_INVALID_PARAMETER, \"Could not find block with at least the specified timestamp.\");\n         }"
+      },
+      {
+        "sha": "a96e6daeb2c718fc6b5cf84b7d03b9aaa6ccf887",
+        "filename": "src/test/skiplist_tests.cpp",
+        "status": "modified",
+        "additions": 29,
+        "deletions": 17,
+        "changes": 46,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/765c0b364d41e9a251c3f88cbe203645854fd790/src/test/skiplist_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/765c0b364d41e9a251c3f88cbe203645854fd790/src/test/skiplist_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/skiplist_tests.cpp?ref=765c0b364d41e9a251c3f88cbe203645854fd790",
+        "patch": "@@ -136,7 +136,7 @@ BOOST_AUTO_TEST_CASE(findearliestatleast_test)\n         // Pick a random element in vBlocksMain.\n         int r = InsecureRandRange(vBlocksMain.size());\n         int64_t test_time = vBlocksMain[r].nTime;\n-        CBlockIndex *ret = chain.FindEarliestAtLeast(test_time);\n+        CBlockIndex* ret = chain.FindEarliestAtLeast(test_time, 0);\n         BOOST_CHECK(ret->nTimeMax >= test_time);\n         BOOST_CHECK((ret->pprev==nullptr) || ret->pprev->nTimeMax < test_time);\n         BOOST_CHECK(vBlocksMain[r].GetAncestor(ret->nHeight) == ret);\n@@ -158,22 +158,34 @@ BOOST_AUTO_TEST_CASE(findearliestatleast_edge_test)\n     CChain chain;\n     chain.SetTip(&blocks.back());\n \n-    BOOST_CHECK_EQUAL(chain.FindEarliestAtLeast(50)->nHeight, 0);\n-    BOOST_CHECK_EQUAL(chain.FindEarliestAtLeast(100)->nHeight, 0);\n-    BOOST_CHECK_EQUAL(chain.FindEarliestAtLeast(150)->nHeight, 3);\n-    BOOST_CHECK_EQUAL(chain.FindEarliestAtLeast(200)->nHeight, 3);\n-    BOOST_CHECK_EQUAL(chain.FindEarliestAtLeast(250)->nHeight, 6);\n-    BOOST_CHECK_EQUAL(chain.FindEarliestAtLeast(300)->nHeight, 6);\n-    BOOST_CHECK(!chain.FindEarliestAtLeast(350));\n-\n-    BOOST_CHECK_EQUAL(chain.FindEarliestAtLeast(0)->nHeight, 0);\n-    BOOST_CHECK_EQUAL(chain.FindEarliestAtLeast(-1)->nHeight, 0);\n-\n-    BOOST_CHECK_EQUAL(chain.FindEarliestAtLeast(std::numeric_limits<int64_t>::min())->nHeight, 0);\n-    BOOST_CHECK_EQUAL(chain.FindEarliestAtLeast(-int64_t(std::numeric_limits<unsigned int>::max()) - 1)->nHeight, 0);\n-    BOOST_CHECK(!chain.FindEarliestAtLeast(std::numeric_limits<int64_t>::max()));\n-    BOOST_CHECK(!chain.FindEarliestAtLeast(std::numeric_limits<unsigned int>::max()));\n-    BOOST_CHECK(!chain.FindEarliestAtLeast(int64_t(std::numeric_limits<unsigned int>::max()) + 1));\n+    BOOST_CHECK_EQUAL(chain.FindEarliestAtLeast(50, 0)->nHeight, 0);\n+    BOOST_CHECK_EQUAL(chain.FindEarliestAtLeast(100, 0)->nHeight, 0);\n+    BOOST_CHECK_EQUAL(chain.FindEarliestAtLeast(150, 0)->nHeight, 3);\n+    BOOST_CHECK_EQUAL(chain.FindEarliestAtLeast(200, 0)->nHeight, 3);\n+    BOOST_CHECK_EQUAL(chain.FindEarliestAtLeast(250, 0)->nHeight, 6);\n+    BOOST_CHECK_EQUAL(chain.FindEarliestAtLeast(300, 0)->nHeight, 6);\n+    BOOST_CHECK(!chain.FindEarliestAtLeast(350, 0));\n+\n+    BOOST_CHECK_EQUAL(chain.FindEarliestAtLeast(0, 0)->nHeight, 0);\n+    BOOST_CHECK_EQUAL(chain.FindEarliestAtLeast(-1, 0)->nHeight, 0);\n+\n+    BOOST_CHECK_EQUAL(chain.FindEarliestAtLeast(std::numeric_limits<int64_t>::min(), 0)->nHeight, 0);\n+    BOOST_CHECK_EQUAL(chain.FindEarliestAtLeast(-int64_t(std::numeric_limits<unsigned int>::max()) - 1, 0)->nHeight, 0);\n+    BOOST_CHECK(!chain.FindEarliestAtLeast(std::numeric_limits<int64_t>::max(), 0));\n+    BOOST_CHECK(!chain.FindEarliestAtLeast(std::numeric_limits<unsigned int>::max(), 0));\n+    BOOST_CHECK(!chain.FindEarliestAtLeast(int64_t(std::numeric_limits<unsigned int>::max()) + 1, 0));\n+\n+    BOOST_CHECK_EQUAL(chain.FindEarliestAtLeast(0, -1)->nHeight, 0);\n+    BOOST_CHECK_EQUAL(chain.FindEarliestAtLeast(0, 0)->nHeight, 0);\n+    BOOST_CHECK_EQUAL(chain.FindEarliestAtLeast(0, 3)->nHeight, 3);\n+    BOOST_CHECK_EQUAL(chain.FindEarliestAtLeast(0, 8)->nHeight, 8);\n+    BOOST_CHECK(!chain.FindEarliestAtLeast(0, 9));\n+\n+    CBlockIndex* ret1 = chain.FindEarliestAtLeast(100, 2);\n+    BOOST_CHECK(ret1->nTimeMax >= 100 && ret1->nHeight == 2);\n+    BOOST_CHECK(!chain.FindEarliestAtLeast(300, 9));\n+    CBlockIndex* ret2 = chain.FindEarliestAtLeast(200, 4);\n+    BOOST_CHECK(ret2->nTimeMax >= 200 && ret2->nHeight == 4);\n }\n \n BOOST_AUTO_TEST_SUITE_END()"
+      },
+      {
+        "sha": "fd0297bae3c2793baead0cbc3ab0653b5ec10f9a",
+        "filename": "src/wallet/wallet.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/765c0b364d41e9a251c3f88cbe203645854fd790/src/wallet/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/765c0b364d41e9a251c3f88cbe203645854fd790/src/wallet/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.cpp?ref=765c0b364d41e9a251c3f88cbe203645854fd790",
+        "patch": "@@ -1722,7 +1722,7 @@ int64_t CWallet::RescanFromTime(int64_t startTime, const WalletRescanReserver& r\n     uint256 start_block;\n     {\n         auto locked_chain = chain().lock();\n-        const Optional<int> start_height = locked_chain->findFirstBlockWithTime(startTime - TIMESTAMP_WINDOW, &start_block);\n+        const Optional<int> start_height = locked_chain->findFirstBlockWithTimeAndHeight(startTime - TIMESTAMP_WINDOW, 0, &start_block);\n         const Optional<int> tip_height = locked_chain->getHeight();\n         WalletLogPrintf(\"%s: Rescanning last %i blocks\\n\", __func__, tip_height && start_height ? *tip_height - *start_height + 1 : 0);\n     }\n@@ -4338,7 +4338,7 @@ std::shared_ptr<CWallet> CWallet::CreateWalletFromFile(interfaces::Chain& chain,\n         // No need to read and scan block if block was created before\n         // our wallet birthday (as adjusted for block time variability)\n         if (walletInstance->nTimeFirstKey) {\n-            if (Optional<int> first_block = locked_chain->findFirstBlockWithTimeAndHeight(walletInstance->nTimeFirstKey - TIMESTAMP_WINDOW, rescan_height)) {\n+            if (Optional<int> first_block = locked_chain->findFirstBlockWithTimeAndHeight(walletInstance->nTimeFirstKey - TIMESTAMP_WINDOW, rescan_height, nullptr)) {\n                 rescan_height = *first_block;\n             }\n         }"
+      }
+    ]
+  }
+]

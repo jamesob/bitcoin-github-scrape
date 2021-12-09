@@ -1,0 +1,624 @@
+[
+  {
+    "sha": "82d00c40df8cd52c0345ebddfc345a2a5186b6d6",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4MmQwMGM0MGRmOGNkNTJjMDM0NWViZGRmYzM0NWEyYTUxODZiNmQ2",
+    "commit": {
+      "author": {
+        "name": "SergioDemianLerner",
+        "email": "Sergio.d.Lerner@gmail.com",
+        "date": "2014-08-12T19:24:16Z"
+      },
+      "committer": {
+        "name": "SergioDemianLerner",
+        "email": "Sergio.d.Lerner@gmail.com",
+        "date": "2014-08-12T19:24:16Z"
+      },
+      "message": "Improvement to the Test Framework in the processing of test blocks\n\nFor several reasons the current test framework does not allow to easily incorporate new unit tests that append specially crafted blocks to the blockchain using ProcessBlock().\nThis was pointed out by Mike Hearn on the development list in the thread with subject \"[Bitcoin-development] Question on creating test cases for block.CheckBlock()\" (http://article.gmane.org/gmane.comp.bitcoin.devel/5939).\n\nAfter debugging the Bitcoin core, we found that this is because of three reasons:\n\n1. The miner_tests.cpp leaves the transaction pool in an invalid state and assumes the blockchain is empty on start.\nSo other independent unit tests cannot be run before nor after (without proper cleaning) if they intend to use CreateNewBlock(), which collects transactions from the pool.\n\n2. Creating test blocks requires proof-of-work.\nEven if the starting difficulty is low (1) the required proof-of-work is still too high to allow for the dynamic creation of test blocks. Instead, unit test have to be \"pre-mined\".\nThis makes the code more opaque and increases the effort of changing the code.\n\n3. Only the first unit test can start with an empty blockchain, all subsequent tests have to start with the blockchain in the state where the previous test left it. This has the following problematic consequences:\na. Each unit test makes the blockchain longer. This breaks the test sequence when a checkpoint is reached because a checkpoint requires a pre-determined hash digest. Moreover, there are exception cases for certain block heights (e.g. regarding allowing two transactions with the same hash) which could be violated.\nb. Certain combinations of unit tests are inherently impossible to implement in a single block-chain if not run in an specific order.\nOther combinations may cause unexpected consequences. For example, since version 1 blocks do not have the height field included in the coinbase field of the generation transaction, a unit test may create a coinbase tx with a future height in the height field and prevent a coinbase tx with the same hash to be used afterward when only blocks v2 are accepted (this happened to us while testing).\nc. The standard unit testing policy that unit tests should be not depend on each other's output is violated.\nThis makes debugging more difficult.\nd. \"Pre-mining\" unit tests is impossible unless all previous unit tests are known and never change. (However, we are proposing to eliminate the proof-of-work check regardless.)\n\nWe believe that testing the block acceptance rules is crucial for the safety of the application and so we wrote this patch.\nBy restarting the blockchain before every unit test that requires testing block acceptance we have the guarantee that all tests are independent, executed in a predefined reproducable environment, and don't unintentionally hit checkpoints or other exceptions. Nevertheless, each unit test decides whether to re-use or\nreset the block-chain. We haven't perceived any significant delay while performing the destruction and creation of the block-chain during the execution of the test application. This is because file space allocation functions are fast on modern filesystems. Nevertheless, UNDOFILE_CHUNK_SIZE/BLOCKFILE_CHUNK_SIZE can be reduced during test case execution if the block-chain is reset many times.\n\nIn detail, this patch solves 1.,2.,3. from above by:\n- Providing a method to reset the blockchain to the starting state (testingSetupManager.SetupGenesisBlockChain())\n- Allowing to dynamically skip the proof-of-work testing (supressCheckBlockWork = true)\n- Fixing the bug in miner_tests.cpp which leaves in the memory pool invalid transactions (mempool.clear() missing).\n\nWe've also found the exact procedure that can be used to programmatically destroy and re-create the blockchain correctly, which was not implemented and nor documented. Some cleanup methods existed but some other were added because they were missing.\n\nThis could be of great help to re-create completely the blockchain in case a severe damage has been detected, without restarting the application.\n\nAs a bonus, 7 unit tests have been added:\n- ToCheckBlockUpgradeMajority (untested before)\n- EnforceBlockUpgradeMajority (untested before)\n- RejectBlockOutdatedMajority (untested before)\n- \"bad-cb-height\"\n- \"bad-version\"\n- \"time-too-old\"\n- \"bad-txns-nonfinal\"\n\nLast, we added a way to leave the blockchain unaltered after the test suite is over to debug the unit tests themselves (testingSetupManager.keepTestEvidence = true)\n\nNote: The BerkeleyDB environment field was converted into a heap allocated object because BerkeleyDB handles are not meant to be re-used after close, and the block-chain environment can be closed and re-opened in the unit tests. This is explained in http://docs.oracle.com/cd/E17275_01/html/api_reference/CXX/envclose.html as\n\"After DbEnv::close() has been called, regardless of its return, the Berkeley DB environment handle may not be accessed again.\"\n\nSergio Demian Lerner & Timo Hanke",
+      "tree": {
+        "sha": "143eac8c4e04e97a8a306e1609db7b355e35182c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/143eac8c4e04e97a8a306e1609db7b355e35182c"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/82d00c40df8cd52c0345ebddfc345a2a5186b6d6",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/82d00c40df8cd52c0345ebddfc345a2a5186b6d6",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/82d00c40df8cd52c0345ebddfc345a2a5186b6d6",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/82d00c40df8cd52c0345ebddfc345a2a5186b6d6/comments",
+    "author": {
+      "login": "SergioDemianLerner",
+      "id": 1752347,
+      "node_id": "MDQ6VXNlcjE3NTIzNDc=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1752347?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/SergioDemianLerner",
+      "html_url": "https://github.com/SergioDemianLerner",
+      "followers_url": "https://api.github.com/users/SergioDemianLerner/followers",
+      "following_url": "https://api.github.com/users/SergioDemianLerner/following{/other_user}",
+      "gists_url": "https://api.github.com/users/SergioDemianLerner/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/SergioDemianLerner/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/SergioDemianLerner/subscriptions",
+      "organizations_url": "https://api.github.com/users/SergioDemianLerner/orgs",
+      "repos_url": "https://api.github.com/users/SergioDemianLerner/repos",
+      "events_url": "https://api.github.com/users/SergioDemianLerner/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/SergioDemianLerner/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "SergioDemianLerner",
+      "id": 1752347,
+      "node_id": "MDQ6VXNlcjE3NTIzNDc=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1752347?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/SergioDemianLerner",
+      "html_url": "https://github.com/SergioDemianLerner",
+      "followers_url": "https://api.github.com/users/SergioDemianLerner/followers",
+      "following_url": "https://api.github.com/users/SergioDemianLerner/following{/other_user}",
+      "gists_url": "https://api.github.com/users/SergioDemianLerner/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/SergioDemianLerner/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/SergioDemianLerner/subscriptions",
+      "organizations_url": "https://api.github.com/users/SergioDemianLerner/orgs",
+      "repos_url": "https://api.github.com/users/SergioDemianLerner/repos",
+      "events_url": "https://api.github.com/users/SergioDemianLerner/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/SergioDemianLerner/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "cdb4193a317e1360be806eed9838010e642b6388",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/cdb4193a317e1360be806eed9838010e642b6388",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/cdb4193a317e1360be806eed9838010e642b6388"
+      }
+    ],
+    "stats": {
+      "total": 459,
+      "additions": 381,
+      "deletions": 78
+    },
+    "files": [
+      {
+        "sha": "6c44a4a77b6475e727c452ecfdcedaa941e6ca4e",
+        "filename": "src/Makefile.test.include",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/82d00c40df8cd52c0345ebddfc345a2a5186b6d6/src/Makefile.test.include",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/82d00c40df8cd52c0345ebddfc345a2a5186b6d6/src/Makefile.test.include",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/Makefile.test.include?ref=82d00c40df8cd52c0345ebddfc345a2a5186b6d6",
+        "patch": "@@ -38,6 +38,7 @@ BITCOIN_TESTS =\\\n   test/key_tests.cpp \\\n   test/main_tests.cpp \\\n   test/miner_tests.cpp \\\n+  test/blockv2_tests.cpp \\\n   test/mruset_tests.cpp \\\n   test/multisig_tests.cpp \\\n   test/netbase_tests.cpp \\"
+      },
+      {
+        "sha": "1bf1b055897fd63ab37f90617ed74b6dfa7a3e23",
+        "filename": "src/db.cpp",
+        "status": "modified",
+        "additions": 38,
+        "deletions": 35,
+        "changes": 73,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/82d00c40df8cd52c0345ebddfc345a2a5186b6d6/src/db.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/82d00c40df8cd52c0345ebddfc345a2a5186b6d6/src/db.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.cpp?ref=82d00c40df8cd52c0345ebddfc345a2a5186b6d6",
+        "patch": "@@ -40,14 +40,15 @@ void CDBEnv::EnvShutdown()\n         return;\n \n     fDbEnvInit = false;\n-    int ret = dbenv.close(0);\n+    int ret = pdbenv->close(0);\n+\tpdbenv = NULL;\n     if (ret != 0)\n         LogPrintf(\"CDBEnv::EnvShutdown : Error %d shutting down database environment: %s\\n\", ret, DbEnv::strerror(ret));\n     if (!fMockDb)\n         DbEnv(0).remove(path.string().c_str(), 0);\n }\n \n-CDBEnv::CDBEnv() : dbenv(DB_CXX_NO_EXCEPTIONS)\n+CDBEnv::CDBEnv() : pdbenv(NULL)\n {\n     fDbEnvInit = false;\n     fMockDb = false;\n@@ -80,17 +81,18 @@ bool CDBEnv::Open(const boost::filesystem::path& pathIn)\n     if (GetBoolArg(\"-privdb\", true))\n         nEnvFlags |= DB_PRIVATE;\n \n-    dbenv.set_lg_dir(pathLogDir.string().c_str());\n-    dbenv.set_cachesize(0, 0x100000, 1); // 1 MiB should be enough for just the wallet\n-    dbenv.set_lg_bsize(0x10000);\n-    dbenv.set_lg_max(1048576);\n-    dbenv.set_lk_max_locks(40000);\n-    dbenv.set_lk_max_objects(40000);\n-    dbenv.set_errfile(fopen(pathErrorFile.string().c_str(), \"a\")); /// debug\n-    dbenv.set_flags(DB_AUTO_COMMIT, 1);\n-    dbenv.set_flags(DB_TXN_WRITE_NOSYNC, 1);\n-    dbenv.log_set_config(DB_LOG_AUTO_REMOVE, 1);\n-    int ret = dbenv.open(path.string().c_str(),\n+\tpdbenv =  new DbEnv(DB_CXX_NO_EXCEPTIONS);\n+    pdbenv->set_lg_dir(pathLogDir.string().c_str());\n+    pdbenv->set_cachesize(0, 0x100000, 1); // 1 MiB should be enough for just the wallet\n+    pdbenv->set_lg_bsize(0x10000);\n+    pdbenv->set_lg_max(1048576);\n+    pdbenv->set_lk_max_locks(40000);\n+    pdbenv->set_lk_max_objects(40000);\n+    pdbenv->set_errfile(fopen(pathErrorFile.string().c_str(), \"a\")); /// debug\n+    pdbenv->set_flags(DB_AUTO_COMMIT, 1);\n+    pdbenv->set_flags(DB_TXN_WRITE_NOSYNC, 1);\n+    pdbenv->log_set_config(DB_LOG_AUTO_REMOVE, 1);\n+    int ret = pdbenv->open(path.string().c_str(),\n                      DB_CREATE     |\n                      DB_INIT_LOCK  |\n                      DB_INIT_LOG   |\n@@ -116,15 +118,16 @@ void CDBEnv::MakeMock()\n     boost::this_thread::interruption_point();\n \n     LogPrint(\"db\", \"CDBEnv::MakeMock\\n\");\n-\n-    dbenv.set_cachesize(1, 0, 1);\n-    dbenv.set_lg_bsize(10485760*4);\n-    dbenv.set_lg_max(10485760);\n-    dbenv.set_lk_max_locks(10000);\n-    dbenv.set_lk_max_objects(10000);\n-    dbenv.set_flags(DB_AUTO_COMMIT, 1);\n-    dbenv.log_set_config(DB_LOG_IN_MEMORY, 1);\n-    int ret = dbenv.open(NULL,\n+\t\n+\tpdbenv =  new DbEnv(DB_CXX_NO_EXCEPTIONS);\n+    pdbenv->set_cachesize(1, 0, 1);\n+    pdbenv->set_lg_bsize(10485760*4);\n+    pdbenv->set_lg_max(10485760);\n+    pdbenv->set_lk_max_locks(10000);\n+    pdbenv->set_lk_max_objects(10000);\n+    pdbenv->set_flags(DB_AUTO_COMMIT, 1);\n+    pdbenv->log_set_config(DB_LOG_IN_MEMORY, 1);\n+    int ret = pdbenv->open(NULL,\n                      DB_CREATE     |\n                      DB_INIT_LOCK  |\n                      DB_INIT_LOG   |\n@@ -145,7 +148,7 @@ CDBEnv::VerifyResult CDBEnv::Verify(std::string strFile, bool (*recoverFunc)(CDB\n     LOCK(cs_db);\n     assert(mapFileUseCount.count(strFile) == 0);\n \n-    Db db(&dbenv, 0);\n+    Db db(pdbenv, 0);\n     int result = db.verify(strFile.c_str(), NULL, NULL, 0);\n     if (result == 0)\n         return VERIFY_OK;\n@@ -168,7 +171,7 @@ bool CDBEnv::Salvage(std::string strFile, bool fAggressive,\n \n     stringstream strDump;\n \n-    Db db(&dbenv, 0);\n+    Db db(pdbenv, 0);\n     int result = db.verify(strFile.c_str(), NULL, &strDump, flags);\n     if (result == DB_VERIFY_BAD)\n     {\n@@ -214,10 +217,10 @@ bool CDBEnv::Salvage(std::string strFile, bool fAggressive,\n \n void CDBEnv::CheckpointLSN(std::string strFile)\n {\n-    dbenv.txn_checkpoint(0, 0, 0);\n+    pdbenv->txn_checkpoint(0, 0, 0);\n     if (fMockDb)\n         return;\n-    dbenv.lsn_reset(strFile.c_str(), 0);\n+    pdbenv->lsn_reset(strFile.c_str(), 0);\n }\n \n \n@@ -244,7 +247,7 @@ CDB::CDB(const char *pszFile, const char* pszMode) :\n         pdb = bitdb.mapDb[strFile];\n         if (pdb == NULL)\n         {\n-            pdb = new Db(&bitdb.dbenv, 0);\n+            pdb = new Db(bitdb.pdbenv, 0);\n \n             bool fMockDb = bitdb.IsMock();\n             if (fMockDb)\n@@ -294,7 +297,7 @@ void CDB::Flush()\n     if (fReadOnly)\n         nMinutes = 1;\n \n-    bitdb.dbenv.txn_checkpoint(nMinutes ? GetArg(\"-dblogsize\", 100)*1024 : 0, nMinutes, 0);\n+    bitdb.pdbenv->txn_checkpoint(nMinutes ? GetArg(\"-dblogsize\", 100)*1024 : 0, nMinutes, 0);\n }\n \n void CDB::Close()\n@@ -334,7 +337,7 @@ bool CDBEnv::RemoveDb(const string& strFile)\n     this->CloseDb(strFile);\n \n     LOCK(cs_db);\n-    int rc = dbenv.dbremove(NULL, strFile.c_str(), NULL, DB_AUTO_COMMIT);\n+    int rc = pdbenv->dbremove(NULL, strFile.c_str(), NULL, DB_AUTO_COMMIT);\n     return (rc == 0);\n }\n \n@@ -356,7 +359,7 @@ bool CDB::Rewrite(const string& strFile, const char* pszSkip)\n                 string strFileRes = strFile + \".rewrite\";\n                 { // surround usage of db with extra {}\n                     CDB db(strFile.c_str(), \"r\");\n-                    Db* pdbCopy = new Db(&bitdb.dbenv, 0);\n+                    Db* pdbCopy = new Db(bitdb.pdbenv, 0);\n \n                     int ret = pdbCopy->open(NULL,                 // Txn pointer\n                                             strFileRes.c_str(),   // Filename\n@@ -414,10 +417,10 @@ bool CDB::Rewrite(const string& strFile, const char* pszSkip)\n                 }\n                 if (fSuccess)\n                 {\n-                    Db dbA(&bitdb.dbenv, 0);\n+                    Db dbA(bitdb.pdbenv, 0);\n                     if (dbA.remove(strFile.c_str(), NULL, 0))\n                         fSuccess = false;\n-                    Db dbB(&bitdb.dbenv, 0);\n+                    Db dbB(bitdb.pdbenv, 0);\n                     if (dbB.rename(strFileRes.c_str(), NULL, strFile.c_str(), 0))\n                         fSuccess = false;\n                 }\n@@ -452,10 +455,10 @@ void CDBEnv::Flush(bool fShutdown)\n                 // Move log data to the dat file\n                 CloseDb(strFile);\n                 LogPrint(\"db\", \"CDBEnv::Flush : %s checkpoint\\n\", strFile);\n-                dbenv.txn_checkpoint(0, 0, 0);\n+                pdbenv->txn_checkpoint(0, 0, 0);\n                 LogPrint(\"db\", \"CDBEnv::Flush : %s detach\\n\", strFile);\n                 if (!fMockDb)\n-                    dbenv.lsn_reset(strFile.c_str(), 0);\n+                    pdbenv->lsn_reset(strFile.c_str(), 0);\n                 LogPrint(\"db\", \"CDBEnv::Flush : %s closed\\n\", strFile);\n                 mapFileUseCount.erase(mi++);\n             }\n@@ -468,7 +471,7 @@ void CDBEnv::Flush(bool fShutdown)\n             char** listp;\n             if (mapFileUseCount.empty())\n             {\n-                dbenv.log_archive(&listp, DB_ARCH_REMOVE);\n+                pdbenv->log_archive(&listp, DB_ARCH_REMOVE);\n                 Close();\n                 if (!fMockDb)\n                     boost::filesystem::remove_all(path / \"database\");"
+      },
+      {
+        "sha": "354c8d11223c8bf309d5e0e03c1baf497176ce35",
+        "filename": "src/db.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/82d00c40df8cd52c0345ebddfc345a2a5186b6d6/src/db.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/82d00c40df8cd52c0345ebddfc345a2a5186b6d6/src/db.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.h?ref=82d00c40df8cd52c0345ebddfc345a2a5186b6d6",
+        "patch": "@@ -38,7 +38,7 @@ class CDBEnv\n \n public:\n     mutable CCriticalSection cs_db;\n-    DbEnv dbenv;\n+    DbEnv * pdbenv;\n     std::map<std::string, int> mapFileUseCount;\n     std::map<std::string, Db*> mapDb;\n \n@@ -76,7 +76,7 @@ class CDBEnv\n     DbTxn *TxnBegin(int flags=DB_TXN_WRITE_NOSYNC)\n     {\n         DbTxn* ptxn = NULL;\n-        int ret = dbenv.txn_begin(NULL, &ptxn, flags);\n+        int ret = pdbenv->txn_begin(NULL, &ptxn, flags);\n         if (!ptxn || ret != 0)\n             return NULL;\n         return ptxn;"
+      },
+      {
+        "sha": "994bd2d4fc842ab0f5189496c9a3303dda2b8730",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 0,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/82d00c40df8cd52c0345ebddfc345a2a5186b6d6/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/82d00c40df8cd52c0345ebddfc345a2a5186b6d6/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=82d00c40df8cd52c0345ebddfc345a2a5186b6d6",
+        "patch": "@@ -49,6 +49,7 @@ bool fBenchmark = false;\n bool fTxIndex = false;\n bool fIsBareMultisigStd = true;\n unsigned int nCoinCacheSize = 5000;\n+bool supressCheckBlockWork = false; // To allow fast dynamic block-checking test cases\n \n /** Fees smaller than this (in satoshi) are considered zero fee (for relaying and mining) */\n CFeeRate minRelayTxFee = CFeeRate(1000);\n@@ -2407,6 +2408,7 @@ bool AcceptBlockHeader(CBlockHeader& block, CValidationState& state, CBlockIndex\n         nHeight = pindexPrev->nHeight+1;\n \n         // Check proof of work\n+\t\tif (!supressCheckBlockWork)\n         if (block.nBits != GetNextWorkRequired(pindexPrev, &block))\n             return state.DoS(100, error(\"AcceptBlock() : incorrect proof of work\"),\n                              REJECT_INVALID, \"bad-diffbits\");\n@@ -3067,6 +3069,12 @@ bool LoadBlockIndex()\n     return true;\n }\n \n+void ResetBlockIndex()\n+{\n+\t nLastBlockFile = 0;\n+\t infoLastBlockFile.SetNull();\n+\t nBlockSequenceId = 1;\n+}\n \n bool InitBlockIndex() {\n     LOCK(cs_main);"
+      },
+      {
+        "sha": "5daeee753764fa6c6f74687c55608afd8b9ad127",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/82d00c40df8cd52c0345ebddfc345a2a5186b6d6/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/82d00c40df8cd52c0345ebddfc345a2a5186b6d6/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=82d00c40df8cd52c0345ebddfc345a2a5186b6d6",
+        "patch": "@@ -97,6 +97,7 @@ extern bool fTxIndex;\n extern bool fIsBareMultisigStd;\n extern unsigned int nCoinCacheSize;\n extern CFeeRate minRelayTxFee;\n+extern bool supressCheckBlockWork;\n \n // Minimum disk space required - used in CheckDiskSpace()\n static const uint64_t nMinDiskSpace = 52428800;"
+      },
+      {
+        "sha": "9d64473a83d0b2a11dcdcdfdd58afa0ea210c5b6",
+        "filename": "src/pow.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 0,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/82d00c40df8cd52c0345ebddfc345a2a5186b6d6/src/pow.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/82d00c40df8cd52c0345ebddfc345a2a5186b6d6/src/pow.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/pow.cpp?ref=82d00c40df8cd52c0345ebddfc345a2a5186b6d6",
+        "patch": "@@ -79,6 +79,10 @@ bool CheckProofOfWork(uint256 hash, unsigned int nBits)\n     bool fNegative;\n     bool fOverflow;\n     uint256 bnTarget;\n+\t\n+\tif (supressCheckBlockWork)\n+\t\treturn true;\n+\t\t\n     bnTarget.SetCompact(nBits, &fNegative, &fOverflow);\n \n     // Check range"
+      },
+      {
+        "sha": "32c5111f57f800c85797db65ebfbf825b8ce64b6",
+        "filename": "src/test/blockv2_tests.cpp",
+        "status": "added",
+        "additions": 206,
+        "deletions": 0,
+        "changes": 206,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/82d00c40df8cd52c0345ebddfc345a2a5186b6d6/src/test/blockv2_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/82d00c40df8cd52c0345ebddfc345a2a5186b6d6/src/test/blockv2_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/blockv2_tests.cpp?ref=82d00c40df8cd52c0345ebddfc345a2a5186b6d6",
+        "patch": "@@ -0,0 +1,206 @@\n+// Copyright (c) 2011-2014 The Bitcoin Core developers\n+// Distributed under the MIT/X11 software license, see the accompanying\n+// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+#include \"main.h\"\n+#include \"miner.h\"\n+#include \"uint256.h\"\n+#include \"util.h\"\n+#include \"test_bitcoin.h\"\n+\n+#include <boost/test/unit_test.hpp>\n+\n+// Tests the majority rule which states that after 1000 v2 blocks no v1 block can go\n+BOOST_AUTO_TEST_SUITE(blockv2_tests)\n+\n+static void SetEmptyBlock(CBlock * pblock)\n+{\n+        pblock->nVersion = 2;\n+        pblock->nTime = chainActive.Tip()->GetMedianTimePast()+1;\n+\t\tpblock->nNonce = 0;\n+}\n+\t\t\n+static void SetBlockDefaultAttributesAndHeight(CBlock * pblock,bool addHeight,int difValue)\n+{\n+\t\tSetEmptyBlock(pblock);\n+\n+\t\t// Add the coinbase\n+        CMutableTransaction txCoinbase(pblock->vtx[0]);\n+\t\t\n+\t\tif (addHeight) \n+\t\t\ttxCoinbase.vin[0].scriptSig = (CScript() << (chainActive.Height()+1+difValue) << 0);\n+\t\t\telse\n+\t\t\ttxCoinbase.vin[0].scriptSig = (CScript() << 0 << 0); // At least size 2, this is a protocol spec\n+\t\t\t\n+        txCoinbase.vout[0].scriptPubKey = CScript();\n+        pblock->vtx[0] = CTransaction(txCoinbase);\n+        pblock->hashMerkleRoot = pblock->BuildMerkleTree();\n+}\n+\n+void breakp()\n+{\n+\tLogPrintf(\"Blockv2test breakp\\n\");\t\n+}\n+\n+void Blockv2test()\n+{\n+\tassert(Params().NetworkID() == CBaseChainParams::MAIN);\t\n+\t\n+\t\n+\t// if you want to debug the test case, uncomment this line, keep the evidence (the blockchain, including debug.log)\n+\t// testingSetupManager.keepTestEvidence = true;\n+\t\n+\ttestingSetupManager.SetupGenesisBlockChain();\t\n+\tLogPrintf(\"Blockv2test testcase starts\\n\");\t\n+\t\n+\tCScript scriptPubKey = CScript() << ParseHex(\"04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f\") << OP_CHECKSIG;\n+    CBlockTemplate *pblocktemplate;\n+    CScript script;\n+    uint256 hash;\n+\n+\t\n+    LOCK(cs_main);\n+\t\n+\t// Disable checking PoW so we can freely create blocks without effort here\n+\tsupressCheckBlockWork = true;\n+\t\n+    // Simple block creation, nothing special yet.\n+    pblocktemplate = CreateNewBlock(scriptPubKey);   \n+    CBlock *pblock = &pblocktemplate->block; // pointer for convenience\n+   \n+    LogPrintf(\"Blockv2test block v1 add begin\\n\");\t\n+    // First create a block v1, check that it is accepted\n+\tSetBlockDefaultAttributesAndHeight(pblock,false,0);\n+\tpblock->nVersion = 1;\n+\tCValidationState state1;\n+\tBOOST_CHECK(ProcessBlock(state1, NULL, pblock));\n+    BOOST_CHECK(state1.IsValid());\n+\tpblock->hashPrevBlock = pblock->GetHash(); // update parent\n+\t\n+\t\n+\t// Now create exactly 1000 blocks v2\n+\t\n+\t// First check that the supermajority threshold is exactly 1000 blocks\n+\tBOOST_CHECK(Params().ToCheckBlockUpgradeMajority()==1000);  // \n+\tBOOST_CHECK(Params().EnforceBlockUpgradeMajority()==750);\n+\tBOOST_CHECK(Params().RejectBlockOutdatedMajority()==950);\n+\t\n+\t// Over the last 1000 blocks, 750 blocks must be v2 to switch to v2-only mode.\n+\t// Here we're testing only the last 750, not any subset.\n+    \n+\tLogPrintf(\"Blockv2test BIP30 repetition begin\\n\");\t\n+\t// First, if we try to add a block v2 without heigh, we should get\n+\t// \"bad-txns-BIP30\" because the coinbase tx has the same hash as the previous.\n+\t// Unluckily, even if ConnectBlock returns a \"bad-txns-BIP30\", ActivateBestChainStep clears\n+\t// the state, so we get true here and the \"bad-txns-BIP30\" reason is lost.\n+\t// We verify instead that the chain heigh has not been incremented.\n+\t\n+\tCValidationState state7;\n+\tint PreviousHeght = chainActive.Height();\n+\tSetBlockDefaultAttributesAndHeight(pblock,false,0); //\n+\tpblock->nVersion = 2;\n+\tBOOST_CHECK(ProcessBlock(state7, NULL, pblock)); // should we care about the return value?\n+\tBOOST_CHECK(state7.IsValid());\n+\tBOOST_CHECK(PreviousHeght == chainActive.Height()); // we check the block has not been added.\n+\t\n+\tLogPrintf(\"Blockv2test 750 v2 blocks  begin\\n\");\t\n+\tfor (int i=0;i<750;i++) \n+    {\n+\t\t\n+\t\tLogPrintf(\"Blockv2test block %d begin\\n\",i);\t\n+\t\t\n+\t\t// We add a value to the height to make is NOT equal to the actual height.\n+\t\tSetBlockDefaultAttributesAndHeight(pblock,true,1000); // blocks version 2 without height are allowed! for only 750 blocks\n+\t\tpblock->nVersion = 2;\n+        CValidationState state;\n+\t\t\t\t\t\n+        BOOST_CHECK(ProcessBlock(state, NULL, pblock));\n+        BOOST_CHECK(state.IsValid());\n+        pblock->hashPrevBlock = pblock->GetHash(); // update parent\n+    }\n+\n+\tLogPrintf(\"Blockv2test v2 without heigh rejected begin\\n\");\t\n+\t\n+\t// Now we try to add a block v2, with an invalid height and it should be rejected. We use 2000 because is not in the range [1000..1750].\n+\tSetBlockDefaultAttributesAndHeight(pblock,true,2000); // \n+\tpblock->nVersion = 2;\n+    CValidationState state0;\n+\tBOOST_CHECK(ProcessBlock(state0, NULL, pblock)==false);\n+\tBOOST_CHECK(!state0.IsValid());\n+\tBOOST_CHECK(state0.GetRejectReason()==\"bad-cb-height\");\t\n+\t// Do not update parent since block has failed\n+\t\n+\tLogPrintf(\"Blockv2test v2 with heigh accepted begin\\n\");\t\n+\t\n+\t\n+\t// Now we add a block with height, must be ok.\n+\tfor (int i=0;i<200;i++) \n+    {\n+\t\t\n+\t\tLogPrintf(\"Blockv2test v2block %d begin\\n\",i);\t\t\n+\t\tSetBlockDefaultAttributesAndHeight(pblock,true,0);\n+\t\tpblock->nVersion = 2;\n+        CValidationState state;\n+        BOOST_CHECK(ProcessBlock(state, NULL, pblock));\n+        BOOST_CHECK(state.IsValid());\n+        pblock->hashPrevBlock = pblock->GetHash(); // update parent\n+    }\n+\n+\tbreakp();\n+\t\n+\tLogPrintf(\"Blockv2test block v1 rejected\\n\");\t\n+\t// Now we add 200 additional blocks, until we get 950 (the threshold were v1 blocks are not accepted anymore)\n+\t// Now we try to add a block v1, it should be rejected, even if it hash the height field\n+\tSetBlockDefaultAttributesAndHeight(pblock,true,0);\n+\tpblock->nVersion = 1;\n+\tCValidationState state2;\n+\tBOOST_CHECK(ProcessBlock(state2, NULL, pblock)==false);\n+\tBOOST_CHECK(!state2.IsValid());\n+\tBOOST_CHECK(state2.GetRejectReason()==\"bad-version\");\n+\t// Do not update parent since block has failed\n+\t\n+\t\n+\t\n+\t// Some other missing tests, added here as bonus...\n+\t\n+\t// Block time too old check\n+\tSetBlockDefaultAttributesAndHeight(pblock,true,0);\n+\tpblock->nVersion = 2;\n+\tpblock->nTime = chainActive.Tip()->GetMedianTimePast()-1;\n+\tCValidationState state4;\n+\tBOOST_CHECK(ProcessBlock(state4, NULL, pblock)==false);\n+\tBOOST_CHECK(!state4.IsValid());\n+\tBOOST_CHECK(state4.GetRejectReason()==\"time-too-old\");\n+\t// Do not update parent since block has failed\n+\t\n+\t// Adding a non-final coinbase, must modify coinbase\n+\tSetEmptyBlock(pblock);\n+\t// Use a mutable coinbase to change nLockTime and  nSequence\n+\tCMutableTransaction txCoinbase(pblock->vtx[0]);\n+\ttxCoinbase.vin[0].scriptSig = (CScript() << chainActive.Height() << 0);\t\n+\ttxCoinbase.nLockTime = LOCKTIME_THRESHOLD-1; // refers to heigh\n+\ttxCoinbase.vin[0].nSequence = 1; // non-zero sequence\n+\tpblock->vtx[0] = CTransaction(txCoinbase);\n+\tpblock->nVersion = 2;\n+\tpblock->hashMerkleRoot = pblock->BuildMerkleTree();\n+\tCValidationState state5;\n+\tBOOST_CHECK(ProcessBlock(state5, NULL, pblock)==false);\n+\tBOOST_CHECK(!state5.IsValid());\n+\tBOOST_CHECK(state5.GetRejectReason()==\"bad-txns-nonfinal\");\n+\t// Do not update parent since block has failed\n+\t\n+\t// Re-enable checking PoW for other tests\n+\tsupressCheckBlockWork = false;\n+\t\n+    delete pblocktemplate;\n+\t\n+\t\n+\tLogPrintf(\"Blockv2test testcase ends\\n\");\t\n+}\n+\n+BOOST_AUTO_TEST_CASE(Blockv2testcase)\n+{\n+\tBlockv2test();\n+}\n+\n+BOOST_AUTO_TEST_SUITE_END()"
+      },
+      {
+        "sha": "c6be8497be11434735e1f9c63d3b5d611f456b16",
+        "filename": "src/test/miner_tests.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 0,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/82d00c40df8cd52c0345ebddfc345a2a5186b6d6/src/test/miner_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/82d00c40df8cd52c0345ebddfc345a2a5186b6d6/src/test/miner_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/miner_tests.cpp?ref=82d00c40df8cd52c0345ebddfc345a2a5186b6d6",
+        "patch": "@@ -6,6 +6,7 @@\n #include \"miner.h\"\n #include \"uint256.h\"\n #include \"util.h\"\n+#include \"test_bitcoin.h\"\n \n #include <boost/test/unit_test.hpp>\n \n@@ -49,6 +50,9 @@ struct {\n // NOTE: These tests rely on CreateNewBlock doing its own self-validation!\n BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n {\n+\tassert(Params().NetworkID() == CBaseChainParams::MAIN);\t\n+\ttestingSetupManager.SetupGenesisBlockChain();\n+\t\n     CScript scriptPubKey = CScript() << ParseHex(\"04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f\") << OP_CHECKSIG;\n     CBlockTemplate *pblocktemplate;\n     CMutableTransaction tx,tx2;\n@@ -253,6 +257,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n \n     chainActive.Tip()->nHeight--;\n     SetMockTime(0);\n+\tmempool.clear();\n \n     BOOST_FOREACH(CTransaction *tx, txFirst)\n         delete tx;"
+      },
+      {
+        "sha": "0ac8ee6e9df7fe4b7cae390229bc35627b51c62b",
+        "filename": "src/test/test_bitcoin.cpp",
+        "status": "modified",
+        "additions": 84,
+        "deletions": 39,
+        "changes": 123,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/82d00c40df8cd52c0345ebddfc345a2a5186b6d6/src/test/test_bitcoin.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/82d00c40df8cd52c0345ebddfc345a2a5186b6d6/src/test/test_bitcoin.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/test_bitcoin.cpp?ref=82d00c40df8cd52c0345ebddfc345a2a5186b6d6",
+        "patch": "@@ -3,72 +3,117 @@\n // file COPYING or http://www.opensource.org/licenses/mit-license.php.\n \n #define BOOST_TEST_MODULE Bitcoin Test Suite\n-\n-#include \"main.h\"\n-#include \"random.h\"\n-#include \"txdb.h\"\n-#include \"ui_interface.h\"\n-#include \"util.h\"\n-#ifdef ENABLE_WALLET\n-#include \"db.h\"\n-#include \"wallet.h\"\n-#endif\n-\n-#include <boost/filesystem.hpp>\n+#include \"test_bitcoin.h\"\n #include <boost/test/unit_test.hpp>\n \n+TestingSetupManager testingSetupManager;\n+\n CClientUIInterface uiInterface;\n CWallet* pwalletMain;\n \n extern bool fPrintToConsole;\n extern void noui_connect();\n \n-struct TestingSetup {\n-    CCoinsViewDB *pcoinsdbview;\n-    boost::filesystem::path pathTemp;\n-    boost::thread_group threadGroup;\n-\n-    TestingSetup() {\n-        fPrintToDebugLog = false; // don't want to write to debug.log file\n-        SelectParams(CBaseChainParams::MAIN);\n-        noui_connect();\n-#ifdef ENABLE_WALLET\n+bool keepTestEvidence = false;\n+    \n+\tvoid TestingSetupManager::SetupGenesisBlockChain()\n+\t{\n+\t\tif (chainActive.Tip()->GetBlockHash()!=Params().HashGenesisBlock()) {\n+\t\t\tDestroyBlockChain();\n+\t\t\tCreateBlockChain();\n+\t\t}\n+\t\n+\t}\n+\t\n+\tvoid TestingSetupManager::CreateBlockChain()\n+\t{\n+\t#ifdef ENABLE_WALLET\n         bitdb.MakeMock();\n-#endif\n-        pathTemp = GetTempPath() / strprintf(\"test_bitcoin_%lu_%i\", (unsigned long)GetTime(), (int)(GetRand(100000)));\n+\t#endif\n+\t\tfReopenDebugLog =true; // Important when switching between two test block-chains, to move the debug.log to the new location\n+\t    pathTemp = GetTempPath() / strprintf(\"test_bitcoin_%lu_%i\", (unsigned long)GetTime(), (int)(GetRand(100000)));\n         boost::filesystem::create_directories(pathTemp);\n         mapArgs[\"-datadir\"] = pathTemp.string();\n         pblocktree = new CBlockTreeDB(1 << 20, true);\n         pcoinsdbview = new CCoinsViewDB(1 << 23, true);\n         pcoinsTip = new CCoinsViewCache(*pcoinsdbview);\n         InitBlockIndex();\n-#ifdef ENABLE_WALLET\n+\t\t#ifdef ENABLE_WALLET\n         bool fFirstRun;\n         pwalletMain = new CWallet(\"wallet.dat\");\n         pwalletMain->LoadWallet(fFirstRun);\n         RegisterWallet(pwalletMain);\n-#endif\n+\t\t#endif\n+\t}\n+\t\n+\tvoid ResetBlockIndex();\n+\t\n+\tvoid TestingSetupManager::DestroyBlockChain()\n+\t{\n+\t\t// Clear the mempool so there are no transactions with missing inputs left.\n+\t\tmempool.clear();\n+\t\t\n+\t#ifdef ENABLE_WALLET\n+\t    UnregisterWallet(pwalletMain);\n+        delete pwalletMain;\n+        pwalletMain = NULL;\n+\t#endif\n+\t \n+\t\tUnloadBlockIndex();\n+\t\tResetBlockIndex();\n+\t\n+\t#ifdef ENABLE_WALLET\n+        bitdb.Flush(true);\n+\t#endif\n+\t\n+\t    delete pcoinsTip;\n+        delete pcoinsdbview;\n+        delete pblocktree;\t\t\n+\t\tClearDatadirCache();\n+\t\t\n+\t\tif (!keepTestEvidence)\n+\t\t\tboost::filesystem::remove_all(pathTemp);\n+\t\t\n+\t}\n+\t\n+    void TestingSetupManager::Start() {\n+        //fPrintToDebugLog = false; // don't want to write to debug.log file\n+        SelectParams(CBaseChainParams::MAIN);\n+        noui_connect();\n+\n+        CreateBlockChain();\n+\n         nScriptCheckThreads = 3;\n         for (int i=0; i < nScriptCheckThreads-1; i++)\n             threadGroup.create_thread(&ThreadScriptCheck);\n-        RegisterNodeSignals(GetNodeSignals());\n+        RegisterNodeSignals(GetNodeSignals());\t\t\n     }\n-    ~TestingSetup()\n+\t\n+    void TestingSetupManager::Stop()\n     {\n         threadGroup.interrupt_all();\n         threadGroup.join_all();\n         UnregisterNodeSignals(GetNodeSignals());\n-#ifdef ENABLE_WALLET\n-        delete pwalletMain;\n-        pwalletMain = NULL;\n-#endif\n-        delete pcoinsTip;\n-        delete pcoinsdbview;\n-        delete pblocktree;\n-#ifdef ENABLE_WALLET\n-        bitdb.Flush(true);\n-#endif\n-        boost::filesystem::remove_all(pathTemp);\n+\n+        DestroyBlockChain();\n+    }\n+\t\n+\tTestingSetupManager::TestingSetupManager() \n+\t{\n+        keepTestEvidence =false;\n+    }\n+\n+\n+struct TestingSetup {\n+    \n+    TestingSetup() \n+\t{\n+        testingSetupManager.Start();\n+    }\n+\t\n+    ~TestingSetup()\n+    {\n+        testingSetupManager.Stop();\n     }\n };\n "
+      },
+      {
+        "sha": "9251ccfaf75d4140c255e4190ae2f9d0197e55c2",
+        "filename": "src/test/test_bitcoin.h",
+        "status": "added",
+        "additions": 29,
+        "deletions": 0,
+        "changes": 29,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/82d00c40df8cd52c0345ebddfc345a2a5186b6d6/src/test/test_bitcoin.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/82d00c40df8cd52c0345ebddfc345a2a5186b6d6/src/test/test_bitcoin.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/test_bitcoin.h?ref=82d00c40df8cd52c0345ebddfc345a2a5186b6d6",
+        "patch": "@@ -0,0 +1,29 @@\n+\r\n+\r\n+#include \"main.h\"\r\n+#include \"random.h\"\r\n+#include \"txdb.h\"\r\n+#include \"ui_interface.h\"\r\n+#include \"util.h\"\r\n+#ifdef ENABLE_WALLET\r\n+#include \"db.h\"\r\n+#include \"wallet.h\"\r\n+#endif\r\n+\r\n+#include <boost/filesystem.hpp>\r\n+\r\n+struct TestingSetupManager {\r\n+\tCCoinsViewDB *pcoinsdbview;\r\n+    boost::filesystem::path pathTemp;\r\n+    boost::thread_group threadGroup;\r\n+\tbool keepTestEvidence;\r\n+\t\r\n+\tTestingSetupManager();\r\n+\tvoid CreateBlockChain();\r\n+\tvoid DestroyBlockChain();\r\n+\tvoid SetupGenesisBlockChain();\r\n+\tvoid Start();\r\n+\tvoid Stop();\r\n+};\r\n+\t\r\n+extern TestingSetupManager testingSetupManager;\r"
+      },
+      {
+        "sha": "799c272416094071857796901529dfc47fad28dc",
+        "filename": "src/util.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/82d00c40df8cd52c0345ebddfc345a2a5186b6d6/src/util.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/82d00c40df8cd52c0345ebddfc345a2a5186b6d6/src/util.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/util.h?ref=82d00c40df8cd52c0345ebddfc345a2a5186b6d6",
+        "patch": "@@ -188,6 +188,7 @@ void SetMockTime(int64_t nMockTimeIn);\n std::string FormatFullVersion();\n std::string FormatSubVersion(const std::string& name, int nClientVersion, const std::vector<std::string>& comments);\n void runCommand(std::string strCommand);\n+void ClearDatadirCache();\n \n inline std::string i64tostr(int64_t n)\n {"
+      },
+      {
+        "sha": "621be5f93980f4ddbe51a3b5a943f4dde9d72b4d",
+        "filename": "src/walletdb.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/82d00c40df8cd52c0345ebddfc345a2a5186b6d6/src/walletdb.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/82d00c40df8cd52c0345ebddfc345a2a5186b6d6/src/walletdb.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/walletdb.cpp?ref=82d00c40df8cd52c0345ebddfc345a2a5186b6d6",
+        "patch": "@@ -900,7 +900,7 @@ bool CWalletDB::Recover(CDBEnv& dbenv, std::string filename, bool fOnlyKeys)\n     int64_t now = GetTime();\n     std::string newFilename = strprintf(\"wallet.%d.bak\", now);\n \n-    int result = dbenv.dbenv.dbrename(NULL, filename.c_str(), NULL,\n+    int result = dbenv.pdbenv->dbrename(NULL, filename.c_str(), NULL,\n                                       newFilename.c_str(), DB_AUTO_COMMIT);\n     if (result == 0)\n         LogPrintf(\"Renamed %s to %s\\n\", filename, newFilename);\n@@ -920,7 +920,7 @@ bool CWalletDB::Recover(CDBEnv& dbenv, std::string filename, bool fOnlyKeys)\n     LogPrintf(\"Salvage(aggressive) found %u records\\n\", salvagedData.size());\n \n     bool fSuccess = allOK;\n-    Db* pdbCopy = new Db(&dbenv.dbenv, 0);\n+    Db* pdbCopy = new Db(dbenv.pdbenv, 0);\n     int ret = pdbCopy->open(NULL,               // Txn pointer\n                             filename.c_str(),   // Filename\n                             \"main\",             // Logical db name"
+      }
+    ]
+  },
+  {
+    "sha": "8afc3fe0a5b325c6eeefa52aa9b0300b945e68d9",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4YWZjM2ZlMGE1YjMyNWM2ZWVlZmE1MmFhOWIwMzAwYjk0NWU2OGQ5",
+    "commit": {
+      "author": {
+        "name": "SergioDemianLerner",
+        "email": "Sergio.d.Lerner@gmail.com",
+        "date": "2014-08-12T19:33:33Z"
+      },
+      "committer": {
+        "name": "SergioDemianLerner",
+        "email": "Sergio.d.Lerner@gmail.com",
+        "date": "2014-08-12T19:33:33Z"
+      },
+      "message": "Bad ident. TAB -> space conversion made",
+      "tree": {
+        "sha": "de55e69243b5537c92e30d8dac297e0775bed91e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/de55e69243b5537c92e30d8dac297e0775bed91e"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/8afc3fe0a5b325c6eeefa52aa9b0300b945e68d9",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8afc3fe0a5b325c6eeefa52aa9b0300b945e68d9",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/8afc3fe0a5b325c6eeefa52aa9b0300b945e68d9",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8afc3fe0a5b325c6eeefa52aa9b0300b945e68d9/comments",
+    "author": {
+      "login": "SergioDemianLerner",
+      "id": 1752347,
+      "node_id": "MDQ6VXNlcjE3NTIzNDc=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1752347?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/SergioDemianLerner",
+      "html_url": "https://github.com/SergioDemianLerner",
+      "followers_url": "https://api.github.com/users/SergioDemianLerner/followers",
+      "following_url": "https://api.github.com/users/SergioDemianLerner/following{/other_user}",
+      "gists_url": "https://api.github.com/users/SergioDemianLerner/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/SergioDemianLerner/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/SergioDemianLerner/subscriptions",
+      "organizations_url": "https://api.github.com/users/SergioDemianLerner/orgs",
+      "repos_url": "https://api.github.com/users/SergioDemianLerner/repos",
+      "events_url": "https://api.github.com/users/SergioDemianLerner/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/SergioDemianLerner/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "SergioDemianLerner",
+      "id": 1752347,
+      "node_id": "MDQ6VXNlcjE3NTIzNDc=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1752347?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/SergioDemianLerner",
+      "html_url": "https://github.com/SergioDemianLerner",
+      "followers_url": "https://api.github.com/users/SergioDemianLerner/followers",
+      "following_url": "https://api.github.com/users/SergioDemianLerner/following{/other_user}",
+      "gists_url": "https://api.github.com/users/SergioDemianLerner/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/SergioDemianLerner/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/SergioDemianLerner/subscriptions",
+      "organizations_url": "https://api.github.com/users/SergioDemianLerner/orgs",
+      "repos_url": "https://api.github.com/users/SergioDemianLerner/repos",
+      "events_url": "https://api.github.com/users/SergioDemianLerner/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/SergioDemianLerner/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "82d00c40df8cd52c0345ebddfc345a2a5186b6d6",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/82d00c40df8cd52c0345ebddfc345a2a5186b6d6",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/82d00c40df8cd52c0345ebddfc345a2a5186b6d6"
+      }
+    ],
+    "stats": {
+      "total": 158,
+      "additions": 79,
+      "deletions": 79
+    },
+    "files": [
+      {
+        "sha": "723576fdb03a59204f4bf6d35df003165dcf7e96",
+        "filename": "src/test/test_bitcoin.cpp",
+        "status": "modified",
+        "additions": 79,
+        "deletions": 79,
+        "changes": 158,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8afc3fe0a5b325c6eeefa52aa9b0300b945e68d9/src/test/test_bitcoin.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8afc3fe0a5b325c6eeefa52aa9b0300b945e68d9/src/test/test_bitcoin.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/test_bitcoin.cpp?ref=8afc3fe0a5b325c6eeefa52aa9b0300b945e68d9",
+        "patch": "@@ -16,101 +16,101 @@ extern void noui_connect();\n \n bool keepTestEvidence = false;\n     \n-\tvoid TestingSetupManager::SetupGenesisBlockChain()\n-\t{\n-\t\tif (chainActive.Tip()->GetBlockHash()!=Params().HashGenesisBlock()) {\n-\t\t\tDestroyBlockChain();\n-\t\t\tCreateBlockChain();\n-\t\t}\n-\t\n+void TestingSetupManager::SetupGenesisBlockChain()\n+{\n+\tif (chainActive.Tip()->GetBlockHash()!=Params().HashGenesisBlock()) {\n+\t\tDestroyBlockChain();\n+\t\tCreateBlockChain();\n \t}\n-\t\n-\tvoid TestingSetupManager::CreateBlockChain()\n-\t{\n+\n+}\n+\n+void TestingSetupManager::CreateBlockChain()\n+{\n+#ifdef ENABLE_WALLET\n+\tbitdb.MakeMock();\n+#endif\n+\tfReopenDebugLog =true; // Important when switching between two test block-chains, to move the debug.log to the new location\n+\tpathTemp = GetTempPath() / strprintf(\"test_bitcoin_%lu_%i\", (unsigned long)GetTime(), (int)(GetRand(100000)));\n+\tboost::filesystem::create_directories(pathTemp);\n+\tmapArgs[\"-datadir\"] = pathTemp.string();\n+\tpblocktree = new CBlockTreeDB(1 << 20, true);\n+\tpcoinsdbview = new CCoinsViewDB(1 << 23, true);\n+\tpcoinsTip = new CCoinsViewCache(*pcoinsdbview);\n+\tInitBlockIndex();\n \t#ifdef ENABLE_WALLET\n-        bitdb.MakeMock();\n+\tbool fFirstRun;\n+\tpwalletMain = new CWallet(\"wallet.dat\");\n+\tpwalletMain->LoadWallet(fFirstRun);\n+\tRegisterWallet(pwalletMain);\n \t#endif\n-\t\tfReopenDebugLog =true; // Important when switching between two test block-chains, to move the debug.log to the new location\n-\t    pathTemp = GetTempPath() / strprintf(\"test_bitcoin_%lu_%i\", (unsigned long)GetTime(), (int)(GetRand(100000)));\n-        boost::filesystem::create_directories(pathTemp);\n-        mapArgs[\"-datadir\"] = pathTemp.string();\n-        pblocktree = new CBlockTreeDB(1 << 20, true);\n-        pcoinsdbview = new CCoinsViewDB(1 << 23, true);\n-        pcoinsTip = new CCoinsViewCache(*pcoinsdbview);\n-        InitBlockIndex();\n-\t\t#ifdef ENABLE_WALLET\n-        bool fFirstRun;\n-        pwalletMain = new CWallet(\"wallet.dat\");\n-        pwalletMain->LoadWallet(fFirstRun);\n-        RegisterWallet(pwalletMain);\n-\t\t#endif\n-\t}\n-\t\n-\tvoid ResetBlockIndex();\n+}\n+\n+void ResetBlockIndex();\n+\n+void TestingSetupManager::DestroyBlockChain()\n+{\n+\t// Clear the mempool so there are no transactions with missing inputs left.\n+\tmempool.clear();\n \t\n-\tvoid TestingSetupManager::DestroyBlockChain()\n-\t{\n-\t\t// Clear the mempool so there are no transactions with missing inputs left.\n-\t\tmempool.clear();\n-\t\t\n-\t#ifdef ENABLE_WALLET\n-\t    UnregisterWallet(pwalletMain);\n-        delete pwalletMain;\n-        pwalletMain = NULL;\n-\t#endif\n-\t \n-\t\tUnloadBlockIndex();\n-\t\tResetBlockIndex();\n+#ifdef ENABLE_WALLET\n+\tUnregisterWallet(pwalletMain);\n+\tdelete pwalletMain;\n+\tpwalletMain = NULL;\n+#endif\n+ \n+\tUnloadBlockIndex();\n+\tResetBlockIndex();\n+\n+#ifdef ENABLE_WALLET\n+\tbitdb.Flush(true);\n+#endif\n+\n+\tdelete pcoinsTip;\n+\tdelete pcoinsdbview;\n+\tdelete pblocktree;      \n+\tClearDatadirCache();\n \t\n-\t#ifdef ENABLE_WALLET\n-        bitdb.Flush(true);\n-\t#endif\n+\tif (!keepTestEvidence)\n+\t\tboost::filesystem::remove_all(pathTemp);\n \t\n-\t    delete pcoinsTip;\n-        delete pcoinsdbview;\n-        delete pblocktree;\t\t\n-\t\tClearDatadirCache();\n-\t\t\n-\t\tif (!keepTestEvidence)\n-\t\t\tboost::filesystem::remove_all(pathTemp);\n-\t\t\n-\t}\n-\t\n-    void TestingSetupManager::Start() {\n-        //fPrintToDebugLog = false; // don't want to write to debug.log file\n-        SelectParams(CBaseChainParams::MAIN);\n-        noui_connect();\n+}\n \n-        CreateBlockChain();\n+void TestingSetupManager::Start() {\n+\t//fPrintToDebugLog = false; // don't want to write to debug.log file\n+\tSelectParams(CBaseChainParams::MAIN);\n+\tnoui_connect();\n \n-        nScriptCheckThreads = 3;\n-        for (int i=0; i < nScriptCheckThreads-1; i++)\n-            threadGroup.create_thread(&ThreadScriptCheck);\n-        RegisterNodeSignals(GetNodeSignals());\t\t\n-    }\n-\t\n-    void TestingSetupManager::Stop()\n-    {\n-        threadGroup.interrupt_all();\n-        threadGroup.join_all();\n-        UnregisterNodeSignals(GetNodeSignals());\n+\tCreateBlockChain();\n \n-        DestroyBlockChain();\n-    }\n-\t\n-\tTestingSetupManager::TestingSetupManager() \n-\t{\n-        keepTestEvidence =false;\n-    }\n+\tnScriptCheckThreads = 3;\n+\tfor (int i=0; i < nScriptCheckThreads-1; i++)\n+\t\tthreadGroup.create_thread(&ThreadScriptCheck);\n+\tRegisterNodeSignals(GetNodeSignals());      \n+}\n+\n+void TestingSetupManager::Stop()\n+{\n+\tthreadGroup.interrupt_all();\n+\tthreadGroup.join_all();\n+\tUnregisterNodeSignals(GetNodeSignals());\n+\n+\tDestroyBlockChain();\n+}\n+\n+TestingSetupManager::TestingSetupManager() \n+{\n+\tkeepTestEvidence =false;\n+}\n \n \n struct TestingSetup {\n     \n     TestingSetup() \n-\t{\n+    {\n         testingSetupManager.Start();\n     }\n-\t\n+    \n     ~TestingSetup()\n     {\n         testingSetupManager.Stop();"
+      }
+    ]
+  },
+  {
+    "sha": "32bb48e8611ff496b3fc0ed588db998f02a08160",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozMmJiNDhlODYxMWZmNDk2YjNmYzBlZDU4OGRiOTk4ZjAyYTA4MTYw",
+    "commit": {
+      "author": {
+        "name": "SergioDemianLerner",
+        "email": "Sergio.d.Lerner@gmail.com",
+        "date": "2014-08-12T19:51:57Z"
+      },
+      "committer": {
+        "name": "SergioDemianLerner",
+        "email": "Sergio.d.Lerner@gmail.com",
+        "date": "2014-08-12T19:51:57Z"
+      },
+      "message": "\"delete\" missing EnvShutdown()",
+      "tree": {
+        "sha": "a823c9e44be34dbb6a65df85c600c634bad1a507",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/a823c9e44be34dbb6a65df85c600c634bad1a507"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/32bb48e8611ff496b3fc0ed588db998f02a08160",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/32bb48e8611ff496b3fc0ed588db998f02a08160",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/32bb48e8611ff496b3fc0ed588db998f02a08160",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/32bb48e8611ff496b3fc0ed588db998f02a08160/comments",
+    "author": {
+      "login": "SergioDemianLerner",
+      "id": 1752347,
+      "node_id": "MDQ6VXNlcjE3NTIzNDc=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1752347?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/SergioDemianLerner",
+      "html_url": "https://github.com/SergioDemianLerner",
+      "followers_url": "https://api.github.com/users/SergioDemianLerner/followers",
+      "following_url": "https://api.github.com/users/SergioDemianLerner/following{/other_user}",
+      "gists_url": "https://api.github.com/users/SergioDemianLerner/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/SergioDemianLerner/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/SergioDemianLerner/subscriptions",
+      "organizations_url": "https://api.github.com/users/SergioDemianLerner/orgs",
+      "repos_url": "https://api.github.com/users/SergioDemianLerner/repos",
+      "events_url": "https://api.github.com/users/SergioDemianLerner/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/SergioDemianLerner/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "SergioDemianLerner",
+      "id": 1752347,
+      "node_id": "MDQ6VXNlcjE3NTIzNDc=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1752347?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/SergioDemianLerner",
+      "html_url": "https://github.com/SergioDemianLerner",
+      "followers_url": "https://api.github.com/users/SergioDemianLerner/followers",
+      "following_url": "https://api.github.com/users/SergioDemianLerner/following{/other_user}",
+      "gists_url": "https://api.github.com/users/SergioDemianLerner/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/SergioDemianLerner/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/SergioDemianLerner/subscriptions",
+      "organizations_url": "https://api.github.com/users/SergioDemianLerner/orgs",
+      "repos_url": "https://api.github.com/users/SergioDemianLerner/repos",
+      "events_url": "https://api.github.com/users/SergioDemianLerner/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/SergioDemianLerner/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "8afc3fe0a5b325c6eeefa52aa9b0300b945e68d9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8afc3fe0a5b325c6eeefa52aa9b0300b945e68d9",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/8afc3fe0a5b325c6eeefa52aa9b0300b945e68d9"
+      }
+    ],
+    "stats": {
+      "total": 1,
+      "additions": 1,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "8a1aedb3b85647e1737202faa83cc24b2be2f7fe",
+        "filename": "src/db.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/32bb48e8611ff496b3fc0ed588db998f02a08160/src/db.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/32bb48e8611ff496b3fc0ed588db998f02a08160/src/db.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.cpp?ref=32bb48e8611ff496b3fc0ed588db998f02a08160",
+        "patch": "@@ -41,6 +41,7 @@ void CDBEnv::EnvShutdown()\n \n     fDbEnvInit = false;\n     int ret = pdbenv->close(0);\n+\tdelete pdbenv;\n \tpdbenv = NULL;\n     if (ret != 0)\n         LogPrintf(\"CDBEnv::EnvShutdown : Error %d shutting down database environment: %s\\n\", ret, DbEnv::strerror(ret));"
+      }
+    ]
+  },
+  {
+    "sha": "11977344219c6ca31847b1d5424876afb5ff1c2b",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxMTk3NzM0NDIxOWM2Y2EzMTg0N2IxZDU0MjQ4NzZhZmI1ZmYxYzJi",
+    "commit": {
+      "author": {
+        "name": "SergioDemianLerner",
+        "email": "Sergio.d.Lerner@gmail.com",
+        "date": "2014-08-13T14:37:31Z"
+      },
+      "committer": {
+        "name": "SergioDemianLerner",
+        "email": "Sergio.d.Lerner@gmail.com",
+        "date": "2014-08-13T14:37:31Z"
+      },
+      "message": "Indentation corrected (TAB -> space)\ntest_bitcoin.h added to BITCOIN_TESTS in Makefile.test.include",
+      "tree": {
+        "sha": "be1687e43d240a27d970d84c8a510cab3a73355f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/be1687e43d240a27d970d84c8a510cab3a73355f"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/11977344219c6ca31847b1d5424876afb5ff1c2b",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/11977344219c6ca31847b1d5424876afb5ff1c2b",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/11977344219c6ca31847b1d5424876afb5ff1c2b",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/11977344219c6ca31847b1d5424876afb5ff1c2b/comments",
+    "author": {
+      "login": "SergioDemianLerner",
+      "id": 1752347,
+      "node_id": "MDQ6VXNlcjE3NTIzNDc=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1752347?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/SergioDemianLerner",
+      "html_url": "https://github.com/SergioDemianLerner",
+      "followers_url": "https://api.github.com/users/SergioDemianLerner/followers",
+      "following_url": "https://api.github.com/users/SergioDemianLerner/following{/other_user}",
+      "gists_url": "https://api.github.com/users/SergioDemianLerner/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/SergioDemianLerner/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/SergioDemianLerner/subscriptions",
+      "organizations_url": "https://api.github.com/users/SergioDemianLerner/orgs",
+      "repos_url": "https://api.github.com/users/SergioDemianLerner/repos",
+      "events_url": "https://api.github.com/users/SergioDemianLerner/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/SergioDemianLerner/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "SergioDemianLerner",
+      "id": 1752347,
+      "node_id": "MDQ6VXNlcjE3NTIzNDc=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1752347?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/SergioDemianLerner",
+      "html_url": "https://github.com/SergioDemianLerner",
+      "followers_url": "https://api.github.com/users/SergioDemianLerner/followers",
+      "following_url": "https://api.github.com/users/SergioDemianLerner/following{/other_user}",
+      "gists_url": "https://api.github.com/users/SergioDemianLerner/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/SergioDemianLerner/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/SergioDemianLerner/subscriptions",
+      "organizations_url": "https://api.github.com/users/SergioDemianLerner/orgs",
+      "repos_url": "https://api.github.com/users/SergioDemianLerner/repos",
+      "events_url": "https://api.github.com/users/SergioDemianLerner/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/SergioDemianLerner/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "32bb48e8611ff496b3fc0ed588db998f02a08160",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/32bb48e8611ff496b3fc0ed588db998f02a08160",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/32bb48e8611ff496b3fc0ed588db998f02a08160"
+      }
+    ],
+    "stats": {
+      "total": 276,
+      "additions": 136,
+      "deletions": 140
+    },
+    "files": [
+      {
+        "sha": "a802e1e467b9cf8fed9b69f9afdc524ed0332a04",
+        "filename": "src/test/blockv2_tests.cpp",
+        "status": "modified",
+        "additions": 136,
+        "deletions": 140,
+        "changes": 276,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/11977344219c6ca31847b1d5424876afb5ff1c2b/src/test/blockv2_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/11977344219c6ca31847b1d5424876afb5ff1c2b/src/test/blockv2_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/blockv2_tests.cpp?ref=11977344219c6ca31847b1d5424876afb5ff1c2b",
+        "patch": "@@ -17,190 +17,186 @@ static void SetEmptyBlock(CBlock * pblock)\n {\n         pblock->nVersion = 2;\n         pblock->nTime = chainActive.Tip()->GetMedianTimePast()+1;\n-\t\tpblock->nNonce = 0;\n+        pblock->nNonce = 0;\n }\n-\t\t\n+        \n static void SetBlockDefaultAttributesAndHeight(CBlock * pblock,bool addHeight,int difValue)\n {\n-\t\tSetEmptyBlock(pblock);\n+        SetEmptyBlock(pblock);\n \n-\t\t// Add the coinbase\n+        // Add the coinbase\n         CMutableTransaction txCoinbase(pblock->vtx[0]);\n-\t\t\n-\t\tif (addHeight) \n-\t\t\ttxCoinbase.vin[0].scriptSig = (CScript() << (chainActive.Height()+1+difValue) << 0);\n-\t\t\telse\n-\t\t\ttxCoinbase.vin[0].scriptSig = (CScript() << 0 << 0); // At least size 2, this is a protocol spec\n-\t\t\t\n+        \n+        if (addHeight) \n+            txCoinbase.vin[0].scriptSig = (CScript() << (chainActive.Height()+1+difValue) << 0);\n+            else\n+            txCoinbase.vin[0].scriptSig = (CScript() << 0 << 0); // At least size 2, this is a protocol spec\n+            \n         txCoinbase.vout[0].scriptPubKey = CScript();\n         pblock->vtx[0] = CTransaction(txCoinbase);\n         pblock->hashMerkleRoot = pblock->BuildMerkleTree();\n }\n \n-void breakp()\n-{\n-\tLogPrintf(\"Blockv2test breakp\\n\");\t\n-}\n+\n \n void Blockv2test()\n {\n-\tassert(Params().NetworkID() == CBaseChainParams::MAIN);\t\n-\t\n-\t\n-\t// if you want to debug the test case, uncomment this line, keep the evidence (the blockchain, including debug.log)\n-\t// testingSetupManager.keepTestEvidence = true;\n-\t\n-\ttestingSetupManager.SetupGenesisBlockChain();\t\n-\tLogPrintf(\"Blockv2test testcase starts\\n\");\t\n-\t\n-\tCScript scriptPubKey = CScript() << ParseHex(\"04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f\") << OP_CHECKSIG;\n+    assert(Params().NetworkID() == CBaseChainParams::MAIN); \n+    \n+    \n+    // if you want to debug the test case, uncomment this line, keep the evidence (the blockchain, including debug.log)\n+    // testingSetupManager.keepTestEvidence = true;\n+    \n+    testingSetupManager.SetupGenesisBlockChain();   \n+    LogPrintf(\"Blockv2test testcase starts\\n\"); \n+    \n+    CScript scriptPubKey = CScript() << ParseHex(\"04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f\") << OP_CHECKSIG;\n     CBlockTemplate *pblocktemplate;\n     CScript script;\n     uint256 hash;\n \n-\t\n+    \n     LOCK(cs_main);\n-\t\n-\t// Disable checking PoW so we can freely create blocks without effort here\n-\tsupressCheckBlockWork = true;\n-\t\n+    \n+    // Disable checking PoW so we can freely create blocks without effort here\n+    supressCheckBlockWork = true;\n+    \n     // Simple block creation, nothing special yet.\n     pblocktemplate = CreateNewBlock(scriptPubKey);   \n     CBlock *pblock = &pblocktemplate->block; // pointer for convenience\n    \n-    LogPrintf(\"Blockv2test block v1 add begin\\n\");\t\n+    LogPrintf(\"Blockv2test block v1 add begin\\n\");  \n     // First create a block v1, check that it is accepted\n-\tSetBlockDefaultAttributesAndHeight(pblock,false,0);\n-\tpblock->nVersion = 1;\n-\tCValidationState state1;\n-\tBOOST_CHECK(ProcessBlock(state1, NULL, pblock));\n+    SetBlockDefaultAttributesAndHeight(pblock,false,0);\n+    pblock->nVersion = 1;\n+    CValidationState state1;\n+    BOOST_CHECK(ProcessBlock(state1, NULL, pblock));\n     BOOST_CHECK(state1.IsValid());\n-\tpblock->hashPrevBlock = pblock->GetHash(); // update parent\n-\t\n-\t\n-\t// Now create exactly 1000 blocks v2\n-\t\n-\t// First check that the supermajority threshold is exactly 1000 blocks\n-\tBOOST_CHECK(Params().ToCheckBlockUpgradeMajority()==1000);  // \n-\tBOOST_CHECK(Params().EnforceBlockUpgradeMajority()==750);\n-\tBOOST_CHECK(Params().RejectBlockOutdatedMajority()==950);\n-\t\n-\t// Over the last 1000 blocks, 750 blocks must be v2 to switch to v2-only mode.\n-\t// Here we're testing only the last 750, not any subset.\n-    \n-\tLogPrintf(\"Blockv2test BIP30 repetition begin\\n\");\t\n-\t// First, if we try to add a block v2 without heigh, we should get\n-\t// \"bad-txns-BIP30\" because the coinbase tx has the same hash as the previous.\n-\t// Unluckily, even if ConnectBlock returns a \"bad-txns-BIP30\", ActivateBestChainStep clears\n-\t// the state, so we get true here and the \"bad-txns-BIP30\" reason is lost.\n-\t// We verify instead that the chain heigh has not been incremented.\n-\t\n-\tCValidationState state7;\n-\tint PreviousHeght = chainActive.Height();\n-\tSetBlockDefaultAttributesAndHeight(pblock,false,0); //\n-\tpblock->nVersion = 2;\n-\tBOOST_CHECK(ProcessBlock(state7, NULL, pblock)); // should we care about the return value?\n-\tBOOST_CHECK(state7.IsValid());\n-\tBOOST_CHECK(PreviousHeght == chainActive.Height()); // we check the block has not been added.\n-\t\n-\tLogPrintf(\"Blockv2test 750 v2 blocks  begin\\n\");\t\n-\tfor (int i=0;i<750;i++) \n+    pblock->hashPrevBlock = pblock->GetHash(); // update parent\n+    \n+    \n+    // Now create exactly 1000 blocks v2\n+    \n+    // First check that the supermajority threshold is exactly 1000 blocks\n+    BOOST_CHECK(Params().ToCheckBlockUpgradeMajority()==1000);  // \n+    BOOST_CHECK(Params().EnforceBlockUpgradeMajority()==750);\n+    BOOST_CHECK(Params().RejectBlockOutdatedMajority()==950);\n+    \n+    // Over the last 1000 blocks, 750 blocks must be v2 to switch to v2-only mode.\n+    // Here we're testing only the last 750, not any subset.\n+    \n+    LogPrintf(\"Blockv2test BIP30 repetition begin\\n\");  \n+    // First, if we try to add a block v2 without heigh, we should get\n+    // \"bad-txns-BIP30\" because the coinbase tx has the same hash as the previous.\n+    // Unluckily, even if ConnectBlock returns a \"bad-txns-BIP30\", ActivateBestChainStep clears\n+    // the state, so we get true here and the \"bad-txns-BIP30\" reason is lost.\n+    // We verify instead that the chain heigh has not been incremented.\n+    \n+    CValidationState state7;\n+    int PreviousHeght = chainActive.Height();\n+    SetBlockDefaultAttributesAndHeight(pblock,false,0); //\n+    pblock->nVersion = 2;\n+    BOOST_CHECK(ProcessBlock(state7, NULL, pblock)); // should we care about the return value?\n+    BOOST_CHECK(state7.IsValid());\n+    BOOST_CHECK(PreviousHeght == chainActive.Height()); // we check the block has not been added.\n+    \n+    LogPrintf(\"Blockv2test 750 v2 blocks  begin\\n\");    \n+    for (int i=0;i<750;i++) \n     {\n-\t\t\n-\t\tLogPrintf(\"Blockv2test block %d begin\\n\",i);\t\n-\t\t\n-\t\t// We add a value to the height to make is NOT equal to the actual height.\n-\t\tSetBlockDefaultAttributesAndHeight(pblock,true,1000); // blocks version 2 without height are allowed! for only 750 blocks\n-\t\tpblock->nVersion = 2;\n+        \n+        LogPrintf(\"Blockv2test block %d begin\\n\",i);    \n+        \n+        // We add a value to the height to make is NOT equal to the actual height.\n+        SetBlockDefaultAttributesAndHeight(pblock,true,1000); // blocks version 2 without height are allowed! for only 750 blocks\n+        pblock->nVersion = 2;\n         CValidationState state;\n-\t\t\t\t\t\n+                    \n         BOOST_CHECK(ProcessBlock(state, NULL, pblock));\n         BOOST_CHECK(state.IsValid());\n         pblock->hashPrevBlock = pblock->GetHash(); // update parent\n     }\n \n-\tLogPrintf(\"Blockv2test v2 without heigh rejected begin\\n\");\t\n-\t\n-\t// Now we try to add a block v2, with an invalid height and it should be rejected. We use 2000 because is not in the range [1000..1750].\n-\tSetBlockDefaultAttributesAndHeight(pblock,true,2000); // \n-\tpblock->nVersion = 2;\n+    LogPrintf(\"Blockv2test v2 without heigh rejected begin\\n\"); \n+    \n+    // Now we try to add a block v2, with an invalid height and it should be rejected. We use 2000 because is not in the range [1000..1750].\n+    SetBlockDefaultAttributesAndHeight(pblock,true,2000); // \n+    pblock->nVersion = 2;\n     CValidationState state0;\n-\tBOOST_CHECK(ProcessBlock(state0, NULL, pblock)==false);\n-\tBOOST_CHECK(!state0.IsValid());\n-\tBOOST_CHECK(state0.GetRejectReason()==\"bad-cb-height\");\t\n-\t// Do not update parent since block has failed\n-\t\n-\tLogPrintf(\"Blockv2test v2 with heigh accepted begin\\n\");\t\n-\t\n-\t\n-\t// Now we add a block with height, must be ok.\n-\tfor (int i=0;i<200;i++) \n+    BOOST_CHECK(ProcessBlock(state0, NULL, pblock)==false);\n+    BOOST_CHECK(!state0.IsValid());\n+    BOOST_CHECK(state0.GetRejectReason()==\"bad-cb-height\"); \n+    // Do not update parent since block has failed\n+    \n+    LogPrintf(\"Blockv2test v2 with heigh accepted begin\\n\");    \n+    \n+    \n+    // Now we add a block with height, must be ok.\n+    for (int i=0;i<200;i++) \n     {\n-\t\t\n-\t\tLogPrintf(\"Blockv2test v2block %d begin\\n\",i);\t\t\n-\t\tSetBlockDefaultAttributesAndHeight(pblock,true,0);\n-\t\tpblock->nVersion = 2;\n+        \n+        LogPrintf(\"Blockv2test v2block %d begin\\n\",i);      \n+        SetBlockDefaultAttributesAndHeight(pblock,true,0);\n+        pblock->nVersion = 2;\n         CValidationState state;\n         BOOST_CHECK(ProcessBlock(state, NULL, pblock));\n         BOOST_CHECK(state.IsValid());\n         pblock->hashPrevBlock = pblock->GetHash(); // update parent\n     }\n \n-\tbreakp();\n-\t\n-\tLogPrintf(\"Blockv2test block v1 rejected\\n\");\t\n-\t// Now we add 200 additional blocks, until we get 950 (the threshold were v1 blocks are not accepted anymore)\n-\t// Now we try to add a block v1, it should be rejected, even if it hash the height field\n-\tSetBlockDefaultAttributesAndHeight(pblock,true,0);\n-\tpblock->nVersion = 1;\n-\tCValidationState state2;\n-\tBOOST_CHECK(ProcessBlock(state2, NULL, pblock)==false);\n-\tBOOST_CHECK(!state2.IsValid());\n-\tBOOST_CHECK(state2.GetRejectReason()==\"bad-version\");\n-\t// Do not update parent since block has failed\n-\t\n-\t\n-\t\n-\t// Some other missing tests, added here as bonus...\n-\t\n-\t// Block time too old check\n-\tSetBlockDefaultAttributesAndHeight(pblock,true,0);\n-\tpblock->nVersion = 2;\n-\tpblock->nTime = chainActive.Tip()->GetMedianTimePast()-1;\n-\tCValidationState state4;\n-\tBOOST_CHECK(ProcessBlock(state4, NULL, pblock)==false);\n-\tBOOST_CHECK(!state4.IsValid());\n-\tBOOST_CHECK(state4.GetRejectReason()==\"time-too-old\");\n-\t// Do not update parent since block has failed\n-\t\n-\t// Adding a non-final coinbase, must modify coinbase\n-\tSetEmptyBlock(pblock);\n-\t// Use a mutable coinbase to change nLockTime and  nSequence\n-\tCMutableTransaction txCoinbase(pblock->vtx[0]);\n-\ttxCoinbase.vin[0].scriptSig = (CScript() << chainActive.Height() << 0);\t\n-\ttxCoinbase.nLockTime = LOCKTIME_THRESHOLD-1; // refers to heigh\n-\ttxCoinbase.vin[0].nSequence = 1; // non-zero sequence\n-\tpblock->vtx[0] = CTransaction(txCoinbase);\n-\tpblock->nVersion = 2;\n-\tpblock->hashMerkleRoot = pblock->BuildMerkleTree();\n-\tCValidationState state5;\n-\tBOOST_CHECK(ProcessBlock(state5, NULL, pblock)==false);\n-\tBOOST_CHECK(!state5.IsValid());\n-\tBOOST_CHECK(state5.GetRejectReason()==\"bad-txns-nonfinal\");\n-\t// Do not update parent since block has failed\n-\t\n-\t// Re-enable checking PoW for other tests\n-\tsupressCheckBlockWork = false;\n-\t\n+    \n+    LogPrintf(\"Blockv2test block v1 rejected\\n\");   \n+    // Now we add 200 additional blocks, until we get 950 (the threshold were v1 blocks are not accepted anymore)\n+    // Now we try to add a block v1, it should be rejected, even if it hash the height field\n+    SetBlockDefaultAttributesAndHeight(pblock,true,0);\n+    pblock->nVersion = 1;\n+    CValidationState state2;\n+    BOOST_CHECK(ProcessBlock(state2, NULL, pblock)==false);\n+    BOOST_CHECK(!state2.IsValid());\n+    BOOST_CHECK(state2.GetRejectReason()==\"bad-version\");\n+    // Do not update parent since block has failed\n+    \n+    \n+    \n+    // Some other missing tests, added here as bonus...\n+    \n+    // Block time too old check\n+    SetBlockDefaultAttributesAndHeight(pblock,true,0);\n+    pblock->nVersion = 2;\n+    pblock->nTime = chainActive.Tip()->GetMedianTimePast()-1;\n+    CValidationState state4;\n+    BOOST_CHECK(ProcessBlock(state4, NULL, pblock)==false);\n+    BOOST_CHECK(!state4.IsValid());\n+    BOOST_CHECK(state4.GetRejectReason()==\"time-too-old\");\n+    // Do not update parent since block has failed\n+    \n+    // Adding a non-final coinbase, must modify coinbase\n+    SetEmptyBlock(pblock);\n+    // Use a mutable coinbase to change nLockTime and  nSequence\n+    CMutableTransaction txCoinbase(pblock->vtx[0]);\n+    txCoinbase.vin[0].scriptSig = (CScript() << chainActive.Height() << 0); \n+    txCoinbase.nLockTime = LOCKTIME_THRESHOLD-1; // refers to heigh\n+    txCoinbase.vin[0].nSequence = 1; // non-zero sequence\n+    pblock->vtx[0] = CTransaction(txCoinbase);\n+    pblock->nVersion = 2;\n+    pblock->hashMerkleRoot = pblock->BuildMerkleTree();\n+    CValidationState state5;\n+    BOOST_CHECK(ProcessBlock(state5, NULL, pblock)==false);\n+    BOOST_CHECK(!state5.IsValid());\n+    BOOST_CHECK(state5.GetRejectReason()==\"bad-txns-nonfinal\");\n+    // Do not update parent since block has failed\n+    \n+    // Re-enable checking PoW for other tests\n+    supressCheckBlockWork = false;\n+    \n     delete pblocktemplate;\n-\t\n-\t\n-\tLogPrintf(\"Blockv2test testcase ends\\n\");\t\n+    \n+    \n+    LogPrintf(\"Blockv2test testcase ends\\n\");   \n }\n \n BOOST_AUTO_TEST_CASE(Blockv2testcase)\n {\n-\tBlockv2test();\n+    Blockv2test();\n }\n \n BOOST_AUTO_TEST_SUITE_END()"
+      }
+    ]
+  },
+  {
+    "sha": "a7555d6f6430aa2ddc83404ae9b627d7d0dd1f6f",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphNzU1NWQ2ZjY0MzBhYTJkZGM4MzQwNGFlOWI2MjdkN2QwZGQxZjZm",
+    "commit": {
+      "author": {
+        "name": "SergioDemianLerner",
+        "email": "Sergio.d.Lerner@gmail.com",
+        "date": "2014-08-13T14:45:37Z"
+      },
+      "committer": {
+        "name": "SergioDemianLerner",
+        "email": "Sergio.d.Lerner@gmail.com",
+        "date": "2014-08-13T14:45:37Z"
+      },
+      "message": "test_bitcoin.h added to BITCOIN_TESTS in Makefile.test.include",
+      "tree": {
+        "sha": "ca3f351d83e709c2d774754ed77b5d35c800b232",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/ca3f351d83e709c2d774754ed77b5d35c800b232"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a7555d6f6430aa2ddc83404ae9b627d7d0dd1f6f",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a7555d6f6430aa2ddc83404ae9b627d7d0dd1f6f",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a7555d6f6430aa2ddc83404ae9b627d7d0dd1f6f",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a7555d6f6430aa2ddc83404ae9b627d7d0dd1f6f/comments",
+    "author": {
+      "login": "SergioDemianLerner",
+      "id": 1752347,
+      "node_id": "MDQ6VXNlcjE3NTIzNDc=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1752347?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/SergioDemianLerner",
+      "html_url": "https://github.com/SergioDemianLerner",
+      "followers_url": "https://api.github.com/users/SergioDemianLerner/followers",
+      "following_url": "https://api.github.com/users/SergioDemianLerner/following{/other_user}",
+      "gists_url": "https://api.github.com/users/SergioDemianLerner/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/SergioDemianLerner/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/SergioDemianLerner/subscriptions",
+      "organizations_url": "https://api.github.com/users/SergioDemianLerner/orgs",
+      "repos_url": "https://api.github.com/users/SergioDemianLerner/repos",
+      "events_url": "https://api.github.com/users/SergioDemianLerner/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/SergioDemianLerner/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "SergioDemianLerner",
+      "id": 1752347,
+      "node_id": "MDQ6VXNlcjE3NTIzNDc=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1752347?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/SergioDemianLerner",
+      "html_url": "https://github.com/SergioDemianLerner",
+      "followers_url": "https://api.github.com/users/SergioDemianLerner/followers",
+      "following_url": "https://api.github.com/users/SergioDemianLerner/following{/other_user}",
+      "gists_url": "https://api.github.com/users/SergioDemianLerner/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/SergioDemianLerner/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/SergioDemianLerner/subscriptions",
+      "organizations_url": "https://api.github.com/users/SergioDemianLerner/orgs",
+      "repos_url": "https://api.github.com/users/SergioDemianLerner/repos",
+      "events_url": "https://api.github.com/users/SergioDemianLerner/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/SergioDemianLerner/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "11977344219c6ca31847b1d5424876afb5ff1c2b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/11977344219c6ca31847b1d5424876afb5ff1c2b",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/11977344219c6ca31847b1d5424876afb5ff1c2b"
+      }
+    ],
+    "stats": {
+      "total": 1,
+      "additions": 1,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "b458e3399bd8b4c50a5e3a743ddbb0ff778358d7",
+        "filename": "src/Makefile.test.include",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a7555d6f6430aa2ddc83404ae9b627d7d0dd1f6f/src/Makefile.test.include",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a7555d6f6430aa2ddc83404ae9b627d7d0dd1f6f/src/Makefile.test.include",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/Makefile.test.include?ref=a7555d6f6430aa2ddc83404ae9b627d7d0dd1f6f",
+        "patch": "@@ -21,6 +21,7 @@ GENERATED_TEST_FILES = $(JSON_TEST_FILES:.json=.json.h) $(RAW_TEST_FILES:.raw=.r\n \n BITCOIN_TESTS =\\\n   test/bignum.h \\\n+  test/test_bitcoin.h \\\n   test/alert_tests.cpp \\\n   test/allocator_tests.cpp \\\n   test/base32_tests.cpp \\"
+      }
+    ]
+  }
+]

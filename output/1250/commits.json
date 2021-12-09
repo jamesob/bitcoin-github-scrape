@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "81c45c0a94d10717f105d28f6d13bac0714d111c",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4MWM0NWMwYTk0ZDEwNzE3ZjEwNWQyOGY2ZDEzYmFjMDcxNGQxMTFj",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-05-10T13:33:01Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-05-10T16:00:00Z"
+      },
+      "message": "optionsdialog.cpp: rename \"Start Bitcoin on window system startup\" to \"Start Bitcoin on system login\" and move it to Main / hide \"Window\" Options on Mac as there are currently none available / remove an unused variable / add Alt-Shortcuts where they were missing / allow translation of \"default\"",
+      "tree": {
+        "sha": "605f0cdbcad908a1f289b90b94daf32e48d7ad37",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/605f0cdbcad908a1f289b90b94daf32e48d7ad37"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/81c45c0a94d10717f105d28f6d13bac0714d111c",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/81c45c0a94d10717f105d28f6d13bac0714d111c",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/81c45c0a94d10717f105d28f6d13bac0714d111c",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/81c45c0a94d10717f105d28f6d13bac0714d111c/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "037a8daee68907b6258c2421a6f0d7265cd1b3ad",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/037a8daee68907b6258c2421a6f0d7265cd1b3ad",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/037a8daee68907b6258c2421a6f0d7265cd1b3ad"
+      }
+    ],
+    "stats": {
+      "total": 24,
+      "additions": 12,
+      "deletions": 12
+    },
+    "files": [
+      {
+        "sha": "c3260217bb800beff9b84c9b616616f5ae855b01",
+        "filename": "src/qt/optionsdialog.cpp",
+        "status": "modified",
+        "additions": 12,
+        "deletions": 12,
+        "changes": 24,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/81c45c0a94d10717f105d28f6d13bac0714d111c/src/qt/optionsdialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/81c45c0a94d10717f105d28f6d13bac0714d111c/src/qt/optionsdialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/optionsdialog.cpp?ref=81c45c0a94d10717f105d28f6d13bac0714d111c",
+        "patch": "@@ -39,8 +39,9 @@ class MainOptionsPage: public OptionsPage\n \n     virtual void setMapper(MonitoredDataMapper *mapper);\n private:\n-    QCheckBox *detach_database;\n     BitcoinAmountField *fee_edit;\n+    QCheckBox *bitcoin_at_startup;\n+    QCheckBox *detach_database;\n };\n \n class WindowOptionsPage: public OptionsPage\n@@ -51,11 +52,8 @@ class WindowOptionsPage: public OptionsPage\n \n     virtual void setMapper(MonitoredDataMapper *mapper);\n private:\n-    QCheckBox *bitcoin_at_startup;\n #ifndef Q_WS_MAC\n     QCheckBox *minimize_to_tray;\n-#endif\n-#ifndef Q_WS_MAC\n     QCheckBox *minimize_on_close;\n #endif\n };\n@@ -88,7 +86,6 @@ class NetworkOptionsPage: public OptionsPage\n     QCheckBox *connect_socks4;\n     QLineEdit *proxy_ip;\n     QLineEdit *proxy_port;\n-    BitcoinAmountField *fee_edit;\n };\n \n \n@@ -107,7 +104,10 @@ OptionsDialog::OptionsDialog(QWidget *parent):\n \n     pages.append(new MainOptionsPage(this));\n     pages.append(new NetworkOptionsPage(this));\n+#ifndef Q_WS_MAC\n+    /* Hide Window options on Mac as there are currently none available */\n     pages.append(new WindowOptionsPage(this));\n+#endif\n     pages.append(new DisplayOptionsPage(this));\n \n     foreach(OptionsPage *page, pages)\n@@ -219,7 +219,11 @@ MainOptionsPage::MainOptionsPage(QWidget *parent):\n \n     layout->addLayout(fee_hbox);\n \n-    detach_database = new QCheckBox(tr(\"Detach databases at shutdown\"));\n+    bitcoin_at_startup = new QCheckBox(tr(\"&Start Bitcoin on system login\"));\n+    bitcoin_at_startup->setToolTip(tr(\"Automatically start Bitcoin after logging in to the system\"));\n+    layout->addWidget(bitcoin_at_startup);\n+\n+    detach_database = new QCheckBox(tr(\"&Detach databases at shutdown\"));\n     detach_database->setToolTip(tr(\"Detach block and address databases at shutdown. This means they can be moved to another data directory, but it slows down shutdown. The wallet is always detached.\"));\n     layout->addWidget(detach_database);\n \n@@ -231,6 +235,7 @@ void MainOptionsPage::setMapper(MonitoredDataMapper *mapper)\n {\n     // Map model to widgets\n     mapper->addMapping(fee_edit, OptionsModel::Fee);\n+    mapper->addMapping(bitcoin_at_startup, OptionsModel::StartAtStartup);\n     mapper->addMapping(detach_database, OptionsModel::DetachDatabases);\n }\n \n@@ -249,7 +254,7 @@ DisplayOptionsPage::DisplayOptionsPage(QWidget *parent):\n     lang = new QValueComboBox(this);\n     // Make list of languages\n     QDir translations(\":translations\");\n-    lang->addItem(\"(default)\", QVariant(\"\"));\n+    lang->addItem(QString(\"(\") + tr(\"default\") + QString(\")\"), QVariant(\"\"));\n     foreach(const QString &langStr, translations.entryList())\n     {\n         lang->addItem(langStr, QVariant(langStr));\n@@ -307,10 +312,6 @@ WindowOptionsPage::WindowOptionsPage(QWidget *parent):\n     QVBoxLayout *layout = new QVBoxLayout();\n     setWindowTitle(tr(\"Window\"));\n \n-    bitcoin_at_startup = new QCheckBox(tr(\"&Start Bitcoin on window system startup\"));\n-    bitcoin_at_startup->setToolTip(tr(\"Automatically start Bitcoin after the computer is turned on\"));\n-    layout->addWidget(bitcoin_at_startup);\n-\n #ifndef Q_WS_MAC\n     minimize_to_tray = new QCheckBox(tr(\"&Minimize to the tray instead of the taskbar\"));\n     minimize_to_tray->setToolTip(tr(\"Show only a tray icon after minimizing the window\"));\n@@ -328,7 +329,6 @@ WindowOptionsPage::WindowOptionsPage(QWidget *parent):\n void WindowOptionsPage::setMapper(MonitoredDataMapper *mapper)\n {\n     // Map model to widgets\n-    mapper->addMapping(bitcoin_at_startup, OptionsModel::StartAtStartup);\n #ifndef Q_WS_MAC\n     mapper->addMapping(minimize_to_tray, OptionsModel::MinimizeToTray);\n #endif"
+      }
+    ]
+  }
+]

@@ -1,0 +1,98 @@
+[
+  {
+    "sha": "e2655e0ab1fc36cd4a58a5145c53500cb7b2d4d0",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplMjY1NWUwYWIxZmMzNmNkNGE1OGE1MTQ1YzUzNTAwY2I3YjJkNGQw",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-11-11T09:52:43Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-11-11T09:52:43Z"
+      },
+      "message": "Add unauthenticated HTTP REST interface to public blockchain data.",
+      "tree": {
+        "sha": "a4ebff17c00212fd883cd2089f2aef1a3cf8db0e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/a4ebff17c00212fd883cd2089f2aef1a3cf8db0e"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/e2655e0ab1fc36cd4a58a5145c53500cb7b2d4d0",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e2655e0ab1fc36cd4a58a5145c53500cb7b2d4d0",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/e2655e0ab1fc36cd4a58a5145c53500cb7b2d4d0",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e2655e0ab1fc36cd4a58a5145c53500cb7b2d4d0/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "83f5daf2fe6e2f42c81576097f4084d2788b454b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/83f5daf2fe6e2f42c81576097f4084d2788b454b",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/83f5daf2fe6e2f42c81576097f4084d2788b454b"
+      }
+    ],
+    "stats": {
+      "total": 217,
+      "additions": 216,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "2c2a96b198e3559facbda2e31c5dd372a8bf40ac",
+        "filename": "src/Makefile.am",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e2655e0ab1fc36cd4a58a5145c53500cb7b2d4d0/src/Makefile.am",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e2655e0ab1fc36cd4a58a5145c53500cb7b2d4d0/src/Makefile.am",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/Makefile.am?ref=e2655e0ab1fc36cd4a58a5145c53500cb7b2d4d0",
+        "patch": "@@ -165,6 +165,7 @@ libbitcoin_server_a_SOURCES = \\\n   net.cpp \\\n   noui.cpp \\\n   pow.cpp \\\n+  rest.cpp \\\n   rpcblockchain.cpp \\\n   rpcmining.cpp \\\n   rpcmisc.cpp \\"
+      },
+      {
+        "sha": "48c1672ae8625db3aaac9770b0075765121a77e5",
+        "filename": "src/rest.cpp",
+        "status": "added",
+        "additions": 201,
+        "deletions": 0,
+        "changes": 201,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e2655e0ab1fc36cd4a58a5145c53500cb7b2d4d0/src/rest.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e2655e0ab1fc36cd4a58a5145c53500cb7b2d4d0/src/rest.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rest.cpp?ref=e2655e0ab1fc36cd4a58a5145c53500cb7b2d4d0",
+        "patch": "@@ -0,0 +1,201 @@\n+// Copyright (c) 2009-2010 Satoshi Nakamoto\n+// Copyright (c) 2009-2012 The Bitcoin developers\n+// Distributed under the MIT/X11 software license, see the accompanying\n+// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+#include <boost/algorithm/string.hpp>\n+#include \"rpcserver.h\"\n+#include \"streams.h\"\n+#include \"utilstrencodings.h\"\n+#include \"core/block.h\"\n+#include \"core/transaction.h\"\n+#include \"version.h\"\n+#include \"main.h\"\n+\n+using namespace std;\n+using namespace json_spirit;\n+\n+enum RetFormat {\n+    RF_BINARY,\n+    RF_HEX,\n+    RF_JSON,\n+};\n+\n+static const struct {\n+    enum RetFormat rf;\n+    const char *name;\n+} rf_names[] = {\n+    { RF_BINARY, \"binary\" },            // default, if match not found\n+    { RF_HEX, \"hex\" },\n+    { RF_JSON, \"json\" },\n+};\n+\n+class RestErr {\n+public:\n+    enum HTTPStatusCode status;\n+    string message;\n+};\n+\n+extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, Object& entry);\n+extern Object blockToJSON(const CBlock& block, const CBlockIndex* blockindex);\n+\n+static RestErr RESTERR(enum HTTPStatusCode status, string message)\n+{\n+    RestErr re;\n+    re.status = status;\n+    re.message = message;\n+    return re;\n+}\n+\n+static enum RetFormat ParseDataFormat(const string& format)\n+{\n+    for (unsigned int i = 0; i < ARRAYLEN(rf_names); i++)\n+        if (format == rf_names[i].name)\n+            return rf_names[i].rf;\n+\n+    return rf_names[0].rf;\n+}\n+\n+static bool ParseHashStr(string& strReq, uint256& v)\n+{\n+    if (!IsHex(strReq) || (strReq.size() != 64))\n+        return false;\n+\n+    v.SetHex(strReq);\n+    return true;\n+}\n+\n+static bool rest_block(AcceptedConnection *conn,\n+                       string& strReq,\n+                       map<string, string>& mapHeaders,\n+                       bool fRun)\n+{\n+    vector<string> params;\n+    boost::split(params, strReq, boost::is_any_of(\"/\"));\n+\n+    enum RetFormat rf = ParseDataFormat(params.size() > 1 ? params[1] : string(\"\"));\n+\n+    string hashStr = params[0];\n+    uint256 hash;\n+    if (!ParseHashStr(hashStr, hash))\n+        throw RESTERR(HTTP_BAD_REQUEST, \"Invalid hash: \" + hashStr);\n+\n+    if (mapBlockIndex.count(hash) == 0)\n+        throw RESTERR(HTTP_NOT_FOUND, hashStr + \" not found\");\n+\n+    CBlock block;\n+    CBlockIndex* pblockindex = mapBlockIndex[hash];\n+    if (!ReadBlockFromDisk(block, pblockindex))\n+        throw RESTERR(HTTP_NOT_FOUND, hashStr + \" not found\");\n+\n+    CDataStream ssBlock(SER_NETWORK, PROTOCOL_VERSION);\n+    ssBlock << block;\n+\n+    switch (rf) {\n+    case RF_BINARY: {\n+        string binaryBlock = ssBlock.str();\n+        conn->stream() << HTTPReply(HTTP_OK, binaryBlock, fRun, true, \"application/octet-stream\") << binaryBlock << std::flush;\n+        return true;\n+    }\n+\n+    case RF_HEX: {\n+        string strHex = HexStr(ssBlock.begin(), ssBlock.end()) + \"\\n\";;\n+        conn->stream() << HTTPReply(HTTP_OK, strHex, fRun, false, \"text/plain\") << std::flush;\n+        return true;\n+    }\n+\n+    case RF_JSON: {\n+        Object objBlock = blockToJSON(block, pblockindex);\n+        string strJSON = write_string(Value(objBlock), false) + \"\\n\";\n+        conn->stream() << HTTPReply(HTTP_OK, strJSON, fRun) << std::flush;\n+        return true;\n+     }\n+    }\n+\n+    // not reached\n+    return true;     // continue to process further HTTP reqs on this cxn\n+}\n+\n+static bool rest_tx(AcceptedConnection *conn,\n+                    string& strReq,\n+                    map<string, string>& mapHeaders,\n+                    bool fRun)\n+{\n+    vector<string> params;\n+    boost::split(params, strReq, boost::is_any_of(\"/\"));\n+\n+    enum RetFormat rf = ParseDataFormat(params.size() > 1 ? params[1] : string(\"\"));\n+\n+    string hashStr = params[0];\n+    uint256 hash;\n+    if (!ParseHashStr(hashStr, hash))\n+        throw RESTERR(HTTP_BAD_REQUEST, \"Invalid hash: \" + hashStr);\n+\n+    CTransaction tx;\n+    uint256 hashBlock = 0;\n+    if (!GetTransaction(hash, tx, hashBlock, true))\n+        throw RESTERR(HTTP_NOT_FOUND, hashStr + \" not found\");\n+\n+    CDataStream ssTx(SER_NETWORK, PROTOCOL_VERSION);\n+    ssTx << tx;\n+\n+    switch (rf) {\n+    case RF_BINARY: {\n+        string binaryTx = ssTx.str();\n+        conn->stream() << HTTPReply(HTTP_OK, binaryTx, fRun, true, \"application/octet-stream\") << binaryTx << std::flush;\n+        return true;\n+    }\n+\n+    case RF_HEX: {\n+        string strHex = HexStr(ssTx.begin(), ssTx.end()) + \"\\n\";;\n+        conn->stream() << HTTPReply(HTTP_OK, strHex, fRun, false, \"text/plain\") << std::flush;\n+        return true;\n+    }\n+\n+    case RF_JSON: {\n+        Object objTx;\n+        TxToJSON(tx, hashBlock, objTx);\n+        string strJSON = write_string(Value(objTx), false) + \"\\n\";\n+        conn->stream() << HTTPReply(HTTP_OK, strJSON, fRun) << std::flush;\n+        return true;\n+     }\n+    }\n+\n+    // not reached\n+    return true;     // continue to process further HTTP reqs on this cxn\n+}\n+\n+static const struct {\n+    const char *prefix;\n+    bool (*handler)(AcceptedConnection *conn,\n+                    string& strURI,\n+                    map<string, string>& mapHeaders,\n+                    bool fRun);\n+} uri_prefixes[] = {\n+    { \"/rest/tx/\", rest_tx },\n+    { \"/rest/block/\", rest_block },\n+};\n+\n+bool HTTPReq_REST(AcceptedConnection *conn,\n+                  string& strURI,\n+                  map<string, string>& mapHeaders,\n+                  bool fRun)\n+{\n+    try {\n+        for (unsigned int i = 0; i < ARRAYLEN(uri_prefixes); i++) {\n+            unsigned int plen = strlen(uri_prefixes[i].prefix);\n+            if (strURI.substr(0, plen) == uri_prefixes[i].prefix) {\n+                string strReq = strURI.substr(plen);\n+                return uri_prefixes[i].handler(conn, strReq, mapHeaders, fRun);\n+            }\n+        }\n+    }\n+    catch (RestErr& re) {\n+        conn->stream() << HTTPReply(re.status, re.message + \"\\r\\n\", false, false, \"text/plain\") << std::flush;\n+        return false;\n+    }\n+\n+    conn->stream() << HTTPReply(HTTP_NOT_FOUND, \"\", false) << std::flush;\n+    return false;\n+}\n+"
+      },
+      {
+        "sha": "d072f18e36de950adc26780b17d1efa725907a64",
+        "filename": "src/rpcserver.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 1,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e2655e0ab1fc36cd4a58a5145c53500cb7b2d4d0/src/rpcserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e2655e0ab1fc36cd4a58a5145c53500cb7b2d4d0/src/rpcserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcserver.cpp?ref=e2655e0ab1fc36cd4a58a5145c53500cb7b2d4d0",
+        "patch": "@@ -946,11 +946,18 @@ void ServiceConnection(AcceptedConnection *conn)\n         if (mapHeaders[\"connection\"] == \"close\")\n             fRun = false;\n \n+        // Process via JSON-RPC API\n         if (strURI == \"/\") {\n             if (!HTTPReq_JSONRPC(conn, strRequest, mapHeaders, fRun))\n                 break;\n+\n+        // Process via HTTP REST API\n+        } else if (strURI.substr(0, 6) == \"/rest/\") {\n+            if (!HTTPReq_REST(conn, strURI, mapHeaders, fRun))\n+                break;\n+\n         } else {\n-            conn->stream() << HTTPError(HTTP_NOT_FOUND, false) << std::flush;\n+            conn->stream() << HTTPReply(HTTP_NOT_FOUND, \"\", false) << std::flush;\n             break;\n         }\n     }"
+      },
+      {
+        "sha": "60793f79aee86ec092fc432b806f5b37f2576ec6",
+        "filename": "src/rpcserver.h",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 0,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e2655e0ab1fc36cd4a58a5145c53500cb7b2d4d0/src/rpcserver.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e2655e0ab1fc36cd4a58a5145c53500cb7b2d4d0/src/rpcserver.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcserver.h?ref=e2655e0ab1fc36cd4a58a5145c53500cb7b2d4d0",
+        "patch": "@@ -218,4 +218,10 @@ extern json_spirit::Value gettxout(const json_spirit::Array& params, bool fHelp)\n extern json_spirit::Value verifychain(const json_spirit::Array& params, bool fHelp);\n extern json_spirit::Value getchaintips(const json_spirit::Array& params, bool fHelp);\n \n+// in rest.cpp\n+extern bool HTTPReq_REST(AcceptedConnection *conn,\n+                  std::string& strURI,\n+                  std::map<std::string, std::string>& mapHeaders,\n+                  bool fRun);\n+\n #endif // BITCOIN_RPCSERVER_H"
+      }
+    ]
+  }
+]

@@ -1,0 +1,86 @@
+[
+  {
+    "sha": "5d67526026cd41845e06e93e5ae216bc1a7b9596",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1ZDY3NTI2MDI2Y2Q0MTg0NWUwNmU5M2U1YWUyMTZiYzFhN2I5NTk2",
+    "commit": {
+      "author": {
+        "name": "Marko Bencun",
+        "email": "marko.bencun@monetas.net",
+        "date": "2017-05-27T10:00:37Z"
+      },
+      "committer": {
+        "name": "Marko Bencun",
+        "email": "marko.bencun@monetas.net",
+        "date": "2017-05-30T07:21:47Z"
+      },
+      "message": "add SeedNodes to CConnman::Options\n\nStart of a series of changes to clean up the instantiation of connman\nby decoupling the command line arguments.",
+      "tree": {
+        "sha": "f559badaaefa0126c881c4d8451d88615357c772",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f559badaaefa0126c881c4d8451d88615357c772"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/5d67526026cd41845e06e93e5ae216bc1a7b9596",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5d67526026cd41845e06e93e5ae216bc1a7b9596",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/5d67526026cd41845e06e93e5ae216bc1a7b9596",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5d67526026cd41845e06e93e5ae216bc1a7b9596/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "5c63d665e51ed0cd5d29275a5d63b07a64300ac8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5c63d665e51ed0cd5d29275a5d63b07a64300ac8",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/5c63d665e51ed0cd5d29275a5d63b07a64300ac8"
+      }
+    ],
+    "stats": {
+      "total": 21,
+      "additions": 12,
+      "deletions": 9
+    },
+    "files": [
+      {
+        "sha": "f343f1d96521ac887c7354b2f39c71d76df91e4e",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 5,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5d67526026cd41845e06e93e5ae216bc1a7b9596/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5d67526026cd41845e06e93e5ae216bc1a7b9596/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=5d67526026cd41845e06e93e5ae216bc1a7b9596",
+        "patch": "@@ -1386,11 +1386,6 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)\n         }\n     }\n \n-    if (gArgs.IsArgSet(\"-seednode\")) {\n-        BOOST_FOREACH(const std::string& strDest, gArgs.GetArgs(\"-seednode\"))\n-            connman.AddOneShot(strDest);\n-    }\n-\n #if ENABLE_ZMQ\n     pzmqNotificationInterface = CZMQNotificationInterface::Create();\n \n@@ -1659,6 +1654,10 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)\n     connOptions.nMaxOutboundTimeframe = nMaxOutboundTimeframe;\n     connOptions.nMaxOutboundLimit = nMaxOutboundLimit;\n \n+    if (gArgs.IsArgSet(\"-seednode\")) {\n+        connOptions.vSeedNodes = gArgs.GetArgs(\"-seednode\");\n+    }\n+\n     if (!connman.Start(scheduler, strNodeError, connOptions))\n         return InitError(strNodeError);\n "
+      },
+      {
+        "sha": "bac9b5732a2601a6f1b8847dba031353039ca330",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 2,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5d67526026cd41845e06e93e5ae216bc1a7b9596/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5d67526026cd41845e06e93e5ae216bc1a7b9596/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=5d67526026cd41845e06e93e5ae216bc1a7b9596",
+        "patch": "@@ -1743,9 +1743,9 @@ void CConnman::ThreadOpenConnections()\n         //  * Increase the number of connectable addresses in the tried table.\n         //\n         // Method:\n-        //  * Choose a random address from new and attempt to connect to it if we can connect \n+        //  * Choose a random address from new and attempt to connect to it if we can connect\n         //    successfully it is added to tried.\n-        //  * Start attempting feeler connections only after node finishes making outbound \n+        //  * Start attempting feeler connections only after node finishes making outbound\n         //    connections.\n         //  * Only make a feeler connection once every few minutes.\n         //\n@@ -2212,6 +2212,10 @@ bool CConnman::Start(CScheduler& scheduler, std::string& strNodeError, Options c\n \n     SetBestHeight(connOptions.nBestHeight);\n \n+    for (const auto& strDest : connOptions.vSeedNodes) {\n+        AddOneShot(strDest);\n+    }\n+\n     clientInterface = connOptions.uiInterface;\n     if (clientInterface) {\n         clientInterface->InitMessage(_(\"Loading P2P addresses...\"));"
+      },
+      {
+        "sha": "7f9ec1a57b6ec4622e340f5aa700de78e47912b7",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5d67526026cd41845e06e93e5ae216bc1a7b9596/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5d67526026cd41845e06e93e5ae216bc1a7b9596/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=5d67526026cd41845e06e93e5ae216bc1a7b9596",
+        "patch": "@@ -144,6 +144,7 @@ class CConnman\n         unsigned int nReceiveFloodSize = 0;\n         uint64_t nMaxOutboundTimeframe = 0;\n         uint64_t nMaxOutboundLimit = 0;\n+        std::vector<std::string> vSeedNodes;\n     };\n     CConnman(uint64_t seed0, uint64_t seed1);\n     ~CConnman();\n@@ -233,8 +234,6 @@ class CConnman\n     void GetBanned(banmap_t &banmap);\n     void SetBanned(const banmap_t &banmap);\n \n-    void AddOneShot(const std::string& strDest);\n-\n     bool AddNode(const std::string& node);\n     bool RemoveAddedNode(const std::string& node);\n     std::vector<AddedNodeInfo> GetAddedNodeInfo();\n@@ -292,6 +291,7 @@ class CConnman\n     };\n \n     void ThreadOpenAddedConnections();\n+    void AddOneShot(const std::string& strDest);\n     void ProcessOneShot();\n     void ThreadOpenConnections();\n     void ThreadMessageHandler();"
+      }
+    ]
+  }
+]

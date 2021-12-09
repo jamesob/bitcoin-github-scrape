@@ -1,0 +1,194 @@
+[
+  {
+    "sha": "b8b8e0a8c0da07d492083433209c3a9e37744f24",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiOGI4ZTBhOGMwZGEwN2Q0OTIwODM0MzMyMDljM2E5ZTM3NzQ0ZjI0",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jeff@garzik.org",
+        "date": "2011-03-26T20:50:30Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-05-10T08:28:47Z"
+      },
+      "message": "Add wallet privkey encryption, and use it for all new keys\n\nRequest the password from the user at startup and store the key in memory for all new key encryption.\nEach ekey in the wallet is decrypted and the privkey derived and checked against the stored pubkey\nto ensure the password is correct.\n\nThanks to jgarzik for the original patch and sipa for all his input.",
+      "tree": {
+        "sha": "3e0787d93b472301e9817210c499612401a9cf1d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/3e0787d93b472301e9817210c499612401a9cf1d"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/b8b8e0a8c0da07d492083433209c3a9e37744f24",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b8b8e0a8c0da07d492083433209c3a9e37744f24",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/b8b8e0a8c0da07d492083433209c3a9e37744f24",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b8b8e0a8c0da07d492083433209c3a9e37744f24/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "04a667b0767a6c3fff8d24be784ccaec9edf712b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/04a667b0767a6c3fff8d24be784ccaec9edf712b",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/04a667b0767a6c3fff8d24be784ccaec9edf712b"
+      }
+    ],
+    "stats": {
+      "total": 502,
+      "additions": 493,
+      "deletions": 9
+    },
+    "files": [
+      {
+        "sha": "3bd3918a56fa3e67899cf6ba9c7f22a965cc9696",
+        "filename": "share/uiproject.fbp",
+        "status": "modified",
+        "additions": 15,
+        "deletions": 0,
+        "changes": 15,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b8b8e0a8c0da07d492083433209c3a9e37744f24/share/uiproject.fbp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b8b8e0a8c0da07d492083433209c3a9e37744f24/share/uiproject.fbp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/share/uiproject.fbp?ref=b8b8e0a8c0da07d492083433209c3a9e37744f24",
+        "patch": "@@ -162,6 +162,21 @@\n                         <event name=\"OnMenuSelection\">OnMenuOptionsChangeYourAddress</event>\r\n                         <event name=\"OnUpdateUI\"></event>\r\n                     </object>\r\n+                    <object class=\"wxMenuItem\" expanded=\"1\">\r\n+                        <property name=\"bitmap\"></property>\r\n+                        <property name=\"checked\">0</property>\r\n+                        <property name=\"enabled\">1</property>\r\n+                        <property name=\"help\"></property>\r\n+                        <property name=\"id\">wxID_ANY</property>\r\n+                        <property name=\"kind\">wxITEM_NORMAL</property>\r\n+                        <property name=\"label\">Change Wallet &amp;Password...</property>\r\n+                        <property name=\"name\">m_menuOptionsChangeWalletPassword</property>\r\n+                        <property name=\"permission\">none</property>\r\n+                        <property name=\"shortcut\"></property>\r\n+                        <property name=\"unchecked_bitmap\"></property>\r\n+                        <event name=\"OnMenuSelection\">OnMenuOptionsChangeWalletPassword</event>\r\n+                        <event name=\"OnUpdateUI\"></event>\r\n+                    </object>\r\n                     <object class=\"wxMenuItem\" expanded=\"1\">\r\n                         <property name=\"bitmap\"></property>\r\n                         <property name=\"checked\">0</property>\r"
+      },
+      {
+        "sha": "f8d51e7515a1077f0a1dba863c995f75cde3abc7",
+        "filename": "src/crypter.h",
+        "status": "added",
+        "additions": 103,
+        "deletions": 0,
+        "changes": 103,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b8b8e0a8c0da07d492083433209c3a9e37744f24/src/crypter.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b8b8e0a8c0da07d492083433209c3a9e37744f24/src/crypter.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/crypter.h?ref=b8b8e0a8c0da07d492083433209c3a9e37744f24",
+        "patch": "@@ -0,0 +1,103 @@\n+#ifndef __CRYPTER_H__\n+#define __CRYPTER_H__\n+\n+class CCrypter\n+{\n+protected:\n+    unsigned char chKey[32];\n+    bool fKeySet;\n+\n+public:\n+    bool SetKey(const string &strKeyData)\n+    {\n+        vector<unsigned char> vchKeyData(strKeyData.size());\n+        unsigned char chNotIV[32];\n+\n+        // try to keep the keydata out of swap (and be a bit over-careful to keep the IV that we don't even use out of swap)\n+        // Note that this does nothing about suspend-to-disk\n+#ifdef __WXMSW__\n+        VirtualLock(&vchKeyData, vchKeyData.size());\n+        VirtualLock(&chNotIV, sizeof chNotIV);\n+        VirtualLock(&chKey, sizeof chKey);\n+#else\n+        mlock(&vchKeyData, vchKeyData.size());\n+        mlock(&chNotIV, sizeof chNotIV);\n+        mlock(&chKey, sizeof chKey);\n+#endif\n+\n+        memcpy(&vchKeyData[0], &strKeyData[0], strKeyData.size());\n+\n+        int i = EVP_BytesToKey(EVP_aes_256_cbc(), EVP_sha256(), (unsigned char *)\"bitcoin is fun! and I prefer much longer salts, though I don't think they offer any real advantage\",\n+                               (unsigned char *)&vchKeyData[0], vchKeyData.size(), 1000, chKey, chNotIV);\n+\n+        fill(vchKeyData.begin(), vchKeyData.end(), '\\0');\n+        memset(&chNotIV, 0, sizeof chNotIV);\n+\n+        if (i != 32)\n+            return false;\n+\n+        fKeySet = true;\n+        return true;\n+    }\n+\n+    bool Encrypt(const vector<unsigned char> &vchPlaintext, const unsigned char chIV[32], vector<unsigned char> &vchCiphertext)\n+    {\n+        if (!fKeySet)\n+            return false;\n+\n+        // max ciphertext len for a n bytes of plaintext is\n+        // n + AES_BLOCK_SIZE - 1 bytes\n+        int nLen = vchPlaintext.size();\n+        int nCLen = nLen + AES_BLOCK_SIZE, nFLen = 0;\n+        vchCiphertext = vector<unsigned char> (nCLen);\n+\n+        EVP_CIPHER_CTX ctx;\n+\n+        EVP_CIPHER_CTX_init(&ctx);\n+        EVP_EncryptInit_ex(&ctx, EVP_aes_256_cbc(), NULL, chKey, chIV);\n+\n+        EVP_EncryptUpdate(&ctx, &vchCiphertext[0], &nCLen, &vchPlaintext[0], nLen);\n+        EVP_EncryptFinal_ex(&ctx, (&vchCiphertext[0])+nCLen, &nFLen);\n+\n+        EVP_CIPHER_CTX_cleanup(&ctx);\n+\n+        vchCiphertext.resize(nCLen + nFLen);\n+        return true;\n+    }\n+\n+    bool Decrypt(const vector<unsigned char> vchCiphertext, const unsigned char chIV[32], vector<unsigned char>& vchPlaintext)\n+    {\n+        if (!fKeySet)\n+            return false;\n+\n+        // plaintext will always be equal to or lesser than length of ciphertext\n+        int nLen = vchCiphertext.size();\n+        int nPLen = nLen, nFLen = 0;\n+        vchPlaintext = vector<unsigned char> (nPLen);\n+\n+        EVP_CIPHER_CTX ctx;\n+\n+        EVP_CIPHER_CTX_init(&ctx);\n+        EVP_DecryptInit_ex(&ctx, EVP_aes_256_cbc(), NULL, chKey, chIV);\n+\n+        EVP_DecryptUpdate(&ctx, &vchPlaintext[0], &nPLen, &vchCiphertext[0], nLen);\n+        EVP_DecryptFinal_ex(&ctx, (&vchPlaintext[0])+nPLen, &nFLen);\n+\n+        EVP_CIPHER_CTX_cleanup(&ctx);\n+\n+        vchPlaintext.resize(nPLen + nFLen);\n+        return true;\n+    }\n+\n+    CCrypter()\n+    {\n+        fKeySet = false;\n+    }\n+\n+    ~CCrypter()\n+    {\n+        memset(&chKey, 0, sizeof chKey);\n+    }\n+};\n+\n+#endif /* __CRYPTER_H__ */"
+      },
+      {
+        "sha": "b866e783c1d44b794553049fbff9bdd90f45f5a0",
+        "filename": "src/db.cpp",
+        "status": "modified",
+        "additions": 198,
+        "deletions": 3,
+        "changes": 201,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b8b8e0a8c0da07d492083433209c3a9e37744f24/src/db.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b8b8e0a8c0da07d492083433209c3a9e37744f24/src/db.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.cpp?ref=b8b8e0a8c0da07d492083433209c3a9e37744f24",
+        "patch": "@@ -654,7 +654,7 @@ void CWalletDB::ListAccountCreditDebit(const string& strAccount, list<CAccountin\n }\n \n \n-bool CWalletDB::LoadWallet()\n+bool CWalletDB::LoadWallet(bool& fHaveUnencKeysInWalletRet)\n {\n     vchDefaultKey.clear();\n     int nFileVersion = 0;\n@@ -744,8 +744,49 @@ bool CWalletDB::LoadWallet()\n                 if (nNumber > nAccountingEntryNumber)\n                     nAccountingEntryNumber = nNumber;\n             }\n+            else if (strType == \"ekey\")\n+            {\n+                if (GetBoolArg(\"-nocrypt\"))\n+                    throw 2;\n+\n+                vector<unsigned char> vchPubKey;\n+                ssKey >> vchPubKey;\n+\n+                vector<unsigned char> vchCiphertext;\n+                ssValue >> vchCiphertext;\n+\n+                uint256 hashPubKey = Hash(vchPubKey.begin(), vchPubKey.end());\n+                unsigned char chIV[32];\n+                memcpy(&chIV, &hashPubKey, 32);\n+\n+                vector<unsigned char> vchPlaintext;\n+                if (!cWalletCrypter.Decrypt(vchCiphertext, chIV, vchPlaintext))\n+                    throw 1;\n+\n+                CPrivKey vchPrivKey;\n+                vchPrivKey.resize(vchPlaintext.size());\n+                memcpy(&vchPrivKey[0], &vchPlaintext[0], vchPlaintext.size());\n+\n+                mapKeys[vchPubKey] = vchPrivKey;\n+                mapPubKeys[Hash160(vchPubKey)] = vchPubKey;\n+\n+                try\n+                {\n+                    CKey key;\n+                    if (!key.SetPrivKey(vchPrivKey))\n+                        throw 1;\n+                    vector<unsigned char> vchDerivedPubKey = key.GetPubKey();\n+                    if (vchDerivedPubKey.size() < 1 || vchDerivedPubKey != vchPubKey)\n+                        throw 1;\n+                }\n+                catch (key_error e)\n+                {\n+                    throw 1;\n+                }\n+            }\n             else if (strType == \"key\" || strType == \"wkey\")\n             {\n+                fHaveUnencKeysInWalletRet = true;\n                 vector<unsigned char> vchPubKey;\n                 ssKey >> vchPubKey;\n                 CWalletKey wkey;\n@@ -825,10 +866,10 @@ bool CWalletDB::LoadWallet()\n     return true;\n }\n \n-bool LoadWallet(bool& fFirstRunRet)\n+bool LoadWallet(bool& fFirstRunRet, bool& fHaveUnencKeysInWalletRet)\n {\n     fFirstRunRet = false;\n-    if (!CWalletDB(\"cr+\").LoadWallet())\n+    if (!CWalletDB(\"cr+\").LoadWallet(fHaveUnencKeysInWalletRet))\n         return false;\n     fFirstRunRet = vchDefaultKey.empty();\n \n@@ -854,6 +895,160 @@ bool LoadWallet(bool& fFirstRunRet)\n     return true;\n }\n \n+bool CWalletDB::EncryptUnencKeys()\n+{\n+    // Get cursor\n+    Dbc* pcursor = GetCursor();\n+    if (!pcursor)\n+        return false;\n+\n+    vector< vector <unsigned char> > keysToWrite;\n+\n+    loop\n+    {\n+        // Read next record\n+        CDataStream ssKey;\n+        CDataStream ssValue;\n+        int ret = ReadAtCursor(pcursor, ssKey, ssValue);\n+        if (ret == DB_NOTFOUND)\n+            break;\n+        else if (ret != 0)\n+            return false;\n+\n+        // Unserialize\n+        // Taking advantage of the fact that pair serialization\n+        // is just the two items serialized one after the other\n+        string strType;\n+        ssKey >> strType;\n+        if (strType == \"key\" || strType == \"wkey\")\n+        {\n+            vector<unsigned char> vchPubKey;\n+            ssKey >> vchPubKey;\n+            vector<unsigned char> vchPrivKey;\n+            if (strType == \"key\")\n+                ssValue >> vchPrivKey;\n+            else\n+            {\n+                CWalletKey wkey;\n+                ssValue >> wkey;\n+                vector<unsigned char> vchPlaintext(wkey.vchPrivKey.size());\n+                memcpy(&vchPlaintext[0], &wkey.vchPrivKey[0], wkey.vchPrivKey.size());\n+            }\n+\n+            uint256 pubKeyHash = Hash(vchPubKey.begin(), vchPubKey.end());\n+            unsigned char chIV[32];\n+            memcpy(&chIV, &pubKeyHash, 32);\n+\n+            vector<unsigned char> vchCiphertext;\n+            if (!cWalletCrypter.Encrypt(vchPrivKey, chIV, vchCiphertext))\n+                return false;\n+            keysToWrite.push_back(vchPubKey);\n+            keysToWrite.push_back(vchCiphertext);\n+        }\n+    }\n+    pcursor->close();\n+\n+    TxnBegin();\n+    for (int i = 0; i < keysToWrite.size()-1; i+=2)\n+    {\n+        WriteKey(keysToWrite[i], keysToWrite[i+1]);\n+        Erase(make_pair(string(\"key\"), keysToWrite[i]));\n+        Erase(make_pair(string(\"wkey\"), keysToWrite[i]));\n+    }\n+    TxnCommit();\n+\n+    return true;\n+}\n+\n+bool EncryptUnencKeys()\n+{\n+    return CWalletDB().EncryptUnencKeys();\n+}\n+\n+bool CWalletDB::ChangeWalletPass(CCrypter& cNewWalletCrypter)\n+{\n+    // Get cursor\n+    Dbc* pcursor = GetCursor();\n+    if (!pcursor)\n+        return false;\n+\n+    vector< vector <unsigned char> > keysToWrite;\n+\n+    loop\n+    {\n+        // Read next record\n+        CDataStream ssKey;\n+        CDataStream ssValue;\n+        int ret = ReadAtCursor(pcursor, ssKey, ssValue);\n+        if (ret == DB_NOTFOUND)\n+            break;\n+        else if (ret != 0)\n+            return false;\n+\n+        // Unserialize\n+        // Taking advantage of the fact that pair serialization\n+        // is just the two items serialized one after the other\n+        string strType;\n+        ssKey >> strType;\n+        if (strType == \"ekey\")\n+        {\n+            vector<unsigned char> vchPubKey;\n+            ssKey >> vchPubKey;\n+\n+            vector<unsigned char> vchCiphertext;\n+            ssValue >> vchCiphertext;\n+\n+            uint256 hashPubKey = Hash(vchPubKey.begin(), vchPubKey.end());\n+            unsigned char chIV[32];\n+            memcpy(&chIV, &hashPubKey, 32);\n+\n+            vector<unsigned char> vchPlaintext;\n+            if (!cWalletCrypter.Decrypt(vchCiphertext, chIV, vchPlaintext))\n+                throw 1;\n+\n+            try\n+            {\n+                CPrivKey vchPrivKey;\n+                vchPrivKey.resize(vchPlaintext.size());\n+                memcpy(&vchPrivKey[0], &vchPlaintext[0], vchPlaintext.size());\n+\n+                CKey key;\n+                if (!key.SetPrivKey(vchPrivKey))\n+                    throw 1;\n+                vector<unsigned char> vchDerivedPubKey = key.GetPubKey();\n+                if (vchDerivedPubKey.size() < 1 || vchDerivedPubKey != vchPubKey)\n+                    throw 1;\n+            }\n+            catch (key_error e)\n+            {\n+                throw 1;\n+            }\n+\n+            if (!cNewWalletCrypter.Encrypt(vchPlaintext, chIV, vchCiphertext))\n+                throw 1;\n+\n+            keysToWrite.push_back(vchPubKey);\n+            keysToWrite.push_back(vchCiphertext);\n+        }\n+    }\n+    pcursor->close();\n+\n+    TxnBegin();\n+    for (int i = 0; i < keysToWrite.size()-1; i+=2)\n+    {\n+        Erase(make_pair(string(\"ekey\"), keysToWrite[i]));\n+        WriteKey(keysToWrite[i], keysToWrite[i+1]);\n+    }\n+    TxnCommit();\n+\n+    return true;\n+}\n+\n+bool ChangeWalletPass(CCrypter& cNewWalletCrypter)\n+{\n+    return CWalletDB().ChangeWalletPass(cNewWalletCrypter);\n+}\n+\n void ThreadFlushWalletDB(void* parg)\n {\n     static bool fOneThread;"
+      },
+      {
+        "sha": "b310ab3c4411d85e0dab9498499db757a56bd189",
+        "filename": "src/db.h",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 2,
+        "changes": 15,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b8b8e0a8c0da07d492083433209c3a9e37744f24/src/db.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b8b8e0a8c0da07d492083433209c3a9e37744f24/src/db.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.h?ref=b8b8e0a8c0da07d492083433209c3a9e37744f24",
+        "patch": "@@ -400,6 +400,13 @@ class CWalletDB : public CDB\n         return Read(make_pair(string(\"key\"), vchPubKey), vchPrivKey);\n     }\n \n+    bool WriteKey(const vector<unsigned char>& vchPubKey,\n+                  const vector<unsigned char>& vchCiphertext)\n+    {\n+        nWalletDBUpdated++;\n+        return Write(make_pair(string(\"ekey\"), vchPubKey), vchCiphertext,false);\n+    }\n+\n     bool WriteKey(const vector<unsigned char>& vchPubKey, const CPrivKey& vchPrivKey)\n     {\n         nWalletDBUpdated++;\n@@ -449,7 +456,9 @@ class CWalletDB : public CDB\n     int64 GetAccountCreditDebit(const string& strAccount);\n     void ListAccountCreditDebit(const string& strAccount, list<CAccountingEntry>& acentries);\n \n-    bool LoadWallet();\n+    bool LoadWallet(bool& fHaveUnencKeysInWalletRet);\n+    bool EncryptUnencKeys();\n+    bool ChangeWalletPass(CCrypter& cNewWalletCrypter);\n protected:\n     void ReserveKeyFromKeyPool(int64& nIndex, CKeyPool& keypool);\n     void KeepKey(int64 nIndex);\n@@ -459,7 +468,9 @@ class CWalletDB : public CDB\n     friend int64 GetOldestKeyPoolTime();\n };\n \n-bool LoadWallet(bool& fFirstRunRet);\n+bool LoadWallet(bool& fFirstRunRet, bool& fHaveUnencKeysInWalletRet);\n+bool EncryptUnencKeys();\n+bool ChangeWalletPass(CCrypter& cNewWalletCrypter);\n void BackupWallet(const string& strDest);\n \n inline bool SetAddressBookName(const string& strAddress, const string& strName)"
+      },
+      {
+        "sha": "cffb3d912c0ee364730fb1e4e949c60c9b85363c",
+        "filename": "src/headers.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b8b8e0a8c0da07d492083433209c3a9e37744f24/src/headers.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b8b8e0a8c0da07d492083433209c3a9e37744f24/src/headers.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/headers.h?ref=b8b8e0a8c0da07d492083433209c3a9e37744f24",
+        "patch": "@@ -39,6 +39,7 @@\n #include <openssl/evp.h>\n #include <openssl/rand.h>\n #include <openssl/sha.h>\n+#include <openssl/aes.h>\n #include <openssl/ripemd.h>\n #include <db_cxx.h>\n #include <stdio.h>\n@@ -94,6 +95,7 @@\n #include <sys/resource.h>\n #include <sys/socket.h>\n #include <sys/stat.h>\n+#include <sys/mman.h>\n #include <arpa/inet.h>\n #include <netdb.h>\n #include <unistd.h>\n@@ -117,6 +119,7 @@ using namespace boost;\n #include \"uint256.h\"\n #include \"util.h\"\n #include \"key.h\"\n+#include \"crypter.h\"\n #include \"bignum.h\"\n #include \"base58.h\"\n #include \"script.h\""
+      },
+      {
+        "sha": "25af557909b7005046b705520a720a64f55ff642",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 92,
+        "deletions": 3,
+        "changes": 95,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b8b8e0a8c0da07d492083433209c3a9e37744f24/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b8b8e0a8c0da07d492083433209c3a9e37744f24/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=b8b8e0a8c0da07d492083433209c3a9e37744f24",
+        "patch": "@@ -182,7 +182,8 @@ bool AppInit2(int argc, char* argv[])\n             \"  -rpcallowip=<ip> \\t\\t  \" + _(\"Allow JSON-RPC connections from specified IP address\\n\") +\n             \"  -rpcconnect=<ip> \\t  \"   + _(\"Send commands to node running on <ip> (default: 127.0.0.1)\\n\") +\n             \"  -keypool=<n>     \\t  \"   + _(\"Set key pool size to <n> (default: 100)\\n\") +\n-            \"  -rescan          \\t  \"   + _(\"Rescan the block chain for missing wallet transactions\\n\");\n+            \"  -rescan          \\t  \"   + _(\"Rescan the block chain for missing wallet transactions\\n\") +\n+            \"  -nocrypt         \\t  \"   + _(\"Don't encrypt the private keys in the wallet.\\n\");\n \n #ifdef USE_SSL\n         strUsage += string() +\n@@ -345,6 +346,55 @@ bool AppInit2(int argc, char* argv[])\n         }\n     }\n \n+    if (!GetBoolArg(\"-nocrypt\"))\n+    {\n+        // obtain wallet encrypt/decrypt key, from passphrase\n+        string strWalletPass = \"\";\n+        strWalletPass.reserve(100);\n+        // keep the passphrase out of swap (or atleast the first 100 characters of it)\n+        // note that this doesn't account for the possibility of suspend-to-disk\n+        // the password could still touch swap while being entered in wx or from the env\n+#ifdef __WXMSW__\n+        VirtualLock(&strWalletPass, strWalletPass.capacity());\n+#else\n+        mlock(&strWalletPass, strWalletPass.capacity());\n+#endif\n+\n+        if (getenv(\"WALLET_PASSPHRASE\") != NULL)\n+            strWalletPass = getenv(\"WALLET_PASSPHRASE\");\n+\n+#ifdef GUI\n+        if (!strWalletPass.size())\n+        {\n+            strWalletPass = wxGetPasswordFromUser(_(\"Enter a password to encrypt/decrypt all addresses created after this point.\\nIf you do not want to encrypt new private keys, please start the client with the -nocrypt flag set.\\nWARNING: If you lose this password, no one, not even the Bitcoin developers can get you your Bitcoins back.\"),\n+                                                  _(\"Password\"));\n+        }\n+#endif\n+\n+        if (!strWalletPass.size())\n+        {\n+#ifdef GUI\n+            wxMessageBox(_(\"Please supply a wallet encryption/decryption password.\"), \"Bitcoin\");\n+#else\n+            fprintf(stderr, \"Please supply a wallet encryption/decryption password.\\n\");\n+#endif\n+            return false;\n+        }\n+\n+        if (!cWalletCrypter.SetKey(strWalletPass))\n+        {\n+#ifdef GUI\n+            wxMessageBox(_(\"Wallet decryption setup failed\"), \"Bitcoin\");\n+#else\n+            fprintf(stderr, \"Wallet decryption setup failed\\n\");\n+#endif\n+            fill(strWalletPass.begin(), strWalletPass.end(), '\\0');\n+            return false;\n+        }\n+\n+        fill(strWalletPass.begin(), strWalletPass.end(), '\\0');\n+    }\n+\n     //\n     // Load data files\n     //\n@@ -368,10 +418,49 @@ bool AppInit2(int argc, char* argv[])\n     printf(\"Loading wallet...\\n\");\n     nStart = GetTimeMillis();\n     bool fFirstRun;\n-    if (!LoadWallet(fFirstRun))\n-        strErrors += _(\"Error loading wallet.dat      \\n\");\n+    bool fHaveUnencKeysInWallet = false;\n+    try\n+    {\n+        if (!LoadWallet(fFirstRun, fHaveUnencKeysInWallet))\n+            strErrors += _(\"Error loading wallet.dat      \\n\");\n+    }\n+    catch (int e)\n+    {\n+        if(e==1)\n+        {\n+#ifdef GUI\n+            wxMessageBox(_(\"The password entered for the wallet decryption was incorrect.\"), \"Bitcoin\");\n+#else\n+            fprintf(stderr, \"Error: The password entered for the wallet decryption was incorrect.\\n\");\n+#endif\n+            return false;\n+        }\n+        else if (e==2)\n+        {\n+#ifdef GUI\n+            wxMessageBox(_(\"You specified the -nocrypt option, but the wallet has encrypted private keys, bitcoin will now exit.\"), \"Bitcoin\");\n+#else\n+            fprintf(stderr, \"Error: -nocrypt was specified, but the wallet has encrypted private keys.\\n\");\n+#endif\n+            return false;\n+        }\n+    }\n     printf(\" wallet      %15\"PRI64d\"ms\\n\", GetTimeMillis() - nStart);\n \n+    if (fHaveUnencKeysInWallet)\n+    {\n+#ifdef GUI\n+        int nResponse = wxMessageBox(_(\"Would you like to encrypt the remaining unencrypted keys in your wallet (Recommended)?\\nNote: This means older version of Bitcoin will not be able to read any of your wallet.\"),\n+                                     \"Bitcoin\", wxYES_NO);\n+#else\n+        fprintf(stderr, \"It is recommended that you restart bitcoin with -encryptkeys to force the encryption of existing unencrypted keys in your wallet.\\n\");\n+#endif\n+        if (nResponse == wxYES || GetBoolArg(\"-encryptkeys\"))\n+        {\n+            EncryptUnencKeys();\n+        }\n+    }\n+\n     CBlockIndex *pindexRescan = pindexBest;\n     if (GetBoolArg(\"-rescan\"))\n         pindexRescan = pindexGenesisBlock;"
+      },
+      {
+        "sha": "33094e63fcf2b706b5469da0f9c55b451eb4c572",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 20,
+        "deletions": 1,
+        "changes": 21,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b8b8e0a8c0da07d492083433209c3a9e37744f24/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b8b8e0a8c0da07d492083433209c3a9e37744f24/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=b8b8e0a8c0da07d492083433209c3a9e37744f24",
+        "patch": "@@ -41,6 +41,7 @@ map<uint256, CWalletTx> mapWallet;\n vector<uint256> vWalletUpdated;\n CCriticalSection cs_mapWallet;\n \n+CCrypter cWalletCrypter;\n map<vector<unsigned char>, CPrivKey> mapKeys;\n map<uint160, vector<unsigned char> > mapPubKeys;\n CCriticalSection cs_mapKeys;\n@@ -91,7 +92,25 @@ bool AddKey(const CKey& key)\n         mapKeys[key.GetPubKey()] = key.GetPrivKey();\n         mapPubKeys[Hash160(key.GetPubKey())] = key.GetPubKey();\n     }\n-    return CWalletDB().WriteKey(key.GetPubKey(), key.GetPrivKey());\n+\n+    if (!GetBoolArg(\"-nocrypt\"))\n+    {\n+        CPrivKey privKey = key.GetPrivKey();\n+        vector<unsigned char> vchPlaintext(privKey.size());\n+        memcpy(&vchPlaintext[0], &privKey[0], privKey.size());\n+\n+        vector<unsigned char> pubKey = key.GetPubKey();\n+        uint256 pubKeyHash = Hash(pubKey.begin(), pubKey.end());\n+        unsigned char chIV[32];\n+        memcpy(&chIV, &pubKeyHash, 32);\n+\n+        vector<unsigned char> vchCiphertext;\n+        if (!cWalletCrypter.Encrypt(vchPlaintext, chIV, vchCiphertext))\n+            return false;\n+        return CWalletDB().WriteKey(key.GetPubKey(), vchCiphertext);\n+    }\n+    else\n+        return CWalletDB().WriteKey(key.GetPubKey(), key.GetPrivKey());\n }\n \n vector<unsigned char> GenerateNewKey()"
+      },
+      {
+        "sha": "7535aac14b01a96f4a78c09d9b62a2a312374409",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b8b8e0a8c0da07d492083433209c3a9e37744f24/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b8b8e0a8c0da07d492083433209c3a9e37744f24/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=b8b8e0a8c0da07d492083433209c3a9e37744f24",
+        "patch": "@@ -51,6 +51,7 @@ extern CCriticalSection cs_mapAddressBook;\n extern vector<unsigned char> vchDefaultKey;\n extern double dHashesPerSec;\n extern int64 nHPSTimerStart;\n+extern CCrypter cWalletCrypter;\n \n // Settings\n extern int fGenerateBitcoins;"
+      },
+      {
+        "sha": "ba2b3482e6fd1ce7789a060f7a3413aaea311813",
+        "filename": "src/ui.cpp",
+        "status": "modified",
+        "additions": 40,
+        "deletions": 0,
+        "changes": 40,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b8b8e0a8c0da07d492083433209c3a9e37744f24/src/ui.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b8b8e0a8c0da07d492083433209c3a9e37744f24/src/ui.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/ui.cpp?ref=b8b8e0a8c0da07d492083433209c3a9e37744f24",
+        "patch": "@@ -1107,6 +1107,46 @@ void CMainFrame::OnMenuOptionsChangeYourAddress(wxCommandEvent& event)\n         return;\n }\n \n+void CMainFrame::OnMenuOptionsChangeWalletPassword(wxCommandEvent& event)\n+{\n+    // Options->Change Wallet Password\n+    if (!GetBoolArg(\"-nocrypt\"))\n+    {\n+        wxString strWalletPass = \"\";\n+        strWalletPass.reserve(100);\n+#ifdef __WXMSW__\n+        VirtualLock(&strWalletPass, strWalletPass.capacity());\n+#else\n+        mlock(&strWalletPass, strWalletPass.capacity());\n+#endif\n+\n+        // obtain new wallet encrypt/decrypt key, from passphrase\n+        strWalletPass = wxGetPasswordFromUser(_(\"Enter a new password to reencrypt all encrypted addresses.\\nWARNING: If you lose this password, no one, not even the Bitcoin developers can get you your Bitcoins back.\"),\n+                                                  _(\"Password\"));\n+\n+        if (!strWalletPass.size())\n+        {\n+            wxMessageBox(_(\"Please supply a new wallet encryption/decryption password.\"), \"Bitcoin\");\n+            return;\n+        }\n+\n+        CCrypter cNewWalletCrypter;\n+        if (!cNewWalletCrypter.SetKey(strWalletPass.ToStdString()))\n+        {\n+            wxMessageBox(_(\"Wallet decryption setup failed\"), \"Bitcoin\");\n+            fill(strWalletPass.begin(), strWalletPass.end(), '\\0');\n+            return;\n+        }\n+        fill(strWalletPass.begin(), strWalletPass.end(), '\\0');\n+\n+        ChangeWalletPass(cNewWalletCrypter);\n+\n+        wxMessageBox(_(\"Wallet password updated.\"), \"Bitcoin\");\n+\n+        cWalletCrypter = cNewWalletCrypter;\n+    }\n+}\n+\n void CMainFrame::OnMenuOptionsOptions(wxCommandEvent& event)\n {\n     // Options->Options"
+      },
+      {
+        "sha": "be067616a936065e095cbdf7778c4b816843c18c",
+        "filename": "src/ui.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b8b8e0a8c0da07d492083433209c3a9e37744f24/src/ui.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b8b8e0a8c0da07d492083433209c3a9e37744f24/src/ui.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/ui.h?ref=b8b8e0a8c0da07d492083433209c3a9e37744f24",
+        "patch": "@@ -54,6 +54,7 @@ class CMainFrame : public CMainFrameBase\n     void OnMenuFileExit(wxCommandEvent& event);\n     void OnUpdateUIOptionsGenerate(wxUpdateUIEvent& event);\n     void OnMenuOptionsChangeYourAddress(wxCommandEvent& event);\n+    void OnMenuOptionsChangeWalletPassword(wxCommandEvent& event);\n     void OnMenuOptionsOptions(wxCommandEvent& event);\n     void OnMenuHelpAbout(wxCommandEvent& event);\n     void OnButtonSend(wxCommandEvent& event);"
+      },
+      {
+        "sha": "1b19bc6c9d497c2e5d683aa86b9f853be568a4f1",
+        "filename": "src/uibase.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 0,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b8b8e0a8c0da07d492083433209c3a9e37744f24/src/uibase.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b8b8e0a8c0da07d492083433209c3a9e37744f24/src/uibase.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/uibase.cpp?ref=b8b8e0a8c0da07d492083433209c3a9e37744f24",
+        "patch": "@@ -32,6 +32,10 @@ CMainFrameBase::CMainFrameBase( wxWindow* parent, wxWindowID id, const wxString&\n \tm_menuOptionsChangeYourAddress = new wxMenuItem( m_menuOptions, wxID_ANY, wxString( _(\"&Your Receiving Addresses...\") ) , wxEmptyString, wxITEM_NORMAL );\n \tm_menuOptions->Append( m_menuOptionsChangeYourAddress );\n \t\n+\twxMenuItem* m_menuOptionsChangeWalletPassword;\n+\tm_menuOptionsChangeWalletPassword = new wxMenuItem( m_menuOptions, wxID_ANY, wxString( _(\"Change Wallet &Password...\") ) , wxEmptyString, wxITEM_NORMAL );\n+\tm_menuOptions->Append( m_menuOptionsChangeWalletPassword );\n+\t\n \twxMenuItem* m_menuOptionsOptions;\n \tm_menuOptionsOptions = new wxMenuItem( m_menuOptions, wxID_PREFERENCES, wxString( _(\"&Options...\") ) , wxEmptyString, wxITEM_NORMAL );\n \tm_menuOptions->Append( m_menuOptionsOptions );\n@@ -187,6 +191,7 @@ CMainFrameBase::CMainFrameBase( wxWindow* parent, wxWindowID id, const wxString&\n \tthis->Connect( wxEVT_PAINT, wxPaintEventHandler( CMainFrameBase::OnPaint ) );\n \tthis->Connect( m_menuFileExit->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( CMainFrameBase::OnMenuFileExit ) );\n \tthis->Connect( m_menuOptionsChangeYourAddress->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( CMainFrameBase::OnMenuOptionsChangeYourAddress ) );\n+\tthis->Connect( m_menuOptionsChangeWalletPassword->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( CMainFrameBase::OnMenuOptionsChangeWalletPassword ) );\n \tthis->Connect( m_menuOptionsOptions->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( CMainFrameBase::OnMenuOptionsOptions ) );\n \tthis->Connect( m_menuHelpAbout->GetId(), wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( CMainFrameBase::OnMenuHelpAbout ) );\n \tthis->Connect( wxID_BUTTONSEND, wxEVT_COMMAND_TOOL_CLICKED, wxCommandEventHandler( CMainFrameBase::OnButtonSend ) );\n@@ -245,6 +250,7 @@ CMainFrameBase::~CMainFrameBase()\n \tthis->Disconnect( wxEVT_PAINT, wxPaintEventHandler( CMainFrameBase::OnPaint ) );\n \tthis->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( CMainFrameBase::OnMenuFileExit ) );\n \tthis->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( CMainFrameBase::OnMenuOptionsChangeYourAddress ) );\n+\tthis->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( CMainFrameBase::OnMenuOptionsChangeWalletPassword ) );\n \tthis->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( CMainFrameBase::OnMenuOptionsOptions ) );\n \tthis->Disconnect( wxID_ANY, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( CMainFrameBase::OnMenuHelpAbout ) );\n \tthis->Disconnect( wxID_BUTTONSEND, wxEVT_COMMAND_TOOL_CLICKED, wxCommandEventHandler( CMainFrameBase::OnButtonSend ) );"
+      },
+      {
+        "sha": "01f40e135133b7fe57239a9faa79ab1088bb5623",
+        "filename": "src/uibase.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b8b8e0a8c0da07d492083433209c3a9e37744f24/src/uibase.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b8b8e0a8c0da07d492083433209c3a9e37744f24/src/uibase.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/uibase.h?ref=b8b8e0a8c0da07d492083433209c3a9e37744f24",
+        "patch": "@@ -98,6 +98,7 @@ class CMainFrameBase : public wxFrame\n \t\tvirtual void OnPaint( wxPaintEvent& event ) { event.Skip(); }\n \t\tvirtual void OnMenuFileExit( wxCommandEvent& event ) { event.Skip(); }\n \t\tvirtual void OnMenuOptionsChangeYourAddress( wxCommandEvent& event ) { event.Skip(); }\n+\t\tvirtual void OnMenuOptionsChangeWalletPassword( wxCommandEvent& event ) { event.Skip(); }\n \t\tvirtual void OnMenuOptionsOptions( wxCommandEvent& event ) { event.Skip(); }\n \t\tvirtual void OnMenuHelpAbout( wxCommandEvent& event ) { event.Skip(); }\n \t\tvirtual void OnButtonSend( wxCommandEvent& event ) { event.Skip(); }"
+      }
+    ]
+  }
+]

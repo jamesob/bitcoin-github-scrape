@@ -1,0 +1,117 @@
+[
+  {
+    "sha": "a81cd96805ce6b65cca3a40ebbd3b2eb428abb7b",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphODFjZDk2ODA1Y2U2YjY1Y2NhM2E0MGViYmQzYjJlYjQyOGFiYjdi",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2012-12-26T20:10:49Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieterw@google.com",
+        "date": "2013-08-15T22:17:50Z"
+      },
+      "message": "Only create signatures with even S, and verification mode to check.\n\nTo fix a minor malleability found by Sergio Lerner (reported here:\nhttps://bitcointalk.org/index.php?topic=8392.msg1245898#msg1245898)\n\nThe problem is that if (R,S) is a valid ECDSA signature for a given\nmessage and public key, (R,-S) is also valid. Modulo N (the order\nof the secp256k1 curve), this means that both (R,S) and (R,N-S) are\nvalid. Given that N is odd, S and N-S have a different lowest bit.\nWe solve the problem by forcing signatures to have an even S value,\nexcluding one of the alternatives.\n\nThis commit just changes the signing code to always produce even S\nvalues, and adds a verification mode to check it. This code is not\nenabled anywhere yet. Existing tests in key_tests.cpp verify that\nthe produced signatures are still valid.",
+      "tree": {
+        "sha": "6bd44b6534c2041f0728f8b985d7c766f85c41cb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/6bd44b6534c2041f0728f8b985d7c766f85c41cb"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a81cd96805ce6b65cca3a40ebbd3b2eb428abb7b",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a81cd96805ce6b65cca3a40ebbd3b2eb428abb7b",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a81cd96805ce6b65cca3a40ebbd3b2eb428abb7b",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a81cd96805ce6b65cca3a40ebbd3b2eb428abb7b/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": null,
+    "parents": [
+      {
+        "sha": "4323bfeafda4a5e0101710d94b518d41819a2325",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4323bfeafda4a5e0101710d94b518d41819a2325",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/4323bfeafda4a5e0101710d94b518d41819a2325"
+      }
+    ],
+    "stats": {
+      "total": 60,
+      "additions": 43,
+      "deletions": 17
+    },
+    "files": [
+      {
+        "sha": "2247c9947598a011b9c16f716af10e52b0ecd667",
+        "filename": "src/key.cpp",
+        "status": "modified",
+        "additions": 18,
+        "deletions": 1,
+        "changes": 19,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a81cd96805ce6b65cca3a40ebbd3b2eb428abb7b/src/key.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a81cd96805ce6b65cca3a40ebbd3b2eb428abb7b/src/key.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/key.cpp?ref=a81cd96805ce6b65cca3a40ebbd3b2eb428abb7b",
+        "patch": "@@ -194,9 +194,26 @@ class CECKey {\n     }\n \n     bool Sign(const uint256 &hash, std::vector<unsigned char>& vchSig) {\n+        vchSig.clear();\n+        ECDSA_SIG *sig = ECDSA_do_sign((unsigned char*)&hash, sizeof(hash), pkey);\n+        if (sig == NULL)\n+            return false;\n+        if (BN_is_odd(sig->s)) {\n+            // enforce even S values, by negating the value (modulo the order) if odd\n+            BN_CTX *ctx = BN_CTX_new();\n+            BN_CTX_start(ctx);\n+            const EC_GROUP *group = EC_KEY_get0_group(pkey);\n+            BIGNUM *order = BN_CTX_get(ctx);\n+            EC_GROUP_get_order(group, order, ctx);\n+            BN_sub(sig->s, order, sig->s);\n+            BN_CTX_end(ctx);\n+            BN_CTX_free(ctx);\n+        }\n         unsigned int nSize = ECDSA_size(pkey);\n         vchSig.resize(nSize); // Make sure it is big enough\n-        assert(ECDSA_sign(0, (unsigned char*)&hash, sizeof(hash), &vchSig[0], &nSize, pkey));\n+        unsigned char *pos = &vchSig[0];\n+        nSize = i2d_ECDSA_SIG(sig, &pos);\n+        ECDSA_SIG_free(sig);\n         vchSig.resize(nSize); // Shrink to fit actual size\n         return true;\n     }"
+      },
+      {
+        "sha": "2df2e9f0d5d54ae9583328c43f8dce4beb30cebd",
+        "filename": "src/script.cpp",
+        "status": "modified",
+        "additions": 17,
+        "deletions": 9,
+        "changes": 26,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a81cd96805ce6b65cca3a40ebbd3b2eb428abb7b/src/script.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a81cd96805ce6b65cca3a40ebbd3b2eb428abb7b/src/script.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script.cpp?ref=a81cd96805ce6b65cca3a40ebbd3b2eb428abb7b",
+        "patch": "@@ -227,7 +227,10 @@ const char* GetOpName(opcodetype opcode)\n     }\n }\n \n-bool IsCanonicalPubKey(const valtype &vchPubKey) {\n+bool IsCanonicalPubKey(const valtype &vchPubKey, unsigned int flags) {\n+    if (!(flags & SCRIPT_VERIFY_STRICTENC))\n+        return true;\n+\n     if (vchPubKey.size() < 33)\n         return error(\"Non-canonical public key: too short\");\n     if (vchPubKey[0] == 0x04) {\n@@ -242,7 +245,10 @@ bool IsCanonicalPubKey(const valtype &vchPubKey) {\n     return true;\n }\n \n-bool IsCanonicalSignature(const valtype &vchSig) {\n+bool IsCanonicalSignature(const valtype &vchSig, unsigned int flags) {\n+    if (!(flags & SCRIPT_VERIFY_STRICTENC))\n+        return true;\n+\n     // See https://bitcointalk.org/index.php?topic=8392.msg127623#msg127623\n     // A canonical signature exists of: <30> <total len> <02> <len R> <R> <02> <len S> <S> <hashtype>\n     // Where R and S are not negative (their first byte has its highest bit not set), and not\n@@ -286,6 +292,11 @@ bool IsCanonicalSignature(const valtype &vchSig) {\n     if (nLenS > 1 && (S[0] == 0x00) && !(S[1] & 0x80))\n         return error(\"Non-canonical signature: S value excessively padded\");\n \n+    if (flags & SCRIPT_VERIFY_EVEN_S) {\n+        if (S[nLenS-1] & 1)\n+            return error(\"Non-canonical signature: S value odd\");\n+    }\n+\n     return true;\n }\n \n@@ -302,7 +313,6 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co\n     if (script.size() > 10000)\n         return false;\n     int nOpCount = 0;\n-    bool fStrictEncodings = flags & SCRIPT_VERIFY_STRICTENC;\n \n     try\n     {\n@@ -841,9 +851,8 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co\n                     // Drop the signature, since there's no way for a signature to sign itself\n                     scriptCode.FindAndDelete(CScript(vchSig));\n \n-                    bool fSuccess = (!fStrictEncodings || (IsCanonicalSignature(vchSig) && IsCanonicalPubKey(vchPubKey)));\n-                    if (fSuccess)\n-                        fSuccess = CheckSig(vchSig, vchPubKey, scriptCode, txTo, nIn, nHashType, flags);\n+                    bool fSuccess = IsCanonicalSignature(vchSig, flags) && IsCanonicalPubKey(vchPubKey, flags) &&\n+                        CheckSig(vchSig, vchPubKey, scriptCode, txTo, nIn, nHashType, flags);\n \n                     popstack(stack);\n                     popstack(stack);\n@@ -903,9 +912,8 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, co\n                         valtype& vchPubKey = stacktop(-ikey);\n \n                         // Check signature\n-                        bool fOk = (!fStrictEncodings || (IsCanonicalSignature(vchSig) && IsCanonicalPubKey(vchPubKey)));\n-                        if (fOk)\n-                            fOk = CheckSig(vchSig, vchPubKey, scriptCode, txTo, nIn, nHashType, flags);\n+                        bool fOk = IsCanonicalSignature(vchSig, flags) && IsCanonicalPubKey(vchPubKey, flags) &&\n+                            CheckSig(vchSig, vchPubKey, scriptCode, txTo, nIn, nHashType, flags);\n \n                         if (fOk) {\n                             isig++;"
+      },
+      {
+        "sha": "fd5b12921e7f252500906e8cbef3096ae1f5ae28",
+        "filename": "src/script.h",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 5,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a81cd96805ce6b65cca3a40ebbd3b2eb428abb7b/src/script.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a81cd96805ce6b65cca3a40ebbd3b2eb428abb7b/src/script.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script.h?ref=a81cd96805ce6b65cca3a40ebbd3b2eb428abb7b",
+        "patch": "@@ -32,9 +32,10 @@ enum\n enum\n {\n     SCRIPT_VERIFY_NONE      = 0,\n-    SCRIPT_VERIFY_P2SH      = (1U << 0),\n-    SCRIPT_VERIFY_STRICTENC = (1U << 1),\n-    SCRIPT_VERIFY_NOCACHE   = (1U << 2),\n+    SCRIPT_VERIFY_P2SH      = (1U << 0), // evaluate P2SH (BIP16) subscripts\n+    SCRIPT_VERIFY_STRICTENC = (1U << 1), // enforce strict conformance to DER and SEC2 for signatures and pubkeys\n+    SCRIPT_VERIFY_EVEN_S    = (1U << 2), // enforce even S values in signatures (depends on STRICTENC)\n+    SCRIPT_VERIFY_NOCACHE   = (1U << 3), // do not store results in signature cache (but do query it)\n };\n \n enum txnouttype\n@@ -665,8 +666,8 @@ class CScriptCompressor\n     }\n };\n \n-bool IsCanonicalPubKey(const std::vector<unsigned char> &vchPubKey);\n-bool IsCanonicalSignature(const std::vector<unsigned char> &vchSig);\n+bool IsCanonicalPubKey(const std::vector<unsigned char> &vchPubKey, unsigned int flags);\n+bool IsCanonicalSignature(const std::vector<unsigned char> &vchSig, unsigned int flags);\n \n bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& script, const CTransaction& txTo, unsigned int nIn, unsigned int flags, int nHashType);\n bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<std::vector<unsigned char> >& vSolutionsRet);"
+      },
+      {
+        "sha": "09988da259f49cdf153f9891ae5cfefd2a78af97",
+        "filename": "src/test/canonical_tests.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a81cd96805ce6b65cca3a40ebbd3b2eb428abb7b/src/test/canonical_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a81cd96805ce6b65cca3a40ebbd3b2eb428abb7b/src/test/canonical_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/canonical_tests.cpp?ref=a81cd96805ce6b65cca3a40ebbd3b2eb428abb7b",
+        "patch": "@@ -64,7 +64,7 @@ BOOST_AUTO_TEST_CASE(script_canon)\n         string test = tv.get_str();\n         if (IsHex(test)) {\n             std::vector<unsigned char> sig = ParseHex(test);\n-            BOOST_CHECK_MESSAGE(IsCanonicalSignature(sig), test);\n+            BOOST_CHECK_MESSAGE(IsCanonicalSignature(sig, SCRIPT_VERIFY_STRICTENC), test);\n             BOOST_CHECK_MESSAGE(IsCanonicalSignature_OpenSSL(sig), test);\n         }\n     }\n@@ -78,7 +78,7 @@ BOOST_AUTO_TEST_CASE(script_noncanon)\n         string test = tv.get_str();\n         if (IsHex(test)) {\n             std::vector<unsigned char> sig = ParseHex(test);\n-            BOOST_CHECK_MESSAGE(!IsCanonicalSignature(sig), test);\n+            BOOST_CHECK_MESSAGE(!IsCanonicalSignature(sig, SCRIPT_VERIFY_STRICTENC), test);\n             BOOST_CHECK_MESSAGE(!IsCanonicalSignature_OpenSSL(sig), test);\n         }\n     }"
+      }
+    ]
+  }
+]

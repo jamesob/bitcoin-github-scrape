@@ -1,0 +1,98 @@
+[
+  {
+    "sha": "41c938eede3e9ea29ef86f3c25bab8fa6a51a509",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0MWM5MzhlZWRlM2U5ZWEyOWVmODZmM2MyNWJhYjhmYTZhNTFhNTA5",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-07-06T11:45:38Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-07-17T07:37:12Z"
+      },
+      "message": "IPC-server hardening and update\n\n- add IMPLEMENT_RANDOMIZE_STACK for ipcThread()\n- log / print boost interprocess exceptions\n- use MAX_URI_LENGTH in guiconstants.h (also used in qrcodedialog.cpp)\n- remove unneeded includes and ipcShutdown() from qtipcserver.cpp\n- fix a small mem-leak by deleting mq before re-using it\n- make ipcThread() and ipcThread2() static functions\n- add some more comments",
+      "tree": {
+        "sha": "a32400a0101478c5f761409f8370007ae0e69660",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/a32400a0101478c5f761409f8370007ae0e69660"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/41c938eede3e9ea29ef86f3c25bab8fa6a51a509",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/41c938eede3e9ea29ef86f3c25bab8fa6a51a509",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/41c938eede3e9ea29ef86f3c25bab8fa6a51a509",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/41c938eede3e9ea29ef86f3c25bab8fa6a51a509/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "ce652affe0ffec114bceb2e2c20ae1d015faca53",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ce652affe0ffec114bceb2e2c20ae1d015faca53",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/ce652affe0ffec114bceb2e2c20ae1d015faca53"
+      }
+    ],
+    "stats": {
+      "total": 112,
+      "additions": 74,
+      "deletions": 38
+    },
+    "files": [
+      {
+        "sha": "f9f5115cd0793caceb853d4ceebede266d34c996",
+        "filename": "src/qt/bitcoin.cpp",
+        "status": "modified",
+        "additions": 12,
+        "deletions": 2,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/41c938eede3e9ea29ef86f3c25bab8fa6a51a509/src/qt/bitcoin.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/41c938eede3e9ea29ef86f3c25bab8fa6a51a509/src/qt/bitcoin.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoin.cpp?ref=41c938eede3e9ea29ef86f3c25bab8fa6a51a509",
+        "patch": "@@ -126,13 +126,21 @@ int main(int argc, char *argv[])\n             const char *strURI = argv[i];\n             try {\n                 boost::interprocess::message_queue mq(boost::interprocess::open_only, BITCOINURI_QUEUE_NAME);\n-                if(mq.try_send(strURI, strlen(strURI), 0))\n+                if (mq.try_send(strURI, strlen(strURI), 0))\n+                    // if URI could be sent to the message queue exit here\n                     exit(0);\n                 else\n+                    // if URI could not be sent to the message queue do a normal Bitcoin-Qt startup\n                     break;\n             }\n             catch (boost::interprocess::interprocess_exception &ex) {\n-                break;\n+                // don't log the \"file not found\" exception, because that's normal for\n+                // the first start of the first instance\n+                if (ex.get_error_code() != boost::interprocess::not_found_error)\n+                {\n+                    printf(\"main() - boost interprocess exception #%d: %s\\n\", ex.get_error_code(), ex.what());\n+                    break;\n+                }\n             }\n         }\n     }\n@@ -278,6 +286,8 @@ int main(int argc, char *argv[])\n                             mq.try_send(strURI, strlen(strURI), 0);\n                         }\n                         catch (boost::interprocess::interprocess_exception &ex) {\n+                            printf(\"main() - boost interprocess exception #%d: %s\\n\", ex.get_error_code(), ex.what());\n+                            break;\n                         }\n                     }\n                 }"
+      },
+      {
+        "sha": "405ba396b74886ae9f9b5b024f2a3fa60a54351a",
+        "filename": "src/qt/guiconstants.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/41c938eede3e9ea29ef86f3c25bab8fa6a51a509/src/qt/guiconstants.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/41c938eede3e9ea29ef86f3c25bab8fa6a51a509/src/qt/guiconstants.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/guiconstants.h?ref=41c938eede3e9ea29ef86f3c25bab8fa6a51a509",
+        "patch": "@@ -4,10 +4,10 @@\n /* Milliseconds between model updates */\n static const int MODEL_UPDATE_DELAY = 500;\n \n-/* Maximum  passphrase length */\n+/* AskPassphraseDialog -- Maximum passphrase length */\n static const int MAX_PASSPHRASE_SIZE = 1024;\n \n-/* Size of icons in status bar */\n+/* BitcoinGUI -- Size of icons in status bar */\n static const int STATUSBAR_ICONSIZE = 16;\n \n /* Invalid field background style */"
+      },
+      {
+        "sha": "e413c71bc0fdbaaaad7818d46a15e8751e662f5c",
+        "filename": "src/qt/qtipcserver.cpp",
+        "status": "modified",
+        "additions": 54,
+        "deletions": 33,
+        "changes": 87,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/41c938eede3e9ea29ef86f3c25bab8fa6a51a509/src/qt/qtipcserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/41c938eede3e9ea29ef86f3c25bab8fa6a51a509/src/qt/qtipcserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/qtipcserver.cpp?ref=41c938eede3e9ea29ef86f3c25bab8fa6a51a509",
+        "patch": "@@ -2,95 +2,116 @@\n // Distributed under the MIT/X11 software license, see the accompanying\n // file license.txt or http://www.opensource.org/licenses/mit-license.php.\n \n-#include <boost/algorithm/string.hpp>\n-#include <boost/interprocess/ipc/message_queue.hpp>\n-#include <boost/tokenizer.hpp>\n+#include \"qtipcserver.h\"\n+#include \"guiconstants.h\"\n+#include \"ui_interface.h\"\n+#include \"util.h\"\n+\n #include <boost/date_time/posix_time/posix_time.hpp>\n+#include <boost/interprocess/ipc/message_queue.hpp>\n #include <boost/version.hpp>\n \n #if defined(WIN32) && (!defined(BOOST_INTERPROCESS_HAS_WINDOWS_KERNEL_BOOTTIME) || !defined(BOOST_INTERPROCESS_HAS_KERNEL_BOOTTIME) || BOOST_VERSION < 104900)\n #warning Compiling without BOOST_INTERPROCESS_HAS_WINDOWS_KERNEL_BOOTTIME and BOOST_INTERPROCESS_HAS_KERNEL_BOOTTIME uncommented in boost/interprocess/detail/tmp_dir_helpers.hpp or using a boost version before 1.49 may have unintended results see svn.boost.org/trac/boost/ticket/5392\n #endif\n \n-#include \"ui_interface.h\"\n-#include \"qtipcserver.h\"\n-#include \"util.h\"\n-\n+using namespace boost;\n using namespace boost::interprocess;\n using namespace boost::posix_time;\n-using namespace boost;\n-using namespace std;\n+\n+static void ipcThread2(void* pArg);\n \n #ifdef MAC_OSX\n // URI handling not implemented on OSX yet\n \n void ipcInit() { }\n-void ipcShutdown() { }\n \n #else\n \n-void ipcShutdown()\n+static void ipcThread(void* pArg)\n {\n-    message_queue::remove(BITCOINURI_QUEUE_NAME);\n+    IMPLEMENT_RANDOMIZE_STACK(ipcThread(pArg));\n+\t\n+    // Make this thread recognisable as the GUI-IPC thread\n+    RenameThread(\"bitcoin-gui-ipc\");\n+\t\n+    try\n+    {\n+        ipcThread2(pArg);\n+    }\n+    catch (std::exception& e) {\n+        PrintExceptionContinue(&e, \"ipcThread()\");\n+    } catch (...) {\n+        PrintExceptionContinue(NULL, \"ipcThread()\");\n+    }\n+    printf(\"ipcThread exited\\n\");\n }\n \n-void ipcThread(void* parg)\n+static void ipcThread2(void* pArg)\n {\n-    // Make this thread recognisable as the GUI-IPC thread\n-    RenameThread(\"bitcoin-gui-ipc\");\n+    printf(\"ipcThread started\\n\");\n+\n+    message_queue* mq = (message_queue*)pArg;\n+    char buffer[MAX_URI_LENGTH + 1] = \"\";\n+    size_t nSize = 0;\n+    unsigned int nPriority = 0;\n \n-    message_queue* mq = (message_queue*)parg;\n-    char strBuf[257];\n-    size_t nSize;\n-    unsigned int nPriority;\n     loop\n     {\n         ptime d = boost::posix_time::microsec_clock::universal_time() + millisec(100);\n-        if(mq->timed_receive(&strBuf, sizeof(strBuf), nSize, nPriority, d))\n+        if (mq->timed_receive(&buffer, sizeof(buffer), nSize, nPriority, d))\n         {\n-            uiInterface.ThreadSafeHandleURI(std::string(strBuf, nSize));\n+            uiInterface.ThreadSafeHandleURI(std::string(buffer, nSize));\n             Sleep(1000);\n         }\n+\n         if (fShutdown)\n-        {\n-            ipcShutdown();\n             break;\n-        }\n     }\n-    ipcShutdown();\n+\n+    // Remove message queue\n+    message_queue::remove(BITCOINURI_QUEUE_NAME);\n+    // Cleanup allocated memory\n+    delete mq;\n }\n \n void ipcInit()\n {\n-    message_queue* mq;\n-    char strBuf[257];\n-    size_t nSize;\n-    unsigned int nPriority;\n+    message_queue* mq = NULL;\n+    char buffer[MAX_URI_LENGTH + 1] = \"\";\n+    size_t nSize = 0;\n+    unsigned int nPriority = 0;\n+\n     try {\n-        mq = new message_queue(open_or_create, BITCOINURI_QUEUE_NAME, 2, 256);\n+        mq = new message_queue(open_or_create, BITCOINURI_QUEUE_NAME, 2, MAX_URI_LENGTH);\n \n         // Make sure we don't lose any bitcoin: URIs\n         for (int i = 0; i < 2; i++)\n         {\n             ptime d = boost::posix_time::microsec_clock::universal_time() + millisec(1);\n-            if(mq->timed_receive(&strBuf, sizeof(strBuf), nSize, nPriority, d))\n+            if (mq->timed_receive(&buffer, sizeof(buffer), nSize, nPriority, d))\n             {\n-                uiInterface.ThreadSafeHandleURI(std::string(strBuf, nSize));\n+                uiInterface.ThreadSafeHandleURI(std::string(buffer, nSize));\n             }\n             else\n                 break;\n         }\n \n         // Make sure only one bitcoin instance is listening\n         message_queue::remove(BITCOINURI_QUEUE_NAME);\n-        mq = new message_queue(open_or_create, BITCOINURI_QUEUE_NAME, 2, 256);\n+        delete mq;\n+\n+        mq = new message_queue(open_or_create, BITCOINURI_QUEUE_NAME, 2, MAX_URI_LENGTH);\n     }\n     catch (interprocess_exception &ex) {\n+        printf(\"ipcInit() - boost interprocess exception #%d: %s\\n\", ex.get_error_code(), ex.what());\n         return;\n     }\n+\n     if (!CreateThread(ipcThread, mq))\n     {\n         delete mq;\n+        return;\n     }\n }\n "
+      },
+      {
+        "sha": "484b6222ebc95013fd0f1d4e02e4434ef720c2c5",
+        "filename": "src/qt/qtipcserver.h",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 1,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/41c938eede3e9ea29ef86f3c25bab8fa6a51a509/src/qt/qtipcserver.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/41c938eede3e9ea29ef86f3c25bab8fa6a51a509/src/qt/qtipcserver.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/qtipcserver.h?ref=41c938eede3e9ea29ef86f3c25bab8fa6a51a509",
+        "patch": "@@ -1,4 +1,9 @@\n+#ifndef QTIPCSERVER_H\n+#define QTIPCSERVER_H\n+\n+// Define Bitcoin-Qt message queue name\n #define BITCOINURI_QUEUE_NAME \"BitcoinURI\"\n \n void ipcInit();\n-void ipcShutdown();\n+\n+#endif // QTIPCSERVER_H"
+      }
+    ]
+  }
+]

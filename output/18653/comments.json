@@ -1,0 +1,724 @@
+[
+  {
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/issues/comments/614337718",
+    "html_url": "https://github.com/bitcoin/bitcoin/pull/18653#issuecomment-614337718",
+    "issue_url": "https://api.github.com/repos/bitcoin/bitcoin/issues/18653",
+    "id": 614337718,
+    "node_id": "MDEyOklzc3VlQ29tbWVudDYxNDMzNzcxOA==",
+    "user": {
+      "login": "DrahtBot",
+      "id": 39886733,
+      "node_id": "MDQ6VXNlcjM5ODg2NzMz",
+      "avatar_url": "https://avatars.githubusercontent.com/u/39886733?u=3c1e73d828cf5a5850dfc25c8397c1cf751db5ac&v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/DrahtBot",
+      "html_url": "https://github.com/DrahtBot",
+      "followers_url": "https://api.github.com/users/DrahtBot/followers",
+      "following_url": "https://api.github.com/users/DrahtBot/following{/other_user}",
+      "gists_url": "https://api.github.com/users/DrahtBot/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/DrahtBot/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/DrahtBot/subscriptions",
+      "organizations_url": "https://api.github.com/users/DrahtBot/orgs",
+      "repos_url": "https://api.github.com/users/DrahtBot/repos",
+      "events_url": "https://api.github.com/users/DrahtBot/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/DrahtBot/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "created_at": "2020-04-15T23:58:32Z",
+    "updated_at": "2020-04-15T23:58:32Z",
+    "author_association": "CONTRIBUTOR",
+    "body": "<!--e57a25ab6845829454e8d69fc972939a-->\n\nThe following sections might be updated with supplementary metadata relevant to reviewers and maintainers.\n\n<!--174a7506f384e20aa4161008e828411d-->\n### Conflicts\nReviewers, this pull request conflicts with the following ones:\n\n* #18594 (cli: display multiwallet balances in -getinfo by jonatack)\n* #18453 (rpc, cli: add multiwallet balances rpc and use it in -getinfo by jonatack)\n\nIf you consider this pull request important, please also help to review the conflicting pull requests. Ideally, start with the one that should be merged first.",
+    "reactions": {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/issues/comments/614337718/reactions",
+      "total_count": 0,
+      "+1": 0,
+      "-1": 0,
+      "laugh": 0,
+      "hooray": 0,
+      "confused": 0,
+      "heart": 0,
+      "rocket": 0,
+      "eyes": 0
+    },
+    "performed_via_github_app": null
+  },
+  {
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/408919423",
+    "pull_request_review_id": 393871318,
+    "id": 408919423,
+    "node_id": "MDI0OlB1bGxSZXF1ZXN0UmV2aWV3Q29tbWVudDQwODkxOTQyMw==",
+    "diff_hunk": "@@ -55,31 +46,50 @@ def run_test(self):\n         self.log.info(\"Test connecting with non-existing RPC cookie file\")\n         assert_raises_process_error(1, \"Could not locate RPC credentials\", self.nodes[0].cli('-rpccookiefile=does-not-exist', '-rpcpassword=').echo)\n \n-        self.log.info(\"Make sure that -getinfo with arguments fails\")\n+        self.log.info(\"Test -getinfo with arguments fails\")\n         assert_raises_process_error(1, \"-getinfo takes no arguments\", self.nodes[0].cli('-getinfo').help)\n \n-        self.log.info(\"Test that -getinfo returns the expected network and blockchain info\")\n+        self.log.info(\"Test -getinfo returns expected network and blockchain info\")\n+        if self.is_wallet_compiled():\n+            self.nodes[0].encryptwallet(password)\n         cli_get_info = self.nodes[0].cli('-getinfo').send_cli()\n         network_info = self.nodes[0].getnetworkinfo()\n         blockchain_info = self.nodes[0].getblockchaininfo()\n-\n         assert_equal(cli_get_info['version'], network_info['version'])\n         assert_equal(cli_get_info['blocks'], blockchain_info['blocks'])\n+        assert_equal(cli_get_info['headers'], blockchain_info['headers'])\n         assert_equal(cli_get_info['timeoffset'], network_info['timeoffset'])\n         assert_equal(cli_get_info['connections'], network_info['connections'])\n         assert_equal(cli_get_info['proxy'], network_info['networks'][0]['proxy'])\n         assert_equal(cli_get_info['difficulty'], blockchain_info['difficulty'])\n         assert_equal(cli_get_info['chain'], blockchain_info['chain'])\n+\n         if self.is_wallet_compiled():\n-            self.log.info(\"Test that -getinfo returns the expected wallet info\")\n+            self.log.info(\"Test -getinfo and bitcoin-cli getwalletinfo return expected wallet info\")\n             assert_equal(cli_get_info['balance'], BALANCE)\n             wallet_info = self.nodes[0].getwalletinfo()\n             assert_equal(cli_get_info['keypoolsize'], wallet_info['keypoolsize'])\n+            assert_equal(cli_get_info['unlocked_until'], wallet_info['unlocked_until'])\n             assert_equal(cli_get_info['paytxfee'], wallet_info['paytxfee'])\n             assert_equal(cli_get_info['relayfee'], network_info['relayfee'])\n-            # unlocked_until is not tested because the wallet is not encrypted\n+            assert_equal(self.nodes[0].cli.getwalletinfo(), wallet_info)\n         else:\n-            self.log.info(\"*** Wallet not compiled; -getinfo wallet tests skipped\")\n+            self.log.info(\"*** Wallet not compiled; cli getwalletinfo and -getinfo wallet tests skipped\")\n+\n+        self.stop_node(0)\n+\n+        self.log.info(\"Test -version with node stopped\")\n+        cli_response = self.nodes[0].cli(\"-version\").send_cli()\n+        assert \"{} RPC client version\".format(self.config['environment']['PACKAGE_NAME']) in cli_response\n+\n+        self.log.info(\"Test -rpcwait option waits for RPC connection instead of failing\")\n+        # Start node without RPC connection.\n+        self.nodes[0].start()\n+        # Verify failure without -rpcwait.\n+        assert_raises_process_error(1, \"Could not connect to the server\", self.nodes[0].cli('getblockcount').echo)",
+    "path": "test/functional/interface_bitcoin_cli.py",
+    "position": 66,
+    "original_position": 66,
+    "commit_id": "c28c7b882b40cc75989dd102414de3b3dad69706",
+    "original_commit_id": "c28c7b882b40cc75989dd102414de3b3dad69706",
+    "user": {
+      "login": "MarcoFalke",
+      "id": 6399679,
+      "node_id": "MDQ6VXNlcjYzOTk2Nzk=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/6399679?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/MarcoFalke",
+      "html_url": "https://github.com/MarcoFalke",
+      "followers_url": "https://api.github.com/users/MarcoFalke/followers",
+      "following_url": "https://api.github.com/users/MarcoFalke/following{/other_user}",
+      "gists_url": "https://api.github.com/users/MarcoFalke/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/MarcoFalke/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/MarcoFalke/subscriptions",
+      "organizations_url": "https://api.github.com/users/MarcoFalke/orgs",
+      "repos_url": "https://api.github.com/users/MarcoFalke/repos",
+      "events_url": "https://api.github.com/users/MarcoFalke/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/MarcoFalke/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "body": "Isn't this racy?",
+    "created_at": "2020-04-15T15:11:03Z",
+    "updated_at": "2020-04-15T15:11:03Z",
+    "html_url": "https://github.com/bitcoin/bitcoin/pull/18653#discussion_r408919423",
+    "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/18653",
+    "author_association": "MEMBER",
+    "_links": {
+      "self": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/408919423"
+      },
+      "html": {
+        "href": "https://github.com/bitcoin/bitcoin/pull/18653#discussion_r408919423"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/18653"
+      }
+    },
+    "reactions": {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/408919423/reactions",
+      "total_count": 0,
+      "+1": 0,
+      "-1": 0,
+      "laugh": 0,
+      "hooray": 0,
+      "confused": 0,
+      "heart": 0,
+      "rocket": 0,
+      "eyes": 0
+    },
+    "start_line": null,
+    "original_start_line": null,
+    "start_side": null,
+    "line": 89,
+    "original_line": 89,
+    "side": "RIGHT"
+  },
+  {
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/408926975",
+    "pull_request_review_id": 393880711,
+    "id": 408926975,
+    "node_id": "MDI0OlB1bGxSZXF1ZXN0UmV2aWV3Q29tbWVudDQwODkyNjk3NQ==",
+    "diff_hunk": "@@ -55,31 +46,50 @@ def run_test(self):\n         self.log.info(\"Test connecting with non-existing RPC cookie file\")\n         assert_raises_process_error(1, \"Could not locate RPC credentials\", self.nodes[0].cli('-rpccookiefile=does-not-exist', '-rpcpassword=').echo)\n \n-        self.log.info(\"Make sure that -getinfo with arguments fails\")\n+        self.log.info(\"Test -getinfo with arguments fails\")\n         assert_raises_process_error(1, \"-getinfo takes no arguments\", self.nodes[0].cli('-getinfo').help)\n \n-        self.log.info(\"Test that -getinfo returns the expected network and blockchain info\")\n+        self.log.info(\"Test -getinfo returns expected network and blockchain info\")\n+        if self.is_wallet_compiled():\n+            self.nodes[0].encryptwallet(password)\n         cli_get_info = self.nodes[0].cli('-getinfo').send_cli()\n         network_info = self.nodes[0].getnetworkinfo()\n         blockchain_info = self.nodes[0].getblockchaininfo()\n-\n         assert_equal(cli_get_info['version'], network_info['version'])\n         assert_equal(cli_get_info['blocks'], blockchain_info['blocks'])\n+        assert_equal(cli_get_info['headers'], blockchain_info['headers'])\n         assert_equal(cli_get_info['timeoffset'], network_info['timeoffset'])\n         assert_equal(cli_get_info['connections'], network_info['connections'])\n         assert_equal(cli_get_info['proxy'], network_info['networks'][0]['proxy'])\n         assert_equal(cli_get_info['difficulty'], blockchain_info['difficulty'])\n         assert_equal(cli_get_info['chain'], blockchain_info['chain'])\n+\n         if self.is_wallet_compiled():\n-            self.log.info(\"Test that -getinfo returns the expected wallet info\")\n+            self.log.info(\"Test -getinfo and bitcoin-cli getwalletinfo return expected wallet info\")\n             assert_equal(cli_get_info['balance'], BALANCE)\n             wallet_info = self.nodes[0].getwalletinfo()\n             assert_equal(cli_get_info['keypoolsize'], wallet_info['keypoolsize'])\n+            assert_equal(cli_get_info['unlocked_until'], wallet_info['unlocked_until'])\n             assert_equal(cli_get_info['paytxfee'], wallet_info['paytxfee'])\n             assert_equal(cli_get_info['relayfee'], network_info['relayfee'])\n-            # unlocked_until is not tested because the wallet is not encrypted\n+            assert_equal(self.nodes[0].cli.getwalletinfo(), wallet_info)\n         else:\n-            self.log.info(\"*** Wallet not compiled; -getinfo wallet tests skipped\")\n+            self.log.info(\"*** Wallet not compiled; cli getwalletinfo and -getinfo wallet tests skipped\")\n+\n+        self.stop_node(0)\n+\n+        self.log.info(\"Test -version with node stopped\")\n+        cli_response = self.nodes[0].cli(\"-version\").send_cli()\n+        assert \"{} RPC client version\".format(self.config['environment']['PACKAGE_NAME']) in cli_response\n+\n+        self.log.info(\"Test -rpcwait option waits for RPC connection instead of failing\")\n+        # Start node without RPC connection.\n+        self.nodes[0].start()\n+        # Verify failure without -rpcwait.\n+        assert_raises_process_error(1, \"Could not connect to the server\", self.nodes[0].cli('getblockcount').echo)",
+    "path": "test/functional/interface_bitcoin_cli.py",
+    "position": 66,
+    "original_position": 66,
+    "commit_id": "c28c7b882b40cc75989dd102414de3b3dad69706",
+    "original_commit_id": "c28c7b882b40cc75989dd102414de3b3dad69706",
+    "user": {
+      "login": "jonatack",
+      "id": 2415484,
+      "node_id": "MDQ6VXNlcjI0MTU0ODQ=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/2415484?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jonatack",
+      "html_url": "https://github.com/jonatack",
+      "followers_url": "https://api.github.com/users/jonatack/followers",
+      "following_url": "https://api.github.com/users/jonatack/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jonatack/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jonatack/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jonatack/subscriptions",
+      "organizations_url": "https://api.github.com/users/jonatack/orgs",
+      "repos_url": "https://api.github.com/users/jonatack/repos",
+      "events_url": "https://api.github.com/users/jonatack/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jonatack/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "body": "Running `(for i in {1..1000}; do test/functional/interface_bitcoin_cli.py ; done)` to see.",
+    "created_at": "2020-04-15T15:20:48Z",
+    "updated_at": "2020-04-15T15:20:48Z",
+    "html_url": "https://github.com/bitcoin/bitcoin/pull/18653#discussion_r408926975",
+    "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/18653",
+    "author_association": "MEMBER",
+    "_links": {
+      "self": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/408926975"
+      },
+      "html": {
+        "href": "https://github.com/bitcoin/bitcoin/pull/18653#discussion_r408926975"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/18653"
+      }
+    },
+    "reactions": {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/408926975/reactions",
+      "total_count": 0,
+      "+1": 0,
+      "-1": 0,
+      "laugh": 0,
+      "hooray": 0,
+      "confused": 0,
+      "heart": 0,
+      "rocket": 0,
+      "eyes": 0
+    },
+    "start_line": null,
+    "original_start_line": null,
+    "start_side": null,
+    "line": 89,
+    "original_line": 89,
+    "side": "RIGHT",
+    "in_reply_to_id": 408919423
+  },
+  {
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/408940547",
+    "pull_request_review_id": 393897334,
+    "id": 408940547,
+    "node_id": "MDI0OlB1bGxSZXF1ZXN0UmV2aWV3Q29tbWVudDQwODk0MDU0Nw==",
+    "diff_hunk": "@@ -55,31 +46,50 @@ def run_test(self):\n         self.log.info(\"Test connecting with non-existing RPC cookie file\")\n         assert_raises_process_error(1, \"Could not locate RPC credentials\", self.nodes[0].cli('-rpccookiefile=does-not-exist', '-rpcpassword=').echo)\n \n-        self.log.info(\"Make sure that -getinfo with arguments fails\")\n+        self.log.info(\"Test -getinfo with arguments fails\")\n         assert_raises_process_error(1, \"-getinfo takes no arguments\", self.nodes[0].cli('-getinfo').help)\n \n-        self.log.info(\"Test that -getinfo returns the expected network and blockchain info\")\n+        self.log.info(\"Test -getinfo returns expected network and blockchain info\")\n+        if self.is_wallet_compiled():\n+            self.nodes[0].encryptwallet(password)\n         cli_get_info = self.nodes[0].cli('-getinfo').send_cli()\n         network_info = self.nodes[0].getnetworkinfo()\n         blockchain_info = self.nodes[0].getblockchaininfo()\n-\n         assert_equal(cli_get_info['version'], network_info['version'])\n         assert_equal(cli_get_info['blocks'], blockchain_info['blocks'])\n+        assert_equal(cli_get_info['headers'], blockchain_info['headers'])\n         assert_equal(cli_get_info['timeoffset'], network_info['timeoffset'])\n         assert_equal(cli_get_info['connections'], network_info['connections'])\n         assert_equal(cli_get_info['proxy'], network_info['networks'][0]['proxy'])\n         assert_equal(cli_get_info['difficulty'], blockchain_info['difficulty'])\n         assert_equal(cli_get_info['chain'], blockchain_info['chain'])\n+\n         if self.is_wallet_compiled():\n-            self.log.info(\"Test that -getinfo returns the expected wallet info\")\n+            self.log.info(\"Test -getinfo and bitcoin-cli getwalletinfo return expected wallet info\")\n             assert_equal(cli_get_info['balance'], BALANCE)\n             wallet_info = self.nodes[0].getwalletinfo()\n             assert_equal(cli_get_info['keypoolsize'], wallet_info['keypoolsize'])\n+            assert_equal(cli_get_info['unlocked_until'], wallet_info['unlocked_until'])\n             assert_equal(cli_get_info['paytxfee'], wallet_info['paytxfee'])\n             assert_equal(cli_get_info['relayfee'], network_info['relayfee'])\n-            # unlocked_until is not tested because the wallet is not encrypted\n+            assert_equal(self.nodes[0].cli.getwalletinfo(), wallet_info)\n         else:\n-            self.log.info(\"*** Wallet not compiled; -getinfo wallet tests skipped\")\n+            self.log.info(\"*** Wallet not compiled; cli getwalletinfo and -getinfo wallet tests skipped\")\n+\n+        self.stop_node(0)\n+\n+        self.log.info(\"Test -version with node stopped\")\n+        cli_response = self.nodes[0].cli(\"-version\").send_cli()\n+        assert \"{} RPC client version\".format(self.config['environment']['PACKAGE_NAME']) in cli_response\n+\n+        self.log.info(\"Test -rpcwait option waits for RPC connection instead of failing\")\n+        # Start node without RPC connection.\n+        self.nodes[0].start()\n+        # Verify failure without -rpcwait.\n+        assert_raises_process_error(1, \"Could not connect to the server\", self.nodes[0].cli('getblockcount').echo)",
+    "path": "test/functional/interface_bitcoin_cli.py",
+    "position": 66,
+    "original_position": 66,
+    "commit_id": "c28c7b882b40cc75989dd102414de3b3dad69706",
+    "original_commit_id": "c28c7b882b40cc75989dd102414de3b3dad69706",
+    "user": {
+      "login": "MarcoFalke",
+      "id": 6399679,
+      "node_id": "MDQ6VXNlcjYzOTk2Nzk=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/6399679?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/MarcoFalke",
+      "html_url": "https://github.com/MarcoFalke",
+      "followers_url": "https://api.github.com/users/MarcoFalke/followers",
+      "following_url": "https://api.github.com/users/MarcoFalke/following{/other_user}",
+      "gists_url": "https://api.github.com/users/MarcoFalke/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/MarcoFalke/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/MarcoFalke/subscriptions",
+      "organizations_url": "https://api.github.com/users/MarcoFalke/orgs",
+      "repos_url": "https://api.github.com/users/MarcoFalke/repos",
+      "events_url": "https://api.github.com/users/MarcoFalke/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/MarcoFalke/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "body": "We generally only see races in travis or valgrind\r\n\r\nLogically, I don't see how the rpc connection is guaranteed to be down when the cli is called here.\r\n\r\n",
+    "created_at": "2020-04-15T15:38:33Z",
+    "updated_at": "2020-04-15T15:38:33Z",
+    "html_url": "https://github.com/bitcoin/bitcoin/pull/18653#discussion_r408940547",
+    "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/18653",
+    "author_association": "MEMBER",
+    "_links": {
+      "self": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/408940547"
+      },
+      "html": {
+        "href": "https://github.com/bitcoin/bitcoin/pull/18653#discussion_r408940547"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/18653"
+      }
+    },
+    "reactions": {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/408940547/reactions",
+      "total_count": 0,
+      "+1": 0,
+      "-1": 0,
+      "laugh": 0,
+      "hooray": 0,
+      "confused": 0,
+      "heart": 0,
+      "rocket": 0,
+      "eyes": 0
+    },
+    "start_line": null,
+    "original_start_line": null,
+    "start_side": null,
+    "line": 89,
+    "original_line": 89,
+    "side": "RIGHT",
+    "in_reply_to_id": 408919423
+  },
+  {
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/408947867",
+    "pull_request_review_id": 393906346,
+    "id": 408947867,
+    "node_id": "MDI0OlB1bGxSZXF1ZXN0UmV2aWV3Q29tbWVudDQwODk0Nzg2Nw==",
+    "diff_hunk": "@@ -25,15 +25,6 @@ def run_test(self):\n         \"\"\"Main test logic\"\"\"\n         self.nodes[0].generate(BLOCKS)\n \n-        cli_response = self.nodes[0].cli(\"-version\").send_cli()\n-        assert \"{} RPC client version\".format(self.config['environment']['PACKAGE_NAME']) in cli_response\n-\n-        self.log.info(\"Compare responses from getwalletinfo RPC and `bitcoin-cli getwalletinfo`\")\n-        if self.is_wallet_compiled():\n-            cli_response = self.nodes[0].cli.getwalletinfo()\n-            rpc_response = self.nodes[0].getwalletinfo()\n-            assert_equal(cli_response, rpc_response)\n-",
+    "path": "test/functional/interface_bitcoin_cli.py",
+    "position": 12,
+    "original_position": 12,
+    "commit_id": "c28c7b882b40cc75989dd102414de3b3dad69706",
+    "original_commit_id": "c28c7b882b40cc75989dd102414de3b3dad69706",
+    "user": {
+      "login": "kristapsk",
+      "id": 4500994,
+      "node_id": "MDQ6VXNlcjQ1MDA5OTQ=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4500994?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/kristapsk",
+      "html_url": "https://github.com/kristapsk",
+      "followers_url": "https://api.github.com/users/kristapsk/followers",
+      "following_url": "https://api.github.com/users/kristapsk/following{/other_user}",
+      "gists_url": "https://api.github.com/users/kristapsk/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/kristapsk/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/kristapsk/subscriptions",
+      "organizations_url": "https://api.github.com/users/kristapsk/orgs",
+      "repos_url": "https://api.github.com/users/kristapsk/repos",
+      "events_url": "https://api.github.com/users/kristapsk/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/kristapsk/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "body": "Why this test was removed?",
+    "created_at": "2020-04-15T15:48:53Z",
+    "updated_at": "2020-04-15T15:58:38Z",
+    "html_url": "https://github.com/bitcoin/bitcoin/pull/18653#discussion_r408947867",
+    "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/18653",
+    "author_association": "CONTRIBUTOR",
+    "_links": {
+      "self": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/408947867"
+      },
+      "html": {
+        "href": "https://github.com/bitcoin/bitcoin/pull/18653#discussion_r408947867"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/18653"
+      }
+    },
+    "reactions": {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/408947867/reactions",
+      "total_count": 0,
+      "+1": 0,
+      "-1": 0,
+      "laugh": 0,
+      "hooray": 0,
+      "confused": 0,
+      "heart": 0,
+      "rocket": 0,
+      "eyes": 0
+    },
+    "start_line": null,
+    "original_start_line": null,
+    "start_side": null,
+    "line": 36,
+    "original_line": 36,
+    "side": "LEFT"
+  },
+  {
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/408953614",
+    "pull_request_review_id": 393913211,
+    "id": 408953614,
+    "node_id": "MDI0OlB1bGxSZXF1ZXN0UmV2aWV3Q29tbWVudDQwODk1MzYxNA==",
+    "diff_hunk": "@@ -25,15 +25,6 @@ def run_test(self):\n         \"\"\"Main test logic\"\"\"\n         self.nodes[0].generate(BLOCKS)\n \n-        cli_response = self.nodes[0].cli(\"-version\").send_cli()\n-        assert \"{} RPC client version\".format(self.config['environment']['PACKAGE_NAME']) in cli_response\n-\n-        self.log.info(\"Compare responses from getwalletinfo RPC and `bitcoin-cli getwalletinfo`\")\n-        if self.is_wallet_compiled():\n-            cli_response = self.nodes[0].cli.getwalletinfo()\n-            rpc_response = self.nodes[0].getwalletinfo()\n-            assert_equal(cli_response, rpc_response)\n-",
+    "path": "test/functional/interface_bitcoin_cli.py",
+    "position": 12,
+    "original_position": 12,
+    "commit_id": "c28c7b882b40cc75989dd102414de3b3dad69706",
+    "original_commit_id": "c28c7b882b40cc75989dd102414de3b3dad69706",
+    "user": {
+      "login": "jonatack",
+      "id": 2415484,
+      "node_id": "MDQ6VXNlcjI0MTU0ODQ=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/2415484?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jonatack",
+      "html_url": "https://github.com/jonatack",
+      "followers_url": "https://api.github.com/users/jonatack/followers",
+      "following_url": "https://api.github.com/users/jonatack/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jonatack/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jonatack/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jonatack/subscriptions",
+      "organizations_url": "https://api.github.com/users/jonatack/orgs",
+      "repos_url": "https://api.github.com/users/jonatack/repos",
+      "events_url": "https://api.github.com/users/jonatack/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jonatack/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "body": "Not removed; moved to line 75 `assert_equal(self.nodes[0].cli.getwalletinfo(), wallet_info)`",
+    "created_at": "2020-04-15T15:56:39Z",
+    "updated_at": "2020-04-15T15:56:39Z",
+    "html_url": "https://github.com/bitcoin/bitcoin/pull/18653#discussion_r408953614",
+    "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/18653",
+    "author_association": "MEMBER",
+    "_links": {
+      "self": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/408953614"
+      },
+      "html": {
+        "href": "https://github.com/bitcoin/bitcoin/pull/18653#discussion_r408953614"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/18653"
+      }
+    },
+    "reactions": {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/408953614/reactions",
+      "total_count": 0,
+      "+1": 0,
+      "-1": 0,
+      "laugh": 0,
+      "hooray": 0,
+      "confused": 0,
+      "heart": 0,
+      "rocket": 0,
+      "eyes": 0
+    },
+    "start_line": null,
+    "original_start_line": null,
+    "start_side": null,
+    "line": 36,
+    "original_line": 36,
+    "side": "LEFT",
+    "in_reply_to_id": 408947867
+  },
+  {
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/408955781",
+    "pull_request_review_id": 393915910,
+    "id": 408955781,
+    "node_id": "MDI0OlB1bGxSZXF1ZXN0UmV2aWV3Q29tbWVudDQwODk1NTc4MQ==",
+    "diff_hunk": "@@ -25,15 +25,6 @@ def run_test(self):\n         \"\"\"Main test logic\"\"\"\n         self.nodes[0].generate(BLOCKS)\n \n-        cli_response = self.nodes[0].cli(\"-version\").send_cli()\n-        assert \"{} RPC client version\".format(self.config['environment']['PACKAGE_NAME']) in cli_response\n-\n-        self.log.info(\"Compare responses from getwalletinfo RPC and `bitcoin-cli getwalletinfo`\")\n-        if self.is_wallet_compiled():\n-            cli_response = self.nodes[0].cli.getwalletinfo()\n-            rpc_response = self.nodes[0].getwalletinfo()\n-            assert_equal(cli_response, rpc_response)\n-",
+    "path": "test/functional/interface_bitcoin_cli.py",
+    "position": 12,
+    "original_position": 12,
+    "commit_id": "c28c7b882b40cc75989dd102414de3b3dad69706",
+    "original_commit_id": "c28c7b882b40cc75989dd102414de3b3dad69706",
+    "user": {
+      "login": "jonatack",
+      "id": 2415484,
+      "node_id": "MDQ6VXNlcjI0MTU0ODQ=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/2415484?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jonatack",
+      "html_url": "https://github.com/jonatack",
+      "followers_url": "https://api.github.com/users/jonatack/followers",
+      "following_url": "https://api.github.com/users/jonatack/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jonatack/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jonatack/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jonatack/subscriptions",
+      "organizations_url": "https://api.github.com/users/jonatack/orgs",
+      "repos_url": "https://api.github.com/users/jonatack/repos",
+      "events_url": "https://api.github.com/users/jonatack/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jonatack/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "body": "which avoids calling rpc getwalletinfo twice, a conditional, and a few lines of code.",
+    "created_at": "2020-04-15T15:59:41Z",
+    "updated_at": "2020-04-15T15:59:41Z",
+    "html_url": "https://github.com/bitcoin/bitcoin/pull/18653#discussion_r408955781",
+    "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/18653",
+    "author_association": "MEMBER",
+    "_links": {
+      "self": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/408955781"
+      },
+      "html": {
+        "href": "https://github.com/bitcoin/bitcoin/pull/18653#discussion_r408955781"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/18653"
+      }
+    },
+    "reactions": {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/408955781/reactions",
+      "total_count": 0,
+      "+1": 0,
+      "-1": 0,
+      "laugh": 0,
+      "hooray": 0,
+      "confused": 0,
+      "heart": 0,
+      "rocket": 0,
+      "eyes": 0
+    },
+    "start_line": null,
+    "original_start_line": null,
+    "start_side": null,
+    "line": 36,
+    "original_line": 36,
+    "side": "LEFT",
+    "in_reply_to_id": 408947867
+  },
+  {
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/408960074",
+    "pull_request_review_id": 393921362,
+    "id": 408960074,
+    "node_id": "MDI0OlB1bGxSZXF1ZXN0UmV2aWV3Q29tbWVudDQwODk2MDA3NA==",
+    "diff_hunk": "@@ -55,31 +46,50 @@ def run_test(self):\n         self.log.info(\"Test connecting with non-existing RPC cookie file\")\n         assert_raises_process_error(1, \"Could not locate RPC credentials\", self.nodes[0].cli('-rpccookiefile=does-not-exist', '-rpcpassword=').echo)\n \n-        self.log.info(\"Make sure that -getinfo with arguments fails\")\n+        self.log.info(\"Test -getinfo with arguments fails\")\n         assert_raises_process_error(1, \"-getinfo takes no arguments\", self.nodes[0].cli('-getinfo').help)\n \n-        self.log.info(\"Test that -getinfo returns the expected network and blockchain info\")\n+        self.log.info(\"Test -getinfo returns expected network and blockchain info\")\n+        if self.is_wallet_compiled():\n+            self.nodes[0].encryptwallet(password)\n         cli_get_info = self.nodes[0].cli('-getinfo').send_cli()\n         network_info = self.nodes[0].getnetworkinfo()\n         blockchain_info = self.nodes[0].getblockchaininfo()\n-\n         assert_equal(cli_get_info['version'], network_info['version'])\n         assert_equal(cli_get_info['blocks'], blockchain_info['blocks'])\n+        assert_equal(cli_get_info['headers'], blockchain_info['headers'])\n         assert_equal(cli_get_info['timeoffset'], network_info['timeoffset'])\n         assert_equal(cli_get_info['connections'], network_info['connections'])\n         assert_equal(cli_get_info['proxy'], network_info['networks'][0]['proxy'])\n         assert_equal(cli_get_info['difficulty'], blockchain_info['difficulty'])\n         assert_equal(cli_get_info['chain'], blockchain_info['chain'])\n+\n         if self.is_wallet_compiled():\n-            self.log.info(\"Test that -getinfo returns the expected wallet info\")\n+            self.log.info(\"Test -getinfo and bitcoin-cli getwalletinfo return expected wallet info\")\n             assert_equal(cli_get_info['balance'], BALANCE)\n             wallet_info = self.nodes[0].getwalletinfo()\n             assert_equal(cli_get_info['keypoolsize'], wallet_info['keypoolsize'])\n+            assert_equal(cli_get_info['unlocked_until'], wallet_info['unlocked_until'])\n             assert_equal(cli_get_info['paytxfee'], wallet_info['paytxfee'])\n             assert_equal(cli_get_info['relayfee'], network_info['relayfee'])\n-            # unlocked_until is not tested because the wallet is not encrypted\n+            assert_equal(self.nodes[0].cli.getwalletinfo(), wallet_info)\n         else:\n-            self.log.info(\"*** Wallet not compiled; -getinfo wallet tests skipped\")\n+            self.log.info(\"*** Wallet not compiled; cli getwalletinfo and -getinfo wallet tests skipped\")\n+\n+        self.stop_node(0)\n+\n+        self.log.info(\"Test -version with node stopped\")\n+        cli_response = self.nodes[0].cli(\"-version\").send_cli()\n+        assert \"{} RPC client version\".format(self.config['environment']['PACKAGE_NAME']) in cli_response\n+\n+        self.log.info(\"Test -rpcwait option waits for RPC connection instead of failing\")\n+        # Start node without RPC connection.\n+        self.nodes[0].start()\n+        # Verify failure without -rpcwait.\n+        assert_raises_process_error(1, \"Could not connect to the server\", self.nodes[0].cli('getblockcount').echo)",
+    "path": "test/functional/interface_bitcoin_cli.py",
+    "position": 66,
+    "original_position": 66,
+    "commit_id": "c28c7b882b40cc75989dd102414de3b3dad69706",
+    "original_commit_id": "c28c7b882b40cc75989dd102414de3b3dad69706",
+    "user": {
+      "login": "jonatack",
+      "id": 2415484,
+      "node_id": "MDQ6VXNlcjI0MTU0ODQ=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/2415484?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jonatack",
+      "html_url": "https://github.com/jonatack",
+      "followers_url": "https://api.github.com/users/jonatack/followers",
+      "following_url": "https://api.github.com/users/jonatack/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jonatack/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jonatack/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jonatack/subscriptions",
+      "organizations_url": "https://api.github.com/users/jonatack/orgs",
+      "repos_url": "https://api.github.com/users/jonatack/repos",
+      "events_url": "https://api.github.com/users/jonatack/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jonatack/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "body": "Makes sense: it ran 1000 times without fail for me in macOS and Debian, but yeah, travis and valgrind. I'll wait to see the travis result for the fun of it and then probably remove that line; we'll still have the assertion with -rpcwait",
+    "created_at": "2020-04-15T16:06:10Z",
+    "updated_at": "2020-04-15T16:06:10Z",
+    "html_url": "https://github.com/bitcoin/bitcoin/pull/18653#discussion_r408960074",
+    "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/18653",
+    "author_association": "MEMBER",
+    "_links": {
+      "self": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/408960074"
+      },
+      "html": {
+        "href": "https://github.com/bitcoin/bitcoin/pull/18653#discussion_r408960074"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/18653"
+      }
+    },
+    "reactions": {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/408960074/reactions",
+      "total_count": 0,
+      "+1": 0,
+      "-1": 0,
+      "laugh": 0,
+      "hooray": 0,
+      "confused": 0,
+      "heart": 0,
+      "rocket": 0,
+      "eyes": 0
+    },
+    "start_line": null,
+    "original_start_line": null,
+    "start_side": null,
+    "line": 89,
+    "original_line": 89,
+    "side": "RIGHT",
+    "in_reply_to_id": 408919423
+  },
+  {
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/408960287",
+    "pull_request_review_id": 393921672,
+    "id": 408960287,
+    "node_id": "MDI0OlB1bGxSZXF1ZXN0UmV2aWV3Q29tbWVudDQwODk2MDI4Nw==",
+    "diff_hunk": "@@ -25,15 +25,6 @@ def run_test(self):\n         \"\"\"Main test logic\"\"\"\n         self.nodes[0].generate(BLOCKS)\n \n-        cli_response = self.nodes[0].cli(\"-version\").send_cli()\n-        assert \"{} RPC client version\".format(self.config['environment']['PACKAGE_NAME']) in cli_response\n-\n-        self.log.info(\"Compare responses from getwalletinfo RPC and `bitcoin-cli getwalletinfo`\")\n-        if self.is_wallet_compiled():\n-            cli_response = self.nodes[0].cli.getwalletinfo()\n-            rpc_response = self.nodes[0].getwalletinfo()\n-            assert_equal(cli_response, rpc_response)\n-",
+    "path": "test/functional/interface_bitcoin_cli.py",
+    "position": 12,
+    "original_position": 12,
+    "commit_id": "c28c7b882b40cc75989dd102414de3b3dad69706",
+    "original_commit_id": "c28c7b882b40cc75989dd102414de3b3dad69706",
+    "user": {
+      "login": "kristapsk",
+      "id": 4500994,
+      "node_id": "MDQ6VXNlcjQ1MDA5OTQ=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4500994?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/kristapsk",
+      "html_url": "https://github.com/kristapsk",
+      "followers_url": "https://api.github.com/users/kristapsk/followers",
+      "following_url": "https://api.github.com/users/kristapsk/following{/other_user}",
+      "gists_url": "https://api.github.com/users/kristapsk/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/kristapsk/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/kristapsk/subscriptions",
+      "organizations_url": "https://api.github.com/users/kristapsk/orgs",
+      "repos_url": "https://api.github.com/users/kristapsk/repos",
+      "events_url": "https://api.github.com/users/kristapsk/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/kristapsk/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "body": "Ok, yes, I didn't read the whole block correctly, assumed it checks `-version`, which is also checked below, just that it outputs, not what it outputs. And it's `bitcoin-cli` version anyways, can differ from version returned by `-getinfo`, nothing to compare against there.",
+    "created_at": "2020-04-15T16:06:32Z",
+    "updated_at": "2020-04-15T16:06:33Z",
+    "html_url": "https://github.com/bitcoin/bitcoin/pull/18653#discussion_r408960287",
+    "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/18653",
+    "author_association": "CONTRIBUTOR",
+    "_links": {
+      "self": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/408960287"
+      },
+      "html": {
+        "href": "https://github.com/bitcoin/bitcoin/pull/18653#discussion_r408960287"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/18653"
+      }
+    },
+    "reactions": {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/408960287/reactions",
+      "total_count": 0,
+      "+1": 0,
+      "-1": 0,
+      "laugh": 0,
+      "hooray": 0,
+      "confused": 0,
+      "heart": 0,
+      "rocket": 0,
+      "eyes": 0
+    },
+    "start_line": null,
+    "original_start_line": null,
+    "start_side": null,
+    "line": 36,
+    "original_line": 36,
+    "side": "LEFT",
+    "in_reply_to_id": 408947867
+  },
+  {
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/409069968",
+    "pull_request_review_id": 394056077,
+    "id": 409069968,
+    "node_id": "MDI0OlB1bGxSZXF1ZXN0UmV2aWV3Q29tbWVudDQwOTA2OTk2OA==",
+    "diff_hunk": "@@ -55,31 +46,50 @@ def run_test(self):\n         self.log.info(\"Test connecting with non-existing RPC cookie file\")\n         assert_raises_process_error(1, \"Could not locate RPC credentials\", self.nodes[0].cli('-rpccookiefile=does-not-exist', '-rpcpassword=').echo)\n \n-        self.log.info(\"Make sure that -getinfo with arguments fails\")\n+        self.log.info(\"Test -getinfo with arguments fails\")\n         assert_raises_process_error(1, \"-getinfo takes no arguments\", self.nodes[0].cli('-getinfo').help)\n \n-        self.log.info(\"Test that -getinfo returns the expected network and blockchain info\")\n+        self.log.info(\"Test -getinfo returns expected network and blockchain info\")\n+        if self.is_wallet_compiled():\n+            self.nodes[0].encryptwallet(password)\n         cli_get_info = self.nodes[0].cli('-getinfo').send_cli()\n         network_info = self.nodes[0].getnetworkinfo()\n         blockchain_info = self.nodes[0].getblockchaininfo()\n-\n         assert_equal(cli_get_info['version'], network_info['version'])\n         assert_equal(cli_get_info['blocks'], blockchain_info['blocks'])\n+        assert_equal(cli_get_info['headers'], blockchain_info['headers'])\n         assert_equal(cli_get_info['timeoffset'], network_info['timeoffset'])\n         assert_equal(cli_get_info['connections'], network_info['connections'])\n         assert_equal(cli_get_info['proxy'], network_info['networks'][0]['proxy'])\n         assert_equal(cli_get_info['difficulty'], blockchain_info['difficulty'])\n         assert_equal(cli_get_info['chain'], blockchain_info['chain'])\n+\n         if self.is_wallet_compiled():\n-            self.log.info(\"Test that -getinfo returns the expected wallet info\")\n+            self.log.info(\"Test -getinfo and bitcoin-cli getwalletinfo return expected wallet info\")\n             assert_equal(cli_get_info['balance'], BALANCE)\n             wallet_info = self.nodes[0].getwalletinfo()\n             assert_equal(cli_get_info['keypoolsize'], wallet_info['keypoolsize'])\n+            assert_equal(cli_get_info['unlocked_until'], wallet_info['unlocked_until'])\n             assert_equal(cli_get_info['paytxfee'], wallet_info['paytxfee'])\n             assert_equal(cli_get_info['relayfee'], network_info['relayfee'])\n-            # unlocked_until is not tested because the wallet is not encrypted\n+            assert_equal(self.nodes[0].cli.getwalletinfo(), wallet_info)\n         else:\n-            self.log.info(\"*** Wallet not compiled; -getinfo wallet tests skipped\")\n+            self.log.info(\"*** Wallet not compiled; cli getwalletinfo and -getinfo wallet tests skipped\")\n+\n+        self.stop_node(0)\n+\n+        self.log.info(\"Test -version with node stopped\")\n+        cli_response = self.nodes[0].cli(\"-version\").send_cli()\n+        assert \"{} RPC client version\".format(self.config['environment']['PACKAGE_NAME']) in cli_response\n+\n+        self.log.info(\"Test -rpcwait option waits for RPC connection instead of failing\")\n+        # Start node without RPC connection.\n+        self.nodes[0].start()\n+        # Verify failure without -rpcwait.\n+        assert_raises_process_error(1, \"Could not connect to the server\", self.nodes[0].cli('getblockcount').echo)",
+    "path": "test/functional/interface_bitcoin_cli.py",
+    "position": 66,
+    "original_position": 66,
+    "commit_id": "c28c7b882b40cc75989dd102414de3b3dad69706",
+    "original_commit_id": "c28c7b882b40cc75989dd102414de3b3dad69706",
+    "user": {
+      "login": "jonatack",
+      "id": 2415484,
+      "node_id": "MDQ6VXNlcjI0MTU0ODQ=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/2415484?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jonatack",
+      "html_url": "https://github.com/jonatack",
+      "followers_url": "https://api.github.com/users/jonatack/followers",
+      "following_url": "https://api.github.com/users/jonatack/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jonatack/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jonatack/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jonatack/subscriptions",
+      "organizations_url": "https://api.github.com/users/jonatack/orgs",
+      "repos_url": "https://api.github.com/users/jonatack/repos",
+      "events_url": "https://api.github.com/users/jonatack/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jonatack/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "body": "Travis all green. Maybe leave it in and remove if we see issues later?",
+    "created_at": "2020-04-15T19:06:10Z",
+    "updated_at": "2020-04-15T19:06:11Z",
+    "html_url": "https://github.com/bitcoin/bitcoin/pull/18653#discussion_r409069968",
+    "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/18653",
+    "author_association": "MEMBER",
+    "_links": {
+      "self": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/409069968"
+      },
+      "html": {
+        "href": "https://github.com/bitcoin/bitcoin/pull/18653#discussion_r409069968"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/18653"
+      }
+    },
+    "reactions": {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/409069968/reactions",
+      "total_count": 0,
+      "+1": 0,
+      "-1": 0,
+      "laugh": 0,
+      "hooray": 0,
+      "confused": 0,
+      "heart": 0,
+      "rocket": 0,
+      "eyes": 0
+    },
+    "start_line": null,
+    "original_start_line": null,
+    "start_side": null,
+    "line": 89,
+    "original_line": 89,
+    "side": "RIGHT",
+    "in_reply_to_id": 408919423
+  },
+  {
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/409431470",
+    "pull_request_review_id": 394477757,
+    "id": 409431470,
+    "node_id": "MDI0OlB1bGxSZXF1ZXN0UmV2aWV3Q29tbWVudDQwOTQzMTQ3MA==",
+    "diff_hunk": "@@ -25,15 +25,6 @@ def run_test(self):\n         \"\"\"Main test logic\"\"\"\n         self.nodes[0].generate(BLOCKS)\n \n-        cli_response = self.nodes[0].cli(\"-version\").send_cli()\n-        assert \"{} RPC client version\".format(self.config['environment']['PACKAGE_NAME']) in cli_response\n-\n-        self.log.info(\"Compare responses from getwalletinfo RPC and `bitcoin-cli getwalletinfo`\")\n-        if self.is_wallet_compiled():\n-            cli_response = self.nodes[0].cli.getwalletinfo()\n-            rpc_response = self.nodes[0].getwalletinfo()\n-            assert_equal(cli_response, rpc_response)\n-",
+    "path": "test/functional/interface_bitcoin_cli.py",
+    "position": 12,
+    "original_position": 12,
+    "commit_id": "c28c7b882b40cc75989dd102414de3b3dad69706",
+    "original_commit_id": "c28c7b882b40cc75989dd102414de3b3dad69706",
+    "user": {
+      "login": "jonatack",
+      "id": 2415484,
+      "node_id": "MDQ6VXNlcjI0MTU0ODQ=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/2415484?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jonatack",
+      "html_url": "https://github.com/jonatack",
+      "followers_url": "https://api.github.com/users/jonatack/followers",
+      "following_url": "https://api.github.com/users/jonatack/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jonatack/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jonatack/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jonatack/subscriptions",
+      "organizations_url": "https://api.github.com/users/jonatack/orgs",
+      "repos_url": "https://api.github.com/users/jonatack/repos",
+      "events_url": "https://api.github.com/users/jonatack/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jonatack/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "body": "@kristapsk thanks for reviewing! Can you ACK?",
+    "created_at": "2020-04-16T09:56:08Z",
+    "updated_at": "2020-04-16T09:56:08Z",
+    "html_url": "https://github.com/bitcoin/bitcoin/pull/18653#discussion_r409431470",
+    "pull_request_url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/18653",
+    "author_association": "MEMBER",
+    "_links": {
+      "self": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/409431470"
+      },
+      "html": {
+        "href": "https://github.com/bitcoin/bitcoin/pull/18653#discussion_r409431470"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/bitcoin/bitcoin/pulls/18653"
+      }
+    },
+    "reactions": {
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/pulls/comments/409431470/reactions",
+      "total_count": 0,
+      "+1": 0,
+      "-1": 0,
+      "laugh": 0,
+      "hooray": 0,
+      "confused": 0,
+      "heart": 0,
+      "rocket": 0,
+      "eyes": 0
+    },
+    "start_line": null,
+    "original_start_line": null,
+    "start_side": null,
+    "line": 36,
+    "original_line": 36,
+    "side": "LEFT",
+    "in_reply_to_id": 408947867
+  }
+]

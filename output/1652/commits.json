@@ -1,0 +1,74 @@
+[
+  {
+    "sha": "561ae122b7bc9d0b3b7a565767371a24a6514768",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1NjFhZTEyMmI3YmM5ZDBiM2I3YTU2NTc2NzM3MWEyNGE2NTE0NzY4",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-08-02T17:59:35Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-08-02T17:59:35Z"
+      },
+      "message": "Report 'neverseen' TXs: the number of TXs in block, but not memory pool\n\nThis statistic is only reported when a new block appends onto the\nstrongest chain.",
+      "tree": {
+        "sha": "959ceb4b7e9df730820d0df3ba794127e3705b2c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/959ceb4b7e9df730820d0df3ba794127e3705b2c"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/561ae122b7bc9d0b3b7a565767371a24a6514768",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/561ae122b7bc9d0b3b7a565767371a24a6514768",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/561ae122b7bc9d0b3b7a565767371a24a6514768",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/561ae122b7bc9d0b3b7a565767371a24a6514768/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "381e87cbd2720180c873f8028de3b827f4d2e1bd",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/381e87cbd2720180c873f8028de3b827f4d2e1bd",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/381e87cbd2720180c873f8028de3b827f4d2e1bd"
+      }
+    ],
+    "stats": {
+      "total": 23,
+      "additions": 15,
+      "deletions": 8
+    },
+    "files": [
+      {
+        "sha": "b68180a3f99b7030b6e751df9b6274b48e696c71",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 14,
+        "deletions": 7,
+        "changes": 21,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/561ae122b7bc9d0b3b7a565767371a24a6514768/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/561ae122b7bc9d0b3b7a565767371a24a6514768/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=561ae122b7bc9d0b3b7a565767371a24a6514768",
+        "patch": "@@ -648,9 +648,10 @@ bool CTxMemPool::remove(CTransaction &tx)\n                 mapNextTx.erase(txin.prevout);\n             mapTx.erase(hash);\n             nTransactionsUpdated++;\n+            return true;                     // success, TX was removed\n         }\n     }\n-    return true;\n+    return false;                            // failure, TX not found\n }\n \n void\n@@ -1552,7 +1553,8 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)\n \n \n // Called from inside SetBestChain: attaches a block to the new best chain being built\n-bool CBlock::SetBestChainInner(CTxDB& txdb, CBlockIndex *pindexNew)\n+bool CBlock::SetBestChainInner(CTxDB& txdb, CBlockIndex *pindexNew,\n+                               unsigned int& neverseen)\n {\n     uint256 hash = GetHash();\n \n@@ -1571,14 +1573,17 @@ bool CBlock::SetBestChainInner(CTxDB& txdb, CBlockIndex *pindexNew)\n \n     // Delete redundant memory transactions\n     BOOST_FOREACH(CTransaction& tx, vtx)\n-        mempool.remove(tx);\n+        if (!mempool.remove(tx))\n+            neverseen++;\n \n     return true;\n }\n \n bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)\n {\n     uint256 hash = GetHash();\n+    unsigned int neverseen = 0;\n+    string strNeverSeen;\n \n     if (!txdb.TxnBegin())\n         return error(\"SetBestChain() : TxnBegin failed\");\n@@ -1592,8 +1597,9 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)\n     }\n     else if (hashPrevBlock == hashBestChain)\n     {\n-        if (!SetBestChainInner(txdb, pindexNew))\n+        if (!SetBestChainInner(txdb, pindexNew, neverseen))\n             return error(\"SetBestChain() : SetBestChainInner failed\");\n+        strNeverSeen = strprintf(\"  neverseen=%u\", neverseen);\n     }\n     else\n     {\n@@ -1636,7 +1642,7 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)\n                 break;\n             }\n             // errors now are not fatal, we still did a reorganisation to a new chain in a valid way\n-            if (!block.SetBestChainInner(txdb, pindex))\n+            if (!block.SetBestChainInner(txdb, pindex, neverseen))\n                 break;\n         }\n     }\n@@ -1657,9 +1663,10 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)\n     bnBestChainWork = pindexNew->bnChainWork;\n     nTimeBestReceived = GetTime();\n     nTransactionsUpdated++;\n-    printf(\"SetBestChain: new best=%s  height=%d  work=%s  date=%s\\n\",\n+    printf(\"SetBestChain: new best=%s  height=%d  work=%s  date=%s%s\\n\",\n       hashBestChain.ToString().substr(0,20).c_str(), nBestHeight, bnBestChainWork.ToString().c_str(),\n-      DateTimeStrFormat(\"%x %H:%M:%S\", pindexBest->GetBlockTime()).c_str());\n+      DateTimeStrFormat(\"%x %H:%M:%S\", pindexBest->GetBlockTime()).c_str(),\n+      strNeverSeen.c_str());\n \n     // Check the version of the last 100 blocks to see if we need to upgrade:\n     if (!fIsInitialDownload)"
+      },
+      {
+        "sha": "203c5b0075aaaf15482257efab7af8f2347f89a2",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/561ae122b7bc9d0b3b7a565767371a24a6514768/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/561ae122b7bc9d0b3b7a565767371a24a6514768/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=561ae122b7bc9d0b3b7a565767371a24a6514768",
+        "patch": "@@ -1025,7 +1025,7 @@ class CBlock\n     bool AcceptBlock();\n \n private:\n-    bool SetBestChainInner(CTxDB& txdb, CBlockIndex *pindexNew);\n+    bool SetBestChainInner(CTxDB& txdb, CBlockIndex *pindexNew, unsigned int& neverseen);\n };\n \n "
+      }
+    ]
+  }
+]

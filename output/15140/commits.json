@@ -1,0 +1,122 @@
+[
+  {
+    "sha": "d7a9f8b6ac24df4704f8725ceee35c99fa1ceba6",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkN2E5ZjhiNmFjMjRkZjQ3MDRmODcyNWNlZWUzNWM5OWZhMWNlYmE2",
+    "commit": {
+      "author": {
+        "name": "kodslav",
+        "email": "kodslav@home.local",
+        "date": "2019-01-10T15:10:05Z"
+      },
+      "committer": {
+        "name": "kodslav",
+        "email": "kodslav@home.local",
+        "date": "2019-01-10T15:10:05Z"
+      },
+      "message": "test: fix script_p2sh_tests OP_PUSHBACK2/4 missing\n\nFixes commit 6b25f29a91 where opcodes where lost in translation.",
+      "tree": {
+        "sha": "722811c01d9dc4f2c0dbcd0ab78df46cffe2d06a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/722811c01d9dc4f2c0dbcd0ab78df46cffe2d06a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/d7a9f8b6ac24df4704f8725ceee35c99fa1ceba6",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d7a9f8b6ac24df4704f8725ceee35c99fa1ceba6",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/d7a9f8b6ac24df4704f8725ceee35c99fa1ceba6",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d7a9f8b6ac24df4704f8725ceee35c99fa1ceba6/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "cebe910718ae4f099f292736192a4e725ad02b94",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/cebe910718ae4f099f292736192a4e725ad02b94",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/cebe910718ae4f099f292736192a4e725ad02b94"
+      }
+    ],
+    "stats": {
+      "total": 35,
+      "additions": 31,
+      "deletions": 4
+    },
+    "files": [
+      {
+        "sha": "d04b011219cd563fdf676bbaa5c3ac34332280e7",
+        "filename": "src/test/script_p2sh_tests.cpp",
+        "status": "modified",
+        "additions": 31,
+        "deletions": 4,
+        "changes": 35,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d7a9f8b6ac24df4704f8725ceee35c99fa1ceba6/src/test/script_p2sh_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d7a9f8b6ac24df4704f8725ceee35c99fa1ceba6/src/test/script_p2sh_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/script_p2sh_tests.cpp?ref=d7a9f8b6ac24df4704f8725ceee35c99fa1ceba6",
+        "patch": "@@ -212,24 +212,51 @@ BOOST_AUTO_TEST_CASE(is)\n     p2sh << OP_HASH160 << ToByteVector(dummy) << OP_EQUAL;\n     BOOST_CHECK(p2sh.IsPayToScriptHash());\n \n-    // Not considered pay-to-script-hash if using one of the OP_PUSHDATA opcodes:\n+    // Same test as above, but use string interface\n     std::vector<unsigned char> direct = {OP_HASH160, 20};\n-    direct.insert(direct.end(), 20, 0);\n+    direct.insert(direct.end(), 20, 0); // this is 160bit dummy\n     direct.push_back(OP_EQUAL);\n     BOOST_CHECK(CScript(direct.begin(), direct.end()).IsPayToScriptHash());\n+\n+    //---------><----- cut here\n+    // orig version fixed by re-adding OP_PUSHDATA2/4\n+    // Not considered pay-to-script-hash if using one of the OP_PUSHDATA opcodes:\n     std::vector<unsigned char> pushdata1 = {OP_HASH160, OP_PUSHDATA1, 20};\n     pushdata1.insert(pushdata1.end(), 20, 0);\n     pushdata1.push_back(OP_EQUAL);\n     BOOST_CHECK(!CScript(pushdata1.begin(), pushdata1.end()).IsPayToScriptHash());\n-    std::vector<unsigned char> pushdata2 = {OP_HASH160, 20, 0};\n+    std::vector<unsigned char> pushdata2 = {OP_HASH160, OP_PUSHDATA2, 20, 0}; // add missing OP_PUSHDATA2\n     pushdata2.insert(pushdata2.end(), 20, 0);\n     pushdata2.push_back(OP_EQUAL);\n     BOOST_CHECK(!CScript(pushdata2.begin(), pushdata2.end()).IsPayToScriptHash());\n-    std::vector<unsigned char> pushdata4 = {OP_HASH160, 20, 0, 0, 0};\n+    std::vector<unsigned char> pushdata4 = {OP_HASH160, OP_PUSHDATA4, 20, 0, 0, 0}; // add missing OP_PUSHDATA4\n     pushdata4.insert(pushdata4.end(), 20, 0);\n     pushdata4.push_back(OP_EQUAL);\n     BOOST_CHECK(!CScript(pushdata4.begin(), pushdata4.end()).IsPayToScriptHash());\n \n+    //---------><----- cut here\n+\n+    // orig version loopified, and using both interfaces (string and stream)\n+    std::vector<std::vector<unsigned char>>\n+     scripts = {{OP_HASH160, OP_PUSHDATA1, 20}, // 8bit\n+                {OP_HASH160, OP_PUSHDATA2, 20,0}, // 16bit\n+                {OP_HASH160, OP_PUSHDATA4, 20,0,0,0}}; // 32bit\n+    std::vector<unsigned char> dum;\n+    dum.insert(dum.end(), 20, 0); // make an 160bit dummy\n+    for(auto &script: scripts)\n+    {\n+        // Check using the CScript stream interface\n+        CScript not_p2sh;\n+        not_p2sh.clear(); not_p2sh << script << dum << OP_EQUAL;\n+        BOOST_CHECK(!not_p2sh.IsPayToScriptHash());\n+        // Check using a simple string\n+        script.insert(script.end(), 20, 0);\n+        script.push_back(OP_EQUAL);\n+        BOOST_CHECK(!CScript(script.begin(), script.end()).IsPayToScriptHash());\n+    }\n+\n+    //---------><----- cut here\n+\n     CScript not_p2sh;\n     BOOST_CHECK(!not_p2sh.IsPayToScriptHash());\n "
+      }
+    ]
+  },
+  {
+    "sha": "017877d8a7c0964eac560485331f03ca0c422f15",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowMTc4NzdkOGE3YzA5NjRlYWM1NjA0ODUzMzFmMDNjYTBjNDIyZjE1",
+    "commit": {
+      "author": {
+        "name": "kodslav",
+        "email": "kodslav@home.local",
+        "date": "2019-01-11T10:48:22Z"
+      },
+      "committer": {
+        "name": "kodslav",
+        "email": "kodslav@home.local",
+        "date": "2019-01-11T10:48:22Z"
+      },
+      "message": "clang_format",
+      "tree": {
+        "sha": "06a00382e7a39a25cb803eeb90a8942d2058e6b4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/06a00382e7a39a25cb803eeb90a8942d2058e6b4"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/017877d8a7c0964eac560485331f03ca0c422f15",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/017877d8a7c0964eac560485331f03ca0c422f15",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/017877d8a7c0964eac560485331f03ca0c422f15",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/017877d8a7c0964eac560485331f03ca0c422f15/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "d7a9f8b6ac24df4704f8725ceee35c99fa1ceba6",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d7a9f8b6ac24df4704f8725ceee35c99fa1ceba6",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/d7a9f8b6ac24df4704f8725ceee35c99fa1ceba6"
+      }
+    ],
+    "stats": {
+      "total": 8,
+      "additions": 4,
+      "deletions": 4
+    },
+    "files": [
+      {
+        "sha": "7430ec5298a560896774de952e589a23c5310b7b",
+        "filename": "src/test/script_p2sh_tests.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 4,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/017877d8a7c0964eac560485331f03ca0c422f15/src/test/script_p2sh_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/017877d8a7c0964eac560485331f03ca0c422f15/src/test/script_p2sh_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/script_p2sh_tests.cpp?ref=017877d8a7c0964eac560485331f03ca0c422f15",
+        "patch": "@@ -237,10 +237,10 @@ BOOST_AUTO_TEST_CASE(is)\n     //---------><----- cut here\n \n     // orig version loopified, and using both interfaces (string and stream)\n-    std::vector<std::vector<unsigned char>>\n-     scripts = {{OP_HASH160, OP_PUSHDATA1, 20}, // 8bit\n-                {OP_HASH160, OP_PUSHDATA2, 20,0}, // 16bit\n-                {OP_HASH160, OP_PUSHDATA4, 20,0,0,0}}; // 32bit\n+    std::vector<std::vector<unsigned char>> scripts = {\n+        {OP_HASH160, OP_PUSHDATA1, 20},        // 8bit\n+        {OP_HASH160, OP_PUSHDATA2, 20,0},      // 16bit\n+        {OP_HASH160, OP_PUSHDATA4, 20,0,0,0}}; // 32bit\n     std::vector<unsigned char> dum;\n     dum.insert(dum.end(), 20, 0); // make an 160bit dummy\n     for(auto &script: scripts)"
+      }
+    ]
+  }
+]

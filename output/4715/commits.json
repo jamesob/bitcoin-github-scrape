@@ -1,0 +1,110 @@
+[
+  {
+    "sha": "3cceba7abb22133fcaea8d4f7aaed345f0e48009",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozY2NlYmE3YWJiMjIxMzNmY2FlYThkNGY3YWFlZDM0NWYwZTQ4MDA5",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-08-18T14:36:21Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-08-18T14:36:21Z"
+      },
+      "message": "Univalue: Do not build JSON escape list at runtime\n\nNo need to waste startup time building something that can be done\nat compile time.\n\nThis also resolves a clang++ warning originally reported in #4714,\nunivalue/univalue_write.cpp:33:12: warning: array subscript is of type 'char\nescapes['\"'] = \"\\\\\"\";\n^~~~\n\netc.",
+      "tree": {
+        "sha": "221d4da65869d4b5df0a9db20af9a9c2566d9621",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/221d4da65869d4b5df0a9db20af9a9c2566d9621"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/3cceba7abb22133fcaea8d4f7aaed345f0e48009",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3cceba7abb22133fcaea8d4f7aaed345f0e48009",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/3cceba7abb22133fcaea8d4f7aaed345f0e48009",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3cceba7abb22133fcaea8d4f7aaed345f0e48009/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "9d26dc3b2973252cc4dbe0f46edb56bfcea1cb78",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9d26dc3b2973252cc4dbe0f46edb56bfcea1cb78",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/9d26dc3b2973252cc4dbe0f46edb56bfcea1cb78"
+      }
+    ],
+    "stats": {
+      "total": 364,
+      "additions": 344,
+      "deletions": 20
+    },
+    "files": [
+      {
+        "sha": "25c0dff660b2f47d654f694c319ec52c3a746434",
+        "filename": ".gitignore",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3cceba7abb22133fcaea8d4f7aaed345f0e48009/.gitignore",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3cceba7abb22133fcaea8d4f7aaed345f0e48009/.gitignore",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/.gitignore?ref=3cceba7abb22133fcaea8d4f7aaed345f0e48009",
+        "patch": "@@ -28,6 +28,8 @@ src/m4/ltsugar.m4\n src/m4/ltversion.m4\n src/m4/lt~obsolete.m4\n \n+src/univalue/gen\n+\n src/qt/*.moc\n src/qt/moc_*.cpp\n src/qt/forms/ui_*.h"
+      },
+      {
+        "sha": "1442c3d668fc03aa761c710121967577fe49d4eb",
+        "filename": "src/Makefile.am",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3cceba7abb22133fcaea8d4f7aaed345f0e48009/src/Makefile.am",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3cceba7abb22133fcaea8d4f7aaed345f0e48009/src/Makefile.am",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/Makefile.am?ref=3cceba7abb22133fcaea8d4f7aaed345f0e48009",
+        "patch": "@@ -187,6 +187,7 @@ univalue_libbitcoin_univalue_a_SOURCES = \\\n   univalue/univalue.cpp \\\n   univalue/univalue_read.cpp \\\n   univalue/univalue_write.cpp \\\n+  univalue/univalue_escapes.h \\\n   univalue/univalue.h\n \n # common: shared between bitcoind, and bitcoin-qt and non-server tools"
+      },
+      {
+        "sha": "881948f46ecc83e129e2bf6fafd80ffdb3f4c6af",
+        "filename": "src/univalue/gen.cpp",
+        "status": "added",
+        "additions": 78,
+        "deletions": 0,
+        "changes": 78,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3cceba7abb22133fcaea8d4f7aaed345f0e48009/src/univalue/gen.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3cceba7abb22133fcaea8d4f7aaed345f0e48009/src/univalue/gen.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/univalue/gen.cpp?ref=3cceba7abb22133fcaea8d4f7aaed345f0e48009",
+        "patch": "@@ -0,0 +1,78 @@\n+// Copyright 2014 BitPay Inc.\n+// Distributed under the MIT/X11 software license, see the accompanying\n+// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+//\n+// To re-create univalue_escapes.h:\n+// $ g++ -o gen gen.cpp\n+// $ ./gen > univalue_escapes.h\n+//\n+\n+#include <ctype.h>\n+#include <stdio.h>\n+#include <string.h>\n+#include \"univalue.h\"\n+\n+using namespace std;\n+\n+static bool initEscapes;\n+static const char *escapes[256];\n+\n+static void initJsonEscape()\n+{\n+    escapes[(int)'\"'] = \"\\\\\\\"\";\n+    escapes[(int)'\\\\'] = \"\\\\\\\\\";\n+    escapes[(int)'/'] = \"\\\\/\";\n+    escapes[(int)'\\b'] = \"\\\\b\";\n+    escapes[(int)'\\f'] = \"\\\\f\";\n+    escapes[(int)'\\n'] = \"\\\\n\";\n+    escapes[(int)'\\r'] = \"\\\\r\";\n+    escapes[(int)'\\t'] = \"\\\\t\";\n+\n+    initEscapes = true;\n+}\n+\n+static void outputEscape()\n+{\n+\tprintf(\t\"// Automatically generated file. Do not modify.\\n\"\n+\t\t\"#ifndef __UNIVALUE_ESCAPES_H__\\n\"\n+\t\t\"#define __UNIVALUE_ESCAPES_H__\\n\"\n+\t\t\"static const char *escapes[256] = {\\n\");\n+\n+\tfor (unsigned int i = 0; i < 256; i++) {\n+\t\tif (!escapes[i]) {\n+\t\t\tprintf(\"\\tNULL,\\n\");\n+\t\t} else {\n+\t\t\tprintf(\"\\t\\\"\");\n+\n+\t\t\tunsigned int si;\n+\t\t\tfor (si = 0; si < strlen(escapes[i]); si++) {\n+\t\t\t\tchar ch = escapes[i][si];\n+\t\t\t\tswitch (ch) {\n+\t\t\t\tcase '\"':\n+\t\t\t\t\tprintf(\"\\\\\\\"\");\n+\t\t\t\t\tbreak;\n+\t\t\t\tcase '\\\\':\n+\t\t\t\t\tprintf(\"\\\\\\\\\");\n+\t\t\t\t\tbreak;\n+\t\t\t\tdefault:\n+\t\t\t\t\tprintf(\"%c\", escapes[i][si]);\n+\t\t\t\t\tbreak;\n+\t\t\t\t}\n+\t\t\t}\n+\n+\t\t\tprintf(\"\\\",\\n\");\n+\t\t}\n+\t}\n+\n+\tprintf(\t\"};\\n\"\n+\t\t\"#endif // __UNIVALUE_ESCAPES_H__\\n\");\n+}\n+\n+int main (int argc, char *argv[])\n+{\n+\tinitJsonEscape();\n+\toutputEscape();\n+\treturn 0;\n+}\n+"
+      },
+      {
+        "sha": "1d3a70a968ed7b5aaf1f446a1a4f91d8ac772db2",
+        "filename": "src/univalue/univalue_escapes.h",
+        "status": "added",
+        "additions": 262,
+        "deletions": 0,
+        "changes": 262,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3cceba7abb22133fcaea8d4f7aaed345f0e48009/src/univalue/univalue_escapes.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3cceba7abb22133fcaea8d4f7aaed345f0e48009/src/univalue/univalue_escapes.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/univalue/univalue_escapes.h?ref=3cceba7abb22133fcaea8d4f7aaed345f0e48009",
+        "patch": "@@ -0,0 +1,262 @@\n+// Automatically generated file. Do not modify.\n+#ifndef __UNIVALUE_ESCAPES_H__\n+#define __UNIVALUE_ESCAPES_H__\n+static const char *escapes[256] = {\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\t\"\\\\b\",\n+\t\"\\\\t\",\n+\t\"\\\\n\",\n+\tNULL,\n+\t\"\\\\f\",\n+\t\"\\\\r\",\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\t\"\\\\\\\"\",\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\t\"\\\\/\",\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\t\"\\\\\\\\\",\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+\tNULL,\n+};\n+#endif // __UNIVALUE_ESCAPES_H__"
+      },
+      {
+        "sha": "70762a1ef1d6929a61ee92f6f3ad04555d21bf50",
+        "filename": "src/univalue/univalue_write.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 20,
+        "changes": 21,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3cceba7abb22133fcaea8d4f7aaed345f0e48009/src/univalue/univalue_write.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3cceba7abb22133fcaea8d4f7aaed345f0e48009/src/univalue/univalue_write.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/univalue/univalue_write.cpp?ref=3cceba7abb22133fcaea8d4f7aaed345f0e48009",
+        "patch": "@@ -5,33 +5,14 @@\n #include <ctype.h>\n #include <stdio.h>\n #include \"univalue.h\"\n+#include \"univalue_escapes.h\"\n \n // TODO: Using UTF8\n \n using namespace std;\n \n-static bool initEscapes;\n-static const char *escapes[256];\n-\n-static void initJsonEscape()\n-{\n-    escapes['\"'] = \"\\\\\\\"\";\n-    escapes['\\\\'] = \"\\\\\\\\\";\n-    escapes['/'] = \"\\\\/\";\n-    escapes['\\b'] = \"\\\\b\";\n-    escapes['\\f'] = \"\\\\f\";\n-    escapes['\\n'] = \"\\\\n\";\n-    escapes['\\r'] = \"\\\\r\";\n-    escapes['\\t'] = \"\\\\t\";\n-\n-    initEscapes = true;\n-}\n-\n static string json_escape(const string& inS)\n {\n-    if (!initEscapes)\n-        initJsonEscape();\n-\n     string outS;\n     outS.reserve(inS.size() * 2);\n "
+      }
+    ]
+  }
+]

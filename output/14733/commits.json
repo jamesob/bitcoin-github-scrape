@@ -1,0 +1,215 @@
+[
+  {
+    "sha": "8042bbfbf001d60feead6f04c99e0fca93dbba3c",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4MDQyYmJmYmYwMDFkNjBmZWVhZDZmMDRjOTllMGZjYTkzZGJiYTNj",
+    "commit": {
+      "author": {
+        "name": "Zain Iqbal Allarakhia",
+        "email": "zain@za1.co",
+        "date": "2018-11-15T23:30:26Z"
+      },
+      "committer": {
+        "name": "Zain Iqbal Allarakhia",
+        "email": "zain.allarakhia@gmail.com",
+        "date": "2018-11-29T00:41:15Z"
+      },
+      "message": "p2p: allow p2ptimeout to be configurable, speed up slow test",
+      "tree": {
+        "sha": "7d5b5881488e4218b200746f6a8dee58422aad71",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/7d5b5881488e4218b200746f6a8dee58422aad71"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/8042bbfbf001d60feead6f04c99e0fca93dbba3c",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8042bbfbf001d60feead6f04c99e0fca93dbba3c",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/8042bbfbf001d60feead6f04c99e0fca93dbba3c",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8042bbfbf001d60feead6f04c99e0fca93dbba3c/comments",
+    "author": null,
+    "committer": {
+      "login": "zallarak",
+      "id": 806155,
+      "node_id": "MDQ6VXNlcjgwNjE1NQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/806155?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/zallarak",
+      "html_url": "https://github.com/zallarak",
+      "followers_url": "https://api.github.com/users/zallarak/followers",
+      "following_url": "https://api.github.com/users/zallarak/following{/other_user}",
+      "gists_url": "https://api.github.com/users/zallarak/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/zallarak/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/zallarak/subscriptions",
+      "organizations_url": "https://api.github.com/users/zallarak/orgs",
+      "repos_url": "https://api.github.com/users/zallarak/repos",
+      "events_url": "https://api.github.com/users/zallarak/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/zallarak/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "384967f311b4c6b1d6c797f7821d25feb26bafbf",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/384967f311b4c6b1d6c797f7821d25feb26bafbf",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/384967f311b4c6b1d6c797f7821d25feb26bafbf"
+      }
+    ],
+    "stats": {
+      "total": 48,
+      "additions": 36,
+      "deletions": 12
+    },
+    "files": [
+      {
+        "sha": "2df47fb78cc7977e8a48a6db594b7c0317da1107",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 10,
+        "deletions": 1,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8042bbfbf001d60feead6f04c99e0fca93dbba3c/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8042bbfbf001d60feead6f04c99e0fca93dbba3c/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=8042bbfbf001d60feead6f04c99e0fca93dbba3c",
+        "patch": "@@ -403,6 +403,7 @@ void SetupServerArgs()\n     gArgs.AddArg(\"-proxyrandomize\", strprintf(\"Randomize credentials for every proxy connection. This enables Tor stream isolation (default: %u)\", DEFAULT_PROXYRANDOMIZE), false, OptionsCategory::CONNECTION);\n     gArgs.AddArg(\"-seednode=<ip>\", \"Connect to a node to retrieve peer addresses, and disconnect. This option can be specified multiple times to connect to multiple nodes.\", false, OptionsCategory::CONNECTION);\n     gArgs.AddArg(\"-timeout=<n>\", strprintf(\"Specify connection timeout in milliseconds (minimum: 1, default: %d)\", DEFAULT_CONNECT_TIMEOUT), false, OptionsCategory::CONNECTION);\n+    gArgs.AddArg(\"-peertimeout=<n>\", strprintf(\"Specify p2p connection timeout in seconds. This option determines the amount of time a peer may be inactive before the connection to it is dropped. (minimum: 1, default: %d)\", DEFAULT_PEER_CONNECT_TIMEOUT), false, OptionsCategory::CONNECTION);\n     gArgs.AddArg(\"-torcontrol=<ip>:<port>\", strprintf(\"Tor control port to use if onion listening enabled (default: %s)\", DEFAULT_TOR_CONTROL), false, OptionsCategory::CONNECTION);\n     gArgs.AddArg(\"-torpassword=<pass>\", \"Tor control port password (default: empty)\", false, OptionsCategory::CONNECTION);\n #ifdef USE_UPNP\n@@ -848,6 +849,7 @@ int nMaxConnections;\n int nUserMaxConnections;\n int nFD;\n ServiceFlags nLocalServices = ServiceFlags(NODE_NETWORK | NODE_NETWORK_LIMITED);\n+int64_t peer_connect_timeout;\n \n } // namespace\n \n@@ -1046,8 +1048,14 @@ bool AppInitParameterInteraction()\n     }\n \n     nConnectTimeout = gArgs.GetArg(\"-timeout\", DEFAULT_CONNECT_TIMEOUT);\n-    if (nConnectTimeout <= 0)\n+    if (nConnectTimeout <= 0) {\n         nConnectTimeout = DEFAULT_CONNECT_TIMEOUT;\n+    }\n+\n+    peer_connect_timeout = gArgs.GetArg(\"-peertimeout\", DEFAULT_PEER_CONNECT_TIMEOUT);\n+    if (peer_connect_timeout <= 0) {\n+        return InitError(_(\"peertimeout cannot be configured with a negative value.\"));\n+    }\n \n     if (gArgs.IsArgSet(\"-minrelaytxfee\")) {\n         CAmount n = 0;\n@@ -1685,6 +1693,7 @@ bool AppInitMain(InitInterfaces& interfaces)\n \n     connOptions.nMaxOutboundTimeframe = nMaxOutboundTimeframe;\n     connOptions.nMaxOutboundLimit = nMaxOutboundLimit;\n+    connOptions.m_peer_connect_timeout = peer_connect_timeout;\n \n     for (const std::string& strBind : gArgs.GetArgs(\"-bind\")) {\n         CService addrBind;"
+      },
+      {
+        "sha": "1787e1eb2c1ea6f3e34e43eddf0dee0172ee6117",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8042bbfbf001d60feead6f04c99e0fca93dbba3c/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8042bbfbf001d60feead6f04c99e0fca93dbba3c/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=8042bbfbf001d60feead6f04c99e0fca93dbba3c",
+        "patch": "@@ -1232,11 +1232,11 @@ void CConnman::NotifyNumConnectionsChanged()\n void CConnman::InactivityCheck(CNode *pnode)\n {\n     int64_t nTime = GetSystemTimeInSeconds();\n-    if (nTime - pnode->nTimeConnected > 60)\n+    if (nTime - pnode->nTimeConnected > m_peer_connect_timeout)\n     {\n         if (pnode->nLastRecv == 0 || pnode->nLastSend == 0)\n         {\n-            LogPrint(BCLog::NET, \"socket no message in first 60 seconds, %d %d from %d\\n\", pnode->nLastRecv != 0, pnode->nLastSend != 0, pnode->GetId());\n+            LogPrint(BCLog::NET, \"socket no message in first %i seconds, %d %d from %d\\n\", m_peer_connect_timeout, pnode->nLastRecv != 0, pnode->nLastSend != 0, pnode->GetId());\n             pnode->fDisconnect = true;\n         }\n         else if (nTime - pnode->nLastSend > TIMEOUT_INTERVAL)"
+      },
+      {
+        "sha": "07f4b5fc138a193723e478a8ce4754121da75fd3",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 0,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8042bbfbf001d60feead6f04c99e0fca93dbba3c/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8042bbfbf001d60feead6f04c99e0fca93dbba3c/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=8042bbfbf001d60feead6f04c99e0fca93dbba3c",
+        "patch": "@@ -78,6 +78,8 @@ static const uint64_t DEFAULT_MAX_UPLOAD_TARGET = 0;\n static const uint64_t MAX_UPLOAD_TIMEFRAME = 60 * 60 * 24;\n /** Default for blocks only*/\n static const bool DEFAULT_BLOCKSONLY = false;\n+/** -peertimeout default */\n+static const int64_t DEFAULT_PEER_CONNECT_TIMEOUT = 60;\n \n static const bool DEFAULT_FORCEDNSSEED = false;\n static const size_t DEFAULT_MAXRECEIVEBUFFER = 5 * 1000;\n@@ -138,6 +140,7 @@ class CConnman\n         unsigned int nReceiveFloodSize = 0;\n         uint64_t nMaxOutboundTimeframe = 0;\n         uint64_t nMaxOutboundLimit = 0;\n+        int64_t m_peer_connect_timeout = DEFAULT_PEER_CONNECT_TIMEOUT;\n         std::vector<std::string> vSeedNodes;\n         std::vector<CSubNet> vWhitelistedRange;\n         std::vector<CService> vBinds, vWhiteBinds;\n@@ -158,6 +161,7 @@ class CConnman\n         m_msgproc = connOptions.m_msgproc;\n         nSendBufferMaxSize = connOptions.nSendBufferMaxSize;\n         nReceiveFloodSize = connOptions.nReceiveFloodSize;\n+        m_peer_connect_timeout = connOptions.m_peer_connect_timeout;\n         {\n             LOCK(cs_totalBytesSent);\n             nMaxOutboundTimeframe = connOptions.nMaxOutboundTimeframe;\n@@ -391,6 +395,9 @@ class CConnman\n     uint64_t nMaxOutboundLimit GUARDED_BY(cs_totalBytesSent);\n     uint64_t nMaxOutboundTimeframe GUARDED_BY(cs_totalBytesSent);\n \n+    // P2P timeout in seconds\n+    int64_t m_peer_connect_timeout;\n+\n     // Whitelisted ranges. Any node connecting from these is automatically\n     // whitelisted (as well as those connecting to whitelisted binds).\n     std::vector<CSubNet> vWhitelistedRange;"
+      },
+      {
+        "sha": "ffed853033dee21aa5bee1a767650e427a92e8bb",
+        "filename": "test/functional/p2p_timeouts.py",
+        "status": "modified",
+        "additions": 17,
+        "deletions": 9,
+        "changes": 26,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8042bbfbf001d60feead6f04c99e0fca93dbba3c/test/functional/p2p_timeouts.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8042bbfbf001d60feead6f04c99e0fca93dbba3c/test/functional/p2p_timeouts.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/p2p_timeouts.py?ref=8042bbfbf001d60feead6f04c99e0fca93dbba3c",
+        "patch": "@@ -14,11 +14,11 @@\n - Wait 1 second\n - Assert that we're connected\n - Send a ping to no_verack_node and no_version_node\n-- Wait 30 seconds\n+- Wait 1 second\n - Assert that we're still connected\n - Send a ping to no_verack_node and no_version_node\n-- Wait 31 seconds\n-- Assert that we're no longer connected (timeout to receive version/verack is 60 seconds)\n+- Wait 2 seconds\n+- Assert that we're no longer connected (timeout to receive version/verack is 3 seconds)\n \"\"\"\n \n from time import sleep\n@@ -36,6 +36,8 @@ class TimeoutsTest(BitcoinTestFramework):\n     def set_test_params(self):\n         self.setup_clean_chain = True\n         self.num_nodes = 1\n+        # set timeout to receive version/verack to 3 seconds\n+        self.extra_args = [[\"-peertimeout=3\"]]\n \n     def run_test(self):\n         # Setup the p2p connections\n@@ -52,7 +54,7 @@ def run_test(self):\n         no_verack_node.send_message(msg_ping())\n         no_version_node.send_message(msg_ping())\n \n-        sleep(30)\n+        sleep(1)\n \n         assert \"version\" in no_verack_node.last_message\n \n@@ -63,11 +65,17 @@ def run_test(self):\n         no_verack_node.send_message(msg_ping())\n         no_version_node.send_message(msg_ping())\n \n-        sleep(31)\n-\n-        assert not no_verack_node.is_connected\n-        assert not no_version_node.is_connected\n-        assert not no_send_node.is_connected\n+        expected_timeout_logs = [\n+            \"version handshake timeout from 0\",\n+            \"socket no message in first 3 seconds, 1 0 from 1\",\n+            \"socket no message in first 3 seconds, 0 0 from 2\",\n+        ]\n+\n+        with self.nodes[0].assert_debug_log(expected_msgs=expected_timeout_logs):\n+            sleep(2)\n+            assert not no_verack_node.is_connected\n+            assert not no_version_node.is_connected\n+            assert not no_send_node.is_connected\n \n if __name__ == '__main__':\n     TimeoutsTest().main()"
+      }
+    ]
+  },
+  {
+    "sha": "48b37db50f4a5dc6d2dd1a01183bdb993ca97f8b",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0OGIzN2RiNTBmNGE1ZGM2ZDJkZDFhMDExODNiZGI5OTNjYTk3Zjhi",
+    "commit": {
+      "author": {
+        "name": "Zain Iqbal Allarakhia",
+        "email": "zain.allarakhia@gmail.com",
+        "date": "2018-11-29T21:05:41Z"
+      },
+      "committer": {
+        "name": "Zain Iqbal Allarakhia",
+        "email": "zain.allarakhia@gmail.com",
+        "date": "2018-11-29T21:05:41Z"
+      },
+      "message": "make peertimeout a debug argument, remove error message translation",
+      "tree": {
+        "sha": "66cd74e9e7a409ba2ed26b321d90d211775233b2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/66cd74e9e7a409ba2ed26b321d90d211775233b2"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/48b37db50f4a5dc6d2dd1a01183bdb993ca97f8b",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/48b37db50f4a5dc6d2dd1a01183bdb993ca97f8b",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/48b37db50f4a5dc6d2dd1a01183bdb993ca97f8b",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/48b37db50f4a5dc6d2dd1a01183bdb993ca97f8b/comments",
+    "author": {
+      "login": "zallarak",
+      "id": 806155,
+      "node_id": "MDQ6VXNlcjgwNjE1NQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/806155?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/zallarak",
+      "html_url": "https://github.com/zallarak",
+      "followers_url": "https://api.github.com/users/zallarak/followers",
+      "following_url": "https://api.github.com/users/zallarak/following{/other_user}",
+      "gists_url": "https://api.github.com/users/zallarak/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/zallarak/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/zallarak/subscriptions",
+      "organizations_url": "https://api.github.com/users/zallarak/orgs",
+      "repos_url": "https://api.github.com/users/zallarak/repos",
+      "events_url": "https://api.github.com/users/zallarak/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/zallarak/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "zallarak",
+      "id": 806155,
+      "node_id": "MDQ6VXNlcjgwNjE1NQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/806155?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/zallarak",
+      "html_url": "https://github.com/zallarak",
+      "followers_url": "https://api.github.com/users/zallarak/followers",
+      "following_url": "https://api.github.com/users/zallarak/following{/other_user}",
+      "gists_url": "https://api.github.com/users/zallarak/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/zallarak/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/zallarak/subscriptions",
+      "organizations_url": "https://api.github.com/users/zallarak/orgs",
+      "repos_url": "https://api.github.com/users/zallarak/repos",
+      "events_url": "https://api.github.com/users/zallarak/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/zallarak/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "8042bbfbf001d60feead6f04c99e0fca93dbba3c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8042bbfbf001d60feead6f04c99e0fca93dbba3c",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/8042bbfbf001d60feead6f04c99e0fca93dbba3c"
+      }
+    ],
+    "stats": {
+      "total": 4,
+      "additions": 2,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "72ca0f5d0f50fcbf318657c2703b50e46f90499b",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/48b37db50f4a5dc6d2dd1a01183bdb993ca97f8b/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/48b37db50f4a5dc6d2dd1a01183bdb993ca97f8b/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=48b37db50f4a5dc6d2dd1a01183bdb993ca97f8b",
+        "patch": "@@ -403,7 +403,7 @@ void SetupServerArgs()\n     gArgs.AddArg(\"-proxyrandomize\", strprintf(\"Randomize credentials for every proxy connection. This enables Tor stream isolation (default: %u)\", DEFAULT_PROXYRANDOMIZE), false, OptionsCategory::CONNECTION);\n     gArgs.AddArg(\"-seednode=<ip>\", \"Connect to a node to retrieve peer addresses, and disconnect. This option can be specified multiple times to connect to multiple nodes.\", false, OptionsCategory::CONNECTION);\n     gArgs.AddArg(\"-timeout=<n>\", strprintf(\"Specify connection timeout in milliseconds (minimum: 1, default: %d)\", DEFAULT_CONNECT_TIMEOUT), false, OptionsCategory::CONNECTION);\n-    gArgs.AddArg(\"-peertimeout=<n>\", strprintf(\"Specify p2p connection timeout in seconds. This option determines the amount of time a peer may be inactive before the connection to it is dropped. (minimum: 1, default: %d)\", DEFAULT_PEER_CONNECT_TIMEOUT), false, OptionsCategory::CONNECTION);\n+    gArgs.AddArg(\"-peertimeout=<n>\", strprintf(\"Specify p2p connection timeout in seconds. This option determines the amount of time a peer may be inactive before the connection to it is dropped. (minimum: 1, default: %d)\", DEFAULT_PEER_CONNECT_TIMEOUT), true, OptionsCategory::CONNECTION);\n     gArgs.AddArg(\"-torcontrol=<ip>:<port>\", strprintf(\"Tor control port to use if onion listening enabled (default: %s)\", DEFAULT_TOR_CONTROL), false, OptionsCategory::CONNECTION);\n     gArgs.AddArg(\"-torpassword=<pass>\", \"Tor control port password (default: empty)\", false, OptionsCategory::CONNECTION);\n #ifdef USE_UPNP\n@@ -1054,7 +1054,7 @@ bool AppInitParameterInteraction()\n \n     peer_connect_timeout = gArgs.GetArg(\"-peertimeout\", DEFAULT_PEER_CONNECT_TIMEOUT);\n     if (peer_connect_timeout <= 0) {\n-        return InitError(_(\"peertimeout cannot be configured with a negative value.\"));\n+        return InitError(\"peertimeout cannot be configured with a negative value.\");\n     }\n \n     if (gArgs.IsArgSet(\"-minrelaytxfee\")) {"
+      }
+    ]
+  }
+]

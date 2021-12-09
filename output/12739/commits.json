@@ -1,0 +1,74 @@
+[
+  {
+    "sha": "b64bf76c7172b67b71c62b883a3c454345f83015",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiNjRiZjc2YzcxNzJiNjdiNzFjNjJiODgzYTNjNDU0MzQ1ZjgzMDE1",
+    "commit": {
+      "author": {
+        "name": "Pedro Branco",
+        "email": "branco@uphold.com",
+        "date": "2018-03-20T18:35:35Z"
+      },
+      "committer": {
+        "name": "Pedro Branco",
+        "email": "branco@uphold.com",
+        "date": "2018-03-21T12:06:06Z"
+      },
+      "message": "Fix lockunspent deadlock when unlocking already spent outputs",
+      "tree": {
+        "sha": "62ecb5d92646d154b35cac7a98e446d7e1eb8978",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/62ecb5d92646d154b35cac7a98e446d7e1eb8978"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/b64bf76c7172b67b71c62b883a3c454345f83015",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b64bf76c7172b67b71c62b883a3c454345f83015",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/b64bf76c7172b67b71c62b883a3c454345f83015",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b64bf76c7172b67b71c62b883a3c454345f83015/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "4ba3d4f4393d81148422d24d222fe7ed00130194",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4ba3d4f4393d81148422d24d222fe7ed00130194",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/4ba3d4f4393d81148422d24d222fe7ed00130194"
+      }
+    ],
+    "stats": {
+      "total": 16,
+      "additions": 13,
+      "deletions": 3
+    },
+    "files": [
+      {
+        "sha": "1c4d2e34962137b7087c6c4142d2820a8db8983c",
+        "filename": "src/wallet/rpcwallet.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b64bf76c7172b67b71c62b883a3c454345f83015/src/wallet/rpcwallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b64bf76c7172b67b71c62b883a3c454345f83015/src/wallet/rpcwallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/rpcwallet.cpp?ref=b64bf76c7172b67b71c62b883a3c454345f83015",
+        "patch": "@@ -2653,7 +2653,7 @@ UniValue lockunspent(const JSONRPCRequest& request)\n             throw JSONRPCError(RPC_INVALID_PARAMETER, \"Invalid parameter, vout index out of bounds\");\n         }\n \n-        if (pwallet->IsSpent(outpt.hash, outpt.n)) {\n+        if (!fUnlock && pwallet->IsSpent(outpt.hash, outpt.n)) {\n             throw JSONRPCError(RPC_INVALID_PARAMETER, \"Invalid parameter, expected unspent output\");\n         }\n "
+      },
+      {
+        "sha": "0b3200f831e55c7a78ad43edc459366c85256ce4",
+        "filename": "test/functional/wallet_basic.py",
+        "status": "modified",
+        "additions": 12,
+        "deletions": 2,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b64bf76c7172b67b71c62b883a3c454345f83015/test/functional/wallet_basic.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b64bf76c7172b67b71c62b883a3c454345f83015/test/functional/wallet_basic.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/wallet_basic.py?ref=b64bf76c7172b67b71c62b883a3c454345f83015",
+        "patch": "@@ -142,6 +142,12 @@ def run_test(self):\n             raw_tx = self.nodes[0].createrawtransaction(inputs, outputs)\n             txns_to_send.append(self.nodes[0].signrawtransactionwithwallet(raw_tx))\n \n+        # Verify that an unspent output can be locked\n+        output_0 = {\"txid\": node0utxos[0][\"txid\"], \"vout\": node0utxos[0][\"vout\"]}\n+        assert_equal(self.nodes[0].listlockunspent(), [])\n+        assert(self.nodes[0].lockunspent(False, [output_0]))\n+        assert_equal(self.nodes[0].listlockunspent(), [output_0])\n+\n         # Have node 1 (miner) send the transactions\n         self.nodes[1].sendrawtransaction(txns_to_send[0][\"hex\"], True)\n         self.nodes[1].sendrawtransaction(txns_to_send[1][\"hex\"], True)\n@@ -155,8 +161,12 @@ def run_test(self):\n         assert_equal(self.nodes[2].getbalance(\"from1\"), 94-21)\n \n         # Verify that a spent output cannot be locked anymore\n-        spent_0 = {\"txid\": node0utxos[0][\"txid\"], \"vout\": node0utxos[0][\"vout\"]}\n-        assert_raises_rpc_error(-8, \"Invalid parameter, expected unspent output\", self.nodes[0].lockunspent, False, [spent_0])\n+        assert_raises_rpc_error(-8, \"Invalid parameter, expected unspent output\", self.nodes[0].lockunspent, False, [output_0])\n+\n+        # Verify that a spent output can be unlocked\n+        assert_equal(self.nodes[0].listlockunspent(), [output_0])\n+        assert(self.nodes[0].lockunspent(True, [output_0]))\n+        assert_equal(self.nodes[0].listlockunspent(), [])\n \n         # Send 10 BTC normal\n         address = self.nodes[0].getnewaddress(\"test\")"
+      }
+    ]
+  }
+]

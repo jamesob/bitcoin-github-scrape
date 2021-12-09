@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "79191f51b50314920b387f5f7322427d14cbab19",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3OTE5MWY1MWI1MDMxNDkyMGIzODdmNWY3MzIyNDI3ZDE0Y2JhYjE5",
+    "commit": {
+      "author": {
+        "name": "Joe Harvell",
+        "email": "joe.harvell.x@gmail.com",
+        "date": "2017-08-23T18:48:00Z"
+      },
+      "committer": {
+        "name": "Joe Harvell",
+        "email": "joe.harvell.x@gmail.com",
+        "date": "2017-08-23T18:48:00Z"
+      },
+      "message": "Add option -stdinrpcpass to allow RPC password to be read from standard input",
+      "tree": {
+        "sha": "920b78cee9134876b5163298834d926be60e55cc",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/920b78cee9134876b5163298834d926be60e55cc"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/79191f51b50314920b387f5f7322427d14cbab19",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/79191f51b50314920b387f5f7322427d14cbab19",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/79191f51b50314920b387f5f7322427d14cbab19",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/79191f51b50314920b387f5f7322427d14cbab19/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "31b2612bbf199fcbbb242fc1cfa2ad6221b0dcc7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/31b2612bbf199fcbbb242fc1cfa2ad6221b0dcc7",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/31b2612bbf199fcbbb242fc1cfa2ad6221b0dcc7"
+      }
+    ],
+    "stats": {
+      "total": 13,
+      "additions": 10,
+      "deletions": 3
+    },
+    "files": [
+      {
+        "sha": "fca6083ea81bed8973d43058dd32160e3a531b1d",
+        "filename": "src/bitcoin-cli.cpp",
+        "status": "modified",
+        "additions": 10,
+        "deletions": 3,
+        "changes": 13,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/79191f51b50314920b387f5f7322427d14cbab19/src/bitcoin-cli.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/79191f51b50314920b387f5f7322427d14cbab19/src/bitcoin-cli.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoin-cli.cpp?ref=79191f51b50314920b387f5f7322427d14cbab19",
+        "patch": "@@ -45,7 +45,8 @@ std::string HelpMessageCli()\n     strUsage += HelpMessageOpt(\"-rpcuser=<user>\", _(\"Username for JSON-RPC connections\"));\n     strUsage += HelpMessageOpt(\"-rpcpassword=<pw>\", _(\"Password for JSON-RPC connections\"));\n     strUsage += HelpMessageOpt(\"-rpcclienttimeout=<n>\", strprintf(_(\"Timeout in seconds during HTTP requests, or 0 for no timeout. (default: %d)\"), DEFAULT_HTTP_CLIENT_TIMEOUT));\n-    strUsage += HelpMessageOpt(\"-stdin\", _(\"Read extra arguments from standard input, one per line until EOF/Ctrl-D (recommended for sensitive information such as passphrases)\"));\n+    strUsage += HelpMessageOpt(\"-stdinrpcpass\", strprintf(_(\"Read RPC password from standard input as a single line.  When combined with -stdin, the first line from standard input is used for the RPC password.\")));\n+    strUsage += HelpMessageOpt(\"-stdin\", _(\"Read extra arguments from standard input, one per line until EOF/Ctrl-D (recommended for sensitive information such as passphrases).  When combined with -stdinrpcpass, the first line from standard input is used for the RPC password.\"));\n     strUsage += HelpMessageOpt(\"-rpcwallet=<walletname>\", _(\"Send RPC for non-default wallet on RPC server (argument is wallet filename in bitcoind directory, required if bitcoind/-Qt runs with multiple wallets)\"));\n \n     return strUsage;\n@@ -190,7 +191,7 @@ static void http_error_cb(enum evhttp_request_error err, void *ctx)\n }\n #endif\n \n-UniValue CallRPC(const std::string& strMethod, const UniValue& params)\n+static UniValue CallRPC(const std::string& strMethod, const UniValue& params)\n {\n     std::string host;\n     // In preference order, we choose the following for the port:\n@@ -222,7 +223,7 @@ UniValue CallRPC(const std::string& strMethod, const UniValue& params)\n         // Try fall back to cookie-based authentication if no password is provided\n         if (!GetAuthCookie(&strRPCUserColonPass)) {\n             throw std::runtime_error(strprintf(\n-                _(\"Could not locate RPC credentials. No authentication cookie could be found, and no rpcpassword is set in the configuration file (%s)\"),\n+                _(\"Could not locate RPC credentials. No authentication cookie could be found, and RPC password is not set.  See -rpcpassword and -stdinrpcpass.  Configuration file: (%s)\"),\n                     GetConfigFile(gArgs.GetArg(\"-conf\", BITCOIN_CONF_FILENAME)).string().c_str()));\n \n         }\n@@ -293,6 +294,12 @@ int CommandLineRPC(int argc, char *argv[])\n             argc--;\n             argv++;\n         }\n+        std::string rpcPass;\n+        if (gArgs.GetBoolArg(\"-stdinrpcpass\", false)) {\n+            if(!std::getline(std::cin,rpcPass))\n+                throw std::runtime_error(\"-stdinrpcpass specified but failed to read from standard input\");\n+            gArgs.ForceSetArg(\"-rpcpassword\", rpcPass);\n+        }\n         std::vector<std::string> args = std::vector<std::string>(&argv[1], &argv[argc]);\n         if (gArgs.GetBoolArg(\"-stdin\", false)) {\n             // Read one arg per line from stdin and append"
+      }
+    ]
+  }
+]

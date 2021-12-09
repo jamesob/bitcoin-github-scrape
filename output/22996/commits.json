@@ -1,0 +1,242 @@
+[
+  {
+    "sha": "279168f075cb81bbeb5462a77555d778abd4dc36",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyNzkxNjhmMDc1Y2I4MWJiZWI1NDYyYTc3NTU1ZDc3OGFiZDRkYzM2",
+    "commit": {
+      "author": {
+        "name": "R E Broadley",
+        "email": "github.com@esuza.com",
+        "date": "2021-09-16T11:54:21Z"
+      },
+      "committer": {
+        "name": "R E Broadley",
+        "email": "github.com@esuza.com",
+        "date": "2021-09-16T12:09:54Z"
+      },
+      "message": "Better fee estimation by identifying the correct height of transactions\nreceived during IBD, and from LoadMempool().\n\nAlso allows CTxMemPoolEntry to be smaller by removing entryHeight.",
+      "tree": {
+        "sha": "36803254d8b83ea3a93ce413f3f85615580329b9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/36803254d8b83ea3a93ce413f3f85615580329b9"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/279168f075cb81bbeb5462a77555d778abd4dc36",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/279168f075cb81bbeb5462a77555d778abd4dc36",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/279168f075cb81bbeb5462a77555d778abd4dc36",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/279168f075cb81bbeb5462a77555d778abd4dc36/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "2161a058552ac938f2079b311a2d12f5d1772d01",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2161a058552ac938f2079b311a2d12f5d1772d01",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/2161a058552ac938f2079b311a2d12f5d1772d01"
+      }
+    ],
+    "stats": {
+      "total": 115,
+      "additions": 83,
+      "deletions": 32
+    },
+    "files": [
+      {
+        "sha": "2e7a1f8d6d4582dd2ac8afcf70e9937729f9bde7",
+        "filename": "src/policy/fees.cpp",
+        "status": "modified",
+        "additions": 15,
+        "deletions": 6,
+        "changes": 21,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/279168f075cb81bbeb5462a77555d778abd4dc36/src/policy/fees.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/279168f075cb81bbeb5462a77555d778abd4dc36/src/policy/fees.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/policy/fees.cpp?ref=279168f075cb81bbeb5462a77555d778abd4dc36",
+        "patch": "@@ -535,10 +535,14 @@ CBlockPolicyEstimator::~CBlockPolicyEstimator()\n {\n }\n \n-void CBlockPolicyEstimator::processTransaction(const CTxMemPoolEntry& entry, bool validFeeEstimate)\n+void CBlockPolicyEstimator::processTransaction(const CChain& active_chain, const CTxMemPoolEntry& entry, bool validFeeEstimate)\n {\n     LOCK(m_cs_fee_estimator);\n-    unsigned int txHeight = entry.GetHeight();\n+    unsigned int txHeight;\n+    {\n+        LOCK(cs_main);\n+        txHeight = entry.GetHeight(active_chain);\n+    }\n     uint256 hash = entry.GetTx().GetHash();\n     if (mapMemPoolTxs.count(hash)) {\n         LogPrint(BCLog::ESTIMATEFEE, \"Blockpolicy error mempool tx %s already being tracked\\n\",\n@@ -574,7 +578,7 @@ void CBlockPolicyEstimator::processTransaction(const CTxMemPoolEntry& entry, boo\n     assert(bucketIndex == bucketIndex3);\n }\n \n-bool CBlockPolicyEstimator::processBlockTx(unsigned int nBlockHeight, const CTxMemPoolEntry* entry)\n+bool CBlockPolicyEstimator::processBlockTx(const CChain& active_chain, unsigned int nBlockHeight, const CTxMemPoolEntry* entry)\n {\n     if (!removeTx(entry->GetTx().GetHash(), true)) {\n         // This transaction wasn't being tracked for fee estimation\n@@ -584,7 +588,12 @@ bool CBlockPolicyEstimator::processBlockTx(unsigned int nBlockHeight, const CTxM\n     // How many blocks did it take for miners to include this transaction?\n     // blocksToConfirm is 1-based, so a transaction included in the earliest\n     // possible block has confirmation count of 1\n-    int blocksToConfirm = nBlockHeight - entry->GetHeight();\n+    unsigned int txHeight;\n+    {\n+        LOCK(cs_main);\n+        txHeight = entry->GetHeight(active_chain);\n+    }\n+    int blocksToConfirm = nBlockHeight - txHeight;\n     if (blocksToConfirm <= 0) {\n         // This can't happen because we don't process transactions from a block with a height\n         // lower than our greatest seen height\n@@ -601,7 +610,7 @@ bool CBlockPolicyEstimator::processBlockTx(unsigned int nBlockHeight, const CTxM\n     return true;\n }\n \n-void CBlockPolicyEstimator::processBlock(unsigned int nBlockHeight,\n+void CBlockPolicyEstimator::processBlock(const CChain& active_chain, unsigned int nBlockHeight,\n                                          std::vector<const CTxMemPoolEntry*>& entries)\n {\n     LOCK(m_cs_fee_estimator);\n@@ -632,7 +641,7 @@ void CBlockPolicyEstimator::processBlock(unsigned int nBlockHeight,\n     unsigned int countedTxs = 0;\n     // Update averages with data points from current block\n     for (const auto& entry : entries) {\n-        if (processBlockTx(nBlockHeight, entry))\n+        if (processBlockTx(active_chain, nBlockHeight, entry))\n             countedTxs++;\n     }\n "
+      },
+      {
+        "sha": "36c08622b0161693199536534aacf358af4634d7",
+        "filename": "src/policy/fees.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 3,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/279168f075cb81bbeb5462a77555d778abd4dc36/src/policy/fees.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/279168f075cb81bbeb5462a77555d778abd4dc36/src/policy/fees.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/policy/fees.h?ref=279168f075cb81bbeb5462a77555d778abd4dc36",
+        "patch": "@@ -18,6 +18,7 @@\n #include <vector>\n \n class CAutoFile;\n+class CChain;\n class CFeeRate;\n class CTxMemPoolEntry;\n class CTxMemPool;\n@@ -185,11 +186,11 @@ class CBlockPolicyEstimator\n     ~CBlockPolicyEstimator();\n \n     /** Process all the transactions that have been included in a block */\n-    void processBlock(unsigned int nBlockHeight,\n+    void processBlock(const CChain& active_chain, unsigned int nBlockHeight,\n                       std::vector<const CTxMemPoolEntry*>& entries);\n \n     /** Process a transaction accepted to the mempool*/\n-    void processTransaction(const CTxMemPoolEntry& entry, bool validFeeEstimate);\n+    void processTransaction(const CChain& active_chain, const CTxMemPoolEntry& entry, bool validFeeEstimate);\n \n     /** Remove a transaction from the mempool tracking stats*/\n     bool removeTx(uint256 hash, bool inBlock);\n@@ -255,7 +256,7 @@ class CBlockPolicyEstimator\n     std::map<double, unsigned int> bucketMap GUARDED_BY(m_cs_fee_estimator); // Map of bucket upper-bound to index into all vectors by bucket\n \n     /** Process a transaction confirmed in a block*/\n-    bool processBlockTx(unsigned int nBlockHeight, const CTxMemPoolEntry* entry) EXCLUSIVE_LOCKS_REQUIRED(m_cs_fee_estimator);\n+    bool processBlockTx(const CChain& active_chain, unsigned int nBlockHeight, const CTxMemPoolEntry* entry) EXCLUSIVE_LOCKS_REQUIRED(m_cs_fee_estimator);\n \n     /** Helper for estimateSmartFee */\n     double estimateCombinedFee(unsigned int confTarget, double successThreshold, bool checkShorterHorizon, EstimationResult *result) const EXCLUSIVE_LOCKS_REQUIRED(m_cs_fee_estimator);"
+      },
+      {
+        "sha": "f0ece62e8d3c09572a83d43a9006ff72fd36aeb9",
+        "filename": "src/rest.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 1,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/279168f075cb81bbeb5462a77555d778abd4dc36/src/rest.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/279168f075cb81bbeb5462a77555d778abd4dc36/src/rest.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rest.cpp?ref=279168f075cb81bbeb5462a77555d778abd4dc36",
+        "patch": "@@ -274,11 +274,13 @@ static bool rest_block(const std::any& context,\n     CBlock block;\n     CBlockIndex* pblockindex = nullptr;\n     CBlockIndex* tip = nullptr;\n+    CChain* active_chain = nullptr;\n     {\n         ChainstateManager* maybe_chainman = GetChainman(context, req);\n         if (!maybe_chainman) return false;\n         ChainstateManager& chainman = *maybe_chainman;\n         LOCK(cs_main);\n+        active_chain = &chainman.ActiveChain();\n         tip = chainman.ActiveChain().Tip();\n         pblockindex = chainman.m_blockman.LookupBlockIndex(hash);\n         if (!pblockindex) {\n@@ -391,12 +393,17 @@ static bool rest_mempool_contents(const std::any& context, HTTPRequest* req, con\n     if (!CheckWarmup(req)) return false;\n     const CTxMemPool* mempool = GetMemPool(context, req);\n     if (!mempool) return false;\n+    ChainstateManager* maybe_chainman = GetChainman(context, req);\n+    if (!maybe_chainman) return false;\n+    ChainstateManager& chainman = *maybe_chainman;\n+    LOCK(cs_main);\n+    const CChain& active_chain = chainman.ActiveChain();\n     std::string param;\n     const RetFormat rf = ParseDataFormat(param, strURIPart);\n \n     switch (rf) {\n     case RetFormat::JSON: {\n-        UniValue mempoolObject = MempoolToJSON(*mempool, true);\n+        UniValue mempoolObject = MempoolToJSON(active_chain, *mempool, true);\n \n         std::string strJSON = mempoolObject.write() + \"\\n\";\n         req->WriteHeader(\"Content-Type\", \"application/json\");"
+      },
+      {
+        "sha": "5c13d5db48244bec0e362ecdba44e9141410c2ff",
+        "filename": "src/rpc/blockchain.cpp",
+        "status": "modified",
+        "additions": 26,
+        "deletions": 8,
+        "changes": 34,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/279168f075cb81bbeb5462a77555d778abd4dc36/src/rpc/blockchain.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/279168f075cb81bbeb5462a77555d778abd4dc36/src/rpc/blockchain.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/blockchain.cpp?ref=279168f075cb81bbeb5462a77555d778abd4dc36",
+        "patch": "@@ -481,7 +481,7 @@ static std::vector<RPCResult> MempoolEntryDescription() { return {\n     RPCResult{RPCResult::Type::BOOL, \"unbroadcast\", \"Whether this transaction is currently unbroadcast (initial broadcast not yet acknowledged by any peers)\"},\n };}\n \n-static void entryToJSON(const CTxMemPool& pool, UniValue& info, const CTxMemPoolEntry& e) EXCLUSIVE_LOCKS_REQUIRED(pool.cs)\n+static void entryToJSON(const CChain& active_chain, const CTxMemPool& pool, UniValue& info, const CTxMemPoolEntry& e) EXCLUSIVE_LOCKS_REQUIRED(pool.cs)\n {\n     AssertLockHeld(pool.cs);\n \n@@ -497,7 +497,12 @@ static void entryToJSON(const CTxMemPool& pool, UniValue& info, const CTxMemPool\n     info.pushKV(\"fee\", ValueFromAmount(e.GetFee()));\n     info.pushKV(\"modifiedfee\", ValueFromAmount(e.GetModifiedFee()));\n     info.pushKV(\"time\", count_seconds(e.GetTime()));\n-    info.pushKV(\"height\", (int)e.GetHeight());\n+    int txHeight;\n+    {\n+        LOCK(cs_main);\n+        txHeight = (int)e.GetHeight(active_chain);\n+    }\n+    info.pushKV(\"height\", txHeight);\n     info.pushKV(\"descendantcount\", e.GetCountWithDescendants());\n     info.pushKV(\"descendantsize\", e.GetSizeWithDescendants());\n     info.pushKV(\"descendantfees\", e.GetModFeesWithDescendants());\n@@ -543,7 +548,7 @@ static void entryToJSON(const CTxMemPool& pool, UniValue& info, const CTxMemPool\n     info.pushKV(\"unbroadcast\", pool.IsUnbroadcastTx(tx.GetHash()));\n }\n \n-UniValue MempoolToJSON(const CTxMemPool& pool, bool verbose, bool include_mempool_sequence)\n+UniValue MempoolToJSON(const CChain& active_chain, const CTxMemPool& pool, bool verbose, bool include_mempool_sequence)\n {\n     if (verbose) {\n         if (include_mempool_sequence) {\n@@ -554,7 +559,7 @@ UniValue MempoolToJSON(const CTxMemPool& pool, bool verbose, bool include_mempoo\n         for (const CTxMemPoolEntry& e : pool.mapTx) {\n             const uint256& hash = e.GetTx().GetHash();\n             UniValue info(UniValue::VOBJ);\n-            entryToJSON(pool, info, e);\n+            entryToJSON(active_chain, pool, info, e);\n             // Mempool has unique entries so there is no advantage in using\n             // UniValue::pushKV, which checks if the key already exists in O(N).\n             // UniValue::__pushKV is used instead which currently is O(1).\n@@ -629,7 +634,11 @@ static RPCHelpMan getrawmempool()\n         include_mempool_sequence = request.params[1].get_bool();\n     }\n \n-    return MempoolToJSON(EnsureAnyMemPool(request.context), fVerbose, include_mempool_sequence);\n+    ChainstateManager& chainman = EnsureAnyChainman(request.context);\n+    LOCK(cs_main);\n+    const CChain& active_chain = chainman.ActiveChain();\n+\n+    return MempoolToJSON(active_chain, EnsureAnyMemPool(request.context), fVerbose, include_mempool_sequence);\n },\n     };\n }\n@@ -664,6 +673,9 @@ static RPCHelpMan getmempoolancestors()\n \n     uint256 hash = ParseHashV(request.params[0], \"parameter 1\");\n \n+    ChainstateManager& chainman = EnsureAnyChainman(request.context);\n+    LOCK(cs_main);\n+    const CChain& active_chain = chainman.ActiveChain();\n     const CTxMemPool& mempool = EnsureAnyMemPool(request.context);\n     LOCK(mempool.cs);\n \n@@ -689,7 +701,7 @@ static RPCHelpMan getmempoolancestors()\n             const CTxMemPoolEntry &e = *ancestorIt;\n             const uint256& _hash = e.GetTx().GetHash();\n             UniValue info(UniValue::VOBJ);\n-            entryToJSON(mempool, info, e);\n+            entryToJSON(active_chain, mempool, info, e);\n             o.pushKV(_hash.ToString(), info);\n         }\n         return o;\n@@ -728,6 +740,9 @@ static RPCHelpMan getmempooldescendants()\n \n     uint256 hash = ParseHashV(request.params[0], \"parameter 1\");\n \n+    ChainstateManager& chainman = EnsureAnyChainman(request.context);\n+    LOCK(cs_main);\n+    const CChain& active_chain = chainman.ActiveChain();\n     const CTxMemPool& mempool = EnsureAnyMemPool(request.context);\n     LOCK(mempool.cs);\n \n@@ -754,7 +769,7 @@ static RPCHelpMan getmempooldescendants()\n             const CTxMemPoolEntry &e = *descendantIt;\n             const uint256& _hash = e.GetTx().GetHash();\n             UniValue info(UniValue::VOBJ);\n-            entryToJSON(mempool, info, e);\n+            entryToJSON(active_chain, mempool, info, e);\n             o.pushKV(_hash.ToString(), info);\n         }\n         return o;\n@@ -780,6 +795,9 @@ static RPCHelpMan getmempoolentry()\n {\n     uint256 hash = ParseHashV(request.params[0], \"parameter 1\");\n \n+    ChainstateManager& chainman = EnsureAnyChainman(request.context);\n+    LOCK(cs_main);\n+    const CChain& active_chain = chainman.ActiveChain();\n     const CTxMemPool& mempool = EnsureAnyMemPool(request.context);\n     LOCK(mempool.cs);\n \n@@ -790,7 +808,7 @@ static RPCHelpMan getmempoolentry()\n \n     const CTxMemPoolEntry &e = *it;\n     UniValue info(UniValue::VOBJ);\n-    entryToJSON(mempool, info, e);\n+    entryToJSON(active_chain, mempool, info, e);\n     return info;\n },\n     };"
+      },
+      {
+        "sha": "349e09c069185098a924f6bd2fa3919da285dc9b",
+        "filename": "src/rpc/blockchain.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 1,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/279168f075cb81bbeb5462a77555d778abd4dc36/src/rpc/blockchain.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/279168f075cb81bbeb5462a77555d778abd4dc36/src/rpc/blockchain.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/blockchain.h?ref=279168f075cb81bbeb5462a77555d778abd4dc36",
+        "patch": "@@ -19,6 +19,7 @@ extern RecursiveMutex cs_main;\n class CBlock;\n class CBlockIndex;\n class CBlockPolicyEstimator;\n+class CChain;\n class CChainState;\n class CTxMemPool;\n class ChainstateManager;\n@@ -45,7 +46,7 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* tip, const CBlockIn\n UniValue MempoolInfoToJSON(const CTxMemPool& pool);\n \n /** Mempool to JSON */\n-UniValue MempoolToJSON(const CTxMemPool& pool, bool verbose = false, bool include_mempool_sequence = false);\n+UniValue MempoolToJSON(const CChain& active_chain, const CTxMemPool& pool, bool verbose = false, bool include_mempool_sequence = false);\n \n /** Block header to JSON */\n UniValue blockheaderToJSON(const CBlockIndex* tip, const CBlockIndex* blockindex) LOCKS_EXCLUDED(cs_main);"
+      },
+      {
+        "sha": "d6462218927c88d0c53df7e7b9607bac0d4cb154",
+        "filename": "src/txmempool.cpp",
+        "status": "modified",
+        "additions": 21,
+        "deletions": 7,
+        "changes": 28,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/279168f075cb81bbeb5462a77555d778abd4dc36/src/txmempool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/279168f075cb81bbeb5462a77555d778abd4dc36/src/txmempool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.cpp?ref=279168f075cb81bbeb5462a77555d778abd4dc36",
+        "patch": "@@ -4,7 +4,7 @@\n // file COPYING or http://www.opensource.org/licenses/mit-license.php.\n \n #include <txmempool.h>\n-\n+#include <chain.h> // For FindEarliestAtLeast()\n #include <consensus/consensus.h>\n #include <consensus/tx_verify.h>\n #include <consensus/validation.h>\n@@ -56,6 +56,20 @@ size_t CTxMemPoolEntry::GetTxSize() const\n     return GetVirtualTransactionSize(nTxWeight, sigOpCost);\n }\n \n+unsigned int CTxMemPoolEntry::GetHeight(const CChain& active_chain) const\n+{\n+    //int64_t now = GetTimeSeconds();\n+    CBlockIndex* ret = active_chain.FindEarliestAtLeast(nTime, 0);\n+    // The new way to calculate entry height is more accurate as it uses the correct height for the transaction when received\n+    // during IBD, and also when loaded from mempool.dat.\n+    unsigned int newEntryHeight = ret ? ret->nHeight-1 : active_chain.Height();\n+    std::string strSame;\n+    if ((entryHeight != newEntryHeight) && (nodeid != -2)) // Hide LoadMempool entries as we know they differ\n+        LogPrintf(\"%s: nTime=%s entryHeight=%d newEntryHeight=%d ret=%d peer=%d\\n\", __func__, FormatISO8601DateTime(nTime), entryHeight, newEntryHeight, ret ? 1 : 0, nodeid);\n+\n+    return newEntryHeight;\n+}\n+\n // Update the given tx for any in-mempool descendants.\n // Assumes that CTxMemPool::m_children is correct for the given tx and all\n // descendants.\n@@ -413,7 +427,7 @@ void CTxMemPool::AddTransactionsUpdated(unsigned int n)\n     nTransactionsUpdated += n;\n }\n \n-void CTxMemPool::addUnchecked(const CTxMemPoolEntry &entry, setEntries &setAncestors, bool validFeeEstimate)\n+void CTxMemPool::addUnchecked(const CChain& active_chain, const CTxMemPoolEntry &entry, setEntries &setAncestors, bool validFeeEstimate)\n {\n     // Add to memory pool without checking anything.\n     // Used by AcceptToMemoryPool(), which DOES do\n@@ -458,7 +472,7 @@ void CTxMemPool::addUnchecked(const CTxMemPoolEntry &entry, setEntries &setAnces\n     totalTxSize += entry.GetTxSize();\n     m_total_fee += entry.GetFee();\n     if (minerPolicyEstimator) {\n-        minerPolicyEstimator->processTransaction(entry, validFeeEstimate);\n+        minerPolicyEstimator->processTransaction(active_chain, entry, validFeeEstimate);\n     }\n \n     vTxHashes.emplace_back(tx.GetWitnessHash(), newit);\n@@ -623,7 +637,7 @@ void CTxMemPool::removeConflicts(const CTransaction &tx)\n /**\n  * Called when a block is connected. Removes from mempool and updates the miner fee estimator.\n  */\n-void CTxMemPool::removeForBlock(const std::vector<CTransactionRef>& vtx, unsigned int nBlockHeight)\n+void CTxMemPool::removeForBlock(const CChain& active_chain, const std::vector<CTransactionRef>& vtx, unsigned int nBlockHeight)\n {\n     AssertLockHeld(cs);\n     std::vector<const CTxMemPoolEntry*> entries;\n@@ -636,7 +650,7 @@ void CTxMemPool::removeForBlock(const std::vector<CTransactionRef>& vtx, unsigne\n             entries.push_back(&*i);\n     }\n     // Before the txs in the new block have been removed from the mempool, update policy estimates\n-    if (minerPolicyEstimator) {minerPolicyEstimator->processBlock(nBlockHeight, entries);}\n+    if (minerPolicyEstimator) {minerPolicyEstimator->processBlock(active_chain, nBlockHeight, entries);}\n     for (const auto& tx : vtx)\n     {\n         txiter it = mapTx.find(tx->GetHash());\n@@ -1046,13 +1060,13 @@ int CTxMemPool::Expire(std::chrono::seconds time)\n     return stage.size();\n }\n \n-void CTxMemPool::addUnchecked(const CTxMemPoolEntry &entry, bool validFeeEstimate)\n+void CTxMemPool::addUnchecked(const CChain& active_chain, const CTxMemPoolEntry &entry, bool validFeeEstimate)\n {\n     setEntries setAncestors;\n     uint64_t nNoLimit = std::numeric_limits<uint64_t>::max();\n     std::string dummy;\n     CalculateMemPoolAncestors(entry, setAncestors, nNoLimit, nNoLimit, nNoLimit, nNoLimit, dummy);\n-    return addUnchecked(entry, setAncestors, validFeeEstimate);\n+    return addUnchecked(active_chain, entry, setAncestors, validFeeEstimate);\n }\n \n void CTxMemPool::UpdateChild(txiter entry, txiter child, bool add)"
+      },
+      {
+        "sha": "143e523bc16c47f6e24ce9c954247c4ee8361e66",
+        "filename": "src/txmempool.h",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 4,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/279168f075cb81bbeb5462a77555d778abd4dc36/src/txmempool.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/279168f075cb81bbeb5462a77555d778abd4dc36/src/txmempool.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.h?ref=279168f075cb81bbeb5462a77555d778abd4dc36",
+        "patch": "@@ -31,6 +31,7 @@\n #include <boost/multi_index/sequenced_index.hpp>\n \n class CBlockIndex;\n+class CChain;\n class CChainState;\n extern RecursiveMutex cs_main;\n \n@@ -126,7 +127,7 @@ class CTxMemPoolEntry\n     size_t GetTxSize() const;\n     size_t GetTxWeight() const { return nTxWeight; }\n     std::chrono::seconds GetTime() const { return std::chrono::seconds{nTime}; }\n-    unsigned int GetHeight() const { return entryHeight; }\n+    unsigned int GetHeight(const CChain& active_chain) const EXCLUSIVE_LOCKS_REQUIRED(::cs_main);\n     int64_t GetSigOpCost() const { return sigOpCost; }\n     int64_t GetModifiedFee() const { return nFee + feeDelta; }\n     size_t DynamicMemoryUsage() const { return nUsageSize; }\n@@ -634,13 +635,13 @@ class CTxMemPool\n     // Note that addUnchecked is ONLY called from ATMP outside of tests\n     // and any other callers may break wallet's in-mempool tracking (due to\n     // lack of CValidationInterface::TransactionAddedToMempool callbacks).\n-    void addUnchecked(const CTxMemPoolEntry& entry, bool validFeeEstimate = true) EXCLUSIVE_LOCKS_REQUIRED(cs, cs_main);\n-    void addUnchecked(const CTxMemPoolEntry& entry, setEntries& setAncestors, bool validFeeEstimate = true) EXCLUSIVE_LOCKS_REQUIRED(cs, cs_main);\n+    void addUnchecked(const CChain& active_chain, const CTxMemPoolEntry& entry, bool validFeeEstimate = true) EXCLUSIVE_LOCKS_REQUIRED(cs, cs_main);\n+    void addUnchecked(const CChain& active_chain, const CTxMemPoolEntry& entry, setEntries& setAncestors, bool validFeeEstimate = true) EXCLUSIVE_LOCKS_REQUIRED(cs, cs_main);\n \n     void removeRecursive(const CTransaction& tx, MemPoolRemovalReason reason) EXCLUSIVE_LOCKS_REQUIRED(cs);\n     void removeForReorg(CChainState& active_chainstate, int flags) EXCLUSIVE_LOCKS_REQUIRED(cs, cs_main);\n     void removeConflicts(const CTransaction& tx) EXCLUSIVE_LOCKS_REQUIRED(cs);\n-    void removeForBlock(const std::vector<CTransactionRef>& vtx, unsigned int nBlockHeight) EXCLUSIVE_LOCKS_REQUIRED(cs);\n+    void removeForBlock(const CChain& active_chain, const std::vector<CTransactionRef>& vtx, unsigned int nBlockHeight) EXCLUSIVE_LOCKS_REQUIRED(cs);\n \n     void clear();\n     void _clear() EXCLUSIVE_LOCKS_REQUIRED(cs); //lock free"
+      },
+      {
+        "sha": "b0a08105e46c1f80eb065c477f6e5c2e7edadb00",
+        "filename": "src/validation.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/279168f075cb81bbeb5462a77555d778abd4dc36/src/validation.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/279168f075cb81bbeb5462a77555d778abd4dc36/src/validation.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.cpp?ref=279168f075cb81bbeb5462a77555d778abd4dc36",
+        "patch": "@@ -902,7 +902,7 @@ bool MemPoolAccept::Finalize(const ATMPArgs& args, Workspace& ws)\n     bool validForFeeEstimation = !fReplacementTransaction && !bypass_limits && IsCurrentForFeeEstimation(m_active_chainstate) && m_pool.HasNoInputsOf(tx);\n \n     // Store transaction in memory\n-    m_pool.addUnchecked(*entry, setAncestors, validForFeeEstimation);\n+    m_pool.addUnchecked(m_active_chainstate.m_chain, *entry, setAncestors, validForFeeEstimation);\n \n     // trim mempool and check if tx was trimmed\n     if (!bypass_limits) {\n@@ -2287,7 +2287,7 @@ bool CChainState::ConnectTip(BlockValidationState& state, CBlockIndex* pindexNew\n     LogPrint(BCLog::BENCH, \"  - Writing chainstate: %.2fms [%.2fs (%.2fms/blk)]\\n\", (nTime5 - nTime4) * MILLI, nTimeChainState * MICRO, nTimeChainState * MILLI / nBlocksTotal);\n     // Remove conflicting transactions from the mempool.;\n     if (m_mempool) {\n-        m_mempool->removeForBlock(blockConnecting.vtx, pindexNew->nHeight);\n+        m_mempool->removeForBlock(m_chain, blockConnecting.vtx, pindexNew->nHeight);\n         disconnectpool.removeForBlock(blockConnecting.vtx);\n     }\n     // Update m_chain & related variables."
+      }
+    ]
+  },
+  {
+    "sha": "00bbac73b45830a18b1a8a676338f9a882284928",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowMGJiYWM3M2I0NTgzMGExOGIxYThhNjc2MzM4ZjlhODgyMjg0OTI4",
+    "commit": {
+      "author": {
+        "name": "R E Broadley",
+        "email": "github.com@esuza.com",
+        "date": "2021-09-16T12:07:50Z"
+      },
+      "committer": {
+        "name": "R E Broadley",
+        "email": "github.com@esuza.com",
+        "date": "2021-09-16T12:13:36Z"
+      },
+      "message": "Remove redundant entryHeight from CTxMemPoolEntry",
+      "tree": {
+        "sha": "050055c9d68ca545c87ae0a3c916ed89386863cb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/050055c9d68ca545c87ae0a3c916ed89386863cb"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/00bbac73b45830a18b1a8a676338f9a882284928",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/00bbac73b45830a18b1a8a676338f9a882284928",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/00bbac73b45830a18b1a8a676338f9a882284928",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/00bbac73b45830a18b1a8a676338f9a882284928/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "279168f075cb81bbeb5462a77555d778abd4dc36",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/279168f075cb81bbeb5462a77555d778abd4dc36",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/279168f075cb81bbeb5462a77555d778abd4dc36"
+      }
+    ],
+    "stats": {
+      "total": 23,
+      "additions": 6,
+      "deletions": 17
+    },
+    "files": [
+      {
+        "sha": "de3a98c2b42868f876c2f3cde158c1db94ac0c47",
+        "filename": "src/node/interfaces.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/00bbac73b45830a18b1a8a676338f9a882284928/src/node/interfaces.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/00bbac73b45830a18b1a8a676338f9a882284928/src/node/interfaces.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/node/interfaces.cpp?ref=00bbac73b45830a18b1a8a676338f9a882284928",
+        "patch": "@@ -590,7 +590,7 @@ class ChainImpl : public Chain\n     {\n         if (!m_node.mempool) return true;\n         LockPoints lp;\n-        CTxMemPoolEntry entry(tx, 0, 0, 0, false, 0, lp);\n+        CTxMemPoolEntry entry(tx, 0 /*fee*/, 0 /*time*/, false /*coinbase*/, 0 /*SigOpsCost*/, lp);\n         CTxMemPool::setEntries ancestors;\n         auto limit_ancestor_count = gArgs.GetArg(\"-limitancestorcount\", DEFAULT_ANCESTOR_LIMIT);\n         auto limit_ancestor_size = gArgs.GetArg(\"-limitancestorsize\", DEFAULT_ANCESTOR_SIZE_LIMIT) * 1000;"
+      },
+      {
+        "sha": "b60bfc31aa6821aec51021f246f7f1c0490c6870",
+        "filename": "src/txmempool.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 11,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/00bbac73b45830a18b1a8a676338f9a882284928/src/txmempool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/00bbac73b45830a18b1a8a676338f9a882284928/src/txmempool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.cpp?ref=00bbac73b45830a18b1a8a676338f9a882284928",
+        "patch": "@@ -22,9 +22,9 @@\n #include <optional>\n \n CTxMemPoolEntry::CTxMemPoolEntry(const CTransactionRef& _tx, const CAmount& _nFee,\n-                                 int64_t _nTime, unsigned int _entryHeight,\n+                                 int64_t _nTime,\n                                  bool _spendsCoinbase, int64_t _sigOpsCost, LockPoints lp)\n-    : tx(_tx), nFee(_nFee), nTxWeight(GetTransactionWeight(*tx)), nUsageSize(RecursiveDynamicUsage(tx)), nTime(_nTime), entryHeight(_entryHeight),\n+    : tx(_tx), nFee(_nFee), nTxWeight(GetTransactionWeight(*tx)), nUsageSize(RecursiveDynamicUsage(tx)), nTime(_nTime),\n     spendsCoinbase(_spendsCoinbase), sigOpCost(_sigOpsCost), lockPoints(lp)\n {\n     nCountWithDescendants = 1;\n@@ -58,16 +58,8 @@ size_t CTxMemPoolEntry::GetTxSize() const\n \n unsigned int CTxMemPoolEntry::GetHeight(const CChain& active_chain) const\n {\n-    //int64_t now = GetTimeSeconds();\n     CBlockIndex* ret = active_chain.FindEarliestAtLeast(nTime, 0);\n-    // The new way to calculate entry height is more accurate as it uses the correct height for the transaction when received\n-    // during IBD, and also when loaded from mempool.dat.\n-    unsigned int newEntryHeight = ret ? ret->nHeight-1 : active_chain.Height();\n-    std::string strSame;\n-    if ((entryHeight != newEntryHeight) && (nodeid != -2)) // Hide LoadMempool entries as we know they differ\n-        LogPrintf(\"%s: nTime=%s entryHeight=%d newEntryHeight=%d ret=%d peer=%d\\n\", __func__, FormatISO8601DateTime(nTime), entryHeight, newEntryHeight, ret ? 1 : 0, nodeid);\n-\n-    return newEntryHeight;\n+    return ret ? ret->nHeight - 1 : active_chain.Height();\n }\n \n // Update the given tx for any in-mempool descendants."
+      },
+      {
+        "sha": "62f6238bab6079c8f6558b9666f7beb7a4343187",
+        "filename": "src/txmempool.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 3,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/00bbac73b45830a18b1a8a676338f9a882284928/src/txmempool.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/00bbac73b45830a18b1a8a676338f9a882284928/src/txmempool.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.h?ref=00bbac73b45830a18b1a8a676338f9a882284928",
+        "patch": "@@ -96,7 +96,6 @@ class CTxMemPoolEntry\n     const size_t nTxWeight;         //!< ... and avoid recomputing tx weight (also used for GetTxSize())\n     const size_t nUsageSize;        //!< ... and total memory usage\n     const int64_t nTime;            //!< Local time when entering the mempool\n-    const unsigned int entryHeight; //!< Chain height when entering the mempool\n     const bool spendsCoinbase;      //!< keep track of transactions that spend a coinbase\n     const int64_t sigOpCost;        //!< Total sigop cost\n     int64_t feeDelta;          //!< Used for determining the priority of the transaction for mining in a block\n@@ -117,8 +116,7 @@ class CTxMemPoolEntry\n \n public:\n     CTxMemPoolEntry(const CTransactionRef& _tx, const CAmount& _nFee,\n-                    int64_t _nTime, unsigned int _entryHeight,\n-                    bool spendsCoinbase,\n+                    int64_t _nTime, bool spendsCoinbase,\n                     int64_t nSigOpsCost, LockPoints lp);\n \n     const CTransaction& GetTx() const { return *this->tx; }"
+      },
+      {
+        "sha": "44bd954fc786af9dbd7cf0939a288b75608aa41d",
+        "filename": "src/validation.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 2,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/00bbac73b45830a18b1a8a676338f9a882284928/src/validation.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/00bbac73b45830a18b1a8a676338f9a882284928/src/validation.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.cpp?ref=00bbac73b45830a18b1a8a676338f9a882284928",
+        "patch": "@@ -695,8 +695,7 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)\n         }\n     }\n \n-    entry.reset(new CTxMemPoolEntry(ptx, ws.m_base_fees, nAcceptTime, m_active_chainstate.m_chain.Height(),\n-            fSpendsCoinbase, nSigOpsCost, lp));\n+    entry.reset(new CTxMemPoolEntry(ptx, ws.m_base_fees, nAcceptTime, fSpendsCoinbase, nSigOpsCost, lp));\n     unsigned int nSize = entry->GetTxSize();\n \n     if (nSigOpsCost > MAX_STANDARD_TX_SIGOPS_COST)"
+      }
+    ]
+  }
+]

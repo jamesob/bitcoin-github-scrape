@@ -1,0 +1,242 @@
+[
+  {
+    "sha": "94d99c3e1741cf0a10bea82f48a92181c59d64c1",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5NGQ5OWMzZTE3NDFjZjBhMTBiZWE4MmY0OGE5MjE4MWM1OWQ2NGMx",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-05-24T16:08:01Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-06-13T13:17:45Z"
+      },
+      "message": "JSON-RPC: add filter{clearall,clear,add}, a block and tx notification system\n\nThese RPCs manipulate a set of named lists, each of which matches\nzero or more bitcoin addresses.\n\nIf a match is found in the TX memory pool, the command specified by\narg -filtertx (or -filter, if missing) is executed.\n\nIf a match is found in a newly [re-]accepted block (SetBestChain),\nthe command specified by arg -filterblock (or -filter, if missing)\nis executed.\n\nThe following command string substituations are performed, before\nthe notification command is executed:\n\n    %t      \"tx\" or \"block\"\n    %h      hex string of 256-bit block hash or tx hash",
+      "tree": {
+        "sha": "ae049d6fb65fe66538933bb474279ecd1a5a3e0d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/ae049d6fb65fe66538933bb474279ecd1a5a3e0d"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/94d99c3e1741cf0a10bea82f48a92181c59d64c1",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/94d99c3e1741cf0a10bea82f48a92181c59d64c1",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/94d99c3e1741cf0a10bea82f48a92181c59d64c1",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/94d99c3e1741cf0a10bea82f48a92181c59d64c1/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "c4879a0c2fea705b6ad7956502acc7897838e841",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c4879a0c2fea705b6ad7956502acc7897838e841",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c4879a0c2fea705b6ad7956502acc7897838e841"
+      }
+    ],
+    "stats": {
+      "total": 282,
+      "additions": 282,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "ec58d89aef9fe1f47d4494b39050c818eeae39fb",
+        "filename": "bitcoin-qt.pro",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/94d99c3e1741cf0a10bea82f48a92181c59d64c1/bitcoin-qt.pro",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/94d99c3e1741cf0a10bea82f48a92181c59d64c1/bitcoin-qt.pro",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/bitcoin-qt.pro?ref=94d99c3e1741cf0a10bea82f48a92181c59d64c1",
+        "patch": "@@ -147,6 +147,7 @@ HEADERS += src/qt/bitcoingui.h \\\n     src/qt/transactionview.h \\\n     src/qt/walletmodel.h \\\n     src/bitcoinrpc.h \\\n+    src/filter.h \\\n     src/qt/overviewpage.h \\\n     src/qt/csvmodelwriter.h \\\n     src/crypter.h \\\n@@ -206,6 +207,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \\\n     src/qt/walletmodel.cpp \\\n     src/bitcoinrpc.cpp \\\n     src/rpcdump.cpp \\\n+    src/filter.cpp \\\n     src/qt/overviewpage.cpp \\\n     src/qt/csvmodelwriter.cpp \\\n     src/crypter.cpp \\"
+      },
+      {
+        "sha": "c7a491d69c1ce4fd540afcb12c299cd2406f09ec",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 0,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/94d99c3e1741cf0a10bea82f48a92181c59d64c1/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/94d99c3e1741cf0a10bea82f48a92181c59d64c1/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=94d99c3e1741cf0a10bea82f48a92181c59d64c1",
+        "patch": "@@ -44,6 +44,9 @@ static CCriticalSection cs_nWalletUnlockTime;\n \n extern Value dumpprivkey(const Array& params, bool fHelp);\n extern Value importprivkey(const Array& params, bool fHelp);\n+extern Value filterclearall(const Array& params, bool fHelp);\n+extern Value filterclear(const Array& params, bool fHelp);\n+extern Value filteradd(const Array& params, bool fHelp);\n \n const Object emptyobj;\n \n@@ -2331,6 +2334,9 @@ static const CRPCCommand vRPCCommands[] =\n     { \"dumpprivkey\",            &dumpprivkey,            false },\n     { \"importprivkey\",          &importprivkey,          false },\n     { \"sendrawtx\",              &sendrawtx,              false },\n+    { \"filterclearall\",         &filterclearall,         false },\n+    { \"filterclear\",            &filterclear,            false },\n+    { \"filteradd\",              &filteradd,              false },\n };\n \n CRPCTable::CRPCTable()"
+      },
+      {
+        "sha": "3821d92693bb8960f7d8e53deb499fc876b16c0b",
+        "filename": "src/filter.cpp",
+        "status": "added",
+        "additions": 148,
+        "deletions": 0,
+        "changes": 148,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/94d99c3e1741cf0a10bea82f48a92181c59d64c1/src/filter.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/94d99c3e1741cf0a10bea82f48a92181c59d64c1/src/filter.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/filter.cpp?ref=94d99c3e1741cf0a10bea82f48a92181c59d64c1",
+        "patch": "@@ -0,0 +1,148 @@\n+// Copyright (c) 2010 Satoshi Nakamoto\n+// Copyright (c) 2009-2012 The Bitcoin developers\n+// Distributed under the MIT/X11 software license, see the accompanying\n+// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+#include \"bitcoinrpc.h\"\n+#include \"filter.h\"\n+#include \"util.h\"\n+#include \"sync.h\"\n+#include \"main.h\"\n+\n+using namespace std;\n+using namespace json_spirit;\n+\n+static CBloomers bloomers;\n+static CCriticalSection cs_lock;\n+static string strNotifyTx;\n+static string strNotifyBlock;\n+\n+Value filterclearall(const Array& params, bool fHelp)\n+{\n+    if (fHelp || params.size() > 0)\n+        throw runtime_error(\n+            \"filterclearall\\n\"\n+            \"Clear all filters.\");\n+\n+    LOCK(cs_lock);\n+    bloomers.clearall();\n+\n+    return true;\n+}\n+\n+Value filterclear(const Array& params, bool fHelp)\n+{\n+    if (fHelp || params.size() != 1)\n+        throw runtime_error(\n+            \"filterclear <name>\\n\"\n+            \"Clear filter named <name>.\");\n+\n+    LOCK(cs_lock);\n+    bloomers.clear(params[0].get_str());\n+\n+    return true;\n+}\n+\n+Value filteradd(const Array& params, bool fHelp)\n+{\n+    if (fHelp || params.size() != 2)\n+        throw runtime_error(\n+            \"filteradd <name> <hash hexstring>\\n\"\n+            \"Add <hash> to filter <name>.\");\n+\n+    LOCK(cs_lock);\n+    bloomers.add(params[0].get_str(), ParseHex(params[1].get_str()));\n+\n+    return true;\n+}\n+\n+static bool FilterMatchTxOut(const CTxOut& txout)\n+{\n+    txnouttype type;\n+    int nRequired;\n+    vector<CBitcoinAddress> addresses;\n+\n+    if (!ExtractAddresses(txout.scriptPubKey, type, addresses, nRequired))\n+        return false;\n+\n+    for (unsigned int i = 0; i < addresses.size(); i++) {\n+        uint160 hash = addresses[i].GetHash160();\n+        vector<string> rv = bloomers.contains(string(hash.begin(), hash.end()));\n+        if (rv.size() > 0)\n+            return true;\n+    }\n+\n+    return false;\n+}\n+\n+static bool __FilterMatchTx(const CTransaction& tx)\n+{\n+    BOOST_FOREACH(const CTxOut& txout, tx.vout) {\n+        if (FilterMatchTxOut(txout))\n+            return true;\n+    }\n+\n+    return false;\n+}\n+\n+static bool FilterMatchTx(const CTransaction& tx)\n+{\n+    LOCK(cs_lock);\n+    return __FilterMatchTx(tx);\n+}\n+\n+static bool FilterMatchBlock(const CBlock& block)\n+{\n+    LOCK(cs_lock);\n+\n+    BOOST_FOREACH(const CTransaction& tx, block.vtx) {\n+        if (__FilterMatchTx(tx))\n+            return true;\n+    }\n+\n+    return false;\n+}\n+\n+void FilterNotifyTx(const CTransaction& tx)\n+{\n+    if (strNotifyTx.empty())\n+        return;\n+\n+    if (!FilterMatchTx(tx))\n+        return;\n+\n+    string strCmd(strNotifyTx);\n+    boost::replace_all(strCmd, \"%t\", \"tx\");\n+    boost::replace_all(strCmd, \"%h\", tx.GetHash().GetHex());\n+\n+    printf(\"FILTER(tx) exec: %s\\n\", strCmd.c_str());\n+    boost::thread t(runCommand, strCmd); // thread runs free\n+}\n+\n+void FilterNotifyBlock(const CBlock& block)\n+{\n+    if (strNotifyBlock.empty())\n+        return;\n+\n+    if (!FilterMatchBlock(block))\n+        return;\n+\n+    string strCmd(strNotifyBlock);\n+    boost::replace_all(strCmd, \"%t\", \"block\");\n+    boost::replace_all(strCmd, \"%h\", block.GetHash().GetHex());\n+\n+    printf(\"FILTER(block) exec: %s\\n\", strCmd.c_str());\n+    boost::thread t(runCommand, strCmd); // thread runs free\n+}\n+\n+void FilterSetup()\n+{\n+    string strNotifyTx = GetArg(\"-filtertx\", \"\");\n+    if (strNotifyTx.empty())\n+        strNotifyTx = GetArg(\"-filter\", \"\");\n+\n+    string strNotifyBlock = GetArg(\"-filterblock\", \"\");\n+    if (strNotifyBlock.empty())\n+        strNotifyBlock = GetArg(\"-filter\", \"\");\n+}\n+"
+      },
+      {
+        "sha": "30717d26eecb7478031c8bf68625936a22bfc745",
+        "filename": "src/filter.h",
+        "status": "added",
+        "additions": 70,
+        "deletions": 0,
+        "changes": 70,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/94d99c3e1741cf0a10bea82f48a92181c59d64c1/src/filter.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/94d99c3e1741cf0a10bea82f48a92181c59d64c1/src/filter.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/filter.h?ref=94d99c3e1741cf0a10bea82f48a92181c59d64c1",
+        "patch": "@@ -0,0 +1,70 @@\n+// Copyright (c) 2010 Satoshi Nakamoto\n+// Copyright (c) 2009-2012 The Bitcoin developers\n+// Distributed under the MIT/X11 software license, see the accompanying\n+// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+#ifndef __BITCOIN_FILTER_H__\n+#define __BITCOIN_FILTER_H__ 1\n+\n+#include <string>\n+#include <map>\n+\n+class CTransaction;\n+class CBlock;\n+\n+class CFilter\n+{\n+private:\n+    std::map<std::string, bool> filter;\n+\n+public:\n+    void insert(const std::string& data) { filter[data] = true; }\n+\n+    bool contains(const std::string& data) const\n+    {\n+        return (filter.count(data) > 0);\n+    }\n+};\n+\n+class CBloomers\n+{\n+private:\n+    std::map<std::string, CFilter> mapFilters;\n+public:\n+    void clearall()\n+    {\n+        mapFilters.clear();\n+    }\n+\n+    void clear(const std::string& name)\n+    {\n+        mapFilters.erase(name);\n+    }\n+\n+    void add(const std::string& name, const std::string& data)\n+    {\n+        mapFilters[name].insert(data);\n+    }\n+\n+    void add(const std::string& name, std::vector<unsigned char> data_)\n+    {\n+        std::string data((char *)&data_[0], data_.size());\n+        add(name, data);\n+    }\n+\n+    std::vector<std::string> contains(const std::string& data)\n+    {\n+        std::vector<std::string> retNames;\n+        for (std::map<std::string, CFilter>::const_iterator mi =\n+                    mapFilters.begin(); mi != mapFilters.end(); mi++) {\n+            if (mi->second.contains(data))\n+                retNames.push_back(mi->first);\n+        }\n+        return retNames;\n+    }\n+};\n+\n+void FilterNotifyTx(const CTransaction& tx);\n+void FilterNotifyBlock(const CBlock& block);\n+\n+#endif // __BITCOIN_FILTER_H__"
+      },
+      {
+        "sha": "298c3ed341a19530cbc44345c05f717b2b78b952",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/94d99c3e1741cf0a10bea82f48a92181c59d64c1/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/94d99c3e1741cf0a10bea82f48a92181c59d64c1/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=94d99c3e1741cf0a10bea82f48a92181c59d64c1",
+        "patch": "@@ -387,6 +387,9 @@ bool AppInit2()\n             InitWarning(_(\"Warning: -paytxfee is set very high. This is the transaction fee you will pay if you send a transaction.\"));\n     }\n \n+    extern void FilterSetup();\n+    FilterSetup();\n+\n     // ********************************************************* Step 4: application initialization: dir lock, daemonize, pidfile, debug log\n \n     // Make sure only a single Bitcoin process is using the data directory."
+      },
+      {
+        "sha": "ef0b5f7d78bb683d13a1083b0af0635ce3162116",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 0,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/94d99c3e1741cf0a10bea82f48a92181c59d64c1/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/94d99c3e1741cf0a10bea82f48a92181c59d64c1/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=94d99c3e1741cf0a10bea82f48a92181c59d64c1",
+        "patch": "@@ -7,6 +7,7 @@\n #include \"db.h\"\n #include \"net.h\"\n #include \"init.h\"\n+#include \"filter.h\"\n #include \"ui_interface.h\"\n #include <boost/algorithm/string/replace.hpp>\n #include <boost/filesystem.hpp>\n@@ -611,6 +612,10 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,\n     printf(\"CTxMemPool::accept() : accepted %s (poolsz %u)\\n\",\n            hash.ToString().substr(0,10).c_str(),\n            mapTx.size());\n+\n+    // exec -filtertx/-filter hook\n+    FilterNotifyTx(tx);\n+\n     return true;\n }\n \n@@ -1616,6 +1621,9 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)\n         boost::thread t(runCommand, strCmd); // thread runs free\n     }\n \n+    // exec -filterblock/-filter hook\n+    FilterNotifyBlock(*this);\n+\n     return true;\n }\n "
+      },
+      {
+        "sha": "322168aca3aa3158331744d369ba06348feab525",
+        "filename": "src/makefile.linux-mingw",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/94d99c3e1741cf0a10bea82f48a92181c59d64c1/src/makefile.linux-mingw",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/94d99c3e1741cf0a10bea82f48a92181c59d64c1/src/makefile.linux-mingw",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/makefile.linux-mingw?ref=94d99c3e1741cf0a10bea82f48a92181c59d64c1",
+        "patch": "@@ -60,6 +60,7 @@ OBJS= \\\n     obj/protocol.o \\\n     obj/bitcoinrpc.o \\\n     obj/rpcdump.o \\\n+    obj/filter.o \\\n     obj/script.o \\\n     obj/sync.o \\\n     obj/util.o \\"
+      },
+      {
+        "sha": "5353faa3c06e61eefd10a72eb12efc02416edafc",
+        "filename": "src/makefile.mingw",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/94d99c3e1741cf0a10bea82f48a92181c59d64c1/src/makefile.mingw",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/94d99c3e1741cf0a10bea82f48a92181c59d64c1/src/makefile.mingw",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/makefile.mingw?ref=94d99c3e1741cf0a10bea82f48a92181c59d64c1",
+        "patch": "@@ -57,6 +57,7 @@ OBJS= \\\n     obj/protocol.o \\\n     obj/bitcoinrpc.o \\\n     obj/rpcdump.o \\\n+    obj/filter.o \\\n     obj/script.o \\\n     obj/sync.o \\\n     obj/util.o \\"
+      },
+      {
+        "sha": "cb79fec4b0157e8007eca4b167cdef26d40cf58d",
+        "filename": "src/makefile.osx",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/94d99c3e1741cf0a10bea82f48a92181c59d64c1/src/makefile.osx",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/94d99c3e1741cf0a10bea82f48a92181c59d64c1/src/makefile.osx",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/makefile.osx?ref=94d99c3e1741cf0a10bea82f48a92181c59d64c1",
+        "patch": "@@ -84,6 +84,7 @@ OBJS= \\\n     obj/protocol.o \\\n     obj/bitcoinrpc.o \\\n     obj/rpcdump.o \\\n+    obj/filter.o \\\n     obj/script.o \\\n     obj/sync.o \\\n     obj/util.o \\"
+      },
+      {
+        "sha": "23b38410ddbc3f936e690a8bd80d420b200c9584",
+        "filename": "src/makefile.unix",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/94d99c3e1741cf0a10bea82f48a92181c59d64c1/src/makefile.unix",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/94d99c3e1741cf0a10bea82f48a92181c59d64c1/src/makefile.unix",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/makefile.unix?ref=94d99c3e1741cf0a10bea82f48a92181c59d64c1",
+        "patch": "@@ -104,6 +104,7 @@ OBJS= \\\n     obj/protocol.o \\\n     obj/bitcoinrpc.o \\\n     obj/rpcdump.o \\\n+    obj/filter.o \\\n     obj/script.o \\\n     obj/sync.o \\\n     obj/util.o \\"
+      },
+      {
+        "sha": "08969ef05e3bacb7214d610ca0401d52311a0d0e",
+        "filename": "src/test/filter_tests.cpp",
+        "status": "added",
+        "additions": 41,
+        "deletions": 0,
+        "changes": 41,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/94d99c3e1741cf0a10bea82f48a92181c59d64c1/src/test/filter_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/94d99c3e1741cf0a10bea82f48a92181c59d64c1/src/test/filter_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/filter_tests.cpp?ref=94d99c3e1741cf0a10bea82f48a92181c59d64c1",
+        "patch": "@@ -0,0 +1,41 @@\n+\n+#include <boost/test/unit_test.hpp>\n+\n+#include \"uint256.h\"\n+#include \"filter.h\"\n+\n+using namespace std;\n+\n+BOOST_AUTO_TEST_SUITE(filter_tests)\n+\n+BOOST_AUTO_TEST_CASE(filter_test1)\n+{\n+    CBloomers bloomers;\n+\n+    vector<uint160> hash;\n+    hash.push_back(0xaabbccdd11223344ULL);\n+    hash.push_back(0x9988776655443322ULL);\n+\n+    vector<string> hashstr;\n+    int i;\n+\n+    for (i = 0; i < 2; i++) {\n+        string s;\n+        s.assign(hash[i].begin(), hash[i].end());\n+        hashstr.push_back(s);\n+    }\n+\n+    for (i = 0; i < 2; i++)\n+        bloomers.add(\"main\", hashstr[i]);\n+\n+    for (i = 0; i < 2; i++) {\n+        vector<string> rv;\n+        rv = bloomers.contains(hashstr[i]);\n+\n+        BOOST_CHECK(rv.size() == 1);\n+        BOOST_CHECK(rv[0] == \"main\");\n+    }\n+}\n+\n+BOOST_AUTO_TEST_SUITE_END()\n+"
+      }
+    ]
+  },
+  {
+    "sha": "ac13b8a30aadd920af643f0de1d44636bff24575",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphYzEzYjhhMzBhYWRkOTIwYWY2NDNmMGRlMWQ0NDYzNmJmZjI0NTc1",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-06-13T13:38:25Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-06-13T13:38:25Z"
+      },
+      "message": "filter: fix bug Gavin noticed",
+      "tree": {
+        "sha": "34a059c671149950260eb8877af9dd9a0068e0a7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/34a059c671149950260eb8877af9dd9a0068e0a7"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/ac13b8a30aadd920af643f0de1d44636bff24575",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ac13b8a30aadd920af643f0de1d44636bff24575",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/ac13b8a30aadd920af643f0de1d44636bff24575",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ac13b8a30aadd920af643f0de1d44636bff24575/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "94d99c3e1741cf0a10bea82f48a92181c59d64c1",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/94d99c3e1741cf0a10bea82f48a92181c59d64c1",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/94d99c3e1741cf0a10bea82f48a92181c59d64c1"
+      }
+    ],
+    "stats": {
+      "total": 4,
+      "additions": 2,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "38ecae64236d13a8015e14f0728efee3b0777418",
+        "filename": "src/filter.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ac13b8a30aadd920af643f0de1d44636bff24575/src/filter.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ac13b8a30aadd920af643f0de1d44636bff24575/src/filter.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/filter.cpp?ref=ac13b8a30aadd920af643f0de1d44636bff24575",
+        "patch": "@@ -137,11 +137,11 @@ void FilterNotifyBlock(const CBlock& block)\n \n void FilterSetup()\n {\n-    string strNotifyTx = GetArg(\"-filtertx\", \"\");\n+    strNotifyTx = GetArg(\"-filtertx\", \"\");\n     if (strNotifyTx.empty())\n         strNotifyTx = GetArg(\"-filter\", \"\");\n \n-    string strNotifyBlock = GetArg(\"-filterblock\", \"\");\n+    strNotifyBlock = GetArg(\"-filterblock\", \"\");\n     if (strNotifyBlock.empty())\n         strNotifyBlock = GetArg(\"-filter\", \"\");\n }"
+      }
+    ]
+  }
+]

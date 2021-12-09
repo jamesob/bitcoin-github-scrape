@@ -1,0 +1,182 @@
+[
+  {
+    "sha": "1a3a3c66f5c71fd780b5fcedd9ffc2342eb58037",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxYTNhM2M2NmY1YzcxZmQ3ODBiNWZjZWRkOWZmYzIzNDJlYjU4MDM3",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-05-30T23:55:15Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-07T22:17:23Z"
+      },
+      "message": "Support pruning from txindex.dat.\n\nBy launching with -prune to prune from genisis block to latest\ncheckpoint.\nOr running initial block download with -autoprune to prune each\ntime you get a new checkpoint.",
+      "tree": {
+        "sha": "690215643ebb4382e3861363e783d1e2980cce73",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/690215643ebb4382e3861363e783d1e2980cce73"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/1a3a3c66f5c71fd780b5fcedd9ffc2342eb58037",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1a3a3c66f5c71fd780b5fcedd9ffc2342eb58037",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/1a3a3c66f5c71fd780b5fcedd9ffc2342eb58037",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1a3a3c66f5c71fd780b5fcedd9ffc2342eb58037/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "afdd59416ed614c63591946aa95c9334db41fc8c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/afdd59416ed614c63591946aa95c9334db41fc8c",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/afdd59416ed614c63591946aa95c9334db41fc8c"
+      }
+    ],
+    "stats": {
+      "total": 182,
+      "additions": 182,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "f50e6200d7cbf0b04e6524ba28a61b2588d2c038",
+        "filename": "src/checkpoints.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 0,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1a3a3c66f5c71fd780b5fcedd9ffc2342eb58037/src/checkpoints.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1a3a3c66f5c71fd780b5fcedd9ffc2342eb58037/src/checkpoints.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/checkpoints.cpp?ref=1a3a3c66f5c71fd780b5fcedd9ffc2342eb58037",
+        "patch": "@@ -56,6 +56,13 @@ namespace Checkpoints\n         return checkpoints.rbegin()->first;\n     }\n \n+    uint256 GetLastCheckpointHash()\n+    {\n+        MapCheckpoints& checkpoints = (fTestNet ? mapCheckpointsTestnet : mapCheckpoints);\n+\n+        return checkpoints.rbegin()->second;\n+    }\n+\n     CBlockIndex* GetLastCheckpoint(const std::map<uint256, CBlockIndex*>& mapBlockIndex)\n     {\n         MapCheckpoints& checkpoints = (fTestNet ? mapCheckpointsTestnet : mapCheckpoints);"
+      },
+      {
+        "sha": "be8d5426d67ea313aea5ade2428f63ab6b1fdd4e",
+        "filename": "src/checkpoints.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1a3a3c66f5c71fd780b5fcedd9ffc2342eb58037/src/checkpoints.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1a3a3c66f5c71fd780b5fcedd9ffc2342eb58037/src/checkpoints.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/checkpoints.h?ref=1a3a3c66f5c71fd780b5fcedd9ffc2342eb58037",
+        "patch": "@@ -20,6 +20,9 @@ namespace Checkpoints\n     // Return conservative estimate of total number of blocks, 0 if unknown\n     int GetTotalBlocksEstimate();\n \n+    // Return the hash of the most recent checkpoint (with height GetTotalBlocksEstimate())\n+    uint256 GetLastCheckpointHash();\n+\n     // Returns last CBlockIndex* in mapBlockIndex that is a checkpoint\n     CBlockIndex* GetLastCheckpoint(const std::map<uint256, CBlockIndex*>& mapBlockIndex);\n }"
+      },
+      {
+        "sha": "ce01cd920cd343588655c316a0b2785b7f8da0ff",
+        "filename": "src/db.cpp",
+        "status": "modified",
+        "additions": 128,
+        "deletions": 0,
+        "changes": 128,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1a3a3c66f5c71fd780b5fcedd9ffc2342eb58037/src/db.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1a3a3c66f5c71fd780b5fcedd9ffc2342eb58037/src/db.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.cpp?ref=1a3a3c66f5c71fd780b5fcedd9ffc2342eb58037",
+        "patch": "@@ -398,6 +398,12 @@ bool CTxDB::EraseTxIndex(const CTransaction& tx)\n     return Erase(make_pair(string(\"tx\"), hash));\n }\n \n+bool CTxDB::EraseTxIndex(uint256 hash)\n+{\n+    assert(!fClient);\n+    return Erase(make_pair(string(\"tx\"), hash));\n+}\n+\n bool CTxDB::ContainsTx(uint256 hash)\n {\n     assert(!fClient);\n@@ -505,6 +511,16 @@ bool CTxDB::WriteHashBestChain(uint256 hashBestChain)\n     return Write(string(\"hashBestChain\"), hashBestChain);\n }\n \n+bool CTxDB::ReadHashBestCheckpoint(uint256& hashBestCheckpoint)\n+{\n+    return Read(string(\"hashBestCheckpoint\"), hashBestCheckpoint);\n+}\n+\n+bool CTxDB::WriteHashBestCheckpoint(uint256 hashBestCheckpoint)\n+{\n+    return Write(string(\"hashBestCheckpoint\"), hashBestCheckpoint);\n+}\n+\n bool CTxDB::ReadBestInvalidWork(CBigNum& bnBestInvalidWork)\n {\n     return Read(string(\"bnBestInvalidWork\"), bnBestInvalidWork);\n@@ -535,6 +551,118 @@ CBlockIndex static * InsertBlockIndex(uint256 hash)\n     return pindexNew;\n }\n \n+bool CTxDB::PruneBlockIndex(uint256 hashPruneFrom, uint256 hashPruneTo)\n+{\n+//    TODO: assert here, but cant #include main.h\n+//    if (hashPruneFrom != 0)\n+//        assert(hashPruneTo == hashBestBlock);\n+\n+    CBlockIndex* pindexScan = pindexGenesisBlock;\n+    uint256 hashOldBestCheckpoint;\n+    if (ReadHashBestCheckpoint(hashOldBestCheckpoint) && hashOldBestCheckpoint == hashPruneTo)\n+        return true;\n+\n+    if (!mapBlockIndex.count(hashPruneTo))\n+        return true;\n+\n+    if (hashPruneFrom != 0)\n+        pindexScan = mapBlockIndex[hashPruneFrom];\n+    assert(pindexScan);\n+\n+    printf(\"Pruning Block Index from %s to %s.\\n\", hashPruneFrom.ToString().substr(0,20).c_str(), hashPruneTo.ToString().substr(0,20).c_str());\n+\n+    // Cache of Txes by hash -> txouts spent before hashPruneTo flags + cant be deleted flag\n+    map<uint256, pair<vector<bool>, bool> > mapTxIndexCache;\n+\n+    while (pindexScan != NULL && *(pindexScan->phashBlock) != hashPruneTo)\n+    {\n+        if(fRequestShutdown)\n+            return true;\n+\n+        CBlock block;\n+        block.ReadFromDisk(pindexScan);\n+\n+        BOOST_FOREACH(CTransaction& tx, block.vtx)\n+        {\n+            if (tx.IsCoinBase())\n+                continue;\n+\n+            BOOST_FOREACH(CTxIn& txin, tx.vin)\n+            {\n+                COutPoint& txout = txin.prevout;\n+                uint256& hash = txout.hash;\n+                pair<vector<bool>, bool>& pairTx = mapTxIndexCache[hash];\n+\n+                if (pairTx.first.size() == 0)\n+                {\n+                    CTxIndex txindex;\n+                    if (!ReadTxIndex(hash, txindex))\n+                    {\n+                        // This should only ever happen if we get interrupted pruning and dont WriteHashBestCheckpoint\n+                        pairTx.second = false;\n+                        break;\n+                    }\n+\n+                    vector<CDiskTxPos>& vSpent = txindex.vSpent;\n+                    unsigned int vouts = vSpent.size();\n+\n+                    pairTx.first.resize(vouts);\n+\n+                    pairTx.second = true;\n+                    for (unsigned int i = 0; i < vouts; i++)\n+                    {\n+                        if (vSpent[i].IsNull())\n+                        {\n+                            pairTx.second = false;\n+                            break;\n+                        }\n+                        pairTx.first[i] = false;\n+                    }\n+                }\n+\n+                if (pairTx.second == false)\n+                    continue;\n+\n+                pairTx.first[txout.n] = true;\n+            }\n+        }\n+\n+        pindexScan = pindexScan->pnext;\n+    }\n+\n+    // TODO: It may be prudent to use DB Transactions here, but if we do we overrun our maximum lock objects\n+    //if (!TxnBegin())\n+    //    return false;\n+\n+    unsigned int nTxsPruned = 0;\n+    typedef pair<const uint256, pair<vector<bool>, bool> > TxIndexCachePairType;\n+    BOOST_FOREACH(TxIndexCachePairType& pair, mapTxIndexCache)\n+    {\n+        bool fPrunable = true;\n+        BOOST_FOREACH(bool fSpent, pair.second.first)\n+            if (!fSpent)\n+            {\n+                fPrunable = false;\n+                break;\n+            }\n+\n+        if (!fPrunable)\n+            continue;\n+\n+        EraseTxIndex(pair.first);\n+        nTxsPruned++;\n+    }\n+\n+    WriteHashBestCheckpoint(hashPruneTo);\n+\n+    //if (!TxnCommit())\n+    //    return false;\n+\n+    printf(\"Pruned %u items from txindex.dat\\n\", nTxsPruned);\n+\n+    return true;\n+}\n+\n bool CTxDB::LoadBlockIndex()\n {\n     if (!LoadBlockIndexGuts())"
+      },
+      {
+        "sha": "5e06a0ad9a81ce57522de2036bc79483256432a0",
+        "filename": "src/db.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 0,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1a3a3c66f5c71fd780b5fcedd9ffc2342eb58037/src/db.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1a3a3c66f5c71fd780b5fcedd9ffc2342eb58037/src/db.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.h?ref=1a3a3c66f5c71fd780b5fcedd9ffc2342eb58037",
+        "patch": "@@ -306,6 +306,7 @@ class CTxDB : public CDB\n     bool UpdateTxIndex(uint256 hash, const CTxIndex& txindex);\n     bool AddTxIndex(const CTransaction& tx, const CDiskTxPos& pos, int nHeight);\n     bool EraseTxIndex(const CTransaction& tx);\n+    bool EraseTxIndex(uint256 hash);\n     bool ContainsTx(uint256 hash);\n     bool ReadOwnerTxes(uint160 hash160, int nHeight, std::vector<CTransaction>& vtx);\n     bool ReadDiskTx(uint256 hash, CTransaction& tx, CTxIndex& txindex);\n@@ -315,9 +316,12 @@ class CTxDB : public CDB\n     bool WriteBlockIndex(const CDiskBlockIndex& blockindex);\n     bool ReadHashBestChain(uint256& hashBestChain);\n     bool WriteHashBestChain(uint256 hashBestChain);\n+    bool ReadHashBestCheckpoint(uint256& hashBestCheckpoint);\n+    bool WriteHashBestCheckpoint(uint256 hashBestCheckpoint);\n     bool ReadBestInvalidWork(CBigNum& bnBestInvalidWork);\n     bool WriteBestInvalidWork(CBigNum bnBestInvalidWork);\n     bool LoadBlockIndex();\n+    bool PruneBlockIndex(uint256 hashPruneFrom, uint256 hashPruneTo);\n private:\n     bool LoadBlockIndexGuts();\n };"
+      },
+      {
+        "sha": "d64c018d3a4727ec819e16bad0fcaf3196bb2464",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 23,
+        "deletions": 0,
+        "changes": 23,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1a3a3c66f5c71fd780b5fcedd9ffc2342eb58037/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1a3a3c66f5c71fd780b5fcedd9ffc2342eb58037/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=1a3a3c66f5c71fd780b5fcedd9ffc2342eb58037",
+        "patch": "@@ -9,6 +9,7 @@\n #include \"init.h\"\n #include \"util.h\"\n #include \"ui_interface.h\"\n+#include \"checkpoints.h\"\n #include <boost/filesystem.hpp>\n #include <boost/filesystem/fstream.hpp>\n #include <boost/filesystem/convenience.hpp>\n@@ -259,6 +260,8 @@ std::string HelpMessage()\n         \"  -checkblocks=<n>       \" + _(\"How many blocks to check at startup (default: 2500, 0 = all)\") + \"\\n\" +\n         \"  -checklevel=<n>        \" + _(\"How thorough the block verification is (0-6, default: 1)\") + \"\\n\" +\n         \"  -loadblock=<file>      \" + _(\"Imports blocks from external blk000?.dat file\") + \"\\n\" +\n+        \"  -autoprune             \" + _(\"Prunes blkindex.dat of spent transactions during download (default: 1)\") + \"\\n\" +\n+        \"  -prune                 \" + _(\"Prunes blkindex.dat of spent transactions during startup (default: 0)\") + \"\\n\" +\n         \"  -?                     \" + _(\"This help message\") + \"\\n\";\n \n     strUsage += string() +\n@@ -572,6 +575,26 @@ bool AppInit2()\n         return false;\n     }\n \n+    uiInterface.InitMessage(_(\"Upgrading block index...\"));\n+    printf(\"Upgrading block index...\\n\");\n+    nStart = GetTimeMillis();\n+    if (GetBoolArg(\"-prune\", false))\n+    {\n+        CTxDB txdb;\n+        if (!txdb.PruneBlockIndex(0, Checkpoints::GetLastCheckpointHash()))\n+            strErrors << _(\"Error pruning blkindex.dat\") << \"\\n\";\n+    }\n+\n+    // as PruneBlockIndex can take several minutes, it's possible the user\n+    // requested to kill bitcoin-qt during the last operation. If so, exit.\n+    // As the program has not fully started yet, Shutdown() is possibly overkill.\n+    if (fRequestShutdown)\n+    {\n+        printf(\"Shutdown requested. Exiting.\\n\");\n+        return false;\n+    }\n+    printf(\" block index prune %15\"PRI64d\"ms\\n\", GetTimeMillis() - nStart);\n+\n     // ********************************************************* Step 7: load wallet\n \n     uiInterface.InitMessage(_(\"Loading wallet...\"));"
+      },
+      {
+        "sha": "2e7f8247c28631479e7945198caeaf8d17fc207f",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 17,
+        "deletions": 0,
+        "changes": 17,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1a3a3c66f5c71fd780b5fcedd9ffc2342eb58037/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1a3a3c66f5c71fd780b5fcedd9ffc2342eb58037/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=1a3a3c66f5c71fd780b5fcedd9ffc2342eb58037",
+        "patch": "@@ -1755,6 +1755,10 @@ bool CBlock::AcceptBlock()\n     if (!Checkpoints::CheckBlock(nHeight, hash))\n         return DoS(100, error(\"AcceptBlock() : rejected by checkpoint lockin at %d\", nHeight));\n \n+    CBlockIndex* pPrevCheckpoint = NULL;\n+    if (GetBoolArg(\"-autoprune\", true))\n+        pPrevCheckpoint = Checkpoints::GetLastCheckpoint(mapBlockIndex);\n+\n     // Write block to history file\n     if (!CheckDiskSpace(::GetSerializeSize(*this, SER_DISK, CLIENT_VERSION)))\n         return error(\"AcceptBlock() : out of disk space\");\n@@ -1765,6 +1769,19 @@ bool CBlock::AcceptBlock()\n     if (!AddToBlockIndex(nFile, nBlockPos))\n         return error(\"AcceptBlock() : AddToBlockIndex failed\");\n \n+    if (GetBoolArg(\"-autoprune\", true))\n+    {\n+        CBlockIndex* pcheckpoint = Checkpoints::GetLastCheckpoint(mapBlockIndex);\n+        if (pcheckpoint == pindexBest)\n+        {\n+            CTxDB txdb;\n+            if (!pPrevCheckpoint)\n+                txdb.PruneBlockIndex(0, hash);\n+            else\n+                txdb.PruneBlockIndex(*(pPrevCheckpoint->phashBlock), hash);\n+        }\n+    }\n+\n     // Relay inventory, but don't relay old inventory during initial block download\n     int nBlockEstimate = Checkpoints::GetTotalBlocksEstimate();\n     if (hashBestChain == hash)"
+      }
+    ]
+  },
+  {
+    "sha": "24f4c50f2997bfc9e374c26b25e234dea549774f",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyNGY0YzUwZjI5OTdiZmM5ZTM3NGMyNmIyNWUyMzRkZWE1NDk3NzRm",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-05-31T01:55:35Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-06-07T22:17:23Z"
+      },
+      "message": "Add UI InitMessage for -loadblock.",
+      "tree": {
+        "sha": "aaccaf5622a13710dbeda928a7e510794de6277d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/aaccaf5622a13710dbeda928a7e510794de6277d"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/24f4c50f2997bfc9e374c26b25e234dea549774f",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/24f4c50f2997bfc9e374c26b25e234dea549774f",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/24f4c50f2997bfc9e374c26b25e234dea549774f",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/24f4c50f2997bfc9e374c26b25e234dea549774f/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "1a3a3c66f5c71fd780b5fcedd9ffc2342eb58037",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1a3a3c66f5c71fd780b5fcedd9ffc2342eb58037",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/1a3a3c66f5c71fd780b5fcedd9ffc2342eb58037"
+      }
+    ],
+    "stats": {
+      "total": 1,
+      "additions": 1,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "8b9d21e8a1669f52270b236a85a976d8cbd0a4d2",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/24f4c50f2997bfc9e374c26b25e234dea549774f/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/24f4c50f2997bfc9e374c26b25e234dea549774f/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=24f4c50f2997bfc9e374c26b25e234dea549774f",
+        "patch": "@@ -676,6 +676,7 @@ bool AppInit2()\n \n     if (mapArgs.count(\"-loadblock\"))\n     {\n+        uiInterface.InitMessage(_(\"Importing additional blocks...\"));\n         BOOST_FOREACH(string strFile, mapMultiArgs[\"-loadblock\"])\n         {\n             FILE *file = fopen(strFile.c_str(), \"rb\");"
+      }
+    ]
+  }
+]

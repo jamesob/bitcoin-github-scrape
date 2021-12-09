@@ -1,0 +1,134 @@
+[
+  {
+    "sha": "4622aea4333b8cf72718953ed13e14f0b724ab07",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0NjIyYWVhNDMzM2I4Y2Y3MjcxODk1M2VkMTNlMTRmMGI3MjRhYjA3",
+    "commit": {
+      "author": {
+        "name": "whythat",
+        "email": "yuri.zhykin@gmail.com",
+        "date": "2016-07-07T14:45:02Z"
+      },
+      "committer": {
+        "name": "whythat",
+        "email": "yuri.zhykin@gmail.com",
+        "date": "2016-07-08T23:20:27Z"
+      },
+      "message": "Use std::move() instead of copying/removing in TxMemPool",
+      "tree": {
+        "sha": "df9ee83003f4c88db4d3ccc5610a8a67b9db2f8e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/df9ee83003f4c88db4d3ccc5610a8a67b9db2f8e"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/4622aea4333b8cf72718953ed13e14f0b724ab07",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4622aea4333b8cf72718953ed13e14f0b724ab07",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/4622aea4333b8cf72718953ed13e14f0b724ab07",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4622aea4333b8cf72718953ed13e14f0b724ab07/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "91abb77970f47b1f6166e564bc695ed30c75bb63",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/91abb77970f47b1f6166e564bc695ed30c75bb63",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/91abb77970f47b1f6166e564bc695ed30c75bb63"
+      }
+    ],
+    "stats": {
+      "total": 73,
+      "additions": 36,
+      "deletions": 37
+    },
+    "files": [
+      {
+        "sha": "ffc23b484297768409cb702bb39f964ac9a0368c",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 4,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4622aea4333b8cf72718953ed13e14f0b724ab07/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4622aea4333b8cf72718953ed13e14f0b724ab07/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=4622aea4333b8cf72718953ed13e14f0b724ab07",
+        "patch": "@@ -2753,7 +2753,7 @@ bool static DisconnectTip(CValidationState& state, const CChainParams& chainpara\n         std::vector<uint256> vHashUpdate;\n         BOOST_FOREACH(const CTransaction &tx, block.vtx) {\n             // ignore validation errors in resurrected transactions\n-            list<CTransaction> removed;\n+            list<shared_ptr<const CTransaction>> removed;\n             CValidationState stateDummy;\n             if (tx.IsCoinBase() || !AcceptToMemoryPool(mempool, stateDummy, tx, false, NULL, true)) {\n                 mempool.removeRecursive(tx, removed);\n@@ -2826,14 +2826,14 @@ bool static ConnectTip(CValidationState& state, const CChainParams& chainparams,\n     int64_t nTime5 = GetTimeMicros(); nTimeChainState += nTime5 - nTime4;\n     LogPrint(\"bench\", \"  - Writing chainstate: %.2fms [%.2fs]\\n\", (nTime5 - nTime4) * 0.001, nTimeChainState * 0.000001);\n     // Remove conflicting transactions from the mempool.\n-    list<CTransaction> txConflicted;\n+    list<shared_ptr<const CTransaction>> txConflicted;\n     mempool.removeForBlock(pblock->vtx, pindexNew->nHeight, txConflicted, !IsInitialBlockDownload());\n     // Update chainActive & related variables.\n     UpdateTip(pindexNew, chainparams);\n     // Tell wallet about transactions that went from mempool\n     // to conflicted:\n-    BOOST_FOREACH(const CTransaction &tx, txConflicted) {\n-        SyncWithWallets(tx, pindexNew, NULL);\n+    BOOST_FOREACH(shared_ptr<const CTransaction> &tx, txConflicted) {\n+        SyncWithWallets(*tx, pindexNew, NULL);\n     }\n     // ... and about transactions that got confirmed:\n     BOOST_FOREACH(const CTransaction &tx, pblock->vtx) {"
+      },
+      {
+        "sha": "b193ac670a63fd5817e177d739ba0ca1c265a6ee",
+        "filename": "src/test/blockencodings_tests.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4622aea4333b8cf72718953ed13e14f0b724ab07/src/test/blockencodings_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4622aea4333b8cf72718953ed13e14f0b724ab07/src/test/blockencodings_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/blockencodings_tests.cpp?ref=4622aea4333b8cf72718953ed13e14f0b724ab07",
+        "patch": "@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE(SimpleRoundTripTest)\n \n         BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[2].GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 1);\n \n-        std::list<CTransaction> removed;\n+        std::list<std::shared_ptr<const CTransaction>> removed;\n         pool.removeRecursive(block.vtx[2], removed);\n         BOOST_CHECK_EQUAL(removed.size(), 1);\n "
+      },
+      {
+        "sha": "8e5e0e53a65dca0d9356f67d8f68ae2d46fa4436",
+        "filename": "src/test/mempool_tests.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 4,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4622aea4333b8cf72718953ed13e14f0b724ab07/src/test/mempool_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4622aea4333b8cf72718953ed13e14f0b724ab07/src/test/mempool_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/mempool_tests.cpp?ref=4622aea4333b8cf72718953ed13e14f0b724ab07",
+        "patch": "@@ -55,7 +55,7 @@ BOOST_AUTO_TEST_CASE(MempoolRemoveTest)\n \n \n     CTxMemPool testPool(CFeeRate(0));\n-    std::list<CTransaction> removed;\n+    std::list<std::shared_ptr<const CTransaction>> removed;\n \n     // Nothing in pool, remove should do nothing:\n     testPool.removeRecursive(txParent, removed);\n@@ -281,7 +281,7 @@ BOOST_AUTO_TEST_CASE(MempoolIndexingTest)\n     BOOST_CHECK_EQUAL(pool.size(), 10);\n \n     // Now try removing tx10 and verify the sort order returns to normal\n-    std::list<CTransaction> removed;\n+    std::list<std::shared_ptr<const CTransaction>> removed;\n     pool.removeRecursive(pool.mapTx.find(tx10.GetHash())->GetTx(), removed);\n     CheckSort<descendant_score>(pool, snapshotOrder);\n \n@@ -413,7 +413,7 @@ BOOST_AUTO_TEST_CASE(MempoolAncestorIndexingTest)\n     /* after tx6 is mined, tx7 should move up in the sort */\n     std::vector<CTransaction> vtx;\n     vtx.push_back(tx6);\n-    std::list<CTransaction> dummy;\n+    std::list<std::shared_ptr<const CTransaction>> dummy;\n     pool.removeForBlock(vtx, 1, dummy, false);\n \n     sortedOrder.erase(sortedOrder.begin()+1);\n@@ -549,7 +549,7 @@ BOOST_AUTO_TEST_CASE(MempoolSizeLimitTest)\n     pool.addUnchecked(tx7.GetHash(), entry.Fee(9000LL).FromTx(tx7, &pool));\n \n     std::vector<CTransaction> vtx;\n-    std::list<CTransaction> conflicts;\n+    std::list<std::shared_ptr<const CTransaction>> conflicts;\n     SetMockTime(42);\n     SetMockTime(42 + CTxMemPool::ROLLING_FEE_HALFLIFE);\n     BOOST_CHECK_EQUAL(pool.GetMinFee(1).GetFeePerK(), maxFeeRateRemoved.GetFeePerK() + 1000);"
+      },
+      {
+        "sha": "71bcd236ed4e36f04da7f1c016e6a227db666da2",
+        "filename": "src/test/miner_tests.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4622aea4333b8cf72718953ed13e14f0b724ab07/src/test/miner_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4622aea4333b8cf72718953ed13e14f0b724ab07/src/test/miner_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/miner_tests.cpp?ref=4622aea4333b8cf72718953ed13e14f0b724ab07",
+        "patch": "@@ -135,7 +135,7 @@ void TestPackageSelection(const CChainParams& chainparams, CScript scriptPubKey,\n     // Test that packages above the min relay fee do get included, even if one\n     // of the transactions is below the min relay fee\n     // Remove the low fee transaction and replace with a higher fee transaction\n-    std::list<CTransaction> dummy;\n+    std::list<std::shared_ptr<const CTransaction>> dummy;\n     mempool.removeRecursive(tx, dummy);\n     tx.vout[0].nValue -= 2; // Now we should be just over the min relay fee\n     hashLowFeeTx = tx.GetHash();"
+      },
+      {
+        "sha": "d48e31350ddb0c0056148ced30646520c080a057",
+        "filename": "src/test/policyestimator_tests.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4622aea4333b8cf72718953ed13e14f0b724ab07/src/test/policyestimator_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4622aea4333b8cf72718953ed13e14f0b724ab07/src/test/policyestimator_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/policyestimator_tests.cpp?ref=4622aea4333b8cf72718953ed13e14f0b724ab07",
+        "patch": "@@ -46,7 +46,7 @@ BOOST_AUTO_TEST_CASE(BlockPolicyEstimates)\n     for (unsigned int i = 0; i < 128; i++)\n         garbage.push_back('X');\n     CMutableTransaction tx;\n-    std::list<CTransaction> dummyConflicted;\n+    std::list<std::shared_ptr<const CTransaction>> dummyConflicted;\n     tx.vin.resize(1);\n     tx.vin[0].scriptSig = garbage;\n     tx.vout.resize(1);"
+      },
+      {
+        "sha": "c1e33fa4da597f63872f78fa1eab520395e3fa83",
+        "filename": "src/txmempool.cpp",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 21,
+        "changes": 37,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4622aea4333b8cf72718953ed13e14f0b724ab07/src/txmempool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4622aea4333b8cf72718953ed13e14f0b724ab07/src/txmempool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.cpp?ref=4622aea4333b8cf72718953ed13e14f0b724ab07",
+        "patch": "@@ -450,7 +450,7 @@ bool CTxMemPool::addUnchecked(const uint256& hash, const CTxMemPoolEntry &entry,\n     return true;\n }\n \n-void CTxMemPool::removeUnchecked(txiter it)\n+void CTxMemPool::removeUnchecked(txiter it, std::list<std::shared_ptr<const CTransaction>>* removed)\n {\n     const uint256 hash = it->GetTx().GetHash();\n     BOOST_FOREACH(const CTxIn& txin, it->GetTx().vin)\n@@ -465,6 +465,9 @@ void CTxMemPool::removeUnchecked(txiter it)\n     } else\n         vTxHashes.clear();\n \n+    if (removed)\n+        removed->push_back(std::move(it->GetSharedTx()));\n+\n     totalTxSize -= it->GetTxSize();\n     cachedInnerUsage -= it->DynamicMemoryUsage();\n     cachedInnerUsage -= memusage::DynamicUsage(mapLinks[it].parents) + memusage::DynamicUsage(mapLinks[it].children);\n@@ -503,7 +506,7 @@ void CTxMemPool::CalculateDescendants(txiter entryit, setEntries &setDescendants\n     }\n }\n \n-void CTxMemPool::removeRecursive(const CTransaction &origTx, std::list<CTransaction>& removed)\n+void CTxMemPool::removeRecursive(const CTransaction &origTx, std::list<std::shared_ptr<const CTransaction>>& removed)\n {\n     // Remove transaction from memory pool\n     {\n@@ -530,10 +533,7 @@ void CTxMemPool::removeRecursive(const CTransaction &origTx, std::list<CTransact\n         BOOST_FOREACH(txiter it, txToRemove) {\n             CalculateDescendants(it, setAllRemoves);\n         }\n-        BOOST_FOREACH(txiter it, setAllRemoves) {\n-            removed.push_back(it->GetTx());\n-        }\n-        RemoveStaged(setAllRemoves, false);\n+        RemoveStaged(setAllRemoves, false, &removed);\n     }\n }\n \n@@ -568,15 +568,14 @@ void CTxMemPool::removeForReorg(const CCoinsViewCache *pcoins, unsigned int nMem\n         }\n     }\n     BOOST_FOREACH(const CTransaction& tx, transactionsToRemove) {\n-        list<CTransaction> removed;\n+        list<shared_ptr<const CTransaction>> removed;\n         removeRecursive(tx, removed);\n     }\n }\n \n-void CTxMemPool::removeConflicts(const CTransaction &tx, std::list<CTransaction>& removed)\n+void CTxMemPool::removeConflicts(const CTransaction &tx, std::list<std::shared_ptr<const CTransaction>>& removed)\n {\n     // Remove transactions which depend on inputs of tx, recursively\n-    list<CTransaction> result;\n     LOCK(cs);\n     BOOST_FOREACH(const CTxIn &txin, tx.vin) {\n         auto it = mapNextTx.find(txin.prevout);\n@@ -595,7 +594,7 @@ void CTxMemPool::removeConflicts(const CTransaction &tx, std::list<CTransaction>\n  * Called when a block is connected. Removes from mempool and updates the miner fee estimator.\n  */\n void CTxMemPool::removeForBlock(const std::vector<CTransaction>& vtx, unsigned int nBlockHeight,\n-                                std::list<CTransaction>& conflicts, bool fCurrentEstimate)\n+                                std::list<std::shared_ptr<const CTransaction>>& conflicts, bool fCurrentEstimate)\n {\n     LOCK(cs);\n     std::vector<CTxMemPoolEntry> entries;\n@@ -986,11 +985,11 @@ size_t CTxMemPool::DynamicMemoryUsage() const {\n     return memusage::MallocUsage(sizeof(CTxMemPoolEntry) + 15 * sizeof(void*)) * mapTx.size() + memusage::DynamicUsage(mapNextTx) + memusage::DynamicUsage(mapDeltas) + memusage::DynamicUsage(mapLinks) + memusage::DynamicUsage(vTxHashes) + cachedInnerUsage;\n }\n \n-void CTxMemPool::RemoveStaged(setEntries &stage, bool updateDescendants) {\n+void CTxMemPool::RemoveStaged(setEntries &stage, bool updateDescendants, std::list<std::shared_ptr<const CTransaction>>* removed) {\n     AssertLockHeld(cs);\n     UpdateForRemoveFromMempool(stage, updateDescendants);\n     BOOST_FOREACH(const txiter& it, stage) {\n-        removeUnchecked(it);\n+        removeUnchecked(it, removed);\n     }\n }\n \n@@ -1109,16 +1108,12 @@ void CTxMemPool::TrimToSize(size_t sizelimit, std::vector<uint256>* pvNoSpendsRe\n         CalculateDescendants(mapTx.project<0>(it), stage);\n         nTxnRemoved += stage.size();\n \n-        std::vector<CTransaction> txn;\n-        if (pvNoSpendsRemaining) {\n-            txn.reserve(stage.size());\n-            BOOST_FOREACH(txiter it, stage)\n-                txn.push_back(it->GetTx());\n-        }\n-        RemoveStaged(stage, false);\n+        std::list<std::shared_ptr<const CTransaction>> txn;\n+        RemoveStaged(stage, false, pvNoSpendsRemaining ? &txn : NULL);\n+\n         if (pvNoSpendsRemaining) {\n-            BOOST_FOREACH(const CTransaction& tx, txn) {\n-                BOOST_FOREACH(const CTxIn& txin, tx.vin) {\n+            BOOST_FOREACH(std::shared_ptr<const CTransaction>& tx, txn) {\n+                BOOST_FOREACH(const CTxIn& txin, tx->vin) {\n                     if (exists(txin.prevout.hash))\n                         continue;\n                     auto it = mapNextTx.lower_bound(COutPoint(txin.prevout.hash, 0));"
+      },
+      {
+        "sha": "b285b93a0f89f16c5f80d325afc5afc420e16d9a",
+        "filename": "src/txmempool.h",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 5,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4622aea4333b8cf72718953ed13e14f0b724ab07/src/txmempool.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4622aea4333b8cf72718953ed13e14f0b724ab07/src/txmempool.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.h?ref=4622aea4333b8cf72718953ed13e14f0b724ab07",
+        "patch": "@@ -517,11 +517,11 @@ class CTxMemPool\n     bool addUnchecked(const uint256& hash, const CTxMemPoolEntry &entry, bool fCurrentEstimate = true);\n     bool addUnchecked(const uint256& hash, const CTxMemPoolEntry &entry, setEntries &setAncestors, bool fCurrentEstimate = true);\n \n-    void removeRecursive(const CTransaction &tx, std::list<CTransaction>& removed);\n+    void removeRecursive(const CTransaction &tx, std::list<std::shared_ptr<const CTransaction>>& removed);\n     void removeForReorg(const CCoinsViewCache *pcoins, unsigned int nMemPoolHeight, int flags);\n-    void removeConflicts(const CTransaction &tx, std::list<CTransaction>& removed);\n+    void removeConflicts(const CTransaction &tx, std::list<std::shared_ptr<const CTransaction>>& removed);\n     void removeForBlock(const std::vector<CTransaction>& vtx, unsigned int nBlockHeight,\n-                        std::list<CTransaction>& conflicts, bool fCurrentEstimate = true);\n+                        std::list<std::shared_ptr<const CTransaction>>& conflicts, bool fCurrentEstimate = true);\n     void clear();\n     void _clear(); //lock free\n     bool CompareDepthAndScore(const uint256& hasha, const uint256& hashb);\n@@ -547,8 +547,10 @@ class CTxMemPool\n      *  in a block.\n      *  Set updateDescendants to true when removing a tx that was in a block, so\n      *  that any in-mempool descendants have their ancestor state updated.\n+     *  Optional removed parameter is used to std::move() transactions instead of\n+     *  copying them in some cases.\n      */\n-    void RemoveStaged(setEntries &stage, bool updateDescendants);\n+    void RemoveStaged(setEntries &stage, bool updateDescendants, std::list<std::shared_ptr<const CTransaction>>* removed = NULL);\n \n     /** When adding transactions from a disconnected block back to the mempool,\n      *  new mempool entries may have children in the mempool (which is generally\n@@ -676,8 +678,10 @@ class CTxMemPool\n      *  given transaction that is removed, so we can't remove intermediate\n      *  transactions in a chain before we've updated all the state for the\n      *  removal.\n+     *  If removed parameter is not NULL, it is used to std::move() transaction\n+     *  instead of copying it some time earlier.\n      */\n-    void removeUnchecked(txiter entry);\n+    void removeUnchecked(txiter entry, std::list<std::shared_ptr<const CTransaction>>* removed);\n };\n \n /** "
+      }
+    ]
+  }
+]

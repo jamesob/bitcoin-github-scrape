@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "0bf6f302626497184a26b88c61fe6af1741e2a44",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowYmY2ZjMwMjYyNjQ5NzE4NGEyNmI4OGM2MWZlNmFmMTc0MWUyYTQ0",
+    "commit": {
+      "author": {
+        "name": "Pedro Branco",
+        "email": "branco@uphold.com",
+        "date": "2016-03-08T10:37:18Z"
+      },
+      "committer": {
+        "name": "Pedro Branco",
+        "email": "branco@uphold.com",
+        "date": "2016-05-06T09:50:02Z"
+      },
+      "message": "Prevent multiple calls to ExtractDestination",
+      "tree": {
+        "sha": "788af4e23e4fa2b8fe9c2bc3085141434f3fb248",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/788af4e23e4fa2b8fe9c2bc3085141434f3fb248"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/0bf6f302626497184a26b88c61fe6af1741e2a44",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0bf6f302626497184a26b88c61fe6af1741e2a44",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/0bf6f302626497184a26b88c61fe6af1741e2a44",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0bf6f302626497184a26b88c61fe6af1741e2a44/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "77b637f20e8cb91cf007bf416b603ca362385cdb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/77b637f20e8cb91cf007bf416b603ca362385cdb",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/77b637f20e8cb91cf007bf416b603ca362385cdb"
+      }
+    ],
+    "stats": {
+      "total": 41,
+      "additions": 19,
+      "deletions": 22
+    },
+    "files": [
+      {
+        "sha": "8da749f525280eacd711104fb0c6f72ef4f39b50",
+        "filename": "src/wallet/rpcwallet.cpp",
+        "status": "modified",
+        "additions": 19,
+        "deletions": 22,
+        "changes": 41,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0bf6f302626497184a26b88c61fe6af1741e2a44/src/wallet/rpcwallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0bf6f302626497184a26b88c61fe6af1741e2a44/src/wallet/rpcwallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/rpcwallet.cpp?ref=0bf6f302626497184a26b88c61fe6af1741e2a44",
+        "patch": "@@ -2341,13 +2341,14 @@ UniValue listunspent(const UniValue& params, bool fHelp)\n             \"\\nResult\\n\"\n             \"[                   (array of json object)\\n\"\n             \"  {\\n\"\n-            \"    \\\"txid\\\" : \\\"txid\\\",        (string) the transaction id \\n\"\n+            \"    \\\"txid\\\" : \\\"txid\\\",          (string) the transaction id \\n\"\n             \"    \\\"vout\\\" : n,               (numeric) the vout value\\n\"\n-            \"    \\\"address\\\" : \\\"address\\\",  (string) the bitcoin address\\n\"\n-            \"    \\\"account\\\" : \\\"account\\\",  (string) DEPRECATED. The associated account, or \\\"\\\" for the default account\\n\"\n-            \"    \\\"scriptPubKey\\\" : \\\"key\\\", (string) the script key\\n\"\n+            \"    \\\"address\\\" : \\\"address\\\",    (string) the bitcoin address\\n\"\n+            \"    \\\"account\\\" : \\\"account\\\",    (string) DEPRECATED. The associated account, or \\\"\\\" for the default account\\n\"\n+            \"    \\\"scriptPubKey\\\" : \\\"key\\\",   (string) the script key\\n\"\n             \"    \\\"amount\\\" : x.xxx,         (numeric) the transaction amount in \" + CURRENCY_UNIT + \"\\n\"\n             \"    \\\"confirmations\\\" : n,      (numeric) The number of confirmations\\n\"\n+            \"    \\\"redeemScript\\\" : n        (string) The redeemScript if scriptPubKey is P2SH\\n\"\n             \"    \\\"spendable\\\" : xxx,        (bool) Whether we have the private keys to spend this output\\n\"\n             \"    \\\"solvable\\\" : xxx          (bool) Whether we know how to spend this output, ignoring the lack of keys\\n\"\n             \"  }\\n\"\n@@ -2393,38 +2394,34 @@ UniValue listunspent(const UniValue& params, bool fHelp)\n         if (out.nDepth < nMinDepth || out.nDepth > nMaxDepth)\n             continue;\n \n-        if (setAddress.size()) {\n-            CTxDestination address;\n-            if (!ExtractDestination(out.tx->vout[out.i].scriptPubKey, address))\n-                continue;\n+        CTxDestination address;\n+        const CScript& scriptPubKey = out.tx->vout[out.i].scriptPubKey;\n+        bool fValidAddress = ExtractDestination(scriptPubKey, address);\n \n-            if (!setAddress.count(address))\n-                continue;\n-        }\n+        if (setAddress.size() && (!fValidAddress || !setAddress.count(address)))\n+            continue;\n \n-        CAmount nValue = out.tx->vout[out.i].nValue;\n-        const CScript& pk = out.tx->vout[out.i].scriptPubKey;\n         UniValue entry(UniValue::VOBJ);\n         entry.push_back(Pair(\"txid\", out.tx->GetHash().GetHex()));\n         entry.push_back(Pair(\"vout\", out.i));\n-        CTxDestination address;\n-        if (ExtractDestination(out.tx->vout[out.i].scriptPubKey, address)) {\n+\n+        if (fValidAddress) {\n             entry.push_back(Pair(\"address\", CBitcoinAddress(address).ToString()));\n+\n             if (pwalletMain->mapAddressBook.count(address))\n                 entry.push_back(Pair(\"account\", pwalletMain->mapAddressBook[address].name));\n-        }\n-        entry.push_back(Pair(\"scriptPubKey\", HexStr(pk.begin(), pk.end())));\n-        if (pk.IsPayToScriptHash()) {\n-            CTxDestination address;\n-            if (ExtractDestination(pk, address)) {\n+\n+            if (scriptPubKey.IsPayToScriptHash()) {\n                 const CScriptID& hash = boost::get<CScriptID>(address);\n                 CScript redeemScript;\n                 if (pwalletMain->GetCScript(hash, redeemScript))\n                     entry.push_back(Pair(\"redeemScript\", HexStr(redeemScript.begin(), redeemScript.end())));\n             }\n         }\n-        entry.push_back(Pair(\"amount\",ValueFromAmount(nValue)));\n-        entry.push_back(Pair(\"confirmations\",out.nDepth));\n+\n+        entry.push_back(Pair(\"scriptPubKey\", HexStr(scriptPubKey.begin(), scriptPubKey.end())));\n+        entry.push_back(Pair(\"amount\", ValueFromAmount(out.tx->vout[out.i].nValue)));\n+        entry.push_back(Pair(\"confirmations\", out.nDepth));\n         entry.push_back(Pair(\"spendable\", out.fSpendable));\n         entry.push_back(Pair(\"solvable\", out.fSolvable));\n         results.push_back(entry);"
+      }
+    ]
+  }
+]

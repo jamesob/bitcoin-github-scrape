@@ -1,0 +1,158 @@
+[
+  {
+    "sha": "ba6a4ea344e28d61224dc54a8f816276afa2bfa3",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiYTZhNGVhMzQ0ZTI4ZDYxMjI0ZGM1NGE4ZjgxNjI3NmFmYTJiZmEz",
+    "commit": {
+      "author": {
+        "name": "Mike Hearn",
+        "email": "mike@riker.plan99.net",
+        "date": "2013-11-21T13:38:29Z"
+      },
+      "committer": {
+        "name": "Mike Hearn",
+        "email": "hearn@google.com",
+        "date": "2013-11-26T12:26:00Z"
+      },
+      "message": "Add some additional logging to give extra network insight.",
+      "tree": {
+        "sha": "f87dc021917cbfe8446095cf6b469293f92c2923",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f87dc021917cbfe8446095cf6b469293f92c2923"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/ba6a4ea344e28d61224dc54a8f816276afa2bfa3",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ba6a4ea344e28d61224dc54a8f816276afa2bfa3",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/ba6a4ea344e28d61224dc54a8f816276afa2bfa3",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ba6a4ea344e28d61224dc54a8f816276afa2bfa3/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "03b6a1cee4fe7f38ca16c0bc2d08d8d4d1288f2f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/03b6a1cee4fe7f38ca16c0bc2d08d8d4d1288f2f",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/03b6a1cee4fe7f38ca16c0bc2d08d8d4d1288f2f"
+      }
+    ],
+    "stats": {
+      "total": 16,
+      "additions": 11,
+      "deletions": 5
+    },
+    "files": [
+      {
+        "sha": "a39dd9e8ef11900d17b628d07b2c6bf7a9e24a86",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 5,
+        "changes": 16,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ba6a4ea344e28d61224dc54a8f816276afa2bfa3/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ba6a4ea344e28d61224dc54a8f816276afa2bfa3/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=ba6a4ea344e28d61224dc54a8f816276afa2bfa3",
+        "patch": "@@ -797,9 +797,6 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa\n         g_signals.EraseTransaction(ptxOld->GetHash());\n     g_signals.SyncTransaction(hash, tx, NULL);\n \n-    LogPrint(\"mempool\", \"AcceptToMemoryPool: : accepted %s (poolsz %\"PRIszu\")\\n\",\n-             hash.ToString().c_str(),\n-             pool.mapTx.size());\n     return true;\n }\n \n@@ -3168,7 +3165,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n \n         pfrom->fSuccessfullyConnected = true;\n \n-        LogPrintf(\"receive version message: version %d, blocks=%d, us=%s, them=%s, peer=%s\\n\", pfrom->nVersion, pfrom->nStartingHeight, addrMe.ToString().c_str(), addrFrom.ToString().c_str(), pfrom->addr.ToString().c_str());\n+        LogPrintf(\"receive version message: %s: version %d, blocks=%d, us=%s, them=%s, peer=%s\\n\", pfrom->strSubVer.c_str(), pfrom->nVersion, pfrom->nStartingHeight, addrMe.ToString().c_str(), addrFrom.ToString().c_str(), pfrom->addr.ToString().c_str());\n \n         AddTimeData(pfrom->addr, nTime);\n \n@@ -3427,6 +3424,12 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n             vWorkQueue.push_back(inv.hash);\n             vEraseQueue.push_back(inv.hash);\n \n+\n+            LogPrint(\"mempool\", \"AcceptToMemoryPool: %s %s : accepted %s (poolsz %\"PRIszu\")\\n\",\n+                pfrom->addr.ToString().c_str(), pfrom->strSubVer.c_str(),\n+                tx.GetHash().ToString().c_str(),\n+                mempool.mapTx.size());\n+\n             // Recursively process any orphan transactions that depended on this one\n             for (unsigned int i = 0; i < vWorkQueue.size(); i++)\n             {\n@@ -3475,7 +3478,10 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n         }\n         int nDoS = 0;\n         if (state.IsInvalid(nDoS))\n-        {\n+        { \n+            LogPrint(\"mempool\", \"%s from %s %s was not accepted into the memory pool: %s\\n\", tx.GetHash().ToString().c_str(), \n+                pfrom->addr.ToString().c_str(), pfrom->strSubVer.c_str(),\n+                state.GetRejectReason().c_str());\n             pfrom->PushMessage(\"reject\", strCommand, state.GetRejectCode(),\n                                state.GetRejectReason(), inv.hash);\n             if (nDoS > 0)"
+      }
+    ]
+  },
+  {
+    "sha": "a946aa8d3ec7009ac670eeb65a525efe5eeb6e84",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphOTQ2YWE4ZDNlYzcwMDlhYzY3MGVlYjY1YTUyNWVmZTVlZWI2ZTg0",
+    "commit": {
+      "author": {
+        "name": "Mike Hearn",
+        "email": "hearn@google.com",
+        "date": "2013-11-26T11:52:21Z"
+      },
+      "committer": {
+        "name": "Mike Hearn",
+        "email": "hearn@google.com",
+        "date": "2013-11-26T12:26:00Z"
+      },
+      "message": "Store and use a sanitized subVer",
+      "tree": {
+        "sha": "ba5cb18d885ba30c498bdb111f373bfb9812cd20",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/ba5cb18d885ba30c498bdb111f373bfb9812cd20"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a946aa8d3ec7009ac670eeb65a525efe5eeb6e84",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a946aa8d3ec7009ac670eeb65a525efe5eeb6e84",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a946aa8d3ec7009ac670eeb65a525efe5eeb6e84",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a946aa8d3ec7009ac670eeb65a525efe5eeb6e84/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "ba6a4ea344e28d61224dc54a8f816276afa2bfa3",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ba6a4ea344e28d61224dc54a8f816276afa2bfa3",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/ba6a4ea344e28d61224dc54a8f816276afa2bfa3"
+      }
+    ],
+    "stats": {
+      "total": 27,
+      "additions": 18,
+      "deletions": 9
+    },
+    "files": [
+      {
+        "sha": "b6888f9750132c32a19eac84709e26bbfb77c682",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 5,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a946aa8d3ec7009ac670eeb65a525efe5eeb6e84/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a946aa8d3ec7009ac670eeb65a525efe5eeb6e84/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=a946aa8d3ec7009ac670eeb65a525efe5eeb6e84",
+        "patch": "@@ -3097,8 +3097,10 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n             pfrom->nVersion = 300;\n         if (!vRecv.empty())\n             vRecv >> addrFrom >> nNonce;\n-        if (!vRecv.empty())\n+        if (!vRecv.empty()) {\n             vRecv >> pfrom->strSubVer;\n+            pfrom->cleanSubVer = SanitizeString(pfrom->strSubVer);\n+        }\n         if (!vRecv.empty())\n             vRecv >> pfrom->nStartingHeight;\n         if (!vRecv.empty())\n@@ -3165,7 +3167,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n \n         pfrom->fSuccessfullyConnected = true;\n \n-        LogPrintf(\"receive version message: %s: version %d, blocks=%d, us=%s, them=%s, peer=%s\\n\", pfrom->strSubVer.c_str(), pfrom->nVersion, pfrom->nStartingHeight, addrMe.ToString().c_str(), addrFrom.ToString().c_str(), pfrom->addr.ToString().c_str());\n+        LogPrintf(\"receive version message: %s: version %d, blocks=%d, us=%s, them=%s, peer=%s\\n\", pfrom->cleanSubVer.c_str(), pfrom->nVersion, pfrom->nStartingHeight, addrMe.ToString().c_str(), addrFrom.ToString().c_str(), pfrom->addr.ToString().c_str());\n \n         AddTimeData(pfrom->addr, nTime);\n \n@@ -3426,7 +3428,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n \n \n             LogPrint(\"mempool\", \"AcceptToMemoryPool: %s %s : accepted %s (poolsz %\"PRIszu\")\\n\",\n-                pfrom->addr.ToString().c_str(), pfrom->strSubVer.c_str(),\n+                pfrom->addr.ToString().c_str(), pfrom->cleanSubVer.c_str(),\n                 tx.GetHash().ToString().c_str(),\n                 mempool.mapTx.size());\n \n@@ -3480,7 +3482,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n         if (state.IsInvalid(nDoS))\n         { \n             LogPrint(\"mempool\", \"%s from %s %s was not accepted into the memory pool: %s\\n\", tx.GetHash().ToString().c_str(), \n-                pfrom->addr.ToString().c_str(), pfrom->strSubVer.c_str(),\n+                pfrom->addr.ToString().c_str(), pfrom->cleanSubVer.c_str(),\n                 state.GetRejectReason().c_str());\n             pfrom->PushMessage(\"reject\", strCommand, state.GetRejectCode(),\n                                state.GetRejectReason(), inv.hash);\n@@ -3618,7 +3620,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n         if (!(sProblem.empty())) {\n             LogPrint(\"net\", \"pong %s %s: %s, %\"PRIx64\" expected, %\"PRIx64\" received, %\"PRIszu\" bytes\\n\",\n                 pfrom->addr.ToString().c_str(),\n-                pfrom->strSubVer.c_str(),\n+                pfrom->cleanSubVer.c_str(),\n                 sProblem.c_str(),\n                 pfrom->nPingNonceSent,\n                 nonce,"
+      },
+      {
+        "sha": "fcef9feea0c4fe3153af28245e4f366d1e2ebbbe",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a946aa8d3ec7009ac670eeb65a525efe5eeb6e84/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a946aa8d3ec7009ac670eeb65a525efe5eeb6e84/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=a946aa8d3ec7009ac670eeb65a525efe5eeb6e84",
+        "patch": "@@ -616,7 +616,7 @@ void CNode::copyStats(CNodeStats &stats)\n     X(nTimeConnected);\n     X(addrName);\n     X(nVersion);\n-    X(strSubVer);\n+    X(cleanSubVer);\n     X(fInbound);\n     X(nStartingHeight);\n     X(nMisbehavior);"
+      },
+      {
+        "sha": "effce35dc4cafbb7fc411fe61a424dd662c5f3f8",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 2,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a946aa8d3ec7009ac670eeb65a525efe5eeb6e84/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a946aa8d3ec7009ac670eeb65a525efe5eeb6e84/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=a946aa8d3ec7009ac670eeb65a525efe5eeb6e84",
+        "patch": "@@ -121,7 +121,7 @@ class CNodeStats\n     int64_t nTimeConnected;\n     std::string addrName;\n     int nVersion;\n-    std::string strSubVer;\n+    std::string cleanSubVer;\n     bool fInbound;\n     int nStartingHeight;\n     int nMisbehavior;\n@@ -203,7 +203,11 @@ class CNode\n     std::string addrName;\n     CService addrLocal;\n     int nVersion;\n-    std::string strSubVer;\n+    // strSubVer is whatever byte array we read from the wire. However, this field is intended \n+    // to be printed out, displayed to humans in various forms and so on. So we sanitize it and\n+    // store the sanitized version in cleanSubVer. The original should be used when dealing with\n+    // the network or wire types and the cleaned string used when displayed or logged.\n+    std::string strSubVer, cleanSubVer;\n     bool fOneShot;\n     bool fClient;\n     bool fInbound;"
+      },
+      {
+        "sha": "8f0df798b454f4bbff184eaf2892adf1ccafc891",
+        "filename": "src/rpcnet.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 1,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a946aa8d3ec7009ac670eeb65a525efe5eeb6e84/src/rpcnet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a946aa8d3ec7009ac670eeb65a525efe5eeb6e84/src/rpcnet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcnet.cpp?ref=a946aa8d3ec7009ac670eeb65a525efe5eeb6e84",
+        "patch": "@@ -126,7 +126,10 @@ Value getpeerinfo(const Array& params, bool fHelp)\n         if (stats.dPingWait > 0.0)\n             obj.push_back(Pair(\"pingwait\", stats.dPingWait));\n         obj.push_back(Pair(\"version\", stats.nVersion));\n-        obj.push_back(Pair(\"subver\", stats.strSubVer));\n+        // Use the sanitized form of subver here, to avoid tricksy remote peers from\n+        // corrupting or modifiying the JSON output by putting special characters in\n+        // their ver message.\n+        obj.push_back(Pair(\"subver\", stats.cleanSubVer));\n         obj.push_back(Pair(\"inbound\", stats.fInbound));\n         obj.push_back(Pair(\"startingheight\", stats.nStartingHeight));\n         obj.push_back(Pair(\"banscore\", stats.nMisbehavior));"
+      }
+    ]
+  }
+]

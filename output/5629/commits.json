@@ -1,0 +1,98 @@
+[
+  {
+    "sha": "a6516686dcf0b93dd0bcae304e74f9ac69cb305c",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphNjUxNjY4NmRjZjBiOTNkZDBiY2FlMzA0ZTc0ZjlhYzY5Y2IzMDVj",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2015-01-09T13:25:43Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2015-02-04T12:47:32Z"
+      },
+      "message": "[Qt] prevent amount overflow problem with payment requests\n\nBitcoin amounts are stored as uint64 in the protobuf messages (see\npaymentrequest.proto), but CAmount is defined as int64_t. Because\nof that we need to verify that single and accumulated amounts are\nin a valid range and no variable overflow has happened.\n\n- fixes #5624 (#5622)\n\nThanks @SergioDemianLerner for reporting that issue and also supplying us\nwith a possible solution.\n\n- add static verifyAmount() function to PaymentServer and move the logging\n  on error into the function\n- also add a unit test to paymentservertests.cpp",
+      "tree": {
+        "sha": "44d9394cf2c1ac085f2815c8b55f1539f9c2d3c7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/44d9394cf2c1ac085f2815c8b55f1539f9c2d3c7"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a6516686dcf0b93dd0bcae304e74f9ac69cb305c",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a6516686dcf0b93dd0bcae304e74f9ac69cb305c",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a6516686dcf0b93dd0bcae304e74f9ac69cb305c",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a6516686dcf0b93dd0bcae304e74f9ac69cb305c/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "31dedb463b0ce77364e516239bf1b9c7eed5b3b0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/31dedb463b0ce77364e516239bf1b9c7eed5b3b0",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/31dedb463b0ce77364e516239bf1b9c7eed5b3b0"
+      }
+    ],
+    "stats": {
+      "total": 69,
+      "additions": 69,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "9aab944f6b5f383a82abc0d3a82b37ad1dbb138d",
+        "filename": "src/qt/paymentserver.cpp",
+        "status": "modified",
+        "additions": 25,
+        "deletions": 0,
+        "changes": 25,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a6516686dcf0b93dd0bcae304e74f9ac69cb305c/src/qt/paymentserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a6516686dcf0b93dd0bcae304e74f9ac69cb305c/src/qt/paymentserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.cpp?ref=a6516686dcf0b93dd0bcae304e74f9ac69cb305c",
+        "patch": "@@ -569,6 +569,14 @@ bool PaymentServer::processPaymentRequest(PaymentRequestPlus& request, SendCoins\n             return false;\n         }\n \n+        // Bitcoin amounts are stored as (optional) uint64 in the protobuf messages (see paymentrequest.proto),\n+        // but CAmount is defined as int64_t. Because of that we need to verify that amounts are in a valid range\n+        // and no overflow has happened.\n+        if (!verifyAmount(sendingTo.second)) {\n+            emit message(tr(\"Payment request rejected\"), tr(\"Invalid payment request.\"), CClientUIInterface::MSG_ERROR);\n+            return false;\n+        }\n+\n         // Extract and check amounts\n         CTxOut txOut(sendingTo.second, sendingTo.first);\n         if (txOut.IsDust(::minRelayTxFee)) {\n@@ -580,6 +588,11 @@ bool PaymentServer::processPaymentRequest(PaymentRequestPlus& request, SendCoins\n         }\n \n         recipient.amount += sendingTo.second;\n+        // Also verify that the final amount is still in a valid range after adding additional amounts.\n+        if (!verifyAmount(recipient.amount)) {\n+            emit message(tr(\"Payment request rejected\"), tr(\"Invalid payment request.\"), CClientUIInterface::MSG_ERROR);\n+            return false;\n+        }\n     }\n     // Store addresses and format them to fit nicely into the GUI\n     recipient.address = addresses.join(\"<br />\");\n@@ -768,3 +781,15 @@ bool PaymentServer::verifyExpired(const payments::PaymentDetails& requestDetails\n     }\n     return fVerified;\n }\n+\n+bool PaymentServer::verifyAmount(const CAmount& requestAmount)\n+{\n+    bool fVerified = MoneyRange(requestAmount);\n+    if (!fVerified) {\n+        qWarning() << QString(\"PaymentServer::%1: Payment request amount out of allowed range (%2, allowed 0 - %3).\")\n+            .arg(__func__)\n+            .arg(requestAmount)\n+            .arg(MAX_MONEY);\n+    }\n+    return fVerified;\n+}"
+      },
+      {
+        "sha": "6bf5ac2eea291fdae1eee4b82583d99ce69dc1a3",
+        "filename": "src/qt/paymentserver.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a6516686dcf0b93dd0bcae304e74f9ac69cb305c/src/qt/paymentserver.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a6516686dcf0b93dd0bcae304e74f9ac69cb305c/src/qt/paymentserver.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.h?ref=a6516686dcf0b93dd0bcae304e74f9ac69cb305c",
+        "patch": "@@ -95,6 +95,8 @@ class PaymentServer : public QObject\n     static bool verifyNetwork(const payments::PaymentDetails& requestDetails);\n     // Verify if the payment request is expired\n     static bool verifyExpired(const payments::PaymentDetails& requestDetails);\n+    // Verify the payment request amount is valid\n+    static bool verifyAmount(const CAmount& requestAmount);\n \n signals:\n     // Fired when a valid payment request is received"
+      },
+      {
+        "sha": "c548ffe429fdacd45ab3e03aa2094895c5c9bf14",
+        "filename": "src/qt/test/paymentrequestdata.h",
+        "status": "modified",
+        "additions": 25,
+        "deletions": 0,
+        "changes": 25,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a6516686dcf0b93dd0bcae304e74f9ac69cb305c/src/qt/test/paymentrequestdata.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a6516686dcf0b93dd0bcae304e74f9ac69cb305c/src/qt/test/paymentrequestdata.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/test/paymentrequestdata.h?ref=a6516686dcf0b93dd0bcae304e74f9ac69cb305c",
+        "patch": "@@ -433,3 +433,28 @@ dGluZyB0ZXN0bmV0ISqAAXSQG8+GFA18VaKarlYrOz293rNMIub0swKGcQm8jAGX\\\n HSLaRgHfUDeEPr4hydy4dtfu59KNwe2xsHOHu/SpO4L8SrA4Dm9A7SlNBVWdcLbw\\\n d2hj739GDLz0b5KuJ2SG6VknMRQM976w/m2qlq0ccVGaaZ2zMIGfpzL3p6adwx/5\\\n \";\n+\n+//\n+// Payment request with amount overflow (amount is set to 21000001 BTC)\n+//\n+const char* paymentrequest5_cert2_BASE64 =\n+\"\\\n+Egt4NTA5K3NoYTI1NhrQBArNBDCCAkkwggExoAMCAQICAQEwDQYJKoZIhvcNAQEL\\\n+BQAwITEfMB0GA1UEAwwWUGF5bWVudFJlcXVlc3QgVGVzdCBDQTAeFw0xNTAxMTEx\\\n+ODIxMDhaFw0yNTAxMDgxODIxMDhaMCExHzAdBgNVBAMMFlBheW1lbnRSZXF1ZXN0\\\n+IFRlc3QgQ0EwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBAMsZqzkzeBGo+i2N\\\n+mUak3Ciodr1V7S062VOy7N0OQYNDQHYkgDFAUET7cEb5VJaHPv5m3ppTBpU9xBcf\\\n+wbHHUt4VjA+mhRmYrl1khjvZM+X8kEqvWn20BtcM9R6r0yIYec8UERDDHBleL/P8\\\n+RkxEnVLjYTV9zigCXfMsgYb3EQShAgMBAAGjEDAOMAwGA1UdEwQFMAMBAf8wDQYJ\\\n+KoZIhvcNAQELBQADggEBABUJpl3QCqsoDSxAsQdV6zKT4VGV76AzoGj7etQsQY+r\\\n++S26VfWh/fMobEzuxFChr0USgLJ6FoK78hAtoZvt1lrye9yqFv/ig3WLWsJKWHHb\\\n+3RT6oR03CIwZXFSUasi08QDVLxafwsU5OMcPLucF3a1lRL1ccYrNgVCCx1+X7Bos\\\n+tIgDGRQQ4AyoHTcfVd2hEGeUv7k14mOxFsAp6851yosHq9Q2kwmdH+rHEJbjof87\\\n+yyKLagc4owyXBZYkQmkeHWCNqnuRmO5vUsfVb0UUrkD64o7Th/NjwooA7SCiUXl6\\\n+dfygT1b7ggpx7GC+sP2DsIM47IAZ55drjqX5u2f+Ba0iTAoEdGVzdBIkCIDC9P+F\\\n+vt0DEhl2qRQErGqUUwSsaMpDvWIaGnJGNQqi8oisGLzcrKYFKhhUZXN0aW5nIGFt\\\n+b3VudCBvdmVyZmxvdyEqgAG8S7WEDUC6tCL6q2CTBjop/AitgEy31RL9IqYruytR\\\n+iEBFUrBDJZU+UEezGwr7/zoECjo5ZY3PmtZcM2sILNjyweJF6XVzGqTxUw6pN6sW\\\n+XR2T3Gy2LzRvhVA25QgGqpz0/juS2BtmNbsZPkN9gMMwKimgzc+PuCzmEKwPK9cQ\\\n+YQ==\\\n+\";"
+      },
+      {
+        "sha": "e2ec439b2e39a1550230b4744f24a4feef8bbac6",
+        "filename": "src/qt/test/paymentservertests.cpp",
+        "status": "modified",
+        "additions": 17,
+        "deletions": 0,
+        "changes": 17,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a6516686dcf0b93dd0bcae304e74f9ac69cb305c/src/qt/test/paymentservertests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a6516686dcf0b93dd0bcae304e74f9ac69cb305c/src/qt/test/paymentservertests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/test/paymentservertests.cpp?ref=a6516686dcf0b93dd0bcae304e74f9ac69cb305c",
+        "patch": "@@ -7,7 +7,10 @@\n #include \"optionsmodel.h\"\n #include \"paymentrequestdata.h\"\n \n+#include \"amount.h\"\n #include \"random.h\"\n+#include \"script/script.h\"\n+#include \"script/standard.h\"\n #include \"util.h\"\n #include \"utilstrencodings.h\"\n \n@@ -184,6 +187,20 @@ void PaymentServerTests::paymentServerTests()\n     tempFile.close();\n     QCOMPARE(PaymentServer::readPaymentRequestFromFile(tempFile.fileName(), r.paymentRequest), false);\n \n+    // Payment request with amount overflow (amount is set to 21000001 BTC):\n+    data = DecodeBase64(paymentrequest5_cert2_BASE64);\n+    byteArray = QByteArray((const char*)&data[0], data.size());\n+    r.paymentRequest.parse(byteArray);\n+    // Ensure the request is initialized\n+    QVERIFY(r.paymentRequest.IsInitialized());\n+    // Extract address and amount from the request\n+    QList<std::pair<CScript, CAmount> > sendingTos = r.paymentRequest.getPayTo();\n+    foreach (const PAIRTYPE(CScript, CAmount)& sendingTo, sendingTos) {\n+        CTxDestination dest;\n+        if (ExtractDestination(sendingTo.first, dest))\n+            QCOMPARE(PaymentServer::verifyAmount(sendingTo.second), false);\n+    }\n+\n     delete server;\n }\n "
+      }
+    ]
+  }
+]

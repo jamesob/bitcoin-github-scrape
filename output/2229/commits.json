@@ -1,0 +1,184 @@
+[
+  {
+    "sha": "288fdc092aff9d7e0cea159196b2e96044a786c7",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyODhmZGMwOTJhZmY5ZDdlMGNlYTE1OTE5NmIyZTk2MDQ0YTc4NmM3",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2013-01-27T23:07:51Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieterw@google.com",
+        "date": "2013-01-30T03:00:25Z"
+      },
+      "message": "Native versions for AllocateFileRange()",
+      "tree": {
+        "sha": "bed80bf762977827bf187ddd520841c037f80a59",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/bed80bf762977827bf187ddd520841c037f80a59"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/288fdc092aff9d7e0cea159196b2e96044a786c7",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/288fdc092aff9d7e0cea159196b2e96044a786c7",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/288fdc092aff9d7e0cea159196b2e96044a786c7",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/288fdc092aff9d7e0cea159196b2e96044a786c7/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": null,
+    "parents": [
+      {
+        "sha": "2835080e164527ecc2db31e68d86ab8a8337c62b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2835080e164527ecc2db31e68d86ab8a8337c62b",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/2835080e164527ecc2db31e68d86ab8a8337c62b"
+      }
+    ],
+    "stats": {
+      "total": 39,
+      "additions": 39,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "6ea5e1d83922cb3ae8e7b1fc10a886dec532283d",
+        "filename": "src/util.cpp",
+        "status": "modified",
+        "additions": 39,
+        "deletions": 0,
+        "changes": 39,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/288fdc092aff9d7e0cea159196b2e96044a786c7/src/util.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/288fdc092aff9d7e0cea159196b2e96044a786c7/src/util.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/util.cpp?ref=288fdc092aff9d7e0cea159196b2e96044a786c7",
+        "patch": "@@ -3,6 +3,15 @@\n // Distributed under the MIT/X11 software license, see the accompanying\n // file COPYING or http://www.opensource.org/licenses/mit-license.php.\n \n+#ifndef WIN32\n+// for posix_fallocate\n+#ifdef __linux__\n+#define _POSIX_C_SOURCE 200112L\n+#endif\n+#include <fcntl.h>\n+#include <sys/stat.h>\n+#endif\n+\n #include \"util.h\"\n #include \"sync.h\"\n #include \"version.h\"\n@@ -1155,6 +1164,35 @@ int GetFilesize(FILE* file)\n // this function tries to make a particular range of a file allocated (corresponding to disk space)\n // it is advisory, and the range specified in the arguments will never contain live data\n void AllocateFileRange(FILE *file, unsigned int offset, unsigned int length) {\n+#if defined(WIN32)\n+    // Windows-specific version\n+    HANDLE hFile = (HANDLE)_get_osfhandle(_fileno(file));\n+    LARGE_INTEGER nFileSize;\n+    int64 nEndPos = (int64)offset + length;\n+    nFileSize.u.LowPart = nEndPos & 0xFFFFFFFF;\n+    nFileSize.u.HighPart = nEndPos >> 32;\n+    SetFilePointerEx(hFile, nFileSize, 0, FILE_BEGIN);\n+    SetEndOfFile(hFile);\n+#elif defined(MAC_OSX)\n+    // OSX specific version\n+    fstore_t fst;\n+    fst.fst_flags = F_ALLOCATECONTIG;\n+    fst.fst_posmode = F_PEOFPOSMODE;\n+    fst.fst_offset = 0;\n+    fst.fst_length = (off_t)offset + length;\n+    fst.fst_bytesalloc = 0;\n+    if (fcntl(fileno(file), F_PREALLOCATE, &fst) == -1) {\n+        fst.fst_flags = F_ALLOCATEALL;\n+        fcntl(fileno(file), F_PREALLOCATE, &fst);\n+    }\n+    ftruncate(fileno(file), fst.fst_length);\n+#elif defined(__linux__)\n+    // Version using posix_fallocate\n+    off_t nEndPos = (off_t)offset + length;\n+    posix_fallocate(fileno(file), 0, nEndPos);\n+#else\n+    // Fallback version\n+    // TODO: just write one byte per block\n     static const char buf[65536] = {};\n     fseek(file, offset, SEEK_SET);\n     while (length > 0) {\n@@ -1164,6 +1202,7 @@ void AllocateFileRange(FILE *file, unsigned int offset, unsigned int length) {\n         fwrite(buf, 1, now, file); // allowed to fail; this function is advisory anyway\n         length -= now;\n     }\n+#endif\n }\n \n void ShrinkDebugFile()"
+      }
+    ]
+  },
+  {
+    "sha": "1eb578796c98f457546059b66eb98fd0efc8e690",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxZWI1Nzg3OTZjOThmNDU3NTQ2MDU5YjY2ZWI5OGZkMGVmYzhlNjkw",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2013-01-30T03:17:33Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieterw@google.com",
+        "date": "2013-01-30T03:55:38Z"
+      },
+      "message": "Drop padding in blk* when finalizing file",
+      "tree": {
+        "sha": "31f41b033a1c43799d1ed9b6eaab7ed705a908e4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/31f41b033a1c43799d1ed9b6eaab7ed705a908e4"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/1eb578796c98f457546059b66eb98fd0efc8e690",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1eb578796c98f457546059b66eb98fd0efc8e690",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/1eb578796c98f457546059b66eb98fd0efc8e690",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1eb578796c98f457546059b66eb98fd0efc8e690/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": null,
+    "parents": [
+      {
+        "sha": "288fdc092aff9d7e0cea159196b2e96044a786c7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/288fdc092aff9d7e0cea159196b2e96044a786c7",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/288fdc092aff9d7e0cea159196b2e96044a786c7"
+      }
+    ],
+    "stats": {
+      "total": 17,
+      "additions": 15,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "a94fdc30906c617f1fe100af0359b50fdbd4b9e4",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 2,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1eb578796c98f457546059b66eb98fd0efc8e690/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1eb578796c98f457546059b66eb98fd0efc8e690/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=1eb578796c98f457546059b66eb98fd0efc8e690",
+        "patch": "@@ -1572,20 +1572,24 @@ bool CBlock::DisconnectBlock(CBlockIndex *pindex, CCoinsViewCache &view, bool *p\n     }\n }\n \n-void static FlushBlockFile()\n+void static FlushBlockFile(bool fFinalize = false)\n {\n     LOCK(cs_LastBlockFile);\n \n     CDiskBlockPos posOld(nLastBlockFile, 0);\n \n     FILE *fileOld = OpenBlockFile(posOld);\n     if (fileOld) {\n+        if (fFinalize)\n+            TruncateFile(fileOld, infoLastBlockFile.nSize);\n         FileCommit(fileOld);\n         fclose(fileOld);\n     }\n \n     fileOld = OpenUndoFile(posOld);\n     if (fileOld) {\n+        if (fFinalize)\n+            TruncateFile(fileOld, infoLastBlockFile.nUndoSize);\n         FileCommit(fileOld);\n         fclose(fileOld);\n     }\n@@ -1991,7 +1995,7 @@ bool FindBlockPos(CDiskBlockPos &pos, unsigned int nAddSize, unsigned int nHeigh\n     } else {\n         while (infoLastBlockFile.nSize + nAddSize >= MAX_BLOCKFILE_SIZE) {\n             printf(\"Leaving block file %i: %s\\n\", nLastBlockFile, infoLastBlockFile.ToString().c_str());\n-            FlushBlockFile();\n+            FlushBlockFile(true);\n             nLastBlockFile++;\n             infoLastBlockFile.SetNull();\n             pblocktree->ReadBlockFileInfo(nLastBlockFile, infoLastBlockFile); // check whether data for the new file somehow already exist; can fail just fine"
+      },
+      {
+        "sha": "4ac66d466028fd6769b55887609dd3430762725e",
+        "filename": "src/util.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 0,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1eb578796c98f457546059b66eb98fd0efc8e690/src/util.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1eb578796c98f457546059b66eb98fd0efc8e690/src/util.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/util.cpp?ref=1eb578796c98f457546059b66eb98fd0efc8e690",
+        "patch": "@@ -1161,6 +1161,14 @@ int GetFilesize(FILE* file)\n     return nFilesize;\n }\n \n+bool TruncateFile(FILE *file, unsigned int length) {\n+#if defined(WIN32)\n+    return _chsize(_fileno(file), length) == 0;\n+#else\n+    return ftruncate(fileno(file), length) == 0;\n+#endif\n+}\n+\n // this function tries to make a particular range of a file allocated (corresponding to disk space)\n // it is advisory, and the range specified in the arguments will never contain live data\n void AllocateFileRange(FILE *file, unsigned int offset, unsigned int length) {"
+      },
+      {
+        "sha": "1d29867076e218a2e81c6d7cda8b7fcfde438a32",
+        "filename": "src/util.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1eb578796c98f457546059b66eb98fd0efc8e690/src/util.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1eb578796c98f457546059b66eb98fd0efc8e690/src/util.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/util.h?ref=1eb578796c98f457546059b66eb98fd0efc8e690",
+        "patch": "@@ -193,6 +193,7 @@ bool WildcardMatch(const char* psz, const char* mask);\n bool WildcardMatch(const std::string& str, const std::string& mask);\n void FileCommit(FILE *fileout);\n int GetFilesize(FILE* file);\n+bool TruncateFile(FILE *file, unsigned int length);\n void AllocateFileRange(FILE *file, unsigned int offset, unsigned int length);\n bool RenameOver(boost::filesystem::path src, boost::filesystem::path dest);\n boost::filesystem::path GetDefaultDataDir();"
+      }
+    ]
+  }
+]

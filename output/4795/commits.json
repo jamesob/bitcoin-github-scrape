@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "0731a8dbf41b781bb1287c453ec4d711a7dcdd54",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowNzMxYThkYmY0MWI3ODFiYjEyODdjNDUzZWM0ZDcxMWE3ZGNkZDU0",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-08-30T18:06:27Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-08-30T18:06:27Z"
+      },
+      "message": "Hold cs_main in SendMessages() for shorter period of time.\n\nMuch runtime under cs_main seemed unneeded here.",
+      "tree": {
+        "sha": "7e21f9c6697f616eed086a76ce8cb99b2122e452",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/7e21f9c6697f616eed086a76ce8cb99b2122e452"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/0731a8dbf41b781bb1287c453ec4d711a7dcdd54",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0731a8dbf41b781bb1287c453ec4d711a7dcdd54",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/0731a8dbf41b781bb1287c453ec4d711a7dcdd54",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0731a8dbf41b781bb1287c453ec4d711a7dcdd54/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "135a43df7b158eef8cd8acf722f96888935c1d07",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/135a43df7b158eef8cd8acf722f96888935c1d07",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/135a43df7b158eef8cd8acf722f96888935c1d07"
+      }
+    ],
+    "stats": {
+      "total": 54,
+      "additions": 31,
+      "deletions": 23
+    },
+    "files": [
+      {
+        "sha": "d81a8a5842fb8df58fc8bfd2395ef8ebc8bfc52b",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 31,
+        "deletions": 23,
+        "changes": 54,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0731a8dbf41b781bb1287c453ec4d711a7dcdd54/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0731a8dbf41b781bb1287c453ec4d711a7dcdd54/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=0731a8dbf41b781bb1287c453ec4d711a7dcdd54",
+        "patch": "@@ -4249,13 +4249,39 @@ bool SendMessages(CNode* pto, bool fSendTrickle)\n             }\n         }\n \n-        TRY_LOCK(cs_main, lockMain); // Acquire cs_main for IsInitialBlockDownload() and CNodeState()\n-        if (!lockMain)\n-            return true;\n+        bool isIBD;\n+        CNodeState state;\n+        {\n+            TRY_LOCK(cs_main, lockMain); // Acquire cs_main for IsInitialBlockDownload() and CNodeState()\n+            if (!lockMain)\n+                return true;\n+\n+            isIBD = IsInitialBlockDownload();\n+\n+            CNodeState &state_ = *State(pto->GetId());\n+            if (state_.fShouldBan) {\n+                if (pto->fWhitelisted)\n+                    LogPrintf(\"Warning: not punishing whitelisted peer %s!\\n\", pto->addr.ToString());\n+                else {\n+                    pto->fDisconnect = true;\n+                    if (pto->addr.IsLocal())\n+                        LogPrintf(\"Warning: not banning local peer %s!\\n\", pto->addr.ToString());\n+                    else\n+                        CNode::Ban(pto->addr);\n+                }\n+                state_.fShouldBan = false;\n+            }\n+\n+            BOOST_FOREACH(const CBlockReject& reject, state_.rejects)\n+                pto->PushMessage(\"reject\", (string)\"block\", reject.chRejectCode, reject.strRejectReason, reject.hashBlock);\n+            state_.rejects.clear();\n+\n+            state = state_;\n+        }\n \n         // Address refresh broadcast\n         static int64_t nLastRebroadcast;\n-        if (!IsInitialBlockDownload() && (GetTime() - nLastRebroadcast > 24 * 60 * 60))\n+        if (!isIBD && (GetTime() - nLastRebroadcast > 24 * 60 * 60))\n         {\n             {\n                 LOCK(cs_vNodes);\n@@ -4303,24 +4329,6 @@ bool SendMessages(CNode* pto, bool fSendTrickle)\n                 pto->PushMessage(\"addr\", vAddr);\n         }\n \n-        CNodeState &state = *State(pto->GetId());\n-        if (state.fShouldBan) {\n-            if (pto->fWhitelisted)\n-                LogPrintf(\"Warning: not punishing whitelisted peer %s!\\n\", pto->addr.ToString());\n-            else {\n-                pto->fDisconnect = true;\n-                if (pto->addr.IsLocal())\n-                    LogPrintf(\"Warning: not banning local peer %s!\\n\", pto->addr.ToString());\n-                else\n-                    CNode::Ban(pto->addr);\n-            }\n-            state.fShouldBan = false;\n-        }\n-\n-        BOOST_FOREACH(const CBlockReject& reject, state.rejects)\n-            pto->PushMessage(\"reject\", (string)\"block\", reject.chRejectCode, reject.strRejectReason, reject.hashBlock);\n-        state.rejects.clear();\n-\n         // Start block sync\n         if (pto->fStartSync && !fImporting && !fReindex) {\n             pto->fStartSync = false;\n@@ -4330,7 +4338,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle)\n         // Resend wallet transactions that haven't gotten in a block yet\n         // Except during reindex, importing and IBD, when old wallet\n         // transactions become unconfirmed and spams other nodes.\n-        if (!fReindex && !fImporting && !IsInitialBlockDownload())\n+        if (!fReindex && !fImporting && !isIBD)\n         {\n             g_signals.Broadcast();\n         }"
+      }
+    ]
+  }
+]

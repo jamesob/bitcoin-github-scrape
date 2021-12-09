@@ -1,0 +1,86 @@
+[
+  {
+    "sha": "a486abd419d76ec3aec4adb90216eccb7b4be0c4",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphNDg2YWJkNDE5ZDc2ZWMzYWVjNGFkYjkwMjE2ZWNjYjdiNGJlMGM0",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-01-30T09:55:55Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-03-03T21:33:09Z"
+      },
+      "message": "replace custom GetFilesize() with boost::filesystem::file_size()",
+      "tree": {
+        "sha": "371c743e3a4fea997da977c05275e728c66f1900",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/371c743e3a4fea997da977c05275e728c66f1900"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a486abd419d76ec3aec4adb90216eccb7b4be0c4",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a486abd419d76ec3aec4adb90216eccb7b4be0c4",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a486abd419d76ec3aec4adb90216eccb7b4be0c4",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a486abd419d76ec3aec4adb90216eccb7b4be0c4/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "aefbf6e30cadaf77ebee44284c74cc5449dc173f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/aefbf6e30cadaf77ebee44284c74cc5449dc173f",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/aefbf6e30cadaf77ebee44284c74cc5449dc173f"
+      }
+    ],
+    "stats": {
+      "total": 26,
+      "additions": 5,
+      "deletions": 21
+    },
+    "files": [
+      {
+        "sha": "d3d276eb59b7cb04a98adb116d8d717e4a944539",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 2,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a486abd419d76ec3aec4adb90216eccb7b4be0c4/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a486abd419d76ec3aec4adb90216eccb7b4be0c4/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=a486abd419d76ec3aec4adb90216eccb7b4be0c4",
+        "patch": "@@ -27,6 +27,8 @@\n #include <miniupnpc/upnperrors.h>\n #endif\n \n+#include <boost/filesystem.hpp>\n+\n // Dump addresses to peers.dat every 15 minutes (900s)\n #define DUMP_ADDRESSES_INTERVAL 900\n \n@@ -1986,9 +1988,9 @@ bool CAddrDB::Read(CAddrMan& addr)\n         return error(\"CAddrman::Read() : open failed\");\n \n     // use file size to size memory buffer\n-    int fileSize = GetFilesize(filein);\n+    int fileSize = boost::filesystem::file_size(pathAddr);\n     int dataSize = fileSize - sizeof(uint256);\n-    //Don't try to resize to a negative number if file is small\n+    // Don't try to resize to a negative number if file is small\n     if ( dataSize < 0 ) dataSize = 0;\n     vector<unsigned char> vchData;\n     vchData.resize(dataSize);"
+      },
+      {
+        "sha": "b90921ab83b717978b08f079e37c00b4c4493f32",
+        "filename": "src/util.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 18,
+        "changes": 19,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a486abd419d76ec3aec4adb90216eccb7b4be0c4/src/util.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a486abd419d76ec3aec4adb90216eccb7b4be0c4/src/util.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/util.cpp?ref=a486abd419d76ec3aec4adb90216eccb7b4be0c4",
+        "patch": "@@ -1107,16 +1107,6 @@ void FileCommit(FILE *fileout)\n #endif\n }\n \n-int GetFilesize(FILE* file)\n-{\n-    int nSavePos = ftell(file);\n-    int nFilesize = -1;\n-    if (fseek(file, 0, SEEK_END) == 0)\n-        nFilesize = ftell(file);\n-    fseek(file, nSavePos, SEEK_SET);\n-    return nFilesize;\n-}\n-\n bool TruncateFile(FILE *file, unsigned int length) {\n #if defined(WIN32)\n     return _chsize(_fileno(file), length) == 0;\n@@ -1195,7 +1185,7 @@ void ShrinkDebugFile()\n     // Scroll debug.log if it's getting too big\n     boost::filesystem::path pathLog = GetDataDir() / \"debug.log\";\n     FILE* file = fopen(pathLog.string().c_str(), \"r\");\n-    if (file && GetFilesize(file) > 10 * 1000000)\n+    if (file && boost::filesystem::file_size(pathLog) > 10 * 1000000)\n     {\n         // Restart the file with some of the end\n         char pch[200000];\n@@ -1214,13 +1204,6 @@ void ShrinkDebugFile()\n         fclose(file);\n }\n \n-\n-\n-\n-\n-\n-\n-\n //\n // \"Never go to sea with two chronometers; take one or three.\"\n // Our three time sources are:"
+      },
+      {
+        "sha": "b0dabd2f6730c3cdb17abaca2b8df223058e1db9",
+        "filename": "src/util.h",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 1,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a486abd419d76ec3aec4adb90216eccb7b4be0c4/src/util.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a486abd419d76ec3aec4adb90216eccb7b4be0c4/src/util.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/util.h?ref=a486abd419d76ec3aec4adb90216eccb7b4be0c4",
+        "patch": "@@ -185,7 +185,6 @@ void ParseParameters(int argc, const char*const argv[]);\n bool WildcardMatch(const char* psz, const char* mask);\n bool WildcardMatch(const std::string& str, const std::string& mask);\n void FileCommit(FILE *fileout);\n-int GetFilesize(FILE* file);\n bool TruncateFile(FILE *file, unsigned int length);\n int RaiseFileDescriptorLimit(int nMinFD);\n void AllocateFileRange(FILE *file, unsigned int offset, unsigned int length);"
+      }
+    ]
+  }
+]

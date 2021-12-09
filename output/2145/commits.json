@@ -1,0 +1,344 @@
+[
+  {
+    "sha": "2cbd71da06a14ffe823440973f8a87032bbe0b1e",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyY2JkNzFkYTA2YTE0ZmZlODIzNDQwOTczZjhhODcwMzJiYmUwYjFl",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2012-12-30T14:29:39Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2013-01-03T14:29:19Z"
+      },
+      "message": "Make DisconnectBlock fault-tolerant",
+      "tree": {
+        "sha": "0ff9a4240080c3d7adae741b543a0b0d84842ac1",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/0ff9a4240080c3d7adae741b543a0b0d84842ac1"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/2cbd71da06a14ffe823440973f8a87032bbe0b1e",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2cbd71da06a14ffe823440973f8a87032bbe0b1e",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/2cbd71da06a14ffe823440973f8a87032bbe0b1e",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2cbd71da06a14ffe823440973f8a87032bbe0b1e/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "ea9788517bfa3e53e192c5af9e64e73625f9db74",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ea9788517bfa3e53e192c5af9e64e73625f9db74",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/ea9788517bfa3e53e192c5af9e64e73625f9db74"
+      }
+    ],
+    "stats": {
+      "total": 62,
+      "additions": 42,
+      "deletions": 20
+    },
+    "files": [
+      {
+        "sha": "bb39f422f9aa05fcf705b23aba4a7cb8f4482ca2",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 37,
+        "deletions": 18,
+        "changes": 55,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/2cbd71da06a14ffe823440973f8a87032bbe0b1e/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/2cbd71da06a14ffe823440973f8a87032bbe0b1e/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=2cbd71da06a14ffe823440973f8a87032bbe0b1e",
+        "patch": "@@ -1464,62 +1464,76 @@ bool CTransaction::ClientCheckInputs() const\n \n \n \n-bool CBlock::DisconnectBlock(CBlockIndex *pindex, CCoinsViewCache &view)\n+bool CBlock::DisconnectBlock(CBlockIndex *pindex, CCoinsViewCache &view, bool *pfClean)\n {\n     assert(pindex == view.GetBestBlock());\n \n+    if (pfClean)\n+        *pfClean = false;\n+\n+    bool fClean = true;\n+\n     CBlockUndo blockUndo;\n     {\n         CDiskBlockPos pos = pindex->GetUndoPos();\n         if (pos.IsNull())\n             return error(\"DisconnectBlock() : no undo data available\");\n-        FILE *file = OpenUndoFile(pos, true);\n-        if (file == NULL)\n-            return error(\"DisconnectBlock() : undo file not available\");\n-        CAutoFile fileUndo(file, SER_DISK, CLIENT_VERSION);\n-        fileUndo >> blockUndo;\n+        CAutoFile fileUndo(OpenUndoFile(pos, true), SER_DISK, CLIENT_VERSION);\n+        if (!fileUndo)\n+            return error(\"DisconnectBlock() : cannot open undo file\");\n+        try {\n+            fileUndo >> blockUndo;\n+        } catch(std::exception &e) {\n+            return error(\"DisconnectBlock() : deserialize or I/O error reading udno data\");\n+        }\n     }\n \n-    assert(blockUndo.vtxundo.size() + 1 == vtx.size());\n+    if (blockUndo.vtxundo.size() + 1 != vtx.size())\n+        return error(\"DisconnectBlock() : block and undo data inconsistent\");\n \n     // undo transactions in reverse order\n     for (int i = vtx.size() - 1; i >= 0; i--) {\n         const CTransaction &tx = vtx[i];\n         uint256 hash = tx.GetHash();\n \n         // check that all outputs are available\n-        if (!view.HaveCoins(hash))\n-            return error(\"DisconnectBlock() : outputs still spent? database corrupted\");\n+        if (!view.HaveCoins(hash)) {\n+            fClean = fClean && error(\"DisconnectBlock() : outputs still spent? database corrupted\");\n+            view.SetCoins(hash, CCoins());\n+        }\n         CCoins &outs = view.GetCoins(hash);\n \n         CCoins outsBlock = CCoins(tx, pindex->nHeight);\n         if (outs != outsBlock)\n-            return error(\"DisconnectBlock() : added transaction mismatch? database corrupted\");\n+            fClean = fClean && error(\"DisconnectBlock() : added transaction mismatch? database corrupted\");\n \n         // remove outputs\n         outs = CCoins();\n \n         // restore inputs\n         if (i > 0) { // not coinbases\n             const CTxUndo &txundo = blockUndo.vtxundo[i-1];\n-            assert(txundo.vprevout.size() == tx.vin.size());\n+            if (txundo.vprevout.size() != tx.vin.size())\n+                return error(\"DisconnectBlock() : transaction and undo data inconsistent\");\n             for (unsigned int j = tx.vin.size(); j-- > 0;) {\n                 const COutPoint &out = tx.vin[j].prevout;\n                 const CTxInUndo &undo = txundo.vprevout[j];\n                 CCoins coins;\n                 view.GetCoins(out.hash, coins); // this can fail if the prevout was already entirely spent\n-                if (coins.IsPruned()) {\n-                    if (undo.nHeight == 0)\n-                        return error(\"DisconnectBlock() : undo data doesn't contain tx metadata? database corrupted\");\n+                if (undo.nHeight != 0) {\n+                    // undo data contains height: this is the last output of the prevout tx being spent\n+                    if (!coins.IsPruned())\n+                        fClean = fClean && error(\"DisconnectBlock() : undo data overwriting existing transaction\");\n+                    coins = CCoins();\n                     coins.fCoinBase = undo.fCoinBase;\n                     coins.nHeight = undo.nHeight;\n                     coins.nVersion = undo.nVersion;\n                 } else {\n-                    if (undo.nHeight != 0)\n-                        return error(\"DisconnectBlock() : undo data contains unneeded tx metadata? database corrupted\");\n+                    if (coins.IsPruned())\n+                        fClean = fClean && error(\"DisconnectBlock() : undo data adding output to missing transaction\");\n                 }\n                 if (coins.IsAvailable(out.n))\n-                    return error(\"DisconnectBlock() : prevout output not spent? database corrupted\");\n+                    fClean = fClean && error(\"DisconnectBlock() : undo data overwriting existing output\");\n                 if (coins.vout.size() < out.n+1)\n                     coins.vout.resize(out.n+1);\n                 coins.vout[out.n] = undo.txout;\n@@ -1532,7 +1546,12 @@ bool CBlock::DisconnectBlock(CBlockIndex *pindex, CCoinsViewCache &view)\n     // move best block pointer to prevout block\n     view.SetBestBlock(pindex->pprev);\n \n-    return true;\n+    if (pfClean) {\n+        *pfClean = fClean;\n+        return true;\n+    } else {\n+        return fClean;\n+    }\n }\n \n void static FlushBlockFile()"
+      },
+      {
+        "sha": "80fd76452bc59bc167fb83d6f84435813a04a03a",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 2,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/2cbd71da06a14ffe823440973f8a87032bbe0b1e/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/2cbd71da06a14ffe823440973f8a87032bbe0b1e/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=2cbd71da06a14ffe823440973f8a87032bbe0b1e",
+        "patch": "@@ -1305,8 +1305,11 @@ class CBlock : public CBlockHeader\n     }\n \n \n-    // Undo the effects of this block (with given index) on the UTXO set represented by coins\n-    bool DisconnectBlock(CBlockIndex *pindex, CCoinsViewCache &coins);\n+    /** Undo the effects of this block (with given index) on the UTXO set represented by coins.\n+     *  In case pfClean is provided, operation will try to be tolerant about errors, and *pfClean\n+     *  will be true if no problems were found. Otherwise, the return value will be false in case\n+     *  of problems. Note that in any case, coins may be modified. */\n+    bool DisconnectBlock(CBlockIndex *pindex, CCoinsViewCache &coins, bool *pfClean = NULL);\n \n     // Apply the effects of this block (with given index) on the UTXO set represented by coins\n     bool ConnectBlock(CBlockIndex *pindex, CCoinsViewCache &coins, bool fJustCheck=false);"
+      }
+    ]
+  },
+  {
+    "sha": "8539361e66eace839060f77f39b770d045e7ce28",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4NTM5MzYxZTY2ZWFjZTgzOTA2MGY3N2YzOWI3NzBkMDQ1ZTdjZTI4",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2012-12-30T22:41:41Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2013-01-03T14:29:19Z"
+      },
+      "message": "Add checksums to undo data\n\nThis should be compatible with older code that didn't write checksums.",
+      "tree": {
+        "sha": "c66def3d40aeb33fbb945c1dc28a9eafd11f5005",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/c66def3d40aeb33fbb945c1dc28a9eafd11f5005"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/8539361e66eace839060f77f39b770d045e7ce28",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8539361e66eace839060f77f39b770d045e7ce28",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/8539361e66eace839060f77f39b770d045e7ce28",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8539361e66eace839060f77f39b770d045e7ce28/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "2cbd71da06a14ffe823440973f8a87032bbe0b1e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2cbd71da06a14ffe823440973f8a87032bbe0b1e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/2cbd71da06a14ffe823440973f8a87032bbe0b1e"
+      }
+    ],
+    "stats": {
+      "total": 68,
+      "additions": 52,
+      "deletions": 16
+    },
+    "files": [
+      {
+        "sha": "2619062a6bac55e15b3412d867ec10b0534658fa",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 15,
+        "changes": 22,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8539361e66eace839060f77f39b770d045e7ce28/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8539361e66eace839060f77f39b770d045e7ce28/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=8539361e66eace839060f77f39b770d045e7ce28",
+        "patch": "@@ -1474,19 +1474,11 @@ bool CBlock::DisconnectBlock(CBlockIndex *pindex, CCoinsViewCache &view, bool *p\n     bool fClean = true;\n \n     CBlockUndo blockUndo;\n-    {\n-        CDiskBlockPos pos = pindex->GetUndoPos();\n-        if (pos.IsNull())\n-            return error(\"DisconnectBlock() : no undo data available\");\n-        CAutoFile fileUndo(OpenUndoFile(pos, true), SER_DISK, CLIENT_VERSION);\n-        if (!fileUndo)\n-            return error(\"DisconnectBlock() : cannot open undo file\");\n-        try {\n-            fileUndo >> blockUndo;\n-        } catch(std::exception &e) {\n-            return error(\"DisconnectBlock() : deserialize or I/O error reading udno data\");\n-        }\n-    }\n+    CDiskBlockPos pos = pindex->GetUndoPos();\n+    if (pos.IsNull())\n+        return error(\"DisconnectBlock() : no undo data available\");\n+    if (!blockUndo.ReadFromDisk(pos, pindex->pprev->GetBlockHash()))\n+        return error(\"DisconnectBlock() : failure reading undo data\");\n \n     if (blockUndo.vtxundo.size() + 1 != vtx.size())\n         return error(\"DisconnectBlock() : block and undo data inconsistent\");\n@@ -1670,9 +1662,9 @@ bool CBlock::ConnectBlock(CBlockIndex* pindex, CCoinsViewCache &view, bool fJust\n     {\n         if (pindex->GetUndoPos().IsNull()) {\n             CDiskBlockPos pos;\n-            if (!FindUndoPos(pindex->nFile, pos, ::GetSerializeSize(blockundo, SER_DISK, CLIENT_VERSION) + 8))\n+            if (!FindUndoPos(pindex->nFile, pos, ::GetSerializeSize(blockundo, SER_DISK, CLIENT_VERSION) + 40))\n                 return error(\"ConnectBlock() : FindUndoPos failed\");\n-            if (!blockundo.WriteToDisk(pos))\n+            if (!blockundo.WriteToDisk(pos, pindex->pprev->GetBlockHash()))\n                 return error(\"ConnectBlock() : CBlockUndo::WriteToDisk failed\");\n \n             // update nUndoPos in block index"
+      },
+      {
+        "sha": "557df8bc5f9deaade3db09514082e3366e274799",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 45,
+        "deletions": 1,
+        "changes": 46,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8539361e66eace839060f77f39b770d045e7ce28/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8539361e66eace839060f77f39b770d045e7ce28/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=8539361e66eace839060f77f39b770d045e7ce28",
+        "patch": "@@ -746,7 +746,7 @@ class CBlockUndo\n         READWRITE(vtxundo);\n     )\n \n-    bool WriteToDisk(CDiskBlockPos &pos)\n+    bool WriteToDisk(CDiskBlockPos &pos, const uint256 &hashBlock)\n     {\n         // Open history file to append\n         CAutoFile fileout = CAutoFile(OpenUndoFile(pos), SER_DISK, CLIENT_VERSION);\n@@ -764,13 +764,57 @@ class CBlockUndo\n         pos.nPos = (unsigned int)fileOutPos;\n         fileout << *this;\n \n+        // calculate & write checksum\n+        CHashWriter hasher(SER_GETHASH, PROTOCOL_VERSION);\n+        hasher << hashBlock;\n+        hasher << *this;\n+        fileout << hasher.GetHash();\n+\n         // Flush stdio buffers and commit to disk before returning\n         fflush(fileout);\n         if (!IsInitialBlockDownload())\n             FileCommit(fileout);\n \n         return true;\n     }\n+\n+    bool ReadFromDisk(const CDiskBlockPos &pos, const uint256 &hashBlock)\n+    {\n+        // Open history file to read\n+        CAutoFile filein = CAutoFile(OpenUndoFile(pos, true), SER_DISK, CLIENT_VERSION);\n+        if (!filein)\n+            return error(\"CBlockUndo::ReadFromDisk() : OpenBlockFile failed\");\n+\n+        // Read block\n+        uint256 hashChecksum;\n+        try {\n+            filein >> *this;\n+        }\n+        catch (std::exception &e) {\n+            return error(\"%s() : deserialize or I/O error\", __PRETTY_FUNCTION__);\n+        }\n+\n+        // for compatibility with pre-release code that didn't write checksums to undo data\n+        // TODO: replace by a simply 'filein >> hashChecksum' in the above try block\n+        try {\n+            filein >> hashChecksum;\n+        } catch (std::exception &e) {\n+            hashChecksum = 0;\n+        }\n+        uint32_t hashInit = hashChecksum.Get64(0) & 0xFFFFFFFFUL;\n+        if (hashChecksum == 0 || memcmp(&hashInit, pchMessageStart, 4) == 0)\n+            return true;\n+\n+        // Verify checksum\n+        CHashWriter hasher(SER_GETHASH, PROTOCOL_VERSION);\n+        hasher << hashBlock;\n+        hasher << *this;\n+        if (hashChecksum != hasher.GetHash())\n+            return error(\"CBlockUndo::ReadFromDisk() : checksum mismatch\");\n+\n+        return true;\n+    }\n+\n };\n \n /** pruned version of CTransaction: only retains metadata and unspent transaction outputs"
+      }
+    ]
+  },
+  {
+    "sha": "1f355b66cd90f1bd96a862604a7216e8ba56f853",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxZjM1NWI2NmNkOTBmMWJkOTZhODYyNjA0YTcyMTZlOGJhNTZmODUz",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2013-01-03T14:29:07Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2013-01-04T13:58:47Z"
+      },
+      "message": "New database check routine\n\n-checklevel gets a new meaning:\n0: verify blocks can be read from disk (like before)\n1: verify (contextless) block validity (like before)\n2: verify undo files can be read and have good checksums\n3: verify coin database is consistent with the last few blocks\n   (close to level 6 before)\n4: verify all validity rules of the last few blocks\n\nLevel 3 is the new default, as it's reasonably fast. As level 3 and\n4 are implemented using an in-memory rollback of the database, they\nare limited to as many blocks as possible without exceeding the\nlimits set by -dbcache. The default of -dbcache=25 allows for some\n150-200 blocks to be rolled back.\n\nIn case an error is found, the application quits with a message\ninstructing the user to restart with -reindex. Better instructions,\nand automatic recovery (when possible) or automatic reindexing are\nleft as future work.",
+      "tree": {
+        "sha": "05998e9ab46b5fe669211a5c0675fa8a8d73ac23",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/05998e9ab46b5fe669211a5c0675fa8a8d73ac23"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/1f355b66cd90f1bd96a862604a7216e8ba56f853",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1f355b66cd90f1bd96a862604a7216e8ba56f853",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/1f355b66cd90f1bd96a862604a7216e8ba56f853",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1f355b66cd90f1bd96a862604a7216e8ba56f853/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "8539361e66eace839060f77f39b770d045e7ce28",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8539361e66eace839060f77f39b770d045e7ce28",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/8539361e66eace839060f77f39b770d045e7ce28"
+      }
+    ],
+    "stats": {
+      "total": 74,
+      "additions": 60,
+      "deletions": 14
+    },
+    "files": [
+      {
+        "sha": "79e9b2fb107189b6ad171bb65e5583a10966adc7",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 2,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1f355b66cd90f1bd96a862604a7216e8ba56f853/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1f355b66cd90f1bd96a862604a7216e8ba56f853/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=1f355b66cd90f1bd96a862604a7216e8ba56f853",
+        "patch": "@@ -300,7 +300,7 @@ std::string HelpMessage()\n         \"  -rescan                \" + _(\"Rescan the block chain for missing wallet transactions\") + \"\\n\" +\n         \"  -salvagewallet         \" + _(\"Attempt to recover private keys from a corrupt wallet.dat\") + \"\\n\" +\n         \"  -checkblocks=<n>       \" + _(\"How many blocks to check at startup (default: 2500, 0 = all)\") + \"\\n\" +\n-        \"  -checklevel=<n>        \" + _(\"How thorough the block verification is (0-6, default: 1)\") + \"\\n\" +\n+        \"  -checklevel=<n>        \" + _(\"How thorough the block verification is (0-4, default: 3)\") + \"\\n\" +\n         \"  -loadblock=<file>      \" + _(\"Imports blocks from external blk000??.dat file\") + \"\\n\" +\n         \"  -reindex               \" + _(\"Rebuild blockchain index from current blk000??.dat files\") + \"\\n\" +\n \n@@ -752,7 +752,10 @@ bool AppInit2()\n         pblocktree->WriteReindexing(true);\n \n     if (!LoadBlockIndex())\n-        return InitError(_(\"Error loading blkindex.dat\"));\n+        return InitError(_(\"Error loading block/coin databases\"));\n+\n+    if (!VerifyDB())\n+        return InitError(_(\"Corrupted database detected. Please restart the client with -reindex.\"));\n \n     // as LoadBlockIndex can take several minutes, it's possible the user\n     // requested to kill bitcoin-qt during the last operation. If so, exit."
+      },
+      {
+        "sha": "3fd85131abc0784234ed9b94d0de0745f9e9efca",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 53,
+        "deletions": 12,
+        "changes": 65,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1f355b66cd90f1bd96a862604a7216e8ba56f853/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1f355b66cd90f1bd96a862604a7216e8ba56f853/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=1f355b66cd90f1bd96a862604a7216e8ba56f853",
+        "patch": "@@ -2388,36 +2388,77 @@ bool static LoadBlockIndexDB()\n         BlockHashStr(hashBestChain).c_str(), nBestHeight,\n         DateTimeStrFormat(\"%Y-%m-%d %H:%M:%S\", pindexBest->GetBlockTime()).c_str());\n \n+    return true;\n+}\n+\n+bool VerifyDB() {\n+    if (pindexBest == NULL || pindexBest->pprev == NULL)\n+        return true;\n+\n     // Verify blocks in the best chain\n-    int nCheckLevel = GetArg(\"-checklevel\", 1);\n+    int nCheckLevel = GetArg(\"-checklevel\", 3);\n     int nCheckDepth = GetArg( \"-checkblocks\", 2500);\n     if (nCheckDepth == 0)\n         nCheckDepth = 1000000000; // suffices until the year 19000\n     if (nCheckDepth > nBestHeight)\n         nCheckDepth = nBestHeight;\n+    nCheckLevel = std::max(0, std::min(4, nCheckLevel));\n     printf(\"Verifying last %i blocks at level %i\\n\", nCheckDepth, nCheckLevel);\n-    CBlockIndex* pindexFork = NULL;\n+    CCoinsViewCache coins(*pcoinsTip, true);\n+    CBlockIndex* pindexState = pindexBest;\n+    CBlockIndex* pindexFailure = NULL;\n+    int nGoodTransactions = 0;\n     for (CBlockIndex* pindex = pindexBest; pindex && pindex->pprev; pindex = pindex->pprev)\n     {\n         if (fRequestShutdown || pindex->nHeight < nBestHeight-nCheckDepth)\n             break;\n         CBlock block;\n+        // check level 0: read from disk\n         if (!block.ReadFromDisk(pindex))\n-            return error(\"LoadBlockIndex() : block.ReadFromDisk failed\");\n+            return error(\"VerifyDB() : *** block.ReadFromDisk failed at %d, hash=%s\", pindex->nHeight, pindex->GetBlockHash().ToString().c_str());\n         // check level 1: verify block validity\n-        if (nCheckLevel>0 && !block.CheckBlock())\n-        {\n-            printf(\"LoadBlockIndex() : *** found bad block at %d, hash=%s\\n\", pindex->nHeight, pindex->GetBlockHash().ToString().c_str());\n-            pindexFork = pindex->pprev;\n+        if (nCheckLevel >= 1 && !block.CheckBlock())\n+            return error(\"VerifyDB() : *** found bad block at %d, hash=%s\\n\", pindex->nHeight, pindex->GetBlockHash().ToString().c_str());\n+        // check level 2: verify undo validity\n+        if (nCheckLevel >= 2 && pindex) {\n+            CBlockUndo undo;\n+            CDiskBlockPos pos = pindex->GetUndoPos();\n+            if (!pos.IsNull()) {\n+                if (!undo.ReadFromDisk(pos, pindex->pprev->GetBlockHash()))\n+                    return error(\"VerifyDB() : *** found bad undo data at %d, hash=%s\\n\", pindex->nHeight, pindex->GetBlockHash().ToString().c_str());\n+            }\n+        }\n+        // check level 3: check for inconsistencies during memory-only disconnect of tip blocks\n+        if (nCheckLevel >= 3 && pindex == pindexState && (coins.GetCacheSize() + pcoinsTip->GetCacheSize()) <= 2*nCoinCacheSize + 32000) {\n+            bool fClean = true;\n+            if (!block.DisconnectBlock(pindex, coins, &fClean))\n+                return error(\"VerifyDB() : *** irrecoverable inconsistency in block data at %d, hash=%s\", pindex->nHeight, pindex->GetBlockHash().ToString().c_str());\n+            pindexState = pindex->pprev;\n+            if (!fClean) {\n+                nGoodTransactions = 0;\n+                pindexFailure = pindex;\n+            } else\n+                nGoodTransactions += block.vtx.size();\n         }\n-        // TODO: stronger verifications\n     }\n-    if (pindexFork && !fRequestShutdown)\n-    {\n-        // TODO: reorg back\n-        return error(\"LoadBlockIndex(): chain database corrupted\");\n+    if (pindexFailure)\n+        return error(\"VerifyDB() : *** coin database inconsistencies found (last %i blocks, %i good transactions before that)\\n\", pindexBest->nHeight - pindexFailure->nHeight + 1, nGoodTransactions);\n+\n+    // check level 4: try reconnecting blocks\n+    if (nCheckLevel >= 4) {\n+        CBlockIndex *pindex = pindexState;\n+        while (pindex != pindexBest && !fRequestShutdown) {\n+             pindex = pindex->pnext;\n+             CBlock block;\n+             if (!block.ReadFromDisk(pindex))\n+                 return error(\"VerifyDB() : *** block.ReadFromDisk failed at %d, hash=%s\", pindex->nHeight, pindex->GetBlockHash().ToString().c_str());\n+             if (!block.ConnectBlock(pindex, coins))\n+                 return error(\"VerifyDB() : *** found unconnectable block at %d, hash=%s\", pindex->nHeight, pindex->GetBlockHash().ToString().c_str());\n+        }\n     }\n \n+    printf(\"No coin database inconsistencies in last %i blocks (%i transactions)\\n\", pindexBest->nHeight - pindexState->nHeight, nGoodTransactions);\n+\n     return true;\n }\n "
+      },
+      {
+        "sha": "2e3e1c5efe63c93b74c6c34cb9799443abc3b825",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1f355b66cd90f1bd96a862604a7216e8ba56f853/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1f355b66cd90f1bd96a862604a7216e8ba56f853/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=1f355b66cd90f1bd96a862604a7216e8ba56f853",
+        "patch": "@@ -126,6 +126,8 @@ FILE* OpenUndoFile(const CDiskBlockPos &pos, bool fReadOnly = false);\n bool LoadExternalBlockFile(FILE* fileIn, CDiskBlockPos *dbp = NULL);\n /** Load the block tree and coins database from disk */\n bool LoadBlockIndex();\n+/** Verify consistency of the block and coin databases */\n+bool VerifyDB();\n /** Print the loaded block tree */\n void PrintBlockTree();\n /** Find a block by height in the currently-connected chain */"
+      }
+    ]
+  }
+]

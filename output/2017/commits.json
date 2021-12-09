@@ -1,0 +1,134 @@
+[
+  {
+    "sha": "fca5b98528dcb7c0c1d5dfa9c5054f55bdb5b81b",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmY2E1Yjk4NTI4ZGNiN2MwYzFkNWRmYTljNTA1NGY1NWJkYjViODFi",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-11-15T23:04:52Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-11-15T23:04:52Z"
+      },
+      "message": "P2P, cosmetic: break out buffer send(2) code into separate function",
+      "tree": {
+        "sha": "ef5c0df9dbdeb9a3194959bbe2e09f907946bfc7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/ef5c0df9dbdeb9a3194959bbe2e09f907946bfc7"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/fca5b98528dcb7c0c1d5dfa9c5054f55bdb5b81b",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fca5b98528dcb7c0c1d5dfa9c5054f55bdb5b81b",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/fca5b98528dcb7c0c1d5dfa9c5054f55bdb5b81b",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fca5b98528dcb7c0c1d5dfa9c5054f55bdb5b81b/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "6caffb5358b1e403b293846b3c832433fa928e46",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6caffb5358b1e403b293846b3c832433fa928e46",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/6caffb5358b1e403b293846b3c832433fa928e46"
+      }
+    ],
+    "stats": {
+      "total": 47,
+      "additions": 25,
+      "deletions": 22
+    },
+    "files": [
+      {
+        "sha": "1985ba7e5daa2db2377c48856d09df6640636deb",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 25,
+        "deletions": 22,
+        "changes": 47,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fca5b98528dcb7c0c1d5dfa9c5054f55bdb5b81b/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fca5b98528dcb7c0c1d5dfa9c5054f55bdb5b81b/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=fca5b98528dcb7c0c1d5dfa9c5054f55bdb5b81b",
+        "patch": "@@ -635,6 +635,30 @@ void CNode::copyStats(CNodeStats &stats)\n \n \n \n+// requires LOCK(cs_vSend)\n+void SocketSendData(CNode *pnode)\n+{\n+    CDataStream& vSend = pnode->vSend;\n+    if (vSend.empty())\n+        return;\n+\n+    int nBytes = send(pnode->hSocket, &vSend[0], vSend.size(), MSG_NOSIGNAL | MSG_DONTWAIT);\n+    if (nBytes > 0)\n+    {\n+        vSend.erase(vSend.begin(), vSend.begin() + nBytes);\n+        pnode->nLastSend = GetTime();\n+    }\n+    else if (nBytes < 0)\n+    {\n+        // error\n+        int nErr = WSAGetLastError();\n+        if (nErr != WSAEWOULDBLOCK && nErr != WSAEMSGSIZE && nErr != WSAEINTR && nErr != WSAEINPROGRESS)\n+        {\n+            printf(\"socket send error %d\\n\", nErr);\n+            pnode->CloseSocketDisconnect();\n+        }\n+    }\n+}\n \n void ThreadSocketHandler(void* parg)\n {\n@@ -924,28 +948,7 @@ void ThreadSocketHandler2(void* parg)\n             {\n                 TRY_LOCK(pnode->cs_vSend, lockSend);\n                 if (lockSend)\n-                {\n-                    CDataStream& vSend = pnode->vSend;\n-                    if (!vSend.empty())\n-                    {\n-                        int nBytes = send(pnode->hSocket, &vSend[0], vSend.size(), MSG_NOSIGNAL | MSG_DONTWAIT);\n-                        if (nBytes > 0)\n-                        {\n-                            vSend.erase(vSend.begin(), vSend.begin() + nBytes);\n-                            pnode->nLastSend = GetTime();\n-                        }\n-                        else if (nBytes < 0)\n-                        {\n-                            // error\n-                            int nErr = WSAGetLastError();\n-                            if (nErr != WSAEWOULDBLOCK && nErr != WSAEMSGSIZE && nErr != WSAEINTR && nErr != WSAEINPROGRESS)\n-                            {\n-                                printf(\"socket send error %d\\n\", nErr);\n-                                pnode->CloseSocketDisconnect();\n-                            }\n-                        }\n-                    }\n-                }\n+                    SocketSendData(pnode);\n             }\n \n             //"
+      }
+    ]
+  },
+  {
+    "sha": "4e4e6d1feca92c346389d4221d022db8f8cd3e78",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0ZTRlNmQxZmVjYTkyYzM0NjM4OWQ0MjIxZDAyMmRiOGY4Y2QzZTc4",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-11-15T23:20:26Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-11-15T23:20:26Z"
+      },
+      "message": "P2P: improve RX/TX flow control\n\n1) \"optimistic write\": Push each message to kernel socket buffer immediately.\n\n2) If there is write data at select time, that implies send() blocked\n   during optimistic write.  Drain write queue, before receiving\n   any more messages.\n\nThis avoids needlessly queueing received data, if the remote peer\nis not themselves receiving data.\n\nResult: write buffer (and thus memory usage) is kept small, DoS\npotential is slightly lower, and TCP flow control signalling is\nproperly utilized.\n\nThe kernel will queue data into the socket buffer, then signal the\nremote peer to stop sending data, until we resume reading again.",
+      "tree": {
+        "sha": "47d19e82d6fb04e4398100e7232119a98378a698",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/47d19e82d6fb04e4398100e7232119a98378a698"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/4e4e6d1feca92c346389d4221d022db8f8cd3e78",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4e4e6d1feca92c346389d4221d022db8f8cd3e78",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/4e4e6d1feca92c346389d4221d022db8f8cd3e78",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4e4e6d1feca92c346389d4221d022db8f8cd3e78/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "fca5b98528dcb7c0c1d5dfa9c5054f55bdb5b81b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fca5b98528dcb7c0c1d5dfa9c5054f55bdb5b81b",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/fca5b98528dcb7c0c1d5dfa9c5054f55bdb5b81b"
+      }
+    ],
+    "stats": {
+      "total": 21,
+      "additions": 15,
+      "deletions": 6
+    },
+    "files": [
+      {
+        "sha": "3ada42bddd9cf85ff7347f1497c4a61e00572904",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 10,
+        "deletions": 6,
+        "changes": 16,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4e4e6d1feca92c346389d4221d022db8f8cd3e78/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4e4e6d1feca92c346389d4221d022db8f8cd3e78/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=4e4e6d1feca92c346389d4221d022db8f8cd3e78",
+        "patch": "@@ -782,14 +782,18 @@ void ThreadSocketHandler2(void* parg)\n             {\n                 if (pnode->hSocket == INVALID_SOCKET)\n                     continue;\n-                FD_SET(pnode->hSocket, &fdsetRecv);\n-                FD_SET(pnode->hSocket, &fdsetError);\n-                hSocketMax = max(hSocketMax, pnode->hSocket);\n-                have_fds = true;\n                 {\n                     TRY_LOCK(pnode->cs_vSend, lockSend);\n-                    if (lockSend && !pnode->vSend.empty())\n-                        FD_SET(pnode->hSocket, &fdsetSend);\n+                    if (lockSend) {\n+                        // do not read, if draining write queue\n+                        if (!pnode->vSend.empty())\n+                            FD_SET(pnode->hSocket, &fdsetSend);\n+                        else\n+                            FD_SET(pnode->hSocket, &fdsetRecv);\n+                        FD_SET(pnode->hSocket, &fdsetError);\n+                        hSocketMax = max(hSocketMax, pnode->hSocket);\n+                        have_fds = true;\n+                    }\n                 }\n             }\n         }"
+      },
+      {
+        "sha": "23d508d7c8dd9173c7212f473edbd204c5949597",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 0,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4e4e6d1feca92c346389d4221d022db8f8cd3e78/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4e4e6d1feca92c346389d4221d022db8f8cd3e78/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=4e4e6d1feca92c346389d4221d022db8f8cd3e78",
+        "patch": "@@ -40,6 +40,7 @@ unsigned short GetListenPort();\n bool BindListenPort(const CService &bindAddr, std::string& strError=REF(std::string()));\n void StartNode(void* parg);\n bool StopNode();\n+void SocketSendData(CNode *pnode);\n \n enum\n {\n@@ -363,6 +364,10 @@ class CNode\n             printf(\"(%d bytes)\\n\", nSize);\n         }\n \n+        // If write queue empty, attempt \"optimistic write\"\n+        if (nHeaderStart == 0)\n+            SocketSendData(this);\n+\n         nHeaderStart = -1;\n         nMessageStart = -1;\n         LEAVE_CRITICAL_SECTION(cs_vSend);"
+      }
+    ]
+  }
+]

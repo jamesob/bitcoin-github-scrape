@@ -1,0 +1,105 @@
+[
+  {
+    "sha": "396878ff5fd76905156d442106ef1ae973748d00",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozOTY4NzhmZjVmZDc2OTA1MTU2ZDQ0MjEwNmVmMWFlOTczNzQ4ZDAw",
+    "commit": {
+      "author": {
+        "name": "coderrr",
+        "email": "coderrr.contact@gmail.com",
+        "date": "2012-08-01T16:48:42Z"
+      },
+      "committer": {
+        "name": "Gregory Maxwell",
+        "email": "greg@xiph.org",
+        "date": "2012-08-01T23:51:48Z"
+      },
+      "message": "Add address groupings RPC from the coincontrol patches.\n\nSigned-off-by: Gregory Maxwell <greg@xiph.org>",
+      "tree": {
+        "sha": "a63c5740bb64219be3a4c33ecf901343c43e6fba",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/a63c5740bb64219be3a4c33ecf901343c43e6fba"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/396878ff5fd76905156d442106ef1ae973748d00",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/396878ff5fd76905156d442106ef1ae973748d00",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/396878ff5fd76905156d442106ef1ae973748d00",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/396878ff5fd76905156d442106ef1ae973748d00/comments",
+    "author": null,
+    "committer": {
+      "login": "gmaxwell",
+      "id": 858454,
+      "node_id": "MDQ6VXNlcjg1ODQ1NA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/858454?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/gmaxwell",
+      "html_url": "https://github.com/gmaxwell",
+      "followers_url": "https://api.github.com/users/gmaxwell/followers",
+      "following_url": "https://api.github.com/users/gmaxwell/following{/other_user}",
+      "gists_url": "https://api.github.com/users/gmaxwell/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/gmaxwell/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/gmaxwell/subscriptions",
+      "organizations_url": "https://api.github.com/users/gmaxwell/orgs",
+      "repos_url": "https://api.github.com/users/gmaxwell/repos",
+      "events_url": "https://api.github.com/users/gmaxwell/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/gmaxwell/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "a823faecf1463d0ce09b1c6690d69c624cc62874",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a823faecf1463d0ce09b1c6690d69c624cc62874",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/a823faecf1463d0ce09b1c6690d69c624cc62874"
+      }
+    ],
+    "stats": {
+      "total": 162,
+      "additions": 162,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "0a294d9629925427498f127d2e32646429fe8b99",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 28,
+        "deletions": 0,
+        "changes": 28,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/396878ff5fd76905156d442106ef1ae973748d00/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/396878ff5fd76905156d442106ef1ae973748d00/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=396878ff5fd76905156d442106ef1ae973748d00",
+        "patch": "@@ -624,6 +624,33 @@ Value sendtoaddress(const Array& params, bool fHelp)\n     return wtx.GetHash().GetHex();\n }\n \n+Value listaddressgroupings(const Array& params, bool fHelp)\n+{\n+    if (fHelp)\n+        throw runtime_error(\"listaddressgroupings\");\n+\n+    Array jsonGroupings;\n+    map<string, int64> balances = pwalletMain->GetAddressBalances();\n+    BOOST_FOREACH(set<string> grouping, pwalletMain->GetAddressGroupings())\n+    {\n+        Array jsonGrouping;\n+        BOOST_FOREACH(string address, grouping)\n+        {\n+            Array addressInfo;\n+            addressInfo.push_back(address);\n+            addressInfo.push_back(ValueFromAmount(balances[address]));\n+            {\n+                LOCK(pwalletMain->cs_wallet);\n+                if (pwalletMain->mapAddressBook.find(CBitcoinAddress(address).Get()) != pwalletMain->mapAddressBook.end())\n+                    addressInfo.push_back(pwalletMain->mapAddressBook.find(CBitcoinAddress(address).Get())->second);\n+            }\n+            jsonGrouping.push_back(addressInfo);\n+        }\n+        jsonGroupings.push_back(jsonGrouping);\n+    }\n+    return jsonGroupings;\n+}\n+\n Value signmessage(const Array& params, bool fHelp)\n {\n     if (fHelp || params.size() != 2)\n@@ -2126,6 +2153,7 @@ static const CRPCCommand vRPCCommands[] =\n     { \"getblockhash\",           &getblockhash,           false },\n     { \"gettransaction\",         &gettransaction,         false },\n     { \"listtransactions\",       &listtransactions,       false },\n+    { \"listaddressgroupings\",   &listaddressgroupings,   false },\n     { \"signmessage\",            &signmessage,            false },\n     { \"verifymessage\",          &verifymessage,          false },\n     { \"getwork\",                &getwork,                true },"
+      },
+      {
+        "sha": "0b3853a6c157911cd656a797dbfac198bb8433f7",
+        "filename": "src/wallet.cpp",
+        "status": "modified",
+        "additions": 123,
+        "deletions": 0,
+        "changes": 123,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/396878ff5fd76905156d442106ef1ae973748d00/src/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/396878ff5fd76905156d442106ef1ae973748d00/src/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.cpp?ref=396878ff5fd76905156d442106ef1ae973748d00",
+        "patch": "@@ -1547,6 +1547,129 @@ int64 CWallet::GetOldestKeyPoolTime()\n     return keypool.nTime;\n }\n \n+std::map<std::string, int64> CWallet::GetAddressBalances()\n+{\n+    map<string, int64> balances;\n+\n+    {\n+        LOCK(cs_wallet);\n+        BOOST_FOREACH(PAIRTYPE(uint256, CWalletTx) walletEntry, mapWallet)\n+        {\n+            CWalletTx *pcoin = &walletEntry.second;\n+\n+            if (!pcoin->IsFinal() || !pcoin->IsConfirmed())\n+                continue;\n+\n+            if (pcoin->IsCoinBase() && pcoin->GetBlocksToMaturity() > 0)\n+                continue;\n+\n+            int nDepth = pcoin->GetDepthInMainChain();\n+            if (nDepth < (pcoin->IsFromMe() ? 0 : 1))\n+                continue;\n+\n+            for (int i = 0; i < pcoin->vout.size(); i++)\n+            {\n+                if (!IsMine(pcoin->vout[i]))\n+                    continue;\n+\n+                int64 n = pcoin->IsSpent(i) ? 0 : pcoin->vout[i].nValue;\n+\n+                string addr = pcoin->GetAddressOfTxOut(i);\n+                if (!balances.count(addr))\n+                    balances[addr] = 0;\n+                balances[addr] += n;\n+            }\n+        }\n+    }\n+\n+    return balances;\n+}\n+\n+set< set<string> > CWallet::GetAddressGroupings()\n+{\n+    set< set<string> > groupings;\n+    set<string> grouping;\n+\n+    BOOST_FOREACH(PAIRTYPE(uint256, CWalletTx) walletEntry, mapWallet)\n+    {\n+        CWalletTx *pcoin = &walletEntry.second;\n+\n+        if (!pcoin->IsFinal() || !pcoin->IsConfirmed())\n+            continue;\n+\n+        if (pcoin->IsCoinBase() && pcoin->GetBlocksToMaturity() > 0)\n+            continue;\n+\n+        int nDepth = pcoin->GetDepthInMainChain();\n+        if (nDepth < (pcoin->IsFromMe() ? 0 : 1))\n+            continue;\n+\n+        if (pcoin->vin.size() > 0 && IsMine(pcoin->vin[0]))\n+        {\n+            // group all input addresses with each other\n+            BOOST_FOREACH(CTxIn txin, pcoin->vin)\n+                grouping.insert(mapWallet[txin.prevout.hash].GetAddressOfTxOut(txin.prevout.n));\n+\n+            // group change with input addresses\n+            BOOST_FOREACH(CTxOut txout, pcoin->vout)\n+                if (IsChange(txout))\n+                {\n+                    CWalletTx tx = mapWallet[pcoin->vin[0].prevout.hash];\n+                    string addr = tx.GetAddressOfTxOut(pcoin->vin[0].prevout.n);\n+                    CTxDestination txoutAddr;\n+                    ExtractDestination(txout.scriptPubKey, txoutAddr);\n+                    grouping.insert(CBitcoinAddress(txoutAddr).ToString());\n+                }\n+            groupings.insert(grouping);\n+            grouping.clear();\n+        }\n+\n+        // group lone addrs by themselves\n+        for (int i = 0; i < pcoin->vout.size(); i++)\n+            if (IsMine(pcoin->vout[i]))\n+            {\n+                grouping.insert(pcoin->GetAddressOfTxOut(i));\n+                groupings.insert(grouping);\n+                grouping.clear();\n+            }\n+    }\n+\n+    set< set<string>* > uniqueGroupings; // a set of pointers to groups of addresses\n+    map< string, set<string>* > setmap;  // map addresses to the unique group containing it\n+    BOOST_FOREACH(set<string> grouping, groupings)\n+    {\n+        // make a set of all the groups hit by this new group\n+        set< set<string>* > hits;\n+        map< string, set<string>* >::iterator it;\n+        BOOST_FOREACH(string address, grouping)\n+            if ((it = setmap.find(address)) != setmap.end())\n+                hits.insert((*it).second);\n+\n+        // merge all hit groups into a new single group and delete old groups\n+        set<string>* merged = new set<string>(grouping);\n+        BOOST_FOREACH(set<string>* hit, hits)\n+        {\n+            merged->insert(hit->begin(), hit->end());\n+            uniqueGroupings.erase(hit);\n+            delete hit;\n+        }\n+        uniqueGroupings.insert(merged);\n+\n+        // update setmap\n+        BOOST_FOREACH(string element, *merged)\n+            setmap[element] = merged;\n+    }\n+\n+    set< set<string> > ret;\n+    BOOST_FOREACH(set<string>* uniqueGrouping, uniqueGroupings)\n+    {\n+        ret.insert(*uniqueGrouping);\n+        delete uniqueGrouping;\n+    }\n+\n+    return ret;\n+}\n+\n CPubKey CReserveKey::GetReservedKey()\n {\n     if (nIndex == -1)"
+      },
+      {
+        "sha": "5c444d197a50156c92f081a4594da0a6af02da85",
+        "filename": "src/wallet.h",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 0,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/396878ff5fd76905156d442106ef1ae973748d00/src/wallet.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/396878ff5fd76905156d442106ef1ae973748d00/src/wallet.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.h?ref=396878ff5fd76905156d442106ef1ae973748d00",
+        "patch": "@@ -5,6 +5,7 @@\n #ifndef BITCOIN_WALLET_H\n #define BITCOIN_WALLET_H\n \n+#include \"base58.h\"\n #include \"main.h\"\n #include \"key.h\"\n #include \"keystore.h\"\n@@ -164,6 +165,9 @@ class CWallet : public CCryptoKeyStore\n     int64 GetOldestKeyPoolTime();\n     void GetAllReserveKeys(std::set<CKeyID>& setAddress);\n \n+    std::set< std::set<std::string> > GetAddressGroupings();\n+    std::map<std::string, int64> GetAddressBalances();\n+\n     bool IsMine(const CTxIn& txin) const;\n     int64 GetDebit(const CTxIn& txin) const;\n     bool IsMine(const CTxOut& txout) const\n@@ -590,6 +594,13 @@ class CWalletTx : public CMerkleTx\n         return true;\n     }\n \n+    std::string GetAddressOfTxOut(int n)\n+    {\n+        CTxDestination addr;\n+        ExtractDestination(vout[n].scriptPubKey, addr);\n+        return CBitcoinAddress(addr).ToString();\n+    }\n+\n     bool WriteToDisk();\n \n     int64 GetTxTime() const;"
+      }
+    ]
+  }
+]

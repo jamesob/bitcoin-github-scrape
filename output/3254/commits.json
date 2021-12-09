@@ -1,0 +1,110 @@
+[
+  {
+    "sha": "4cf3411056f6a59fc5fe07784b6b6a512d76b046",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0Y2YzNDExMDU2ZjZhNTlmYzVmZTA3Nzg0YjZiNmE1MTJkNzZiMDQ2",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-11-14T18:21:16Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-12-06T10:06:57Z"
+      },
+      "message": "[Qt] misc PaymentServer changes (e.g. changes to eventFilter())\n\n- make eventFilter() private and pass events on to QObject::eventFilter()\n  instead of just returning false\n- re-work paymentservertest.cpp to correctly handle the event test\n  after the above change (rewrite test_main to allow usage of\n  QCoreApplication:: in the tests)\n- delete socket when we were unable to connect in ipcSendCommandLine()\n- show a message to the user if we fail to start-up (instead of just a\n  debug.log entry)\n- misc small comment changes",
+      "tree": {
+        "sha": "d06a4552af4cc2694c9e2fec98d840365a298a27",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/d06a4552af4cc2694c9e2fec98d840365a298a27"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/4cf3411056f6a59fc5fe07784b6b6a512d76b046",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4cf3411056f6a59fc5fe07784b6b6a512d76b046",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/4cf3411056f6a59fc5fe07784b6b6a512d76b046",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4cf3411056f6a59fc5fe07784b6b6a512d76b046/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "b4297c8fffa6a21535015db4e34b95041a386fbb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b4297c8fffa6a21535015db4e34b95041a386fbb",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b4297c8fffa6a21535015db4e34b95041a386fbb"
+      }
+    ],
+    "stats": {
+      "total": 54,
+      "additions": 35,
+      "deletions": 19
+    },
+    "files": [
+      {
+        "sha": "ba5c06064f603067a6021664df7b7a2b6f905562",
+        "filename": "src/qt/paymentserver.cpp",
+        "status": "modified",
+        "additions": 14,
+        "deletions": 7,
+        "changes": 21,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4cf3411056f6a59fc5fe07784b6b6a512d76b046/src/qt/paymentserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4cf3411056f6a59fc5fe07784b6b6a512d76b046/src/qt/paymentserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.cpp?ref=4cf3411056f6a59fc5fe07784b6b6a512d76b046",
+        "patch": "@@ -232,7 +232,10 @@ bool PaymentServer::ipcSendCommandLine(int argc, char* argv[])\n         QLocalSocket* socket = new QLocalSocket();\n         socket->connectToServer(ipcServerName(), QIODevice::WriteOnly);\n         if (!socket->waitForConnected(BITCOIN_IPC_CONNECT_TIMEOUT))\n+        {\n+            delete socket;\n             return false;\n+        }\n \n         QByteArray block;\n         QDataStream out(&block, QIODevice::WriteOnly);\n@@ -277,8 +280,11 @@ PaymentServer::PaymentServer(QObject* parent, bool startLocalServer) :\n     {\n         uriServer = new QLocalServer(this);\n \n-        if (!uriServer->listen(name))\n-            qDebug() << \"PaymentServer::PaymentServer : Cannot start bitcoin: click-to-pay handler\";\n+        if (!uriServer->listen(name)) {\n+            // constructor is called early in init, so don't use \"emit message()\" here\n+            QMessageBox::critical(0, tr(\"Payment request error\"),\n+                tr(\"Cannot start bitcoin: click-to-pay handler\"));\n+        }\n         else {\n             connect(uriServer, SIGNAL(newConnection()), this, SLOT(handleURIConnection()));\n             connect(this, SIGNAL(receivedPaymentACK(QString)), this, SLOT(handlePaymentACK(QString)));\n@@ -295,20 +301,21 @@ PaymentServer::~PaymentServer()\n // OSX-specific way of handling bitcoin: URIs and\n // PaymentRequest mime types\n //\n-bool PaymentServer::eventFilter(QObject *, QEvent *event)\n+bool PaymentServer::eventFilter(QObject *object, QEvent *event)\n {\n-    // clicking on bitcoin: URIs creates FileOpen events on the Mac:\n+    // clicking on bitcoin: URIs creates FileOpen events on the Mac\n     if (event->type() == QEvent::FileOpen)\n     {\n-        QFileOpenEvent* fileEvent = static_cast<QFileOpenEvent*>(event);\n+        QFileOpenEvent *fileEvent = static_cast<QFileOpenEvent*>(event);\n         if (!fileEvent->file().isEmpty())\n             handleURIOrFile(fileEvent->file());\n         else if (!fileEvent->url().isEmpty())\n             handleURIOrFile(fileEvent->url().toString());\n \n         return true;\n     }\n-    return false;\n+\n+    return QObject::eventFilter(object, event);\n }\n \n void PaymentServer::initNetManager()\n@@ -359,7 +366,7 @@ void PaymentServer::handleURIOrFile(const QString& s)\n         return;\n     }\n \n-    if (s.startsWith(BITCOIN_IPC_PREFIX, Qt::CaseInsensitive)) // bitcoin:\n+    if (s.startsWith(BITCOIN_IPC_PREFIX, Qt::CaseInsensitive)) // bitcoin: URI\n     {\n #if QT_VERSION < 0x050000\n         QUrl uri(s);"
+      },
+      {
+        "sha": "ab59388accf72beee915eb1f13f53a6e1fb645b0",
+        "filename": "src/qt/paymentserver.h",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 4,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4cf3411056f6a59fc5fe07784b6b6a512d76b046/src/qt/paymentserver.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4cf3411056f6a59fc5fe07784b6b6a512d76b046/src/qt/paymentserver.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.h?ref=4cf3411056f6a59fc5fe07784b6b6a512d76b046",
+        "patch": "@@ -77,10 +77,6 @@ class PaymentServer : public QObject\n     // Return certificate store\n     static X509_STORE* getCertStore() { return certStore; }\n \n-    // Constructor registers this on the parent QApplication to\n-    // receive QEvent::FileOpen events\n-    bool eventFilter(QObject *object, QEvent *event);\n-\n     // OptionsModel is used for getting proxy settings and display unit\n     void setOptionsModel(OptionsModel *optionsModel);\n \n@@ -111,6 +107,11 @@ private slots:\n     void reportSslErrors(QNetworkReply*, const QList<QSslError> &);\n     void handlePaymentACK(const QString& paymentACKMsg);\n \n+protected:\n+    // Constructor registers this on the parent QApplication to\n+    // receive QEvent::FileOpen and QEvent:Drop events\n+    bool eventFilter(QObject *object, QEvent *event);\n+\n private:\n     static bool readPaymentRequest(const QString& filename, PaymentRequestPlus& request);\n     bool processPaymentRequest(PaymentRequestPlus& request, SendCoinsRecipient& recipient);"
+      },
+      {
+        "sha": "7dee7a9cda47b29d291dc7489825520b2e81d797",
+        "filename": "src/qt/test/paymentservertests.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 6,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4cf3411056f6a59fc5fe07784b6b6a512d76b046/src/qt/test/paymentservertests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4cf3411056f6a59fc5fe07784b6b6a512d76b046/src/qt/test/paymentservertests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/test/paymentservertests.cpp?ref=4cf3411056f6a59fc5fe07784b6b6a512d76b046",
+        "patch": "@@ -7,12 +7,9 @@\n \n #include <openssl/x509.h>\n #include <openssl/x509_vfy.h>\n-#include <QCoreApplication>\n-#include <QDebug>\n+\n #include <QFileOpenEvent>\n #include <QTemporaryFile>\n-#include <QVariant>\n-\n \n X509 *parse_b64der_cert(const char* cert_data)\n {\n@@ -41,9 +38,14 @@ static SendCoinsRecipient handleRequest(PaymentServer* server, std::vector<unsig\n     f.write((const char*)&data[0], data.size());\n     f.close();\n \n-    // Create a FileOpenEvent and send it directly to the server's event filter:\n+    // Create a QObject, install event filter from PaymentServer\n+    // and send a file open event to the object\n+    QObject object;\n+    object.installEventFilter(server);\n     QFileOpenEvent event(f.fileName());\n-    server->eventFilter(NULL, &event);\n+    // If sending the event fails, this will cause sigCatcher to be empty,\n+    // which will lead to a test failure anyway.\n+    QCoreApplication::sendEvent(&object, &event);\n \n     QObject::disconnect(server, SIGNAL(receivedPaymentRequest(SendCoinsRecipient)),\n                         &sigCatcher, SLOT(getRecipient(SendCoinsRecipient)));"
+      },
+      {
+        "sha": "884e535a6032d62413f8c0dd1b3a64cbab9bd8bf",
+        "filename": "src/qt/test/paymentservertests.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4cf3411056f6a59fc5fe07784b6b6a512d76b046/src/qt/test/paymentservertests.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4cf3411056f6a59fc5fe07784b6b6a512d76b046/src/qt/test/paymentservertests.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/test/paymentservertests.h?ref=4cf3411056f6a59fc5fe07784b6b6a512d76b046",
+        "patch": "@@ -20,8 +20,10 @@ private slots:\n class RecipientCatcher : public QObject\n {\n     Q_OBJECT\n+\n public slots:\n     void getRecipient(SendCoinsRecipient r);\n+\n public:\n     SendCoinsRecipient recipient;\n };"
+      },
+      {
+        "sha": "ae584706f197ee828e1dfc6265083b0bd1fea0b9",
+        "filename": "src/qt/test/test_main.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 2,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4cf3411056f6a59fc5fe07784b6b6a512d76b046/src/qt/test/test_main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4cf3411056f6a59fc5fe07784b6b6a512d76b046/src/qt/test/test_main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/test/test_main.cpp?ref=4cf3411056f6a59fc5fe07784b6b6a512d76b046",
+        "patch": "@@ -1,8 +1,7 @@\n-\n-\n #include \"paymentservertests.h\"\n #include \"uritests.h\"\n \n+#include <QCoreApplication>\n #include <QObject>\n #include <QTest>\n \n@@ -11,6 +10,11 @@ int main(int argc, char *argv[])\n {\n     bool fInvalid = false;\n \n+    // Don't remove this, it's needed to access\n+    // QCoreApplication:: in the tests\n+    QCoreApplication app(argc, argv);\n+    app.setApplicationName(\"Bitcoin-Qt-test\");\n+\n     URITests test1;\n     if (QTest::qExec(&test1) != 0)\n         fInvalid = true;"
+      }
+    ]
+  }
+]

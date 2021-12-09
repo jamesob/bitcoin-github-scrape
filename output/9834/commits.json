@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "5b528d746c841aa868a305f9c1a586f539b531cb",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1YjUyOGQ3NDZjODQxYWE4NjhhMzA1ZjljMWE1ODZmNTM5YjUzMWNi",
+    "commit": {
+      "author": {
+        "name": "Marko Bencun",
+        "email": "marko.bencun@monetas.net",
+        "date": "2017-02-23T08:12:36Z"
+      },
+      "committer": {
+        "name": "Marko Bencun",
+        "email": "marko.bencun@monetas.net",
+        "date": "2017-02-23T08:21:39Z"
+      },
+      "message": "qt: clean up initialize/shutdown signals\n\n - Change initializeResult(int) to initializeResult(bool) to avoid\n   implicit type conversion.\n - Use EXIT_FAILURE and EXIT_SUCCESS instead of magic numbers.\n - Remove the argument from shutdownResult(int); it was called with a\n   constant argument.",
+      "tree": {
+        "sha": "52bfaa50b428a1076917b67e1d8f22541fb35482",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/52bfaa50b428a1076917b67e1d8f22541fb35482"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/5b528d746c841aa868a305f9c1a586f539b531cb",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5b528d746c841aa868a305f9c1a586f539b531cb",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/5b528d746c841aa868a305f9c1a586f539b531cb",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5b528d746c841aa868a305f9c1a586f539b531cb/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "bed5b30a5622782b35d0d28fccde979e188901f1",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/bed5b30a5622782b35d0d28fccde979e188901f1",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/bed5b30a5622782b35d0d28fccde979e188901f1"
+      }
+    ],
+    "stats": {
+      "total": 29,
+      "additions": 14,
+      "deletions": 15
+    },
+    "files": [
+      {
+        "sha": "bc6b4268430c6c997da51c6bf736821e7bb805b2",
+        "filename": "src/qt/bitcoin.cpp",
+        "status": "modified",
+        "additions": 14,
+        "deletions": 15,
+        "changes": 29,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5b528d746c841aa868a305f9c1a586f539b531cb/src/qt/bitcoin.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5b528d746c841aa868a305f9c1a586f539b531cb/src/qt/bitcoin.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoin.cpp?ref=5b528d746c841aa868a305f9c1a586f539b531cb",
+        "patch": "@@ -178,8 +178,8 @@ public Q_SLOTS:\n     void shutdown();\n \n Q_SIGNALS:\n-    void initializeResult(int retval);\n-    void shutdownResult(int retval);\n+    void initializeResult(bool success);\n+    void shutdownResult();\n     void runawayException(const QString &message);\n \n private:\n@@ -223,8 +223,8 @@ class BitcoinApplication: public QApplication\n     WId getMainWinId() const;\n \n public Q_SLOTS:\n-    void initializeResult(int retval);\n-    void shutdownResult(int retval);\n+    void initializeResult(bool success);\n+    void shutdownResult();\n     /// Handle runaway exceptions. Shows a message box with the problem and quits the program.\n     void handleRunawayException(const QString &message);\n \n@@ -284,7 +284,7 @@ void BitcoinCore::initialize()\n             Q_EMIT initializeResult(false);\n             return;\n         }\n-        int rv = AppInitMain(threadGroup, scheduler);\n+        bool rv = AppInitMain(threadGroup, scheduler);\n         Q_EMIT initializeResult(rv);\n     } catch (const std::exception& e) {\n         handleRunawayException(&e);\n@@ -302,7 +302,7 @@ void BitcoinCore::shutdown()\n         threadGroup.join_all();\n         Shutdown();\n         qDebug() << __func__ << \": Shutdown finished\";\n-        Q_EMIT shutdownResult(1);\n+        Q_EMIT shutdownResult();\n     } catch (const std::exception& e) {\n         handleRunawayException(&e);\n     } catch (...) {\n@@ -398,8 +398,8 @@ void BitcoinApplication::startThread()\n     executor->moveToThread(coreThread);\n \n     /*  communication to and from thread */\n-    connect(executor, SIGNAL(initializeResult(int)), this, SLOT(initializeResult(int)));\n-    connect(executor, SIGNAL(shutdownResult(int)), this, SLOT(shutdownResult(int)));\n+    connect(executor, SIGNAL(initializeResult(bool)), this, SLOT(initializeResult(bool)));\n+    connect(executor, SIGNAL(shutdownResult()), this, SLOT(shutdownResult()));\n     connect(executor, SIGNAL(runawayException(QString)), this, SLOT(handleRunawayException(QString)));\n     connect(this, SIGNAL(requestedInitialize()), executor, SLOT(initialize()));\n     connect(this, SIGNAL(requestedShutdown()), executor, SLOT(shutdown()));\n@@ -450,12 +450,12 @@ void BitcoinApplication::requestShutdown()\n     Q_EMIT requestedShutdown();\n }\n \n-void BitcoinApplication::initializeResult(int retval)\n+void BitcoinApplication::initializeResult(bool success)\n {\n-    qDebug() << __func__ << \": Initialization result: \" << retval;\n-    // Set exit result: 0 if successful, 1 if failure\n-    returnValue = retval ? 0 : 1;\n-    if(retval)\n+    qDebug() << __func__ << \": Initialization result: \" << success;\n+    // Set exit result.\n+    returnValue = success ? EXIT_SUCCESS : EXIT_FAILURE;\n+    if(success)\n     {\n         // Log this only after AppInit2 finishes, as then logging setup is guaranteed complete\n         qWarning() << \"Platform customization:\" << platformStyle->getName();\n@@ -507,9 +507,8 @@ void BitcoinApplication::initializeResult(int retval)\n     }\n }\n \n-void BitcoinApplication::shutdownResult(int retval)\n+void BitcoinApplication::shutdownResult()\n {\n-    qDebug() << __func__ << \": Shutdown result: \" << retval;\n     quit(); // Exit main loop after shutdown finished\n }\n "
+      }
+    ]
+  }
+]

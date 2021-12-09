@@ -1,0 +1,494 @@
+[
+  {
+    "sha": "a92df770112e73adddfee7c72e08fe8d108fb0b2",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphOTJkZjc3MDExMmU3M2FkZGRmZWU3YzcyZTA4ZmU4ZDEwOGZiMGIy",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2015-07-09T00:19:08Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2015-07-09T00:19:08Z"
+      },
+      "message": "miner: remove prio calculations and dPriority from TxPriority tuple",
+      "tree": {
+        "sha": "1cf62a764666df99aae412360cad58396c2d5e96",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/1cf62a764666df99aae412360cad58396c2d5e96"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a92df770112e73adddfee7c72e08fe8d108fb0b2",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a92df770112e73adddfee7c72e08fe8d108fb0b2",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a92df770112e73adddfee7c72e08fe8d108fb0b2",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a92df770112e73adddfee7c72e08fe8d108fb0b2/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "11576a57d2ee37aa421e0fce69e70751b5af9a61",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/11576a57d2ee37aa421e0fce69e70751b5af9a61",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/11576a57d2ee37aa421e0fce69e70751b5af9a61"
+      }
+    ],
+    "stats": {
+      "total": 55,
+      "additions": 11,
+      "deletions": 44
+    },
+    "files": [
+      {
+        "sha": "2db528b9363f8297a31206c4e83094e826c8f509",
+        "filename": "src/miner.cpp",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 44,
+        "changes": 55,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a92df770112e73adddfee7c72e08fe8d108fb0b2/src/miner.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a92df770112e73adddfee7c72e08fe8d108fb0b2/src/miner.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/miner.cpp?ref=a92df770112e73adddfee7c72e08fe8d108fb0b2",
+        "patch": "@@ -44,9 +44,8 @@ class COrphan\n     const CTransaction* ptx;\n     set<uint256> setDependsOn;\n     CFeeRate feeRate;\n-    double dPriority;\n \n-    COrphan(const CTransaction* ptxIn) : ptx(ptxIn), feeRate(0), dPriority(0)\n+    COrphan(const CTransaction* ptxIn) : ptx(ptxIn), feeRate(0)\n     {\n     }\n };\n@@ -55,28 +54,15 @@ uint64_t nLastBlockTx = 0;\n uint64_t nLastBlockSize = 0;\n \n // We want to sort transactions by priority and fee rate, so:\n-typedef boost::tuple<double, CFeeRate, const CTransaction*> TxPriority;\n+typedef boost::tuple<CFeeRate, const CTransaction*> TxPriority;\n class TxPriorityCompare\n {\n-    bool byFee;\n-\n public:\n-    TxPriorityCompare(bool _byFee) : byFee(_byFee) { }\n+    TxPriorityCompare(bool _byFee) { }\n \n     bool operator()(const TxPriority& a, const TxPriority& b)\n     {\n-        if (byFee)\n-        {\n-            if (a.get<1>() == b.get<1>())\n-                return a.get<0>() < b.get<0>();\n-            return a.get<1>() < b.get<1>();\n-        }\n-        else\n-        {\n-            if (a.get<0>() == b.get<0>())\n-                return a.get<1>() < b.get<1>();\n-            return a.get<0>() < b.get<0>();\n-        }\n+        return a.get<0>() < b.get<0>();\n     }\n };\n \n@@ -120,11 +106,6 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)\n     // Limit to betweeen 1K and MAX_BLOCK_SIZE-1K for sanity:\n     nBlockMaxSize = std::max((unsigned int)1000, std::min((unsigned int)(MAX_BLOCK_SIZE-1000), nBlockMaxSize));\n \n-    // How much of the block should be dedicated to high-priority transactions,\n-    // included regardless of the fees they pay\n-    unsigned int nBlockPrioritySize = GetArg(\"-blockprioritysize\", DEFAULT_BLOCK_PRIORITY_SIZE);\n-    nBlockPrioritySize = std::min(nBlockMaxSize, nBlockPrioritySize);\n-\n     // Minimum block size you want to create; block will be filled with free transactions\n     // until there are no more or the block reaches this size:\n     unsigned int nBlockMinSize = GetArg(\"-blockminsize\", DEFAULT_BLOCK_MIN_SIZE);\n@@ -211,29 +192,25 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)\n             CFeeRate feeRate(nTotalIn-tx.GetValueOut(), nTxSize);\n \n             if (porphan)\n-            {\n-                porphan->dPriority = dPriority;\n                 porphan->feeRate = feeRate;\n-            }\n             else\n-                vecPriority.push_back(TxPriority(dPriority, feeRate, &mi->second.GetTx()));\n+                vecPriority.push_back(TxPriority(feeRate, &mi->second.GetTx()));\n         }\n \n         // Collect transactions into block\n         uint64_t nBlockSize = 1000;\n         uint64_t nBlockTx = 0;\n         int nBlockSigOps = 100;\n-        bool fSortedByFee = (nBlockPrioritySize <= 0);\n \n-        TxPriorityCompare comparer(fSortedByFee);\n+        TxPriorityCompare comparer(true);\n         std::make_heap(vecPriority.begin(), vecPriority.end(), comparer);\n \n         while (!vecPriority.empty())\n         {\n             // Take highest priority transaction off the priority queue:\n-            double dPriority = vecPriority.front().get<0>();\n-            CFeeRate feeRate = vecPriority.front().get<1>();\n-            const CTransaction& tx = *(vecPriority.front().get<2>());\n+            double dPriority = 0;\n+            CFeeRate feeRate = vecPriority.front().get<0>();\n+            const CTransaction& tx = *(vecPriority.front().get<1>());\n \n             std::pop_heap(vecPriority.begin(), vecPriority.end(), comparer);\n             vecPriority.pop_back();\n@@ -253,19 +230,9 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)\n             double dPriorityDelta = 0;\n             CAmount nFeeDelta = 0;\n             mempool.ApplyDeltas(hash, dPriorityDelta, nFeeDelta);\n-            if (fSortedByFee && (dPriorityDelta <= 0) && (nFeeDelta <= 0) && (feeRate < ::minRelayTxFee) && (nBlockSize + nTxSize >= nBlockMinSize))\n+            if ((dPriorityDelta <= 0) && (nFeeDelta <= 0) && (feeRate < ::minRelayTxFee) && (nBlockSize + nTxSize >= nBlockMinSize))\n                 continue;\n \n-            // Prioritise by fee once past the priority size or we run out of high-priority\n-            // transactions:\n-            if (!fSortedByFee &&\n-                ((nBlockSize + nTxSize >= nBlockPrioritySize) || !AllowFree(dPriority)))\n-            {\n-                fSortedByFee = true;\n-                comparer = TxPriorityCompare(fSortedByFee);\n-                std::make_heap(vecPriority.begin(), vecPriority.end(), comparer);\n-            }\n-\n             if (!view.HaveInputs(tx))\n                 continue;\n \n@@ -309,7 +276,7 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)\n                         porphan->setDependsOn.erase(hash);\n                         if (porphan->setDependsOn.empty())\n                         {\n-                            vecPriority.push_back(TxPriority(porphan->dPriority, porphan->feeRate, porphan->ptx));\n+                            vecPriority.push_back(TxPriority(porphan->feeRate, porphan->ptx));\n                             std::push_heap(vecPriority.begin(), vecPriority.end(), comparer);\n                         }\n                     }"
+      }
+    ]
+  },
+  {
+    "sha": "7ce77af67b3138a8d839ace28f762c658dedccaf",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3Y2U3N2FmNjdiMzEzOGE4ZDgzOWFjZTI4Zjc2MmM2NThkZWRjY2Fm",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2015-07-09T04:03:57Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2015-07-09T04:03:57Z"
+      },
+      "message": "mempool: remove priority from memory pool per-entry container",
+      "tree": {
+        "sha": "a950dd78e5f87b196c60c96088db49121221354a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/a950dd78e5f87b196c60c96088db49121221354a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/7ce77af67b3138a8d839ace28f762c658dedccaf",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7ce77af67b3138a8d839ace28f762c658dedccaf",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/7ce77af67b3138a8d839ace28f762c658dedccaf",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7ce77af67b3138a8d839ace28f762c658dedccaf/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "a92df770112e73adddfee7c72e08fe8d108fb0b2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a92df770112e73adddfee7c72e08fe8d108fb0b2",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/a92df770112e73adddfee7c72e08fe8d108fb0b2"
+      }
+    ],
+    "stats": {
+      "total": 177,
+      "additions": 20,
+      "deletions": 157
+    },
+    "files": [
+      {
+        "sha": "961e667da37e264d67ba3f74e62da9508a209f8a",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 2,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7ce77af67b3138a8d839ace28f762c658dedccaf/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7ce77af67b3138a8d839ace28f762c658dedccaf/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=7ce77af67b3138a8d839ace28f762c658dedccaf",
+        "patch": "@@ -854,9 +854,8 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa\n \n         CAmount nValueOut = tx.GetValueOut();\n         CAmount nFees = nValueIn-nValueOut;\n-        double dPriority = view.GetPriority(tx, chainActive.Height());\n \n-        CTxMemPoolEntry entry(tx, nFees, GetTime(), dPriority, chainActive.Height(), mempool.HasNoInputsOf(tx));\n+        CTxMemPoolEntry entry(tx, nFees, GetTime(), chainActive.Height(), mempool.HasNoInputsOf(tx));\n         unsigned int nSize = entry.GetTxSize();\n \n         // Don't accept it if it can't get into a block"
+      },
+      {
+        "sha": "8d310858e9da5cac745e631841d42d4313efe70c",
+        "filename": "src/policy/fees.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 59,
+        "changes": 64,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7ce77af67b3138a8d839ace28f762c658dedccaf/src/policy/fees.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7ce77af67b3138a8d839ace28f762c658dedccaf/src/policy/fees.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/policy/fees.cpp?ref=7ce77af67b3138a8d839ace28f762c658dedccaf",
+        "patch": "@@ -309,33 +309,13 @@ CBlockPolicyEstimator::CBlockPolicyEstimator(const CFeeRate& _minRelayFee)\n     vfeelist.push_back(INF_FEERATE);\n     feeStats.Initialize(vfeelist, MAX_BLOCK_CONFIRMS, DEFAULT_DECAY, \"FeeRate\");\n \n-    minTrackedPriority = AllowFreeThreshold() < MIN_PRIORITY ? MIN_PRIORITY : AllowFreeThreshold();\n-    std::vector<double> vprilist;\n-    for (double bucketBoundary = minTrackedPriority; bucketBoundary <= MAX_PRIORITY; bucketBoundary *= PRI_SPACING) {\n-        vprilist.push_back(bucketBoundary);\n-    }\n-    vprilist.push_back(INF_PRIORITY);\n-    priStats.Initialize(vprilist, MAX_BLOCK_CONFIRMS, DEFAULT_DECAY, \"Priority\");\n-\n     feeUnlikely = CFeeRate(0);\n     feeLikely = CFeeRate(INF_FEERATE);\n-    priUnlikely = 0;\n-    priLikely = INF_PRIORITY;\n }\n \n-bool CBlockPolicyEstimator::isFeeDataPoint(const CFeeRate &fee, double pri)\n+bool CBlockPolicyEstimator::isFeeDataPoint(const CFeeRate &fee)\n {\n-    if ((pri < minTrackedPriority && fee >= minTrackedFee) ||\n-        (pri < priUnlikely && fee > feeLikely)) {\n-        return true;\n-    }\n-    return false;\n-}\n-\n-bool CBlockPolicyEstimator::isPriDataPoint(const CFeeRate &fee, double pri)\n-{\n-    if ((fee < minTrackedFee && pri >= minTrackedPriority) ||\n-        (fee < feeUnlikely && pri > priLikely)) {\n+    if ((fee >= minTrackedFee) || (fee > feeLikely)) {\n         return true;\n     }\n     return false;\n@@ -348,7 +328,7 @@ void CBlockPolicyEstimator::processTransaction(const CTxMemPoolEntry& entry, boo\n     if (mapMemPoolTxs[hash].stats != NULL) {\n         LogPrint(\"estimatefee\", \"Blockpolicy error mempool tx %s already being tracked\\n\",\n                  hash.ToString().c_str());\n-\treturn;\n+        return;\n     }\n \n     if (txHeight < nBestSeenHeight) {\n@@ -375,17 +355,11 @@ void CBlockPolicyEstimator::processTransaction(const CTxMemPoolEntry& entry, boo\n     // Want the priority of the tx at confirmation. However we don't know\n     // what that will be and its too hard to continue updating it\n     // so use starting priority as a proxy\n-    double curPri = entry.GetPriority(txHeight);\n     mapMemPoolTxs[hash].blockHeight = txHeight;\n \n     LogPrint(\"estimatefee\", \"Blockpolicy mempool tx %s \", hash.ToString().substr(0,10));\n-    // Record this as a priority estimate\n-    if (entry.GetFee() == 0 || isPriDataPoint(feeRate, curPri)) {\n-        mapMemPoolTxs[hash].stats = &priStats;\n-        mapMemPoolTxs[hash].bucketIndex =  priStats.NewTx(txHeight, curPri);\n-    }\n     // Record this as a fee estimate\n-    else if (isFeeDataPoint(feeRate, curPri)) {\n+    if (isFeeDataPoint(feeRate)) {\n         mapMemPoolTxs[hash].stats = &feeStats;\n         mapMemPoolTxs[hash].bucketIndex = feeStats.NewTx(txHeight, (double)feeRate.GetFeePerK());\n     }\n@@ -417,16 +391,8 @@ void CBlockPolicyEstimator::processBlockTx(unsigned int nBlockHeight, const CTxM\n     // Fees are stored and reported as BTC-per-kb:\n     CFeeRate feeRate(entry.GetFee(), entry.GetTxSize());\n \n-    // Want the priority of the tx at confirmation.  The priority when it\n-    // entered the mempool could easily be very small and change quickly\n-    double curPri = entry.GetPriority(nBlockHeight);\n-\n-    // Record this as a priority estimate\n-    if (entry.GetFee() == 0 || isPriDataPoint(feeRate, curPri)) {\n-        priStats.Record(blocksToConfirm, curPri);\n-    }\n     // Record this as a fee estimate\n-    else if (isFeeDataPoint(feeRate, curPri)) {\n+    if (isFeeDataPoint(feeRate)) {\n         feeStats.Record(blocksToConfirm, (double)feeRate.GetFeePerK());\n     }\n }\n@@ -453,20 +419,13 @@ void CBlockPolicyEstimator::processBlock(unsigned int nBlockHeight,\n     // a fee/priority is \"likely\" the reason your tx was included in a block if >85% of such tx's\n     // were confirmed in 2 blocks and is \"unlikely\" if <50% were confirmed in 10 blocks\n     LogPrint(\"estimatefee\", \"Blockpolicy recalculating dynamic cutoffs:\\n\");\n-    priLikely = priStats.EstimateMedianVal(2, SUFFICIENT_PRITXS, MIN_SUCCESS_PCT, true, nBlockHeight);\n-    if (priLikely == -1)\n-        priLikely = INF_PRIORITY;\n \n     double feeLikelyEst = feeStats.EstimateMedianVal(2, SUFFICIENT_FEETXS, MIN_SUCCESS_PCT, true, nBlockHeight);\n     if (feeLikelyEst == -1)\n         feeLikely = CFeeRate(INF_FEERATE);\n     else\n         feeLikely = CFeeRate(feeLikelyEst);\n \n-    priUnlikely = priStats.EstimateMedianVal(10, SUFFICIENT_PRITXS, UNLIKELY_PCT, false, nBlockHeight);\n-    if (priUnlikely == -1)\n-        priUnlikely = 0;\n-\n     double feeUnlikelyEst = feeStats.EstimateMedianVal(10, SUFFICIENT_FEETXS, UNLIKELY_PCT, false, nBlockHeight);\n     if (feeUnlikelyEst == -1)\n         feeUnlikely = CFeeRate(0);\n@@ -475,15 +434,13 @@ void CBlockPolicyEstimator::processBlock(unsigned int nBlockHeight,\n \n     // Clear the current block states\n     feeStats.ClearCurrent(nBlockHeight);\n-    priStats.ClearCurrent(nBlockHeight);\n \n     // Repopulate the current block states\n     for (unsigned int i = 0; i < entries.size(); i++)\n         processBlockTx(nBlockHeight, entries[i]);\n \n     // Update all exponential averages with the current block states\n     feeStats.UpdateMovingAverages();\n-    priStats.UpdateMovingAverages();\n \n     LogPrint(\"estimatefee\", \"Blockpolicy after updating estimates for %u confirmed entries, new mempool map size %u\\n\",\n              entries.size(), mapMemPoolTxs.size());\n@@ -503,27 +460,16 @@ CFeeRate CBlockPolicyEstimator::estimateFee(int confTarget)\n     return CFeeRate(median);\n }\n \n-double CBlockPolicyEstimator::estimatePriority(int confTarget)\n-{\n-    // Return failure if trying to analyze a target we're not tracking\n-    if (confTarget <= 0 || (unsigned int)confTarget > priStats.GetMaxConfirms())\n-        return -1;\n-\n-    return priStats.EstimateMedianVal(confTarget, SUFFICIENT_PRITXS, MIN_SUCCESS_PCT, true, nBestSeenHeight);\n-}\n-\n void CBlockPolicyEstimator::Write(CAutoFile& fileout)\n {\n     fileout << nBestSeenHeight;\n     feeStats.Write(fileout);\n-    priStats.Write(fileout);\n }\n \n void CBlockPolicyEstimator::Read(CAutoFile& filein)\n {\n     int nFileBestSeenHeight;\n     filein >> nFileBestSeenHeight;\n     feeStats.Read(filein);\n-    priStats.Read(filein);\n     nBestSeenHeight = nFileBestSeenHeight;\n }"
+      },
+      {
+        "sha": "094523507f4e6ddbb73544efd83401699c9a9b10",
+        "filename": "src/policy/fees.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 6,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7ce77af67b3138a8d839ace28f762c658dedccaf/src/policy/fees.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7ce77af67b3138a8d839ace28f762c658dedccaf/src/policy/fees.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/policy/fees.h?ref=7ce77af67b3138a8d839ace28f762c658dedccaf",
+        "patch": "@@ -234,10 +234,7 @@ class CBlockPolicyEstimator\n     void removeTx(uint256 hash);\n \n     /** Is this transaction likely included in a block because of its fee?*/\n-    bool isFeeDataPoint(const CFeeRate &fee, double pri);\n-\n-    /** Is this transaction likely included in a block because of its priority?*/\n-    bool isPriDataPoint(const CFeeRate &fee, double pri);\n+    bool isFeeDataPoint(const CFeeRate &fee);\n \n     /** Return a fee estimate */\n     CFeeRate estimateFee(int confTarget);\n@@ -253,7 +250,6 @@ class CBlockPolicyEstimator\n \n private:\n     CFeeRate minTrackedFee; //! Passed to constructor to avoid dependency on main\n-    double minTrackedPriority; //! Set to AllowFreeThreshold\n     unsigned int nBestSeenHeight;\n     struct TxStatsInfo\n     {\n@@ -271,6 +267,5 @@ class CBlockPolicyEstimator\n \n     /** Breakpoints to help determine whether a transaction was confirmed by priority or Fee */\n     CFeeRate feeLikely, feeUnlikely;\n-    double priLikely, priUnlikely;\n };\n #endif /*BITCOIN_POLICYESTIMATOR_H */"
+      },
+      {
+        "sha": "3c3210661e3a1f867f6b904cd10b46e0a24565b5",
+        "filename": "src/qt/coincontroldialog.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 11,
+        "changes": 15,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7ce77af67b3138a8d839ace28f762c658dedccaf/src/qt/coincontroldialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7ce77af67b3138a8d839ace28f762c658dedccaf/src/qt/coincontroldialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/coincontroldialog.cpp?ref=7ce77af67b3138a8d839ace28f762c658dedccaf",
+        "patch": "@@ -538,8 +538,8 @@ void CoinControlDialog::updateLabels(WalletModel *model, QDialog* dialog)\n         nBytes = nBytesInputs + ((CoinControlDialog::payAmounts.size() > 0 ? CoinControlDialog::payAmounts.size() + 1 : 2) * 34) + 10; // always assume +1 output for change here\n \n         // Priority\n-        double mempoolEstimatePriority = mempool.estimatePriority(nTxConfirmTarget);\n-        dPriority = dPriorityInputs / (nBytes - nBytesInputs + (nQuantityUncompressed * 29)); // 29 = 180 - 151 (uncompressed public keys are over the limit. max 151 bytes of the input are ignored for priority)\n+        double mempoolEstimatePriority = 0;\n+        dPriority = 0;\n         sPriorityLabel = CoinControlDialog::getPriorityLabel(dPriority, mempoolEstimatePriority);\n \n         // in the subtract fee from amount case, we can tell if zero change already and subtract the bytes, so that fee calculation afterwards is accurate\n@@ -551,14 +551,7 @@ void CoinControlDialog::updateLabels(WalletModel *model, QDialog* dialog)\n         nPayFee = CWallet::GetMinimumFee(nBytes, nTxConfirmTarget, mempool);\n \n         // Allow free?\n-        double dPriorityNeeded = mempoolEstimatePriority;\n-        if (dPriorityNeeded <= 0)\n-            dPriorityNeeded = AllowFreeThreshold(); // not enough data, back to hard-coded\n-        fAllowFree = (dPriority >= dPriorityNeeded);\n-\n-        if (fSendFreeTransactions)\n-            if (fAllowFree && nBytes <= MAX_FREE_TRANSACTION_CREATE_SIZE)\n-                nPayFee = 0;\n+        fAllowFree = false;\n \n         if (nPayAmount > 0)\n         {\n@@ -686,7 +679,7 @@ void CoinControlDialog::updateView()\n     QFlags<Qt::ItemFlag> flgTristate = Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsUserCheckable | Qt::ItemIsTristate;\n \n     int nDisplayUnit = model->getOptionsModel()->getDisplayUnit();\n-    double mempoolEstimatePriority = mempool.estimatePriority(nTxConfirmTarget);\n+    double mempoolEstimatePriority = 0;\n \n     map<QString, vector<COutput> > mapCoins;\n     model->listCoins(mapCoins);"
+      },
+      {
+        "sha": "c9216056f57efa82ffef579b4f2ec4145a7a1c38",
+        "filename": "src/rpcmining.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 27,
+        "changes": 27,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7ce77af67b3138a8d839ace28f762c658dedccaf/src/rpcmining.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7ce77af67b3138a8d839ace28f762c658dedccaf/src/rpcmining.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcmining.cpp?ref=7ce77af67b3138a8d839ace28f762c658dedccaf",
+        "patch": "@@ -693,30 +693,3 @@ UniValue estimatefee(const UniValue& params, bool fHelp)\n     return ValueFromAmount(feeRate.GetFeePerK());\n }\n \n-UniValue estimatepriority(const UniValue& params, bool fHelp)\n-{\n-    if (fHelp || params.size() != 1)\n-        throw runtime_error(\n-            \"estimatepriority nblocks\\n\"\n-            \"\\nEstimates the approximate priority\\n\"\n-            \"a zero-fee transaction needs to begin confirmation\\n\"\n-            \"within nblocks blocks.\\n\"\n-            \"\\nArguments:\\n\"\n-            \"1. nblocks     (numeric)\\n\"\n-            \"\\nResult:\\n\"\n-            \"n :    (numeric) estimated priority\\n\"\n-            \"\\n\"\n-            \"-1.0 is returned if not enough transactions and\\n\"\n-            \"blocks have been observed to make an estimate.\\n\"\n-            \"\\nExample:\\n\"\n-            + HelpExampleCli(\"estimatepriority\", \"6\")\n-            );\n-\n-    RPCTypeCheck(params, boost::assign::list_of(UniValue::VNUM));\n-\n-    int nBlocks = params[0].get_int();\n-    if (nBlocks < 1)\n-        nBlocks = 1;\n-\n-    return mempool.estimatePriority(nBlocks);\n-}"
+      },
+      {
+        "sha": "8600b3eb9a178be2be6b349a31c572c94805aecf",
+        "filename": "src/rpcserver.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 1,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7ce77af67b3138a8d839ace28f762c658dedccaf/src/rpcserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7ce77af67b3138a8d839ace28f762c658dedccaf/src/rpcserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcserver.cpp?ref=7ce77af67b3138a8d839ace28f762c658dedccaf",
+        "patch": "@@ -328,7 +328,6 @@ static const CRPCCommand vRPCCommands[] =\n     { \"util\",               \"validateaddress\",        &validateaddress,        true  }, /* uses wallet if enabled */\n     { \"util\",               \"verifymessage\",          &verifymessage,          true  },\n     { \"util\",               \"estimatefee\",            &estimatefee,            true  },\n-    { \"util\",               \"estimatepriority\",       &estimatepriority,       true  },\n \n     /* Not shown in help */\n     { \"hidden\",             \"invalidateblock\",        &invalidateblock,        true  },"
+      },
+      {
+        "sha": "2e132782e3b1e8e5288af94dd03e04c1ae1aad87",
+        "filename": "src/rpcserver.h",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 1,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7ce77af67b3138a8d839ace28f762c658dedccaf/src/rpcserver.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7ce77af67b3138a8d839ace28f762c658dedccaf/src/rpcserver.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcserver.h?ref=7ce77af67b3138a8d839ace28f762c658dedccaf",
+        "patch": "@@ -173,7 +173,6 @@ extern UniValue prioritisetransaction(const UniValue& params, bool fHelp);\n extern UniValue getblocktemplate(const UniValue& params, bool fHelp);\n extern UniValue submitblock(const UniValue& params, bool fHelp);\n extern UniValue estimatefee(const UniValue& params, bool fHelp);\n-extern UniValue estimatepriority(const UniValue& params, bool fHelp);\n \n extern UniValue getnewaddress(const UniValue& params, bool fHelp); // in rpcwallet.cpp\n extern UniValue getaccountaddress(const UniValue& params, bool fHelp);"
+      },
+      {
+        "sha": "6892494ffd3e8a156c45d445babd6d84552488d8",
+        "filename": "src/test/policyestimator_tests.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 18,
+        "changes": 21,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7ce77af67b3138a8d839ace28f762c658dedccaf/src/test/policyestimator_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7ce77af67b3138a8d839ace28f762c658dedccaf/src/test/policyestimator_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/policyestimator_tests.cpp?ref=7ce77af67b3138a8d839ace28f762c658dedccaf",
+        "patch": "@@ -17,20 +17,15 @@ BOOST_AUTO_TEST_CASE(BlockPolicyEstimates)\n {\n     CTxMemPool mpool(CFeeRate(1000));\n     CAmount basefee(2000);\n-    double basepri = 1e6;\n     CAmount deltaFee(100);\n-    double deltaPri=5e5;\n     std::vector<CAmount> feeV[2];\n-    std::vector<double> priV[2];\n \n     // Populate vectors of increasing fees or priorities\n     for (int j = 0; j < 10; j++) {\n         //V[0] is for fee transactions\n         feeV[0].push_back(basefee * (j+1));\n-        priV[0].push_back(0);\n         //V[1] is for priority transactions\n         feeV[1].push_back(CAmount(0));\n-        priV[1].push_back(basepri * pow(10, j+1));\n     }\n \n     // Store the hashes of transactions that have been\n@@ -63,7 +58,7 @@ BOOST_AUTO_TEST_CASE(BlockPolicyEstimates)\n             for (int k = 0; k < 5; k++) { // add 4 fee txs for every priority tx\n                 tx.vin[0].prevout.n = 10000*blocknum+100*j+k; // make transaction unique\n                 uint256 hash = tx.GetHash();\n-                mpool.addUnchecked(hash, CTxMemPoolEntry(tx, feeV[k/4][j], GetTime(), priV[k/4][j], blocknum, mpool.HasNoInputsOf(tx)));\n+                mpool.addUnchecked(hash, CTxMemPoolEntry(tx, feeV[k/4][j], GetTime(), blocknum, mpool.HasNoInputsOf(tx)));\n                 txHashes[j].push_back(hash);\n             }\n         }\n@@ -92,7 +87,6 @@ BOOST_AUTO_TEST_CASE(BlockPolicyEstimates)\n     }\n \n     std::vector<CAmount> origFeeEst;\n-    std::vector<double> origPriEst;\n     // Highest feerate is 10*baseRate and gets in all blocks,\n     // second highest feerate is 9*baseRate and gets in 9/10 blocks = 90%,\n     // third highest feerate is 8*base rate, and gets in 8/10 blocks = 80%,\n@@ -101,15 +95,11 @@ BOOST_AUTO_TEST_CASE(BlockPolicyEstimates)\n     // so estimateFee(2) should return 8*baseRate etc...\n     for (int i = 1; i < 10;i++) {\n         origFeeEst.push_back(mpool.estimateFee(i).GetFeePerK());\n-        origPriEst.push_back(mpool.estimatePriority(i));\n         if (i > 1) { // Fee estimates should be monotonically decreasing\n             BOOST_CHECK(origFeeEst[i-1] <= origFeeEst[i-2]);\n-            BOOST_CHECK(origPriEst[i-1] <= origPriEst[i-2]);\n         }\n         BOOST_CHECK(origFeeEst[i-1] < (10-i)*baseRate.GetFeePerK() + deltaFee);\n         BOOST_CHECK(origFeeEst[i-1] > (10-i)*baseRate.GetFeePerK() - deltaFee);\n-        BOOST_CHECK(origPriEst[i-1] < pow(10,10-i) * basepri + deltaPri);\n-        BOOST_CHECK(origPriEst[i-1] > pow(10,10-i) * basepri - deltaPri);\n     }\n \n     // Mine 50 more blocks with no transactions happening, estimates shouldn't change\n@@ -120,8 +110,6 @@ BOOST_AUTO_TEST_CASE(BlockPolicyEstimates)\n     for (int i = 1; i < 10;i++) {\n         BOOST_CHECK(mpool.estimateFee(i).GetFeePerK() < origFeeEst[i-1] + deltaFee);\n         BOOST_CHECK(mpool.estimateFee(i).GetFeePerK() > origFeeEst[i-1] - deltaFee);\n-        BOOST_CHECK(mpool.estimatePriority(i) < origPriEst[i-1] + deltaPri);\n-        BOOST_CHECK(mpool.estimatePriority(i) > origPriEst[i-1] - deltaPri);\n     }\n \n \n@@ -132,7 +120,7 @@ BOOST_AUTO_TEST_CASE(BlockPolicyEstimates)\n             for (int k = 0; k < 5; k++) { // add 4 fee txs for every priority tx\n                 tx.vin[0].prevout.n = 10000*blocknum+100*j+k;\n                 uint256 hash = tx.GetHash();\n-                mpool.addUnchecked(hash, CTxMemPoolEntry(tx, feeV[k/4][j], GetTime(), priV[k/4][j], blocknum, mpool.HasNoInputsOf(tx)));\n+                mpool.addUnchecked(hash, CTxMemPoolEntry(tx, feeV[k/4][j], GetTime(), blocknum, mpool.HasNoInputsOf(tx)));\n                 txHashes[j].push_back(hash);\n             }\n         }\n@@ -141,7 +129,6 @@ BOOST_AUTO_TEST_CASE(BlockPolicyEstimates)\n \n     for (int i = 1; i < 10;i++) {\n         BOOST_CHECK(mpool.estimateFee(i).GetFeePerK() > origFeeEst[i-1] - deltaFee);\n-        BOOST_CHECK(mpool.estimatePriority(i) > origPriEst[i-1] - deltaPri);\n     }\n \n     // Mine all those transactions\n@@ -158,7 +145,6 @@ BOOST_AUTO_TEST_CASE(BlockPolicyEstimates)\n     block.clear();\n     for (int i = 1; i < 10;i++) {\n         BOOST_CHECK(mpool.estimateFee(i).GetFeePerK() > origFeeEst[i-1] - deltaFee);\n-        BOOST_CHECK(mpool.estimatePriority(i) > origPriEst[i-1] - deltaPri);\n     }\n \n     // Mine 100 more blocks where everything is mined every block\n@@ -168,7 +154,7 @@ BOOST_AUTO_TEST_CASE(BlockPolicyEstimates)\n             for (int k = 0; k < 5; k++) { // add 4 fee txs for every priority tx\n                 tx.vin[0].prevout.n = 10000*blocknum+100*j+k;\n                 uint256 hash = tx.GetHash();\n-                mpool.addUnchecked(hash, CTxMemPoolEntry(tx, feeV[k/4][j], GetTime(), priV[k/4][j], blocknum, mpool.HasNoInputsOf(tx)));\n+                mpool.addUnchecked(hash, CTxMemPoolEntry(tx, feeV[k/4][j], GetTime(), blocknum, mpool.HasNoInputsOf(tx)));\n                 CTransaction btx;\n                 if (mpool.lookup(hash, btx))\n                     block.push_back(btx);\n@@ -179,7 +165,6 @@ BOOST_AUTO_TEST_CASE(BlockPolicyEstimates)\n     }\n     for (int i = 1; i < 9; i++) {\n         BOOST_CHECK(mpool.estimateFee(i).GetFeePerK() < origFeeEst[i-1] - deltaFee);\n-        BOOST_CHECK(mpool.estimatePriority(i) < origPriEst[i-1] - deltaPri);\n     }\n }\n "
+      },
+      {
+        "sha": "69236755076ff7ffd3df6bf8470ccb13a4a73f4c",
+        "filename": "src/txmempool.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 10,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7ce77af67b3138a8d839ace28f762c658dedccaf/src/txmempool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7ce77af67b3138a8d839ace28f762c658dedccaf/src/txmempool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.cpp?ref=7ce77af67b3138a8d839ace28f762c658dedccaf",
+        "patch": "@@ -18,15 +18,15 @@\n using namespace std;\n \n CTxMemPoolEntry::CTxMemPoolEntry():\n-    nFee(0), nTxSize(0), nModSize(0), nTime(0), dPriority(0.0), hadNoDependencies(false)\n+    nFee(0), nTxSize(0), nModSize(0), nTime(0), hadNoDependencies(false)\n {\n     nHeight = MEMPOOL_HEIGHT;\n }\n \n CTxMemPoolEntry::CTxMemPoolEntry(const CTransaction& _tx, const CAmount& _nFee,\n-                                 int64_t _nTime, double _dPriority,\n+                                 int64_t _nTime,\n                                  unsigned int _nHeight, bool poolHasNoInputsOf):\n-    tx(_tx), nFee(_nFee), nTime(_nTime), dPriority(_dPriority), nHeight(_nHeight),\n+    tx(_tx), nFee(_nFee), nTime(_nTime), nHeight(_nHeight),\n     hadNoDependencies(poolHasNoInputsOf)\n {\n     nTxSize = ::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION);\n@@ -43,8 +43,7 @@ CTxMemPoolEntry::GetPriority(unsigned int currentHeight) const\n {\n     CAmount nValueIn = tx.GetValueOut()+nFee;\n     double deltaPriority = ((double)(currentHeight-nHeight)*nValueIn)/nModSize;\n-    double dResult = dPriority + deltaPriority;\n-    return dResult;\n+    return deltaPriority;\n }\n \n CTxMemPool::CTxMemPool(const CFeeRate& _minRelayFee) :\n@@ -325,11 +324,6 @@ CFeeRate CTxMemPool::estimateFee(int nBlocks) const\n     LOCK(cs);\n     return minerPolicyEstimator->estimateFee(nBlocks);\n }\n-double CTxMemPool::estimatePriority(int nBlocks) const\n-{\n-    LOCK(cs);\n-    return minerPolicyEstimator->estimatePriority(nBlocks);\n-}\n \n bool\n CTxMemPool::WriteFeeEstimates(CAutoFile& fileout) const"
+      },
+      {
+        "sha": "5a23ed422e253441e3240d28f5502e7bf35a5ded",
+        "filename": "src/txmempool.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 8,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7ce77af67b3138a8d839ace28f762c658dedccaf/src/txmempool.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7ce77af67b3138a8d839ace28f762c658dedccaf/src/txmempool.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.h?ref=7ce77af67b3138a8d839ace28f762c658dedccaf",
+        "patch": "@@ -22,9 +22,7 @@ inline double AllowFreeThreshold()\n \n inline bool AllowFree(double dPriority)\n {\n-    // Large (in bytes) low-priority (new, small-coin) transactions\n-    // need a fee.\n-    return dPriority > AllowFreeThreshold();\n+    return false;\n }\n \n /** Fake height value used in CCoins to signify they are only in the memory pool (since 0.8) */\n@@ -41,13 +39,12 @@ class CTxMemPoolEntry\n     size_t nTxSize; //! ... and avoid recomputing tx size\n     size_t nModSize; //! ... and modified size for priority\n     int64_t nTime; //! Local time when entering the mempool\n-    double dPriority; //! Priority when entering the mempool\n     unsigned int nHeight; //! Chain height when entering the mempool\n     bool hadNoDependencies; //! Not dependent on any other txs when it entered the mempool\n \n public:\n     CTxMemPoolEntry(const CTransaction& _tx, const CAmount& _nFee,\n-                    int64_t _nTime, double _dPriority, unsigned int _nHeight, bool poolHasNoInputsOf = false);\n+                    int64_t _nTime, unsigned int _nHeight, bool poolHasNoInputsOf = false);\n     CTxMemPoolEntry();\n     CTxMemPoolEntry(const CTxMemPoolEntry& other);\n \n@@ -156,9 +153,6 @@ class CTxMemPool\n     /** Estimate fee rate needed to get into the next nBlocks */\n     CFeeRate estimateFee(int nBlocks) const;\n \n-    /** Estimate priority needed to get into the next nBlocks */\n-    double estimatePriority(int nBlocks) const;\n-    \n     /** Write/Read estimates to disk */\n     bool WriteFeeEstimates(CAutoFile& fileout) const;\n     bool ReadFeeEstimates(CAutoFile& filein);"
+      },
+      {
+        "sha": "d6ff3e9ab42e6829acbb6de6e0762b1490c7176f",
+        "filename": "src/wallet/wallet.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 14,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7ce77af67b3138a8d839ace28f762c658dedccaf/src/wallet/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7ce77af67b3138a8d839ace28f762c658dedccaf/src/wallet/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.cpp?ref=7ce77af67b3138a8d839ace28f762c658dedccaf",
+        "patch": "@@ -2023,20 +2023,6 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend, CWalletTx& wt\n \n                 dPriority = wtxNew.ComputePriority(dPriority, nBytes);\n \n-                // Can we complete this as a free transaction?\n-                if (fSendFreeTransactions && nBytes <= MAX_FREE_TRANSACTION_CREATE_SIZE)\n-                {\n-                    // Not enough fee: enough priority?\n-                    double dPriorityNeeded = mempool.estimatePriority(nTxConfirmTarget);\n-                    // Not enough mempool history to estimate: use hard-coded AllowFree.\n-                    if (dPriorityNeeded <= 0 && AllowFree(dPriority))\n-                        break;\n-\n-                    // Small enough, and priority high enough, to send for free\n-                    if (dPriorityNeeded > 0 && dPriority >= dPriorityNeeded)\n-                        break;\n-                }\n-\n                 CAmount nFeeNeeded = GetMinimumFee(nBytes, nTxConfirmTarget, mempool);\n \n                 // If we made it here and we aren't even able to meet the relay fee on the next pass, give up"
+      }
+    ]
+  },
+  {
+    "sha": "711b2bfea5bf0fc16d71993c8607053d03d48f06",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3MTFiMmJmZWE1YmYwZmMxNmQ3MTk5M2M4NjA3MDUzZDAzZDQ4ZjA2",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2015-07-09T05:46:45Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2015-07-09T05:46:45Z"
+      },
+      "message": "mempool, miner, qt, main: remove uses of priority, free transactions",
+      "tree": {
+        "sha": "69622be0dca70192ddc552205596017aa41bb0fd",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/69622be0dca70192ddc552205596017aa41bb0fd"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/711b2bfea5bf0fc16d71993c8607053d03d48f06",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/711b2bfea5bf0fc16d71993c8607053d03d48f06",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/711b2bfea5bf0fc16d71993c8607053d03d48f06",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/711b2bfea5bf0fc16d71993c8607053d03d48f06/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "7ce77af67b3138a8d839ace28f762c658dedccaf",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7ce77af67b3138a8d839ace28f762c658dedccaf",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/7ce77af67b3138a8d839ace28f762c658dedccaf"
+      }
+    ],
+    "stats": {
+      "total": 214,
+      "additions": 44,
+      "deletions": 170
+    },
+    "files": [
+      {
+        "sha": "4a7aaae01a381951c723cb5357cf7ec8c226021c",
+        "filename": "src/coins.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 17,
+        "changes": 17,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/coins.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/coins.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/coins.cpp?ref=711b2bfea5bf0fc16d71993c8607053d03d48f06",
+        "patch": "@@ -229,23 +229,6 @@ bool CCoinsViewCache::HaveInputs(const CTransaction& tx) const\n     return true;\n }\n \n-double CCoinsViewCache::GetPriority(const CTransaction &tx, int nHeight) const\n-{\n-    if (tx.IsCoinBase())\n-        return 0.0;\n-    double dResult = 0.0;\n-    BOOST_FOREACH(const CTxIn& txin, tx.vin)\n-    {\n-        const CCoins* coins = AccessCoins(txin.prevout.hash);\n-        assert(coins);\n-        if (!coins->IsAvailable(txin.prevout.n)) continue;\n-        if (coins->nHeight < nHeight) {\n-            dResult += coins->vout[txin.prevout.n].nValue * (nHeight-coins->nHeight);\n-        }\n-    }\n-    return tx.ComputePriority(dResult);\n-}\n-\n CCoinsModifier::CCoinsModifier(CCoinsViewCache& cache_, CCoinsMap::iterator it_, size_t usage) : cache(cache_), it(it_), cachedCoinUsage(usage) {\n     assert(!cache.hasModifier);\n     cache.hasModifier = true;"
+      },
+      {
+        "sha": "62b6e92955111abf99c8a40d155dd5fec42263c1",
+        "filename": "src/coins.h",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 3,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/coins.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/coins.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/coins.h?ref=711b2bfea5bf0fc16d71993c8607053d03d48f06",
+        "patch": "@@ -445,9 +445,6 @@ class CCoinsViewCache : public CCoinsViewBacked\n     //! Check whether all prevouts of the transaction are present in the UTXO set represented by this view\n     bool HaveInputs(const CTransaction& tx) const;\n \n-    //! Return priority of tx at height nHeight\n-    double GetPriority(const CTransaction &tx, int nHeight) const;\n-\n     const CTxOut &GetOutputFor(const CTxIn& input) const;\n \n     friend class CCoinsModifier;"
+      },
+      {
+        "sha": "20ba5cf3f96edff74f1738b1c879566353303f47",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 4,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=711b2bfea5bf0fc16d71993c8607053d03d48f06",
+        "patch": "@@ -341,7 +341,6 @@ std::string HelpMessage(HelpMessageMode mode)\n     strUsage += HelpMessageOpt(\"-paytxfee=<amt>\", strprintf(_(\"Fee (in BTC/kB) to add to transactions you send (default: %s)\"), FormatMoney(payTxFee.GetFeePerK())));\n     strUsage += HelpMessageOpt(\"-rescan\", _(\"Rescan the block chain for missing wallet transactions\") + \" \" + _(\"on startup\"));\n     strUsage += HelpMessageOpt(\"-salvagewallet\", _(\"Attempt to recover private keys from a corrupt wallet.dat\") + \" \" + _(\"on startup\"));\n-    strUsage += HelpMessageOpt(\"-sendfreetransactions\", strprintf(_(\"Send transactions as zero-fee transactions if possible (default: %u)\"), 0));\n     strUsage += HelpMessageOpt(\"-spendzeroconfchange\", strprintf(_(\"Spend unconfirmed change when sending transactions (default: %u)\"), 1));\n     strUsage += HelpMessageOpt(\"-txconfirmtarget=<n>\", strprintf(_(\"If paytxfee is not set, include enough fee so transactions begin confirmation on average within n blocks (default: %u)\"), DEFAULT_TX_CONFIRM_TARGET));\n     strUsage += HelpMessageOpt(\"-maxtxfee=<amt>\", strprintf(_(\"Maximum total fees to use in a single wallet transaction; setting this too low may abort large transactions (default: %s)\"),\n@@ -378,8 +377,6 @@ std::string HelpMessage(HelpMessageMode mode)\n     strUsage += HelpMessageOpt(\"-logtimestamps\", strprintf(_(\"Prepend debug output with timestamp (default: %u)\"), 1));\n     if (showDebug)\n     {\n-        strUsage += HelpMessageOpt(\"-limitfreerelay=<n>\", strprintf(\"Continuously rate-limit free transactions to <n>*1000 bytes per minute (default: %u)\", 15));\n-        strUsage += HelpMessageOpt(\"-relaypriority\", strprintf(\"Require high priority for relaying free or low-fee transactions (default: %u)\", 1));\n         strUsage += HelpMessageOpt(\"-maxsigcachesize=<n>\", strprintf(\"Limit size of signature cache to <n> entries (default: %u)\", 50000));\n     }\n     strUsage += HelpMessageOpt(\"-minrelaytxfee=<amt>\", strprintf(_(\"Fees (in BTC/Kb) smaller than this are considered zero fee for relaying (default: %s)\"), FormatMoney(::minRelayTxFee.GetFeePerK())));\n@@ -863,7 +860,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)\n     }\n     nTxConfirmTarget = GetArg(\"-txconfirmtarget\", DEFAULT_TX_CONFIRM_TARGET);\n     bSpendZeroConfChange = GetBoolArg(\"-spendzeroconfchange\", true);\n-    fSendFreeTransactions = GetBoolArg(\"-sendfreetransactions\", false);\n \n     std::string strWalletFile = GetArg(\"-wallet\", \"wallet.dat\");\n #endif // ENABLE_WALLET"
+      },
+      {
+        "sha": "6db2a01849fab1bd4e413a6827ec46ba38b7468d",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 12,
+        "deletions": 46,
+        "changes": 58,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=711b2bfea5bf0fc16d71993c8607053d03d48f06",
+        "patch": "@@ -718,37 +718,26 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)\n     return true;\n }\n \n-CAmount GetMinRelayFee(const CTransaction& tx, unsigned int nBytes, bool fAllowFree)\n+CAmount GetMinRelayFee(const CTransaction& tx, unsigned int nBytes)\n {\n     {\n         LOCK(mempool.cs);\n         uint256 hash = tx.GetHash();\n-        double dPriorityDelta = 0;\n         CAmount nFeeDelta = 0;\n-        mempool.ApplyDeltas(hash, dPriorityDelta, nFeeDelta);\n-        if (dPriorityDelta > 0 || nFeeDelta > 0)\n+        mempool.ApplyDeltas(hash, nFeeDelta);\n+        if (nFeeDelta > 0)\n             return 0;\n     }\n \n     CAmount nMinFee = ::minRelayTxFee.GetFee(nBytes);\n \n-    if (fAllowFree)\n-    {\n-        // There is a free transaction area in blocks created by most miners,\n-        // * If we are relaying we allow transactions up to DEFAULT_BLOCK_PRIORITY_SIZE - 1000\n-        //   to be considered to fall into this category. We don't want to encourage sending\n-        //   multiple transactions instead of one big transaction to avoid fees.\n-        if (nBytes < (DEFAULT_BLOCK_PRIORITY_SIZE - 1000))\n-            nMinFee = 0;\n-    }\n-\n     if (!MoneyRange(nMinFee))\n         nMinFee = MAX_MONEY;\n     return nMinFee;\n }\n \n \n-bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransaction &tx, bool fLimitFree,\n+bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransaction &tx,\n                         bool* pfMissingInputs, bool fRejectAbsurdFee)\n {\n     AssertLockHeld(cs_main);\n@@ -859,39 +848,16 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa\n         unsigned int nSize = entry.GetTxSize();\n \n         // Don't accept it if it can't get into a block\n-        CAmount txMinFee = GetMinRelayFee(tx, nSize, true);\n-        if (fLimitFree && nFees < txMinFee)\n+        CAmount txMinFee = GetMinRelayFee(tx, nSize);\n+        if (nFees < txMinFee)\n             return state.DoS(0, error(\"AcceptToMemoryPool: not enough fees %s, %d < %d\",\n                                       hash.ToString(), nFees, txMinFee),\n                              REJECT_INSUFFICIENTFEE, \"insufficient fee\");\n \n-        // Require that free transactions have sufficient priority to be mined in the next block.\n-        if (GetBoolArg(\"-relaypriority\", true) && nFees < ::minRelayTxFee.GetFee(nSize) && !AllowFree(view.GetPriority(tx, chainActive.Height() + 1))) {\n-            return state.DoS(0, false, REJECT_INSUFFICIENTFEE, \"insufficient priority\");\n-        }\n-\n-        // Continuously rate-limit free (really, very-low-fee) transactions\n-        // This mitigates 'penny-flooding' -- sending thousands of free transactions just to\n-        // be annoying or make others' transactions take longer to confirm.\n-        if (fLimitFree && nFees < ::minRelayTxFee.GetFee(nSize))\n+        if (nFees < ::minRelayTxFee.GetFee(nSize))\n         {\n-            static CCriticalSection csFreeLimiter;\n-            static double dFreeCount;\n-            static int64_t nLastTime;\n-            int64_t nNow = GetTime();\n-\n-            LOCK(csFreeLimiter);\n-\n-            // Use an exponentially decaying ~10-minute window:\n-            dFreeCount *= pow(1.0 - 1.0/600.0, (double)(nNow - nLastTime));\n-            nLastTime = nNow;\n-            // -limitfreerelay unit is thousand-bytes-per-minute\n-            // At default rate it would take over a month to fill 1GB\n-            if (dFreeCount >= GetArg(\"-limitfreerelay\", 15)*10*1000)\n-                return state.DoS(0, error(\"AcceptToMemoryPool: free transaction rejected by rate limiter\"),\n-                                 REJECT_INSUFFICIENTFEE, \"rate limited free transaction\");\n-            LogPrint(\"mempool\", \"Rate limit dFreeCount: %g => %g\\n\", dFreeCount, dFreeCount+nSize);\n-            dFreeCount += nSize;\n+            return state.DoS(0, error(\"AcceptToMemoryPool: too-low fee transaction rejected\"),\n+                             REJECT_INSUFFICIENTFEE, \"too-low fee transaction\");\n         }\n \n         if (fRejectAbsurdFee && nFees > ::minRelayTxFee.GetFee(nSize) * 10000)\n@@ -2016,7 +1982,7 @@ bool static DisconnectTip(CValidationState &state) {\n         // ignore validation errors in resurrected transactions\n         list<CTransaction> removed;\n         CValidationState stateDummy;\n-        if (tx.IsCoinBase() || !AcceptToMemoryPool(mempool, stateDummy, tx, false, NULL))\n+        if (tx.IsCoinBase() || !AcceptToMemoryPool(mempool, stateDummy, tx, NULL))\n             mempool.remove(tx, removed, true);\n     }\n     mempool.removeCoinbaseSpends(pcoinsTip, pindexDelete->nHeight);\n@@ -4203,7 +4169,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv,\n \n         mapAlreadyAskedFor.erase(inv);\n \n-        if (AcceptToMemoryPool(mempool, state, tx, true, &fMissingInputs))\n+        if (AcceptToMemoryPool(mempool, state, tx, &fMissingInputs))\n         {\n             mempool.check(pcoinsTip);\n             RelayTransaction(tx);\n@@ -4237,7 +4203,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv,\n \n                     if (setMisbehaving.count(fromPeer))\n                         continue;\n-                    if (AcceptToMemoryPool(mempool, stateDummy, orphanTx, true, &fMissingInputs2))\n+                    if (AcceptToMemoryPool(mempool, stateDummy, orphanTx, &fMissingInputs2))\n                     {\n                         LogPrint(\"mempool\", \"   accepted orphan tx %s\\n\", orphanHash.ToString());\n                         RelayTransaction(orphanTx);"
+      },
+      {
+        "sha": "7f86cf146ea19837225d8b6f8745e95895441f64",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=711b2bfea5bf0fc16d71993c8607053d03d48f06",
+        "patch": "@@ -223,7 +223,7 @@ void FlushStateToDisk();\n void PruneAndFlush();\n \n /** (try to) add transaction to memory pool **/\n-bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransaction &tx, bool fLimitFree,\n+bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransaction &tx,\n                         bool* pfMissingInputs, bool fRejectAbsurdFee=false);\n \n \n@@ -260,7 +260,7 @@ struct CDiskTxPos : public CDiskBlockPos\n };\n \n \n-CAmount GetMinRelayFee(const CTransaction& tx, unsigned int nBytes, bool fAllowFree);\n+CAmount GetMinRelayFee(const CTransaction& tx, unsigned int nBytes);\n \n /** \n  * Count ECDSA signature operations the old-fashioned (pre-0.6) way"
+      },
+      {
+        "sha": "ed9de9b7ab1c89ccdd39aa889a3fb8a68cdb8c01",
+        "filename": "src/miner.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 19,
+        "changes": 25,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/miner.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/miner.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/miner.cpp?ref=711b2bfea5bf0fc16d71993c8607053d03d48f06",
+        "patch": "@@ -106,11 +106,6 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)\n     // Limit to betweeen 1K and MAX_BLOCK_SIZE-1K for sanity:\n     nBlockMaxSize = std::max((unsigned int)1000, std::min((unsigned int)(MAX_BLOCK_SIZE-1000), nBlockMaxSize));\n \n-    // Minimum block size you want to create; block will be filled with free transactions\n-    // until there are no more or the block reaches this size:\n-    unsigned int nBlockMinSize = GetArg(\"-blockminsize\", DEFAULT_BLOCK_MIN_SIZE);\n-    nBlockMinSize = std::min(nBlockMaxSize, nBlockMinSize);\n-\n     // Collect memory pool transactions into the block\n     CAmount nFees = 0;\n \n@@ -137,7 +132,6 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)\n                 continue;\n \n             COrphan* porphan = NULL;\n-            double dPriority = 0;\n             CAmount nTotalIn = 0;\n             bool fMissingInputs = false;\n             BOOST_FOREACH(const CTxIn& txin, tx.vin)\n@@ -175,19 +169,14 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)\n \n                 CAmount nValueIn = coins->vout[txin.prevout.n].nValue;\n                 nTotalIn += nValueIn;\n-\n-                int nConf = nHeight - coins->nHeight;\n-\n-                dPriority += (double)nValueIn * nConf;\n             }\n             if (fMissingInputs) continue;\n \n             // Priority is sum(valuein * age) / modified_txsize\n             unsigned int nTxSize = ::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION);\n-            dPriority = tx.ComputePriority(dPriority, nTxSize);\n \n             uint256 hash = tx.GetHash();\n-            mempool.ApplyDeltas(hash, dPriority, nTotalIn);\n+            mempool.ApplyDeltas(hash, nTotalIn);\n \n             CFeeRate feeRate(nTotalIn-tx.GetValueOut(), nTxSize);\n \n@@ -208,7 +197,6 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)\n         while (!vecPriority.empty())\n         {\n             // Take highest priority transaction off the priority queue:\n-            double dPriority = 0;\n             CFeeRate feeRate = vecPriority.front().get<0>();\n             const CTransaction& tx = *(vecPriority.front().get<1>());\n \n@@ -225,12 +213,11 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)\n             if (nBlockSigOps + nTxSigOps >= MAX_BLOCK_SIGOPS)\n                 continue;\n \n-            // Skip free transactions if we're past the minimum block size:\n+            // Skip low-fee transactions\n             const uint256& hash = tx.GetHash();\n-            double dPriorityDelta = 0;\n             CAmount nFeeDelta = 0;\n-            mempool.ApplyDeltas(hash, dPriorityDelta, nFeeDelta);\n-            if ((dPriorityDelta <= 0) && (nFeeDelta <= 0) && (feeRate < ::minRelayTxFee) && (nBlockSize + nTxSize >= nBlockMinSize))\n+            mempool.ApplyDeltas(hash, nFeeDelta);\n+            if ((nFeeDelta <= 0) && (feeRate < ::minRelayTxFee))\n                 continue;\n \n             if (!view.HaveInputs(tx))\n@@ -262,8 +249,8 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)\n \n             if (fPrintPriority)\n             {\n-                LogPrintf(\"priority %.1f fee %s txid %s\\n\",\n-                    dPriority, feeRate.ToString(), tx.GetHash().ToString());\n+                LogPrintf(\"fee %s txid %s\\n\",\n+                    feeRate.ToString(), tx.GetHash().ToString());\n             }\n \n             // Add transactions that depend on this one to the priority queue"
+      },
+      {
+        "sha": "1a3ef1eeef576539f4bc65696c7f888b624a9084",
+        "filename": "src/qt/coincontroldialog.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 14,
+        "changes": 15,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/qt/coincontroldialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/qt/coincontroldialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/coincontroldialog.cpp?ref=711b2bfea5bf0fc16d71993c8607053d03d48f06",
+        "patch": "@@ -423,20 +423,7 @@ void CoinControlDialog::viewItemChanged(QTreeWidgetItem* item, int column)\n // return human readable label for priority number\n QString CoinControlDialog::getPriorityLabel(double dPriority, double mempoolEstimatePriority)\n {\n-    double dPriorityMedium = mempoolEstimatePriority;\n-\n-    if (dPriorityMedium <= 0)\n-        dPriorityMedium = AllowFreeThreshold(); // not enough data, back to hard-coded\n-\n-    if      (dPriority / 1000000 > dPriorityMedium) return tr(\"highest\");\n-    else if (dPriority / 100000 > dPriorityMedium)  return tr(\"higher\");\n-    else if (dPriority / 10000 > dPriorityMedium)   return tr(\"high\");\n-    else if (dPriority / 1000 > dPriorityMedium)    return tr(\"medium-high\");\n-    else if (dPriority > dPriorityMedium)           return tr(\"medium\");\n-    else if (dPriority * 10 > dPriorityMedium)      return tr(\"low-medium\");\n-    else if (dPriority * 100 > dPriorityMedium)     return tr(\"low\");\n-    else if (dPriority * 1000 > dPriorityMedium)    return tr(\"lower\");\n-    else                                            return tr(\"lowest\");\n+    return tr(\"medium\");\n }\n \n // shows count of locked unspent outputs"
+      },
+      {
+        "sha": "1e9a7df461443c59f9f6980ac7467dbe5ce9dfe6",
+        "filename": "src/qt/forms/sendcoinsdialog.ui",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 17,
+        "changes": 17,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/qt/forms/sendcoinsdialog.ui",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/qt/forms/sendcoinsdialog.ui",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/forms/sendcoinsdialog.ui?ref=711b2bfea5bf0fc16d71993c8607053d03d48f06",
+        "patch": "@@ -1175,23 +1175,6 @@\n              <property name=\"bottomMargin\">\n               <number>4</number>\n              </property>\n-             <item>\n-              <widget class=\"QCheckBox\" name=\"checkBoxFreeTx\">\n-               <property name=\"text\">\n-                <string>Send as zero-fee transaction if possible</string>\n-               </property>\n-              </widget>\n-             </item>\n-             <item>\n-              <widget class=\"QLabel\" name=\"labelFreeTx\">\n-               <property name=\"text\">\n-                <string>(confirmation may take longer)</string>\n-               </property>\n-               <property name=\"margin\">\n-                <number>5</number>\n-               </property>\n-              </widget>\n-             </item>\n              <item>\n               <spacer name=\"horizontalSpacerFee5\">\n                <property name=\"orientation\">"
+      },
+      {
+        "sha": "4514cb6a4474d5ed01a2a6120fb3ee984d0b0281",
+        "filename": "src/qt/sendcoinsdialog.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 8,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/qt/sendcoinsdialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/qt/sendcoinsdialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/sendcoinsdialog.cpp?ref=711b2bfea5bf0fc16d71993c8607053d03d48f06",
+        "patch": "@@ -102,8 +102,6 @@ SendCoinsDialog::SendCoinsDialog(QWidget *parent) :\n         settings.setValue(\"nTransactionFee\", (qint64)DEFAULT_TRANSACTION_FEE);\n     if (!settings.contains(\"fPayOnlyMinFee\"))\n         settings.setValue(\"fPayOnlyMinFee\", false);\n-    if (!settings.contains(\"fSendFreeTransactions\"))\n-        settings.setValue(\"fSendFreeTransactions\", false);\n     ui->groupFee->setId(ui->radioSmartFee, 0);\n     ui->groupFee->setId(ui->radioCustomFee, 1);\n     ui->groupFee->button((int)std::max(0, std::min(1, settings.value(\"nFeeRadio\").toInt())))->setChecked(true);\n@@ -113,7 +111,6 @@ SendCoinsDialog::SendCoinsDialog(QWidget *parent) :\n     ui->sliderSmartFee->setValue(settings.value(\"nSmartFeeSliderPosition\").toInt());\n     ui->customFee->setValue(settings.value(\"nTransactionFee\").toLongLong());\n     ui->checkBoxMinimumFee->setChecked(settings.value(\"fPayOnlyMinFee\").toBool());\n-    ui->checkBoxFreeTx->setChecked(settings.value(\"fSendFreeTransactions\").toBool());\n     minimizeFeeSection(settings.value(\"fFeeSectionMinimized\").toBool());\n }\n \n@@ -168,8 +165,6 @@ void SendCoinsDialog::setModel(WalletModel *model)\n         connect(ui->checkBoxMinimumFee, SIGNAL(stateChanged(int)), this, SLOT(updateFeeSectionControls()));\n         connect(ui->checkBoxMinimumFee, SIGNAL(stateChanged(int)), this, SLOT(updateGlobalFeeVariables()));\n         connect(ui->checkBoxMinimumFee, SIGNAL(stateChanged(int)), this, SLOT(coinControlUpdateLabels()));\n-        connect(ui->checkBoxFreeTx, SIGNAL(stateChanged(int)), this, SLOT(updateGlobalFeeVariables()));\n-        connect(ui->checkBoxFreeTx, SIGNAL(stateChanged(int)), this, SLOT(coinControlUpdateLabels()));\n         ui->customFee->setSingleStep(CWallet::minTxFee.GetFeePerK());\n         updateFeeSectionControls();\n         updateMinFeeLabel();\n@@ -187,7 +182,6 @@ SendCoinsDialog::~SendCoinsDialog()\n     settings.setValue(\"nSmartFeeSliderPosition\", ui->sliderSmartFee->value());\n     settings.setValue(\"nTransactionFee\", (qint64)ui->customFee->value());\n     settings.setValue(\"fPayOnlyMinFee\", ui->checkBoxMinimumFee->isChecked());\n-    settings.setValue(\"fSendFreeTransactions\", ui->checkBoxFreeTx->isChecked());\n \n     delete ui;\n }\n@@ -599,8 +593,6 @@ void SendCoinsDialog::updateGlobalFeeVariables()\n         payTxFee = CFeeRate(ui->customFee->value());\n         fPayAtLeastCustomFee = ui->radioCustomAtLeast->isChecked();\n     }\n-\n-    fSendFreeTransactions = ui->checkBoxFreeTx->isChecked();\n }\n \n void SendCoinsDialog::updateFeeMinimizedLabel()"
+      },
+      {
+        "sha": "4813153d400db137ed53f705bb82623d8f8ee04b",
+        "filename": "src/rpcmining.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 9,
+        "changes": 15,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/rpcmining.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/rpcmining.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcmining.cpp?ref=711b2bfea5bf0fc16d71993c8607053d03d48f06",
+        "patch": "@@ -266,29 +266,26 @@ UniValue prioritisetransaction(const UniValue& params, bool fHelp)\n {\n     if (fHelp || params.size() != 3)\n         throw runtime_error(\n-            \"prioritisetransaction <txid> <priority delta> <fee delta>\\n\"\n+            \"prioritisetransaction <txid> <fee delta>\\n\"\n             \"Accepts the transaction into mined blocks at a higher (or lower) priority\\n\"\n             \"\\nArguments:\\n\"\n             \"1. \\\"txid\\\"       (string, required) The transaction id.\\n\"\n-            \"2. priority delta (numeric, required) The priority to add or subtract.\\n\"\n-            \"                  The transaction selection algorithm considers the tx as it would have a higher priority.\\n\"\n-            \"                  (priority of a transaction is calculated: coinage * value_in_satoshis / txsize) \\n\"\n-            \"3. fee delta      (numeric, required) The fee value (in satoshis) to add (or subtract, if negative).\\n\"\n+            \"2. fee delta      (numeric, required) The fee value (in satoshis) to add (or subtract, if negative).\\n\"\n             \"                  The fee is not actually paid, only the algorithm for selecting transactions into a block\\n\"\n             \"                  considers the transaction as it would have paid a higher (or lower) fee.\\n\"\n             \"\\nResult\\n\"\n             \"true              (boolean) Returns true\\n\"\n             \"\\nExamples:\\n\"\n-            + HelpExampleCli(\"prioritisetransaction\", \"\\\"txid\\\" 0.0 10000\")\n-            + HelpExampleRpc(\"prioritisetransaction\", \"\\\"txid\\\", 0.0, 10000\")\n+            + HelpExampleCli(\"prioritisetransaction\", \"\\\"txid\\\" 10000\")\n+            + HelpExampleRpc(\"prioritisetransaction\", \"\\\"txid\\\", 10000\")\n         );\n \n     LOCK(cs_main);\n \n     uint256 hash = ParseHashStr(params[0].get_str(), \"txid\");\n-    CAmount nAmount = params[2].get_int64();\n+    CAmount nAmount = params[1].get_int64();\n \n-    mempool.PrioritiseTransaction(hash, params[0].get_str(), params[1].get_real(), nAmount);\n+    mempool.PrioritiseTransaction(hash, params[0].get_str(), nAmount);\n     return true;\n }\n "
+      },
+      {
+        "sha": "8745c11a0b3c41a27471a2c2d4a3c942bd9ce398",
+        "filename": "src/rpcmisc.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/rpcmisc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/rpcmisc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcmisc.cpp?ref=711b2bfea5bf0fc16d71993c8607053d03d48f06",
+        "patch": "@@ -60,7 +60,7 @@ UniValue getinfo(const UniValue& params, bool fHelp)\n             \"  \\\"keypoolsize\\\": xxxx,        (numeric) how many new keys are pre-generated\\n\"\n             \"  \\\"unlocked_until\\\": ttt,      (numeric) the timestamp in seconds since epoch (midnight Jan 1 1970 GMT) that the wallet is unlocked for transfers, or 0 if the wallet is locked\\n\"\n             \"  \\\"paytxfee\\\": x.xxxx,         (numeric) the transaction fee set in btc/kb\\n\"\n-            \"  \\\"relayfee\\\": x.xxxx,         (numeric) minimum relay fee for non-free transactions in btc/kb\\n\"\n+            \"  \\\"relayfee\\\": x.xxxx,         (numeric) minimum relay fee, in btc/kb\\n\"\n             \"  \\\"errors\\\": \\\"...\\\"           (string) any error messages\\n\"\n             \"}\\n\"\n             \"\\nExamples:\\n\""
+      },
+      {
+        "sha": "9aae476096df053a4f69c2d32d06806215b9dd3f",
+        "filename": "src/rpcnet.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/rpcnet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/rpcnet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcnet.cpp?ref=711b2bfea5bf0fc16d71993c8607053d03d48f06",
+        "patch": "@@ -421,7 +421,7 @@ UniValue getnetworkinfo(const UniValue& params, bool fHelp)\n             \"  }\\n\"\n             \"  ,...\\n\"\n             \"  ],\\n\"\n-            \"  \\\"relayfee\\\": x.xxxxxxxx,                (numeric) minimum relay fee for non-free transactions in btc/kb\\n\"\n+            \"  \\\"relayfee\\\": x.xxxxxxxx,                (numeric) minimum relay fee, in btc/kb\\n\"\n             \"  \\\"localaddresses\\\": [                    (array) list of local addresses\\n\"\n             \"  {\\n\"\n             \"    \\\"address\\\": \\\"xxxx\\\",                 (string) network address\\n\""
+      },
+      {
+        "sha": "be990f86bdb11a67589d9b140ffad36e5adf059b",
+        "filename": "src/rpcrawtransaction.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/rpcrawtransaction.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/rpcrawtransaction.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcrawtransaction.cpp?ref=711b2bfea5bf0fc16d71993c8607053d03d48f06",
+        "patch": "@@ -794,7 +794,7 @@ UniValue sendrawtransaction(const UniValue& params, bool fHelp)\n         // push to local node and sync with wallets\n         CValidationState state;\n         bool fMissingInputs;\n-        if (!AcceptToMemoryPool(mempool, state, tx, false, &fMissingInputs, !fOverrideFees)) {\n+        if (!AcceptToMemoryPool(mempool, state, tx, &fMissingInputs, !fOverrideFees)) {\n             if (state.IsInvalid()) {\n                 throw JSONRPCError(RPC_TRANSACTION_REJECTED, strprintf(\"%i: %s\", state.GetRejectCode(), state.GetRejectReason()));\n             } else {"
+      },
+      {
+        "sha": "c8eb3769bfed71e86e3aa82938f2af3a8f50bf6e",
+        "filename": "src/txmempool.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 10,
+        "changes": 18,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/txmempool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/txmempool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.cpp?ref=711b2bfea5bf0fc16d71993c8607053d03d48f06",
+        "patch": "@@ -360,26 +360,24 @@ CTxMemPool::ReadFeeEstimates(CAutoFile& filein)\n     return true;\n }\n \n-void CTxMemPool::PrioritiseTransaction(const uint256 hash, const string strHash, double dPriorityDelta, const CAmount& nFeeDelta)\n+void CTxMemPool::PrioritiseTransaction(const uint256 hash, const string strHash, const CAmount& nFeeDelta)\n {\n     {\n         LOCK(cs);\n-        std::pair<double, CAmount> &deltas = mapDeltas[hash];\n-        deltas.first += dPriorityDelta;\n-        deltas.second += nFeeDelta;\n+        CAmount &delta = mapDeltas[hash];\n+        delta += nFeeDelta;\n     }\n-    LogPrintf(\"PrioritiseTransaction: %s priority += %f, fee += %d\\n\", strHash, dPriorityDelta, FormatMoney(nFeeDelta));\n+    LogPrintf(\"PrioritiseTransaction: %s fee += %d\\n\", strHash, FormatMoney(nFeeDelta));\n }\n \n-void CTxMemPool::ApplyDeltas(const uint256 hash, double &dPriorityDelta, CAmount &nFeeDelta)\n+void CTxMemPool::ApplyDeltas(const uint256 hash, CAmount &nFeeDelta)\n {\n     LOCK(cs);\n-    std::map<uint256, std::pair<double, CAmount> >::iterator pos = mapDeltas.find(hash);\n+    std::map<uint256, CAmount>::iterator pos = mapDeltas.find(hash);\n     if (pos == mapDeltas.end())\n         return;\n-    const std::pair<double, CAmount> &deltas = pos->second;\n-    dPriorityDelta += deltas.first;\n-    nFeeDelta += deltas.second;\n+    const CAmount &delta = pos->second;\n+    nFeeDelta += delta;\n }\n \n void CTxMemPool::ClearPrioritisation(const uint256 hash)"
+      },
+      {
+        "sha": "7f8d6ac6912c344ac2e097d6274b3d2728900a7b",
+        "filename": "src/txmempool.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 13,
+        "changes": 16,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/txmempool.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/txmempool.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.h?ref=711b2bfea5bf0fc16d71993c8607053d03d48f06",
+        "patch": "@@ -15,16 +15,6 @@\n \n class CAutoFile;\n \n-inline double AllowFreeThreshold()\n-{\n-    return COIN * 144 / 250;\n-}\n-\n-inline bool AllowFree(double dPriority)\n-{\n-    return false;\n-}\n-\n /** Fake height value used in CCoins to signify they are only in the memory pool (since 0.8) */\n static const unsigned int MEMPOOL_HEIGHT = 0x7FFFFFFF;\n \n@@ -95,7 +85,7 @@ class CTxMemPool\n     mutable CCriticalSection cs;\n     std::map<uint256, CTxMemPoolEntry> mapTx;\n     std::map<COutPoint, CInPoint> mapNextTx;\n-    std::map<uint256, std::pair<double, CAmount> > mapDeltas;\n+    std::map<uint256, CAmount> mapDeltas;\n \n     CTxMemPool(const CFeeRate& _minRelayFee);\n     ~CTxMemPool();\n@@ -127,8 +117,8 @@ class CTxMemPool\n     bool HasNoInputsOf(const CTransaction& tx) const;\n \n     /** Affect CreateNewBlock prioritisation of transactions */\n-    void PrioritiseTransaction(const uint256 hash, const std::string strHash, double dPriorityDelta, const CAmount& nFeeDelta);\n-    void ApplyDeltas(const uint256 hash, double &dPriorityDelta, CAmount &nFeeDelta);\n+    void PrioritiseTransaction(const uint256 hash, const std::string strHash, const CAmount& nFeeDelta);\n+    void ApplyDeltas(const uint256 hash, CAmount &nFeeDelta);\n     void ClearPrioritisation(const uint256 hash);\n \n     unsigned long size()"
+      },
+      {
+        "sha": "1d11fbbe6eb925c76916cf1be258cbd0eff2cf8f",
+        "filename": "src/wallet/wallet.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 3,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/wallet/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/wallet/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.cpp?ref=711b2bfea5bf0fc16d71993c8607053d03d48f06",
+        "patch": "@@ -34,7 +34,6 @@ CFeeRate payTxFee(DEFAULT_TRANSACTION_FEE);\n CAmount maxTxFee = DEFAULT_TRANSACTION_MAXFEE;\n unsigned int nTxConfirmTarget = DEFAULT_TX_CONFIRM_TARGET;\n bool bSpendZeroConfChange = true;\n-bool fSendFreeTransactions = false;\n bool fPayAtLeastCustomFee = true;\n \n /**\n@@ -2850,9 +2849,9 @@ int CMerkleTx::GetBlocksToMaturity() const\n }\n \n \n-bool CMerkleTx::AcceptToMemoryPool(bool fLimitFree, bool fRejectAbsurdFee)\n+bool CMerkleTx::AcceptToMemoryPool(bool fRejectAbsurdFee)\n {\n     CValidationState state;\n-    return ::AcceptToMemoryPool(mempool, state, *this, fLimitFree, NULL, fRejectAbsurdFee);\n+    return ::AcceptToMemoryPool(mempool, state, *this, NULL, fRejectAbsurdFee);\n }\n "
+      },
+      {
+        "sha": "fc226218d3230312e782b4fd469683c27ec1ba25",
+        "filename": "src/wallet/wallet.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 2,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/wallet/wallet.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/711b2bfea5bf0fc16d71993c8607053d03d48f06/src/wallet/wallet.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.h?ref=711b2bfea5bf0fc16d71993c8607053d03d48f06",
+        "patch": "@@ -37,7 +37,6 @@ extern CFeeRate payTxFee;\n extern CAmount maxTxFee;\n extern unsigned int nTxConfirmTarget;\n extern bool bSpendZeroConfChange;\n-extern bool fSendFreeTransactions;\n extern bool fPayAtLeastCustomFee;\n \n //! -paytxfee default\n@@ -202,7 +201,7 @@ class CMerkleTx : public CTransaction\n     int GetDepthInMainChain() const { const CBlockIndex *pindexRet; return GetDepthInMainChain(pindexRet); }\n     bool IsInMainChain() const { const CBlockIndex *pindexRet; return GetDepthInMainChainINTERNAL(pindexRet) > 0; }\n     int GetBlocksToMaturity() const;\n-    bool AcceptToMemoryPool(bool fLimitFree=true, bool fRejectAbsurdFee=true);\n+    bool AcceptToMemoryPool(bool fRejectAbsurdFee=true);\n };\n \n /** "
+      }
+    ]
+  }
+]

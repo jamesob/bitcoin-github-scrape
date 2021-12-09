@@ -1,0 +1,98 @@
+[
+  {
+    "sha": "99e88a3726c2325e3a3a35c0a750bde25bd58ad0",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5OWU4OGEzNzI2YzIzMjVlM2EzYTM1YzBhNzUwYmRlMjViZDU4YWQw",
+    "commit": {
+      "author": {
+        "name": "Antoine Riard",
+        "email": "ariard@student.42.fr",
+        "date": "2019-04-10T13:38:41Z"
+      },
+      "committer": {
+        "name": "Antoine Riard",
+        "email": "ariard@student.42.fr",
+        "date": "2019-04-17T12:17:17Z"
+      },
+      "message": "rpc: Remove dependency on interfaces::Chain in SignTransaction\n\nComment SignTransaction utility",
+      "tree": {
+        "sha": "050a20cb4577f577def4c79210b886eef72e659f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/050a20cb4577f577def4c79210b886eef72e659f"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/99e88a3726c2325e3a3a35c0a750bde25bd58ad0",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/99e88a3726c2325e3a3a35c0a750bde25bd58ad0",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/99e88a3726c2325e3a3a35c0a750bde25bd58ad0",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/99e88a3726c2325e3a3a35c0a750bde25bd58ad0/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "c536dfbcb00fb15963bf5d507b7017c241718bf6",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c536dfbcb00fb15963bf5d507b7017c241718bf6",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c536dfbcb00fb15963bf5d507b7017c241718bf6"
+      }
+    ],
+    "stats": {
+      "total": 53,
+      "additions": 34,
+      "deletions": 19
+    },
+    "files": [
+      {
+        "sha": "e838443fe1056c04d8d4152539687c01e48dc3fc",
+        "filename": "src/rpc/rawtransaction.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 1,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/99e88a3726c2325e3a3a35c0a750bde25bd58ad0/src/rpc/rawtransaction.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/99e88a3726c2325e3a3a35c0a750bde25bd58ad0/src/rpc/rawtransaction.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/rawtransaction.cpp?ref=99e88a3726c2325e3a3a35c0a750bde25bd58ad0",
+        "patch": "@@ -15,6 +15,7 @@\n #include <key_io.h>\n #include <keystore.h>\n #include <merkleblock.h>\n+#include <node/coin.h>\n #include <node/psbt.h>\n #include <node/transaction.h>\n #include <policy/policy.h>\n@@ -770,7 +771,14 @@ static UniValue signrawtransactionwithkey(const JSONRPCRequest& request)\n         keystore.AddKey(key);\n     }\n \n-    return SignTransaction(*g_rpc_interfaces->chain, mtx, request.params[2], &keystore, true, request.params[3]);\n+    // Fetch previous transactions (inputs):\n+    std::map<COutPoint, Coin> coins;\n+    for (const CTxIn& txin : mtx.vin) {\n+        coins[txin.prevout]; // Create empty map entry keyed by prevout.\n+    }\n+    FindCoins(coins);\n+\n+    return SignTransaction(mtx, request.params[2], &keystore, coins, true, request.params[3]);\n }\n \n static UniValue sendrawtransaction(const JSONRPCRequest& request)"
+      },
+      {
+        "sha": "8af491977c44c634d804993f4670a37a78c6d2db",
+        "filename": "src/rpc/rawtransaction_util.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 11,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/99e88a3726c2325e3a3a35c0a750bde25bd58ad0/src/rpc/rawtransaction_util.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/99e88a3726c2325e3a3a35c0a750bde25bd58ad0/src/rpc/rawtransaction_util.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/rawtransaction_util.cpp?ref=99e88a3726c2325e3a3a35c0a750bde25bd58ad0",
+        "patch": "@@ -149,18 +149,8 @@ static void TxInErrorToJSON(const CTxIn& txin, UniValue& vErrorsRet, const std::\n     vErrorsRet.push_back(entry);\n }\n \n-// TODO(https://github.com/bitcoin/bitcoin/pull/10973#discussion_r267084237):\n-// The dependency on interfaces::Chain should be removed, so\n-// signrawtransactionwithkey doesn't need access to a Chain instance.\n-UniValue SignTransaction(interfaces::Chain& chain, CMutableTransaction& mtx, const UniValue& prevTxsUnival, CBasicKeyStore *keystore, bool is_temp_keystore, const UniValue& hashType)\n+UniValue SignTransaction(CMutableTransaction& mtx, const UniValue& prevTxsUnival, CBasicKeyStore* keystore, std::map<COutPoint, Coin>& coins, bool is_temp_keystore, const UniValue& hashType)\n {\n-    // Fetch previous transactions (inputs):\n-    std::map<COutPoint, Coin> coins;\n-    for (const CTxIn& txin : mtx.vin) {\n-        coins[txin.prevout]; // Create empty map entry keyed by prevout.\n-    }\n-    chain.findCoins(coins);\n-\n     // Add previous txouts given in the RPC call:\n     if (!prevTxsUnival.isNull()) {\n         UniValue prevTxs = prevTxsUnival.get_array();"
+      },
+      {
+        "sha": "c115d33a7734c8b7b597a0e8993fd5abbb19ba4f",
+        "filename": "src/rpc/rawtransaction_util.h",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 6,
+        "changes": 22,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/99e88a3726c2325e3a3a35c0a750bde25bd58ad0/src/rpc/rawtransaction_util.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/99e88a3726c2325e3a3a35c0a750bde25bd58ad0/src/rpc/rawtransaction_util.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/rawtransaction_util.h?ref=99e88a3726c2325e3a3a35c0a750bde25bd58ad0",
+        "patch": "@@ -5,16 +5,26 @@\n #ifndef BITCOIN_RPC_RAWTRANSACTION_UTIL_H\n #define BITCOIN_RPC_RAWTRANSACTION_UTIL_H\n \n+#include <map>\n+\n class CBasicKeyStore;\n class UniValue;\n struct CMutableTransaction;\n+class Coin;\n+class COutPoint;\n \n-namespace interfaces {\n-class Chain;\n-} // namespace interfaces\n-\n-/** Sign a transaction with the given keystore and previous transactions */\n-UniValue SignTransaction(interfaces::Chain& chain, CMutableTransaction& mtx, const UniValue& prevTxs, CBasicKeyStore *keystore, bool tempKeystore, const UniValue& hashType);\n+/**\n+ * Sign a transaction with the given keystore and previous transactions\n+ *\n+ * @param  mtx           The transaction to-be-signed\n+ * @param  prevTxs       Array of previous txns outputs that tx depends on but may not yet be in the block chain\n+ * @param  keystore      Temporary keystore containing signing keys\n+ * @param  coins         Map of unspent outputs - coins in mempool and current chain UTXO set, may be extended by previous txns outputs after call\n+ * @param  tempKeystore  Whether to use temporary keystore\n+ * @param  hashType      The signature hash type\n+ * @returns JSON object with details of signed transaction\n+ */\n+UniValue SignTransaction(CMutableTransaction& mtx, const UniValue& prevTxs, CBasicKeyStore* keystore, std::map<COutPoint, Coin>& coins, bool tempKeystore, const UniValue& hashType);\n \n /** Create a transaction from univalue parameters */\n CMutableTransaction ConstructTransaction(const UniValue& inputs_in, const UniValue& outputs_in, const UniValue& locktime, const UniValue& rbf);"
+      },
+      {
+        "sha": "0397978061c007cb7323bb79ad598a70b20932d0",
+        "filename": "src/wallet/rpcwallet.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 1,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/99e88a3726c2325e3a3a35c0a750bde25bd58ad0/src/wallet/rpcwallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/99e88a3726c2325e3a3a35c0a750bde25bd58ad0/src/wallet/rpcwallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/rpcwallet.cpp?ref=99e88a3726c2325e3a3a35c0a750bde25bd58ad0",
+        "patch": "@@ -3150,7 +3150,14 @@ UniValue signrawtransactionwithwallet(const JSONRPCRequest& request)\n     LOCK(pwallet->cs_wallet);\n     EnsureWalletIsUnlocked(pwallet);\n \n-    return SignTransaction(pwallet->chain(), mtx, request.params[1], pwallet, false, request.params[2]);\n+    // Fetch previous transactions (inputs):\n+    std::map<COutPoint, Coin> coins;\n+    for (const CTxIn& txin : mtx.vin) {\n+        coins[txin.prevout]; // Create empty map entry keyed by prevout.\n+    }\n+    pwallet->chain().findCoins(coins);\n+\n+    return SignTransaction(mtx, request.params[1], pwallet, coins, false, request.params[2]);\n }\n \n static UniValue bumpfee(const JSONRPCRequest& request)"
+      }
+    ]
+  }
+]

@@ -1,0 +1,158 @@
+[
+  {
+    "sha": "6e2fb937f76fecbe0db397ef206d60e292c97024",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2ZTJmYjkzN2Y3NmZlY2JlMGRiMzk3ZWYyMDZkNjBlMjkyYzk3MDI0",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-04-01T12:07:29Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-06-10T11:55:28Z"
+      },
+      "message": "massive URI-handling / IPC server re-work",
+      "tree": {
+        "sha": "4e97af18ff76ee95b65811e9245a3fbae179b431",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/4e97af18ff76ee95b65811e9245a3fbae179b431"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/6e2fb937f76fecbe0db397ef206d60e292c97024",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6e2fb937f76fecbe0db397ef206d60e292c97024",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/6e2fb937f76fecbe0db397ef206d60e292c97024",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6e2fb937f76fecbe0db397ef206d60e292c97024/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "883a310904b3d36c9d74b887d47c14a072ebae7d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/883a310904b3d36c9d74b887d47c14a072ebae7d",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/883a310904b3d36c9d74b887d47c14a072ebae7d"
+      }
+    ],
+    "stats": {
+      "total": 192,
+      "additions": 128,
+      "deletions": 64
+    },
+    "files": [
+      {
+        "sha": "b433bdb7722663eb8e064aef877e998885178723",
+        "filename": "src/qt/bitcoin.cpp",
+        "status": "modified",
+        "additions": 26,
+        "deletions": 12,
+        "changes": 38,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6e2fb937f76fecbe0db397ef206d60e292c97024/src/qt/bitcoin.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6e2fb937f76fecbe0db397ef206d60e292c97024/src/qt/bitcoin.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoin.cpp?ref=6e2fb937f76fecbe0db397ef206d60e292c97024",
+        "patch": "@@ -116,23 +116,34 @@ static void handleRunawayException(std::exception *e)\n #ifndef BITCOIN_QT_TEST\n int main(int argc, char *argv[])\n {\n-#if !defined(MAC_OSX) && !defined(WIN32)\n-// TODO: implement qtipcserver.cpp for Mac and Windows\n+#if !defined(MAC_OSX)\n+// TODO: implement qtipcserver.cpp for Mac\n \n     // Do this early as we don't want to bother initializing if we are just calling IPC\n     for (int i = 1; i < argc; i++)\n     {\n-        if (boost::algorithm::istarts_with(argv[i], \"bitcoin:\"))\n+        // limit length of parsed URIs to max. size of message queue messages\n+        if (strlen(argv[i]) <= IPC_MQ_MAX_MESSAGE_SIZE && boost::algorithm::istarts_with(argv[i], \"bitcoin:\"))\n         {\n-            const char *strURI = argv[i];\n+            std::string strURI = argv[i];\n             try {\n-                boost::interprocess::message_queue mq(boost::interprocess::open_only, BITCOINURI_QUEUE_NAME);\n-                if(mq.try_send(strURI, strlen(strURI), 0))\n+                boost::interprocess::message_queue mq(boost::interprocess::open_only, IPC_MQ_NAME);\n+                if (mq.try_send(strURI.c_str(), strURI.length(), 0))\n                     exit(0);\n                 else\n                     break;\n             }\n             catch (boost::interprocess::interprocess_exception &ex) {\n+                // don't log the \"file not found\" exception, because that's normal for\n+                // the first start of the first instance\n+                if (ex.get_error_code() != boost::interprocess::not_found_error)\n+                {\n+                    printf(\"boost interprocess exception #%d: %s\\n\", ex.get_error_code(), ex.what());\n+\n+                    // without this every clicked bitcoin: URI would show the datadir locked error in the case of an exception,\n+                    // while the client is already running (perhaps this should be shown as message box?)\n+                    exit(0);\n+                }\n                 break;\n             }\n         }\n@@ -262,23 +273,26 @@ int main(int argc, char *argv[])\n                 {\n                     window.show();\n                 }\n-#if !defined(MAC_OSX) && !defined(WIN32)\n-// TODO: implement qtipcserver.cpp for Mac and Windows\n+#if !defined(MAC_OSX)\n+// TODO: implement qtipcserver.cpp for Mac\n \n                 // Place this here as guiref has to be defined if we dont want to lose URIs\n                 ipcInit();\n \n                 // Check for URI in argv\n                 for (int i = 1; i < argc; i++)\n                 {\n-                    if (boost::algorithm::istarts_with(argv[i], \"bitcoin:\"))\n+                    // only bother with this if IPC is initialized\n+                    if (globalIpcState == IPC_INITIALIZED && strlen(argv[i]) <= IPC_MQ_MAX_MESSAGE_SIZE && boost::algorithm::istarts_with(argv[i], \"bitcoin:\"))\n                     {\n-                        const char *strURI = argv[i];\n+                        std::string strURI = argv[i];\n                         try {\n-                            boost::interprocess::message_queue mq(boost::interprocess::open_only, BITCOINURI_QUEUE_NAME);\n-                            mq.try_send(strURI, strlen(strURI), 0);\n+                            boost::interprocess::message_queue mq(boost::interprocess::open_only, IPC_MQ_NAME);\n+                            mq.try_send(strURI.c_str(), strURI.length(), 0);\n                         }\n                         catch (boost::interprocess::interprocess_exception &ex) {\n+                            printf(\"boost interprocess exception #%d: %s\\n\", ex.get_error_code(), ex.what());\n+                            break;\n                         }\n                     }\n                 }"
+      },
+      {
+        "sha": "6645fdac5798b55bd37eb388ac6ed45ec53220ea",
+        "filename": "src/qt/qtipcserver.cpp",
+        "status": "modified",
+        "additions": 76,
+        "deletions": 49,
+        "changes": 125,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6e2fb937f76fecbe0db397ef206d60e292c97024/src/qt/qtipcserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6e2fb937f76fecbe0db397ef206d60e292c97024/src/qt/qtipcserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/qtipcserver.cpp?ref=6e2fb937f76fecbe0db397ef206d60e292c97024",
+        "patch": "@@ -2,88 +2,115 @@\n // Distributed under the MIT/X11 software license, see the accompanying\n // file license.txt or http://www.opensource.org/licenses/mit-license.php.\n \n-#include <boost/algorithm/string.hpp>\n+#include <boost/filesystem.hpp>\n #include <boost/interprocess/ipc/message_queue.hpp>\n-#include <boost/tokenizer.hpp>\n-#include <boost/date_time/posix_time/posix_time.hpp>\n \n #include \"ui_interface.h\"\n+#include \"util.h\"\n #include \"qtipcserver.h\"\n \n-using namespace boost::interprocess;\n-using namespace boost::posix_time;\n using namespace boost;\n-using namespace std;\n \n-void ipcShutdown()\n+/** global state definition */\n+ipcState globalIpcState = IPC_NOT_INITIALIZED;\n+\n+void ipcThread(void* pArg)\n {\n-    message_queue::remove(BITCOINURI_QUEUE_NAME);\n+    IMPLEMENT_RANDOMIZE_STACK(ipcThread(pArg));\n+    try\n+    {\n+        ipcThread2(pArg);\n+    }\n+    catch (std::exception& e) {\n+        PrintExceptionContinue(&e, \"ipcThread()\");\n+    } catch (...) {\n+        PrintExceptionContinue(NULL, \"ipcThread()\");\n+    }\n+    printf(\"ipcThread exited\\n\");\n }\n \n-void ipcThread(void* parg)\n+void ipcThread2(void* pArg)\n {\n-    message_queue* mq = (message_queue*)parg;\n-    char strBuf[257];\n-    size_t nSize;\n-    unsigned int nPriority;\n+    printf(\"ipcThread started\\n\");\n+\n+    interprocess::message_queue* mq = (interprocess::message_queue*)pArg;\n+    char buffer[IPC_MQ_MAX_MESSAGE_SIZE + 1] = \"\";\n+    size_t nSize = 0;\n+    unsigned int nPriority = 0;\n+\n     loop\n     {\n-        ptime d = boost::posix_time::microsec_clock::universal_time() + millisec(100);\n-        if(mq->timed_receive(&strBuf, sizeof(strBuf), nSize, nPriority, d))\n+        if (mq->try_receive(&buffer, sizeof(buffer), nSize, nPriority))\n         {\n-            uiInterface.ThreadSafeHandleURI(std::string(strBuf, nSize));\n+            uiInterface.ThreadSafeHandleURI(std::string(buffer, nSize));\n             Sleep(1000);\n         }\n+        else\n+            /** needs to be here to stop this thread from utilizing 100% of a CPU core */\n+            Sleep(100);\n+\n         if (fShutdown)\n-        {\n-            ipcShutdown();\n             break;\n-        }\n     }\n-    ipcShutdown();\n+\n+    /** cleanup allocated memory and set global IPC state to not initialized */\n+    delete mq;\n+    globalIpcState = IPC_NOT_INITIALIZED;\n }\n \n-void ipcInit()\n+void ipcInit(bool fUseMQModeOpenOnly, bool fInitCalledAfterRecovery)\n {\n-#ifdef MAC_OSX\n-    // TODO: implement bitcoin: URI handling the Mac Way\n-    return;\n-#endif\n-#ifdef WIN32\n-    // TODO: THOROUGHLY test boost::interprocess fix,\n-    // and make sure there are no Windows argument-handling exploitable\n-    // problems.\n-    return;\n-#endif\n+    /** set global IPC state variable to not initialized */\n+    globalIpcState = IPC_NOT_INITIALIZED;\n \n-    message_queue* mq;\n-    char strBuf[257];\n-    size_t nSize;\n-    unsigned int nPriority;\n-    try {\n-        mq = new message_queue(open_or_create, BITCOINURI_QUEUE_NAME, 2, 256);\n+    interprocess::message_queue* mq = NULL;\n \n-        // Make sure we don't lose any bitcoin: URIs\n-        for (int i = 0; i < 2; i++)\n+    try {\n+        if (fUseMQModeOpenOnly)\n+            mq = new interprocess::message_queue(interprocess::open_only, IPC_MQ_NAME);\n+        else\n+            mq = new interprocess::message_queue(interprocess::create_only, IPC_MQ_NAME, IPC_MQ_MAX_MESSAGES, IPC_MQ_MAX_MESSAGE_SIZE);\n+    }\n+    catch (interprocess::interprocess_exception &ex) {\n+#ifdef WIN32\n+        /** check if the exception is a \"file not found\" error */\n+        if(ex.get_error_code() == interprocess::not_found_error)\n         {\n-            ptime d = boost::posix_time::microsec_clock::universal_time() + millisec(1);\n-            if(mq->timed_receive(&strBuf, sizeof(strBuf), nSize, nPriority, d))\n+            if (!fInitCalledAfterRecovery)\n             {\n-                uiInterface.ThreadSafeHandleURI(std::string(strBuf, nSize));\n+                printf(\"ipcInit - trying to create new message queue...\\n\");\n+\n+                /** try init once more (false - create_only mode / true - avoid an infinite recursion)\n+                 * create_only: create new message queue\n+                 */\n+                ipcInit(false, true);\n             }\n-            else\n-                break;\n         }\n+        /** check if the exception is a \"file already exists\" error */\n+        else if (ex.get_error_code() == interprocess::already_exists_error)\n+        {\n+            if (!fInitCalledAfterRecovery)\n+            {\n+                printf(\"ipcInit - trying to open current message queue...\\n\");\n \n-        // Make sure only one bitcoin instance is listening\n-        message_queue::remove(BITCOINURI_QUEUE_NAME);\n-        mq = new message_queue(open_or_create, BITCOINURI_QUEUE_NAME, 2, 256);\n-    }\n-    catch (interprocess_exception &ex) {\n+                /** try init once more (true - open_only mode / true - avoid an infinite recursion)\n+                 * open_only: try to open the existing queue\n+                 */\n+                ipcInit(true, true);\n+            }\n+        }\n+        else\n+            printf(\"ipcInit - boost interprocess exception #%d: %s\\n\", ex.get_error_code(), ex.what());\n+#endif\n         return;\n     }\n+\n     if (!CreateThread(ipcThread, mq))\n     {\n         delete mq;\n+        return;\n     }\n+\n+    /** if we reach this, set global IPC state to initialized */\n+    globalIpcState = IPC_INITIALIZED;\n }"
+      },
+      {
+        "sha": "ff81ccece8fc6c43bfa358bfec6e5273a4946ed7",
+        "filename": "src/qt/qtipcserver.h",
+        "status": "modified",
+        "additions": 26,
+        "deletions": 3,
+        "changes": 29,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6e2fb937f76fecbe0db397ef206d60e292c97024/src/qt/qtipcserver.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6e2fb937f76fecbe0db397ef206d60e292c97024/src/qt/qtipcserver.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/qtipcserver.h?ref=6e2fb937f76fecbe0db397ef206d60e292c97024",
+        "patch": "@@ -1,4 +1,27 @@\n-#define BITCOINURI_QUEUE_NAME \"BitcoinURI\"\n+#ifndef QTIPCSERVER_H\n+#define QTIPCSERVER_H\n \n-void ipcInit();\n-void ipcShutdown();\n+using namespace boost;\n+\n+/** define Bitcoin-Qt message queue name */\n+#define IPC_MQ_NAME \"BitcoinURI\"\n+\n+/** define Bitcoin-Qt message queue maximum message number */\n+#define IPC_MQ_MAX_MESSAGES 2\n+\n+/** define Bitcoin-Qt message queue maximum message size */\n+#define IPC_MQ_MAX_MESSAGE_SIZE 255\n+\n+enum ipcState {\n+    IPC_NOT_INITIALIZED = 0,\n+    IPC_INITIALIZED = 1\n+};\n+\n+/** global state declaration */\n+extern ipcState globalIpcState;\n+\n+void ipcThread(void* pArg);\n+void ipcThread2(void* pArg);\n+void ipcInit(bool fUseMQModeOpenOnly = true, bool fInitCalledAfterRecovery = false);\n+\n+#endif // QTIPCSERVER_H"
+      }
+    ]
+  },
+  {
+    "sha": "5fc2f75cf87198e090c3f6f3e1911fcd0c4776ad",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1ZmMyZjc1Y2Y4NzE5OGUwOTBjM2Y2ZjNlMTkxMWZjZDBjNDc3NmFk",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-06-10T15:57:30Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-06-10T15:57:30Z"
+      },
+      "message": "update 1",
+      "tree": {
+        "sha": "5936014e42d35ea237e98f77be12d085a9116905",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/5936014e42d35ea237e98f77be12d085a9116905"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/5fc2f75cf87198e090c3f6f3e1911fcd0c4776ad",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5fc2f75cf87198e090c3f6f3e1911fcd0c4776ad",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/5fc2f75cf87198e090c3f6f3e1911fcd0c4776ad",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5fc2f75cf87198e090c3f6f3e1911fcd0c4776ad/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "6e2fb937f76fecbe0db397ef206d60e292c97024",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6e2fb937f76fecbe0db397ef206d60e292c97024",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/6e2fb937f76fecbe0db397ef206d60e292c97024"
+      }
+    ],
+    "stats": {
+      "total": 18,
+      "additions": 8,
+      "deletions": 10
+    },
+    "files": [
+      {
+        "sha": "6b5a25eb18c4f0de809d9b97f763eab3d49f999f",
+        "filename": "src/qt/bitcoin.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 5,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5fc2f75cf87198e090c3f6f3e1911fcd0c4776ad/src/qt/bitcoin.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5fc2f75cf87198e090c3f6f3e1911fcd0c4776ad/src/qt/bitcoin.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoin.cpp?ref=5fc2f75cf87198e090c3f6f3e1911fcd0c4776ad",
+        "patch": "@@ -122,13 +122,12 @@ int main(int argc, char *argv[])\n     // Do this early as we don't want to bother initializing if we are just calling IPC\n     for (int i = 1; i < argc; i++)\n     {\n-        // limit length of parsed URIs to max. size of message queue messages\n-        if (strlen(argv[i]) <= IPC_MQ_MAX_MESSAGE_SIZE && boost::algorithm::istarts_with(argv[i], \"bitcoin:\"))\n+        if (boost::algorithm::istarts_with(argv[i], \"bitcoin:\"))\n         {\n             std::string strURI = argv[i];\n             try {\n                 boost::interprocess::message_queue mq(boost::interprocess::open_only, IPC_MQ_NAME);\n-                if (mq.try_send(strURI.c_str(), strURI.length(), 0))\n+                if (mq.try_send(strURI.data(), strURI.length(), 0))\n                     exit(0);\n                 else\n                     break;\n@@ -283,12 +282,12 @@ int main(int argc, char *argv[])\n                 for (int i = 1; i < argc; i++)\n                 {\n                     // only bother with this if IPC is initialized\n-                    if (globalIpcState == IPC_INITIALIZED && strlen(argv[i]) <= IPC_MQ_MAX_MESSAGE_SIZE && boost::algorithm::istarts_with(argv[i], \"bitcoin:\"))\n+                    if (globalIpcState == IPC_INITIALIZED && boost::algorithm::istarts_with(argv[i], \"bitcoin:\"))\n                     {\n                         std::string strURI = argv[i];\n                         try {\n                             boost::interprocess::message_queue mq(boost::interprocess::open_only, IPC_MQ_NAME);\n-                            mq.try_send(strURI.c_str(), strURI.length(), 0);\n+                            mq.try_send(strURI.data(), strURI.length(), 0);\n                         }\n                         catch (boost::interprocess::interprocess_exception &ex) {\n                             printf(\"boost interprocess exception #%d: %s\\n\", ex.get_error_code(), ex.what());"
+      },
+      {
+        "sha": "876cbe98fa717b8ebedde3d8b04dfca3e92db493",
+        "filename": "src/qt/qtipcserver.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 5,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5fc2f75cf87198e090c3f6f3e1911fcd0c4776ad/src/qt/qtipcserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5fc2f75cf87198e090c3f6f3e1911fcd0c4776ad/src/qt/qtipcserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/qtipcserver.cpp?ref=5fc2f75cf87198e090c3f6f3e1911fcd0c4776ad",
+        "patch": "@@ -2,6 +2,7 @@\n // Distributed under the MIT/X11 software license, see the accompanying\n // file license.txt or http://www.opensource.org/licenses/mit-license.php.\n \n+#include <boost/date_time/posix_time/posix_time.hpp>\n #include <boost/filesystem.hpp>\n #include <boost/interprocess/ipc/message_queue.hpp>\n \n@@ -40,14 +41,12 @@ void ipcThread2(void* pArg)\n \n     loop\n     {\n-        if (mq->try_receive(&buffer, sizeof(buffer), nSize, nPriority))\n+        boost::posix_time::ptime d = boost::posix_time::microsec_clock::universal_time() + boost::posix_time::millisec(100);\n+        if (mq->timed_receive(&buffer, sizeof(buffer), nSize, nPriority, d))\n         {\n             uiInterface.ThreadSafeHandleURI(std::string(buffer, nSize));\n             Sleep(1000);\n         }\n-        else\n-            /** needs to be here to stop this thread from utilizing 100% of a CPU core */\n-            Sleep(100);\n \n         if (fShutdown)\n             break;\n@@ -60,7 +59,7 @@ void ipcThread2(void* pArg)\n \n void ipcInit(bool fUseMQModeOpenOnly, bool fInitCalledAfterRecovery)\n {\n-    /** set global IPC state variable to not initialized */\n+    /** set global IPC state to not initialized */\n     globalIpcState = IPC_NOT_INITIALIZED;\n \n     interprocess::message_queue* mq = NULL;"
+      }
+    ]
+  }
+]

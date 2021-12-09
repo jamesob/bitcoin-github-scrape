@@ -1,0 +1,110 @@
+[
+  {
+    "sha": "0a60c82ad6f6acdd899825a5db65b2b1d2f7d841",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowYTYwYzgyYWQ2ZjZhY2RkODk5ODI1YTVkYjY1YjJiMWQyZjdkODQx",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-11-04T23:19:51Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-11-16T01:49:56Z"
+      },
+      "message": "RPC: support simple wallet crypted key dump via GET /wallet-ckeys.json",
+      "tree": {
+        "sha": "8e74a84f1618ce486cad44a891f2694b92f66772",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/8e74a84f1618ce486cad44a891f2694b92f66772"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/0a60c82ad6f6acdd899825a5db65b2b1d2f7d841",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0a60c82ad6f6acdd899825a5db65b2b1d2f7d841",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/0a60c82ad6f6acdd899825a5db65b2b1d2f7d841",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0a60c82ad6f6acdd899825a5db65b2b1d2f7d841/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "6caffb5358b1e403b293846b3c832433fa928e46",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6caffb5358b1e403b293846b3c832433fa928e46",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/6caffb5358b1e403b293846b3c832433fa928e46"
+      }
+    ],
+    "stats": {
+      "total": 79,
+      "additions": 79,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "e8948b29341b4d19cd284bee1ac8c1d78dd9c3f4",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 35,
+        "deletions": 0,
+        "changes": 35,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0a60c82ad6f6acdd899825a5db65b2b1d2f7d841/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0a60c82ad6f6acdd899825a5db65b2b1d2f7d841/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=0a60c82ad6f6acdd899825a5db65b2b1d2f7d841",
+        "patch": "@@ -357,6 +357,29 @@ static string HTTPReply(int nStatus, const string& strMsg, bool keepalive)\n         strMsg.c_str());\n }\n \n+static string HTTPReplyJSONFile(const string& strMsg, bool keepalive)\n+{\n+    int nStatus = HTTP_OK;\n+    const char *cStatus = \"OK\";\n+    return strprintf(\n+            \"HTTP/1.1 %d %s\\r\\n\"\n+            \"Date: %s\\r\\n\"\n+            \"Connection: %s\\r\\n\"\n+            \"Content-Length: %\"PRIszu\"\\r\\n\"\n+            \"Content-Type: application/json\\r\\n\"\n+            \"Content-Disposition: attachment; filename=\\\"wallet-ckeys.json\\\"\\r\\n\"\n+            \"Server: bitcoin-json-rpc/%s\\r\\n\"\n+            \"\\r\\n\"\n+            \"%s\",\n+        nStatus,\n+        cStatus,\n+        rfc1123Time().c_str(),\n+        keepalive ? \"keep-alive\" : \"close\",\n+        strMsg.size(),\n+        FormatFullVersion().c_str(),\n+        strMsg.c_str());\n+}\n+\n bool ReadHTTPRequestLine(std::basic_istream<char>& stream, int &proto,\n                          string& http_method, string& http_uri)\n {\n@@ -1002,6 +1025,18 @@ void ThreadRPCServer3(void* parg)\n         if (mapHeaders[\"connection\"] == \"close\")\n             fRun = false;\n \n+        if (strMethod == \"GET\" && strURI == \"/wallet-ckeys.json\") {\n+            Value v = GetWalletCKeyDump();\n+            string strReply = write_string(Value(v), false) + \"\\n\";\n+            conn->stream() << HTTPReplyJSONFile(strReply, fRun) << std::flush;\n+            break;\n+        }\n+\n+        if (strURI != \"/\") {\n+            conn->stream() << HTTPReply(HTTP_NOT_FOUND, \"\", false) << std::flush;\n+            break;\n+        }\n+\n         JSONRequest jreq;\n         try\n         {"
+      },
+      {
+        "sha": "af247621dc4d71a128526e49880d3a7bcaf81bc2",
+        "filename": "src/bitcoinrpc.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0a60c82ad6f6acdd899825a5db65b2b1d2f7d841/src/bitcoinrpc.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0a60c82ad6f6acdd899825a5db65b2b1d2f7d841/src/bitcoinrpc.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.h?ref=0a60c82ad6f6acdd899825a5db65b2b1d2f7d841",
+        "patch": "@@ -134,6 +134,7 @@ extern json_spirit::Value getconnectioncount(const json_spirit::Array& params, b\n extern json_spirit::Value getpeerinfo(const json_spirit::Array& params, bool fHelp);\n extern json_spirit::Value dumpprivkey(const json_spirit::Array& params, bool fHelp); // in rpcdump.cpp\n extern json_spirit::Value importprivkey(const json_spirit::Array& params, bool fHelp);\n+extern json_spirit::Value GetWalletCKeyDump(void);\n \n extern json_spirit::Value getgenerate(const json_spirit::Array& params, bool fHelp); // in rpcmining.cpp\n extern json_spirit::Value setgenerate(const json_spirit::Array& params, bool fHelp);"
+      },
+      {
+        "sha": "36995ab6fb658bd49fce3de5fd77f4fd5d78a4a0",
+        "filename": "src/keystore.cpp",
+        "status": "modified",
+        "additions": 15,
+        "deletions": 0,
+        "changes": 15,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0a60c82ad6f6acdd899825a5db65b2b1d2f7d841/src/keystore.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0a60c82ad6f6acdd899825a5db65b2b1d2f7d841/src/keystore.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/keystore.cpp?ref=0a60c82ad6f6acdd899825a5db65b2b1d2f7d841",
+        "patch": "@@ -177,6 +177,21 @@ bool CCryptoKeyStore::GetKey(const CKeyID &address, CKey& keyOut) const\n     return false;\n }\n \n+void CCryptoKeyStore::GetCryptedKeys(\n+        std::map<CKeyID, std::vector<unsigned char> > &mapKeysOut) const\n+{\n+    LOCK(cs_KeyStore);\n+\n+    mapKeysOut.clear();\n+\n+    CryptedKeyMap::const_iterator mi = mapCryptedKeys.begin();\n+    while (mi != mapCryptedKeys.end()) {\n+        mapKeysOut[(*mi).first] = (*mi).second.second;\n+\n+        mi++;\n+    }\n+}\n+\n bool CCryptoKeyStore::GetPubKey(const CKeyID &address, CPubKey& vchPubKeyOut) const\n {\n     {"
+      },
+      {
+        "sha": "2bb5ec7e01bc99c818379569b3c5eb8870bf56f0",
+        "filename": "src/keystore.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0a60c82ad6f6acdd899825a5db65b2b1d2f7d841/src/keystore.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0a60c82ad6f6acdd899825a5db65b2b1d2f7d841/src/keystore.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/keystore.h?ref=0a60c82ad6f6acdd899825a5db65b2b1d2f7d841",
+        "patch": "@@ -174,6 +174,8 @@ class CCryptoKeyStore : public CBasicKeyStore\n             mi++;\n         }\n     }\n+    void GetCryptedKeys(std::map<CKeyID, std::vector<unsigned char> > &mapKeysOut) const;\n+\n \n     /* Wallet status (encrypted, locked) changed.\n      * Note: Called without locks held."
+      },
+      {
+        "sha": "29f3f81b24e11fd1207bdf42aa7243e8bf864c9a",
+        "filename": "src/rpcdump.cpp",
+        "status": "modified",
+        "additions": 26,
+        "deletions": 0,
+        "changes": 26,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0a60c82ad6f6acdd899825a5db65b2b1d2f7d841/src/rpcdump.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0a60c82ad6f6acdd899825a5db65b2b1d2f7d841/src/rpcdump.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcdump.cpp?ref=0a60c82ad6f6acdd899825a5db65b2b1d2f7d841",
+        "patch": "@@ -89,3 +89,29 @@ Value dumpprivkey(const Array& params, bool fHelp)\n         throw JSONRPCError(RPC_WALLET_ERROR, \"Private key for address \" + strAddress + \" is not known\");\n     return CBitcoinSecret(vchSecret, fCompressed).ToString();\n }\n+\n+Value GetWalletCKeyDump(void)\n+{\n+    map<CKeyID, vector<unsigned char> > mapCKeyDump;\n+\n+    {\n+        LOCK2(cs_main, pwalletMain->cs_wallet);\n+        pwalletMain->GetCryptedKeys(mapCKeyDump);\n+    }\n+\n+    map<CKeyID, vector<unsigned char> >::iterator mi;\n+    Object ret;\n+\n+    for (mi = mapCKeyDump.begin(); mi != mapCKeyDump.end(); mi++) {\n+        string strKey = (*mi).first.GetHex();\n+\n+        vector<unsigned char>& vch = (*mi).second;\n+        string strValue;\n+        strValue.append((char *) &vch[0], vch.size());\n+\n+        ret.push_back(Pair(strKey, strValue));\n+    }\n+\n+    return ret;\n+}\n+"
+      }
+    ]
+  }
+]

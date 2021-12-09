@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "f757d3ea1f3a39e911331076975b74095bfa7e62",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmNzU3ZDNlYTFmM2EzOWU5MTEzMzEwNzY5NzViNzQwOTViZmE3ZTYy",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-09-14T11:04:04Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-09-14T11:04:04Z"
+      },
+      "message": "add safety checks in init before calling delete\n\n- init pwalletMain and pcoinsdbview to NULL\n- add or extend NULL pointer checks before deleting any of pblocktree,\n  pcoinsTip, pcoinsdbview or pwalletMain\n- change a LogPrintf for nScriptCheckThreads from unsigned to %d as it is\n  an integer",
+      "tree": {
+        "sha": "eaa4e8391f1f742d56d109d17d96e8c486a91ddb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/eaa4e8391f1f742d56d109d17d96e8c486a91ddb"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/f757d3ea1f3a39e911331076975b74095bfa7e62",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f757d3ea1f3a39e911331076975b74095bfa7e62",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/f757d3ea1f3a39e911331076975b74095bfa7e62",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f757d3ea1f3a39e911331076975b74095bfa7e62/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "e5fc6631b9ca452eaacc8f978b3c5ffe2ef38e77",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e5fc6631b9ca452eaacc8f978b3c5ffe2ef38e77",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/e5fc6631b9ca452eaacc8f978b3c5ffe2ef38e77"
+      }
+    ],
+    "stats": {
+      "total": 52,
+      "additions": 34,
+      "deletions": 18
+    },
+    "files": [
+      {
+        "sha": "26d38984c64c77f39f7bf0a26a17d4be13841c44",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 34,
+        "deletions": 18,
+        "changes": 52,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f757d3ea1f3a39e911331076975b74095bfa7e62/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f757d3ea1f3a39e911331076975b74095bfa7e62/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=f757d3ea1f3a39e911331076975b74095bfa7e62",
+        "patch": "@@ -45,7 +45,7 @@ using namespace boost;\n using namespace std;\n \n #ifdef ENABLE_WALLET\n-CWallet* pwalletMain;\n+CWallet* pwalletMain = NULL;\n #endif\n \n #ifdef WIN32\n@@ -109,11 +109,12 @@ bool ShutdownRequested()\n     return fRequestShutdown;\n }\n \n-static CCoinsViewDB *pcoinsdbview;\n+static CCoinsViewDB *pcoinsdbview = NULL;\n \n void Shutdown()\n {\n     LogPrintf(\"%s: In progress...\\n\", __func__);\n+\n     static CCriticalSection cs_Shutdown;\n     TRY_LOCK(cs_Shutdown, lockShutdown);\n     if (!lockShutdown)\n@@ -145,16 +146,22 @@ void Shutdown()\n         if (pwalletMain)\n             pwalletMain->SetBestChain(chainActive.GetLocator());\n #endif\n-        if (pblocktree)\n+        if (pblocktree) {\n             pblocktree->Flush();\n-        if (pcoinsTip)\n+            delete pblocktree;\n+            pblocktree = NULL;\n+        }\n+\n+        if (pcoinsTip) {\n             pcoinsTip->Flush();\n-        delete pcoinsTip;\n-        pcoinsTip = NULL;\n-        delete pcoinsdbview;\n-        pcoinsdbview = NULL;\n-        delete pblocktree;\n-        pblocktree = NULL;\n+            delete pcoinsTip;\n+            pcoinsTip = NULL;\n+        }\n+\n+        if (pcoinsdbview) {\n+            delete pcoinsdbview;\n+            pcoinsdbview = NULL;\n+        }\n     }\n #ifdef ENABLE_WALLET\n     if (pwalletMain)\n@@ -163,9 +170,12 @@ void Shutdown()\n     boost::filesystem::remove(GetPidFile());\n     UnregisterAllWallets();\n #ifdef ENABLE_WALLET\n-    if (pwalletMain)\n+    if (pwalletMain) {\n         delete pwalletMain;\n+        pwalletMain = NULL;\n+    }\n #endif\n+\n     LogPrintf(\"%s: done\\n\", __func__);\n }\n \n@@ -695,6 +705,7 @@ bool AppInit2(boost::thread_group& threadGroup)\n     fIsBareMultisigStd = GetArg(\"-permitbaremultisig\", true);\n \n     // ********************************************************* Step 4: application initialization: dir lock, daemonize, pidfile, debug log\n+\n     // Sanity check\n     if (!InitSanityCheck())\n         return InitError(_(\"Initialization sanity check failed. Bitcoin Core is shutting down.\"));\n@@ -730,8 +741,8 @@ bool AppInit2(boost::thread_group& threadGroup)\n     std::ostringstream strErrors;\n \n     if (nScriptCheckThreads) {\n-        LogPrintf(\"Using %u threads for script verification\\n\", nScriptCheckThreads);\n-        for (int i=0; i<nScriptCheckThreads-1; i++)\n+        LogPrintf(\"Using %d threads for script verification\\n\", nScriptCheckThreads);\n+        for (int i = 0; i < nScriptCheckThreads - 1; i++)\n             threadGroup.create_thread(&ThreadScriptCheck);\n     }\n \n@@ -944,9 +955,12 @@ bool AppInit2(boost::thread_group& threadGroup)\n         do {\n             try {\n                 UnloadBlockIndex();\n-                delete pcoinsTip;\n-                delete pcoinsdbview;\n-                delete pblocktree;\n+                if (pcoinsTip)\n+                    delete pcoinsTip;\n+                if (pcoinsdbview)\n+                    delete pcoinsdbview;\n+                if (pblocktree)\n+                    delete pblocktree;\n \n                 pblocktree = new CBlockTreeDB(nBlockTreeDBCache, false, fReindex);\n                 pcoinsdbview = new CCoinsViewDB(nCoinDBCache, false, fReindex);\n@@ -1075,8 +1089,10 @@ bool AppInit2(boost::thread_group& threadGroup)\n                 return false;\n             }\n \n-            delete pwalletMain;\n-            pwalletMain = NULL;\n+            if (pwalletMain) {\n+                delete pwalletMain;\n+                pwalletMain = NULL;\n+            }\n         }\n \n         uiInterface.InitMessage(_(\"Loading wallet...\"));"
+      }
+    ]
+  }
+]

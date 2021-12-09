@@ -1,0 +1,74 @@
+[
+  {
+    "sha": "50ecd7b68970062bfb540798370dbfab6d376086",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1MGVjZDdiNjg5NzAwNjJiZmI1NDA3OTgzNzBkYmZhYjZkMzc2MDg2",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-11-27T21:02:50Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-12-03T13:02:02Z"
+      },
+      "message": "use new message() function in BitcoinGUI\n\n- use it for displaying URI parsing warnings\n- use it for displaying error and information in backup wallet function\n  (the information display is new and the error was a warning before)\n\n- cleanup BitcoinGUI::incomingTransaction()\n-- use message() + the information icon from message\n-- comment out an unused parameter in the function definition and\n   declaration\n-- move all pre-checks at the beginning of the function",
+      "tree": {
+        "sha": "087c71cb3f5a3a3b885ad2e3278d8f5e4e116281",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/087c71cb3f5a3a3b885ad2e3278d8f5e4e116281"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/50ecd7b68970062bfb540798370dbfab6d376086",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/50ecd7b68970062bfb540798370dbfab6d376086",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/50ecd7b68970062bfb540798370dbfab6d376086",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/50ecd7b68970062bfb540798370dbfab6d376086/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "2e2fca4439b4651e28c13237999ab84e06481c9d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2e2fca4439b4651e28c13237999ab84e06481c9d",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/2e2fca4439b4651e28c13237999ab84e06481c9d"
+      }
+    ],
+    "stats": {
+      "total": 62,
+      "additions": 31,
+      "deletions": 31
+    },
+    "files": [
+      {
+        "sha": "9cd22ed297679d80e53e381620dc74f320e18670",
+        "filename": "src/qt/bitcoingui.cpp",
+        "status": "modified",
+        "additions": 30,
+        "deletions": 30,
+        "changes": 60,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/50ecd7b68970062bfb540798370dbfab6d376086/src/qt/bitcoingui.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/50ecd7b68970062bfb540798370dbfab6d376086/src/qt/bitcoingui.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoingui.cpp?ref=50ecd7b68970062bfb540798370dbfab6d376086",
+        "patch": "@@ -697,39 +697,33 @@ void BitcoinGUI::askFee(qint64 nFeeRequired, bool *payFee)\n     *payFee = (retval == QMessageBox::Yes);\n }\n \n-void BitcoinGUI::incomingTransaction(const QModelIndex & parent, int start, int end)\n+void BitcoinGUI::incomingTransaction(const QModelIndex& parent, int start, int /*end*/)\n {\n-    if(!walletModel || !clientModel)\n+    // Prevent balloon-spam when initial block download is in progress\n+    if(!walletModel || !clientModel || clientModel->inInitialBlockDownload())\n         return;\n+\n     TransactionTableModel *ttm = walletModel->getTransactionTableModel();\n+\n+    QString date = ttm->index(start, TransactionTableModel::Date, parent)\n+                     .data().toString();\n     qint64 amount = ttm->index(start, TransactionTableModel::Amount, parent)\n-                    .data(Qt::EditRole).toULongLong();\n-    if(!clientModel->inInitialBlockDownload())\n-    {\n-        // On new transaction, make an info balloon\n-        // Unless the initial block download is in progress, to prevent balloon-spam\n-        QString date = ttm->index(start, TransactionTableModel::Date, parent)\n-                        .data().toString();\n-        QString type = ttm->index(start, TransactionTableModel::Type, parent)\n+                      .data(Qt::EditRole).toULongLong();\n+    QString type = ttm->index(start, TransactionTableModel::Type, parent)\n+                     .data().toString();\n+    QString address = ttm->index(start, TransactionTableModel::ToAddress, parent)\n                         .data().toString();\n-        QString address = ttm->index(start, TransactionTableModel::ToAddress, parent)\n-                        .data().toString();\n-        QIcon icon = qvariant_cast<QIcon>(ttm->index(start,\n-                            TransactionTableModel::ToAddress, parent)\n-                        .data(Qt::DecorationRole));\n \n-        notificator->notify(Notificator::Information,\n-                            (amount)<0 ? tr(\"Sent transaction\") :\n-                                         tr(\"Incoming transaction\"),\n-                              tr(\"Date: %1\\n\"\n-                                 \"Amount: %2\\n\"\n-                                 \"Type: %3\\n\"\n-                                 \"Address: %4\\n\")\n-                              .arg(date)\n-                              .arg(BitcoinUnits::formatWithUnit(walletModel->getOptionsModel()->getDisplayUnit(), amount, true))\n-                              .arg(type)\n-                              .arg(address), icon);\n-    }\n+    // On new transaction, make an info balloon\n+    message((amount)<0 ? tr(\"Sent transaction\") : tr(\"Incoming transaction\"),\n+             tr(\"Date: %1\\n\"\n+                \"Amount: %2\\n\"\n+                \"Type: %3\\n\"\n+                \"Address: %4\\n\")\n+                  .arg(date)\n+                  .arg(BitcoinUnits::formatWithUnit(walletModel->getOptionsModel()->getDisplayUnit(), amount, true))\n+                  .arg(type)\n+                  .arg(address), CClientUIInterface::MSG_INFORMATION);\n }\n \n void BitcoinGUI::gotoOverviewPage()\n@@ -821,7 +815,8 @@ void BitcoinGUI::dropEvent(QDropEvent *event)\n         if (nValidUrisFound)\n             gotoSendCoinsPage();\n         else\n-            notificator->notify(Notificator::Warning, tr(\"URI handling\"), tr(\"URI can not be parsed! This can be caused by an invalid Bitcoin address or malformed URI parameters.\"));\n+            message(tr(\"URI handling\"), tr(\"URI can not be parsed! This can be caused by an invalid Bitcoin address or malformed URI parameters.\"),\n+                      CClientUIInterface::ICON_WARNING);\n     }\n \n     event->acceptProposedAction();\n@@ -848,7 +843,8 @@ void BitcoinGUI::handleURI(QString strURI)\n         gotoSendCoinsPage();\n     }\n     else\n-        notificator->notify(Notificator::Warning, tr(\"URI handling\"), tr(\"URI can not be parsed! This can be caused by an invalid Bitcoin address or malformed URI parameters.\"));\n+        message(tr(\"URI handling\"), tr(\"URI can not be parsed! This can be caused by an invalid Bitcoin address or malformed URI parameters.\"),\n+                  CClientUIInterface::ICON_WARNING);\n }\n \n void BitcoinGUI::setEncryptionStatus(int status)\n@@ -898,8 +894,12 @@ void BitcoinGUI::backupWallet()\n     QString filename = QFileDialog::getSaveFileName(this, tr(\"Backup Wallet\"), saveDir, tr(\"Wallet Data (*.dat)\"));\n     if(!filename.isEmpty()) {\n         if(!walletModel->backupWallet(filename)) {\n-            QMessageBox::warning(this, tr(\"Backup Failed\"), tr(\"There was an error trying to save the wallet data to the new location.\"));\n+            message(tr(\"Backup Failed\"), tr(\"There was an error trying to save the wallet data to the new location.\"),\n+                      CClientUIInterface::MSG_ERROR);\n         }\n+        else\n+            message(tr(\"Backup Successful\"), tr(\"The wallet data was successfully saved to the new location.\"),\n+                      CClientUIInterface::MSG_INFORMATION);\n     }\n }\n "
+      },
+      {
+        "sha": "b7afdb1c8c61001a15ae5084645b49ec2a564a63",
+        "filename": "src/qt/bitcoingui.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/50ecd7b68970062bfb540798370dbfab6d376086/src/qt/bitcoingui.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/50ecd7b68970062bfb540798370dbfab6d376086/src/qt/bitcoingui.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoingui.h?ref=50ecd7b68970062bfb540798370dbfab6d376086",
+        "patch": "@@ -168,7 +168,7 @@ private slots:\n \n         The new items are those between start and end inclusive, under the given parent item.\n     */\n-    void incomingTransaction(const QModelIndex & parent, int start, int end);\n+    void incomingTransaction(const QModelIndex& parent, int start, int /*end*/);\n     /** Encrypt the wallet */\n     void encryptWallet(bool status);\n     /** Backup the wallet */"
+      }
+    ]
+  }
+]

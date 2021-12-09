@@ -1,0 +1,146 @@
+[
+  {
+    "sha": "b0b53dc068c0bb489a1d5aaec54d281d30de64d5",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiMGI1M2RjMDY4YzBiYjQ4OWExZDVhYWVjNTRkMjgxZDMwZGU2NGQ1",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-09-09T20:11:11Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-11-16T00:49:48Z"
+      },
+      "message": "Add <= 80-byte OP_DROP multisig transactions as standard transactions.",
+      "tree": {
+        "sha": "008f9b3e584e789a1fe6600170a75b117aaebfc5",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/008f9b3e584e789a1fe6600170a75b117aaebfc5"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/b0b53dc068c0bb489a1d5aaec54d281d30de64d5",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b0b53dc068c0bb489a1d5aaec54d281d30de64d5",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/b0b53dc068c0bb489a1d5aaec54d281d30de64d5",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b0b53dc068c0bb489a1d5aaec54d281d30de64d5/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "6caffb5358b1e403b293846b3c832433fa928e46",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6caffb5358b1e403b293846b3c832433fa928e46",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/6caffb5358b1e403b293846b3c832433fa928e46"
+      }
+    ],
+    "stats": {
+      "total": 14,
+      "additions": 14,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "900b7e878c0423738615c15adbe0306dad14e5bb",
+        "filename": "src/script.cpp",
+        "status": "modified",
+        "additions": 12,
+        "deletions": 0,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b0b53dc068c0bb489a1d5aaec54d281d30de64d5/src/script.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b0b53dc068c0bb489a1d5aaec54d281d30de64d5/src/script.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script.cpp?ref=b0b53dc068c0bb489a1d5aaec54d281d30de64d5",
+        "patch": "@@ -105,6 +105,7 @@ const char* GetTxnOutputType(txnouttype t)\n     case TX_PUBKEYHASH: return \"pubkeyhash\";\n     case TX_SCRIPTHASH: return \"scripthash\";\n     case TX_MULTISIG: return \"multisig\";\n+    case TX_MULTISIG_DATA: return \"multisig_data\";\n     }\n     return NULL;\n }\n@@ -244,6 +245,7 @@ const char* GetOpName(opcodetype opcode)\n \n \n     // template matching params\n+    case OP_SMALLDATA              : return \"OP_SMALLDATA\";\n     case OP_PUBKEYHASH             : return \"OP_PUBKEYHASH\";\n     case OP_PUBKEY                 : return \"OP_PUBKEY\";\n \n@@ -1300,6 +1302,7 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, vector<vector<unsi\n \n         // Sender provides N pubkeys, receivers provides M signatures\n         mTemplates.insert(make_pair(TX_MULTISIG, CScript() << OP_SMALLINTEGER << OP_PUBKEYS << OP_SMALLINTEGER << OP_CHECKMULTISIG));\n+        mTemplates.insert(make_pair(TX_MULTISIG_DATA, CScript() << OP_SMALLDATA << OP_DROP << OP_SMALLINTEGER << OP_PUBKEYS << OP_SMALLINTEGER << OP_CHECKMULTISIG));\n     }\n \n     // Shortcut for pay-to-script-hash, which are more constrained than the other types:\n@@ -1373,6 +1376,11 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, vector<vector<unsi\n                     break;\n                 vSolutionsRet.push_back(vch1);\n             }\n+            else if (opcode2 == OP_SMALLDATA)\n+            {\n+                if (vch1.size() > 80)\n+                    break;\n+            }\n             else if (opcode2 == OP_SMALLINTEGER)\n             {   // Single-byte small integer pushed onto vSolutions\n                 if (opcode1 == OP_0 ||\n@@ -1465,6 +1473,7 @@ bool Solver(const CKeyStore& keystore, const CScript& scriptPubKey, uint256 hash\n         return keystore.GetCScript(uint160(vSolutions[0]), scriptSigRet);\n \n     case TX_MULTISIG:\n+    case TX_MULTISIG_DATA:\n         scriptSigRet << OP_0; // workaround CHECKMULTISIG bug\n         return (SignN(vSolutions, keystore, hash, nHashType, scriptSigRet));\n     }\n@@ -1482,6 +1491,7 @@ int ScriptSigArgsExpected(txnouttype t, const std::vector<std::vector<unsigned c\n     case TX_PUBKEYHASH:\n         return 2;\n     case TX_MULTISIG:\n+    case TX_MULTISIG_DATA:\n         if (vSolutions.size() < 1 || vSolutions[0].size() < 1)\n             return -1;\n         return vSolutions[0][0] + 1;\n@@ -1568,6 +1578,7 @@ bool IsMine(const CKeyStore &keystore, const CScript& scriptPubKey)\n         return IsMine(keystore, subscript);\n     }\n     case TX_MULTISIG:\n+    case TX_MULTISIG_DATA:\n     {\n         // Only consider transactions \"mine\" if we own ALL the\n         // keys involved. multi-signature transactions that are\n@@ -1830,6 +1841,7 @@ static CScript CombineSignatures(CScript scriptPubKey, const CTransaction& txTo,\n             return result;\n         }\n     case TX_MULTISIG:\n+    case TX_MULTISIG_DATA:\n         return CombineMultisig(scriptPubKey, txTo, nIn, vSolutions, sigs1, sigs2);\n     }\n "
+      },
+      {
+        "sha": "9855abf43ee898763c83de0082bcb73c9f7fdbaf",
+        "filename": "src/script.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b0b53dc068c0bb489a1d5aaec54d281d30de64d5/src/script.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b0b53dc068c0bb489a1d5aaec54d281d30de64d5/src/script.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script.h?ref=b0b53dc068c0bb489a1d5aaec54d281d30de64d5",
+        "patch": "@@ -35,6 +35,7 @@ enum txnouttype\n     TX_PUBKEYHASH,\n     TX_SCRIPTHASH,\n     TX_MULTISIG,\n+    TX_MULTISIG_DATA,\n };\n \n class CNoDestination {\n@@ -191,6 +192,7 @@ enum opcodetype\n \n \n     // template matching params\n+    OP_SMALLDATA = 0xf9,\n     OP_SMALLINTEGER = 0xfa,\n     OP_PUBKEYS = 0xfb,\n     OP_PUBKEYHASH = 0xfd,"
+      }
+    ]
+  },
+  {
+    "sha": "8afa3ce75f6f49f68e6310d2fffabfffcfbd7770",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4YWZhM2NlNzVmNmY0OWY2OGU2MzEwZDJmZmZhYmZmZmNmYmQ3Nzcw",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-09-09T21:52:26Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-11-16T00:49:48Z"
+      },
+      "message": "TX_MULTISIG_DATA transactions always require a fee.",
+      "tree": {
+        "sha": "fc5cb8f21601aec04fb2009b343dc6f3f1b45e30",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/fc5cb8f21601aec04fb2009b343dc6f3f1b45e30"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/8afa3ce75f6f49f68e6310d2fffabfffcfbd7770",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8afa3ce75f6f49f68e6310d2fffabfffcfbd7770",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/8afa3ce75f6f49f68e6310d2fffabfffcfbd7770",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8afa3ce75f6f49f68e6310d2fffabfffcfbd7770/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "b0b53dc068c0bb489a1d5aaec54d281d30de64d5",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b0b53dc068c0bb489a1d5aaec54d281d30de64d5",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b0b53dc068c0bb489a1d5aaec54d281d30de64d5"
+      }
+    ],
+    "stats": {
+      "total": 27,
+      "additions": 27,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "89ee2e855ec9d4d51f3312a2caa317182871ebee",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 26,
+        "deletions": 0,
+        "changes": 26,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8afa3ce75f6f49f68e6310d2fffabfffcfbd7770/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8afa3ce75f6f49f68e6310d2fffabfffcfbd7770/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=8afa3ce75f6f49f68e6310d2fffabfffcfbd7770",
+        "patch": "@@ -441,6 +441,10 @@ bool CTransaction::AreInputsStandard(CCoinsViewCache& mapInputs) const\n             nArgsExpected += tmpExpected;\n         }\n \n+        // These are non-standard, as inputs\n+        else if (whichType == TX_MULTISIG_DATA)\n+            return false;\n+\n         if (stack.size() != (unsigned int)nArgsExpected)\n             return false;\n     }\n@@ -573,6 +577,24 @@ bool CTransaction::CheckTransaction() const\n     return true;\n }\n \n+bool CTransaction::IsDataCarrier() const\n+{\n+    for (unsigned int i = 0; i < vout.size(); i++)\n+    {\n+        vector<vector<unsigned char> > vSolutions;\n+        txnouttype whichType;\n+\n+        const CScript& script = vout[i].scriptPubKey;\n+        if (!Solver(script, whichType, vSolutions))\n+            return false;\n+\n+        if (whichType == TX_MULTISIG_DATA)\n+            return true;\n+    }\n+\n+    return false;\n+}\n+\n int64 CTransaction::GetMinFee(unsigned int nBlockSize, bool fAllowFree,\n                               enum GetMinFee_mode mode) const\n {\n@@ -600,6 +622,10 @@ int64 CTransaction::GetMinFee(unsigned int nBlockSize, bool fAllowFree,\n         }\n     }\n \n+    // OP_DATA multisig transactions are never free\n+    if (IsDataCarrier())\n+        nMinFee = nBaseFee;\n+\n     // To limit dust spam, require MIN_TX_FEE/MIN_RELAY_TX_FEE if any output is less than 0.01\n     if (nMinFee < nBaseFee)\n     {"
+      },
+      {
+        "sha": "d05ae71ad10b025f21e139a02fc5b2509c4ac967",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8afa3ce75f6f49f68e6310d2fffabfffcfbd7770/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8afa3ce75f6f49f68e6310d2fffabfffcfbd7770/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=8afa3ce75f6f49f68e6310d2fffabfffcfbd7770",
+        "patch": "@@ -579,6 +579,7 @@ class CTransaction\n         return dPriority > COIN * 144 / 250;\n     }\n \n+    bool IsDataCarrier() const;\n     int64 GetMinFee(unsigned int nBlockSize=1, bool fAllowFree=true, enum GetMinFee_mode mode=GMF_BLOCK) const;\n \n     friend bool operator==(const CTransaction& a, const CTransaction& b)"
+      }
+    ]
+  }
+]

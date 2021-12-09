@@ -1,0 +1,466 @@
+[
+  {
+    "sha": "0b1295b066b9369decb2e664e60b0129dbc30dfb",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowYjEyOTViMDY2YjkzNjlkZWNiMmU2NjRlNjBiMDEyOWRiYzMwZGZi",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-05-06T18:41:28Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-05-17T18:04:42Z"
+      },
+      "message": "Add SipHash-2-4 primitives to hash",
+      "tree": {
+        "sha": "3a02f501e4e3c12877b748304d176aea5da97b49",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/3a02f501e4e3c12877b748304d176aea5da97b49"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/0b1295b066b9369decb2e664e60b0129dbc30dfb",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0b1295b066b9369decb2e664e60b0129dbc30dfb",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/0b1295b066b9369decb2e664e60b0129dbc30dfb",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0b1295b066b9369decb2e664e60b0129dbc30dfb/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "1f01443567b03ac75a91c810f1733f5c21b5699d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1f01443567b03ac75a91c810f1733f5c21b5699d",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/1f01443567b03ac75a91c810f1733f5c21b5699d"
+      }
+    ],
+    "stats": {
+      "total": 142,
+      "additions": 142,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "a518314a5376a1fb32a1fccde18dfc96e30aa82d",
+        "filename": "src/hash.cpp",
+        "status": "modified",
+        "additions": 94,
+        "deletions": 0,
+        "changes": 94,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0b1295b066b9369decb2e664e60b0129dbc30dfb/src/hash.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0b1295b066b9369decb2e664e60b0129dbc30dfb/src/hash.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/hash.cpp?ref=0b1295b066b9369decb2e664e60b0129dbc30dfb",
+        "patch": "@@ -81,3 +81,97 @@ void BIP32Hash(const ChainCode &chainCode, unsigned int nChild, unsigned char he\n     num[3] = (nChild >>  0) & 0xFF;\n     CHMAC_SHA512(chainCode.begin(), chainCode.size()).Write(&header, 1).Write(data, 32).Write(num, 4).Finalize(output);\n }\n+\n+#define ROTL(x, b) (uint64_t)(((x) << (b)) | ((x) >> (64 - (b))))\n+\n+#define SIPROUND do { \\\n+    v0 += v1; v1 = ROTL(v1, 13); v1 ^= v0; \\\n+    v0 = ROTL(v0, 32); \\\n+    v2 += v3; v3 = ROTL(v3, 16); v3 ^= v2; \\\n+    v0 += v3; v3 = ROTL(v3, 21); v3 ^= v0; \\\n+    v2 += v1; v1 = ROTL(v1, 17); v1 ^= v2; \\\n+    v2 = ROTL(v2, 32); \\\n+} while (0)\n+\n+CSipHasher::CSipHasher(uint64_t k0, uint64_t k1)\n+{\n+    v[0] = 0x736f6d6570736575ULL ^ k0;\n+    v[1] = 0x646f72616e646f6dULL ^ k1;\n+    v[2] = 0x6c7967656e657261ULL ^ k0;\n+    v[3] = 0x7465646279746573ULL ^ k1;\n+    count = 0;\n+}\n+\n+CSipHasher& CSipHasher::Write(uint64_t data)\n+{\n+    uint64_t v0 = v[0], v1 = v[1], v2 = v[2], v3 = v[3];\n+\n+    v3 ^= data;\n+    SIPROUND;\n+    SIPROUND;\n+    v0 ^= data;\n+\n+    v[0] = v0;\n+    v[1] = v1;\n+    v[2] = v2;\n+    v[3] = v3;\n+\n+    count++;\n+    return *this;\n+}\n+\n+uint64_t CSipHasher::Finalize() const\n+{\n+    uint64_t v0 = v[0], v1 = v[1], v2 = v[2], v3 = v[3];\n+\n+    v3 ^= ((uint64_t)count) << 59;\n+    SIPROUND;\n+    SIPROUND;\n+    v0 ^= ((uint64_t)count) << 59;\n+    v2 ^= 0xFF;\n+    SIPROUND;\n+    SIPROUND;\n+    SIPROUND;\n+    SIPROUND;\n+    return v0 ^ v1 ^ v2 ^ v3;\n+}\n+\n+uint64_t SipHashUint256(uint64_t k0, uint64_t k1, const uint256& val)\n+{\n+    /* Specialized implementation for efficiency */\n+    uint64_t d = val.GetUint64(0);\n+\n+    uint64_t v0 = 0x736f6d6570736575ULL ^ k0;\n+    uint64_t v1 = 0x646f72616e646f6dULL ^ k1;\n+    uint64_t v2 = 0x6c7967656e657261ULL ^ k0;\n+    uint64_t v3 = 0x7465646279746573ULL ^ k1 ^ d;\n+\n+    SIPROUND;\n+    SIPROUND;\n+    v0 ^= d;\n+    d = val.GetUint64(1);\n+    v3 ^= d;\n+    SIPROUND;\n+    SIPROUND;\n+    v0 ^= d;\n+    d = val.GetUint64(2);\n+    v3 ^= d;\n+    SIPROUND;\n+    SIPROUND;\n+    v0 ^= d;\n+    d = val.GetUint64(3);\n+    v3 ^= d;\n+    SIPROUND;\n+    SIPROUND;\n+    v0 ^= d;\n+    v3 ^= ((uint64_t)4) << 59;\n+    SIPROUND;\n+    SIPROUND;\n+    v0 ^= ((uint64_t)4) << 59;\n+    v2 ^= 0xFF;\n+    SIPROUND;\n+    SIPROUND;\n+    SIPROUND;\n+    SIPROUND;\n+    return v0 ^ v1 ^ v2 ^ v3;\n+}"
+      },
+      {
+        "sha": "600dabec5608715d2f8d1ccaa23eafd0eb167d54",
+        "filename": "src/hash.h",
+        "status": "modified",
+        "additions": 15,
+        "deletions": 0,
+        "changes": 15,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0b1295b066b9369decb2e664e60b0129dbc30dfb/src/hash.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0b1295b066b9369decb2e664e60b0129dbc30dfb/src/hash.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/hash.h?ref=0b1295b066b9369decb2e664e60b0129dbc30dfb",
+        "patch": "@@ -171,4 +171,19 @@ unsigned int MurmurHash3(unsigned int nHashSeed, const std::vector<unsigned char\n \n void BIP32Hash(const ChainCode &chainCode, unsigned int nChild, unsigned char header, const unsigned char data[32], unsigned char output[64]);\n \n+/** SipHash-2-4, using a uint64_t-based (rather than byte-based) interface */\n+class CSipHasher\n+{\n+private:\n+    uint64_t v[4];\n+    int count;\n+\n+public:\n+    CSipHasher(uint64_t k0, uint64_t k1);\n+    CSipHasher& Write(uint64_t data);\n+    uint64_t Finalize() const;\n+};\n+\n+uint64_t SipHashUint256(uint64_t k0, uint64_t k1, const uint256& val);\n+\n #endif // BITCOIN_HASH_H"
+      },
+      {
+        "sha": "8baaf3645fab5325c3f45d490e6fda9d1a7600d7",
+        "filename": "src/test/hash_tests.cpp",
+        "status": "modified",
+        "additions": 20,
+        "deletions": 0,
+        "changes": 20,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0b1295b066b9369decb2e664e60b0129dbc30dfb/src/test/hash_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0b1295b066b9369decb2e664e60b0129dbc30dfb/src/test/hash_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/hash_tests.cpp?ref=0b1295b066b9369decb2e664e60b0129dbc30dfb",
+        "patch": "@@ -47,4 +47,24 @@ BOOST_AUTO_TEST_CASE(murmurhash3)\n #undef T\n }\n \n+BOOST_AUTO_TEST_CASE(siphash)\n+{\n+    CSipHasher hasher(0x0706050403020100ULL, 0x0F0E0D0C0B0A0908ULL);\n+    BOOST_CHECK_EQUAL(hasher.Finalize(),  0x726fdb47dd0e0e31ull);\n+    hasher.Write(0x0706050403020100ULL);\n+    BOOST_CHECK_EQUAL(hasher.Finalize(),  0x93f5f5799a932462ull);\n+    hasher.Write(0x0F0E0D0C0B0A0908ULL);\n+    BOOST_CHECK_EQUAL(hasher.Finalize(),  0x3f2acc7f57c29bdbull);\n+    hasher.Write(0x1716151413121110ULL);\n+    BOOST_CHECK_EQUAL(hasher.Finalize(),  0xb8ad50c6f649af94ull);\n+    hasher.Write(0x1F1E1D1C1B1A1918ULL);\n+    BOOST_CHECK_EQUAL(hasher.Finalize(),  0x7127512f72f27cceull);\n+    hasher.Write(0x2726252423222120ULL);\n+    BOOST_CHECK_EQUAL(hasher.Finalize(),  0x0e3ea96b5304a7d0ull);\n+    hasher.Write(0x2F2E2D2C2B2A2928ULL);\n+    BOOST_CHECK_EQUAL(hasher.Finalize(),  0xe612a3cb9ecba951ull);\n+\n+    BOOST_CHECK_EQUAL(SipHashUint256(0x0706050403020100ULL, 0x0F0E0D0C0B0A0908ULL, uint256S(\"1f1e1d1c1b1a191817161514131211100f0e0d0c0b0a09080706050403020100\")), 0x7127512f72f27cceull);\n+}\n+\n BOOST_AUTO_TEST_SUITE_END()"
+      },
+      {
+        "sha": "af1f3ab7d99e531180bcbf3479839514230f4bd8",
+        "filename": "src/uint256.h",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 0,
+        "changes": 13,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0b1295b066b9369decb2e664e60b0129dbc30dfb/src/uint256.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0b1295b066b9369decb2e664e60b0129dbc30dfb/src/uint256.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/uint256.h?ref=0b1295b066b9369decb2e664e60b0129dbc30dfb",
+        "patch": "@@ -83,6 +83,19 @@ class base_blob\n         return sizeof(data);\n     }\n \n+    uint64_t GetUint64(int pos) const\n+    {\n+        const uint8_t* ptr = data + pos * 8;\n+        return ((uint64_t)ptr[0]) | \\\n+               ((uint64_t)ptr[1]) << 8 | \\\n+               ((uint64_t)ptr[2]) << 16 | \\\n+               ((uint64_t)ptr[3]) << 24 | \\\n+               ((uint64_t)ptr[4]) << 32 | \\\n+               ((uint64_t)ptr[5]) << 40 | \\\n+               ((uint64_t)ptr[6]) << 48 | \\\n+               ((uint64_t)ptr[7]) << 56;\n+    }\n+\n     template<typename Stream>\n     void Serialize(Stream& s, int nType, int nVersion) const\n     {"
+      }
+    ]
+  },
+  {
+    "sha": "382c871d28b95cc52309a128edd8dc23822bcd60",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozODJjODcxZDI4Yjk1Y2M1MjMwOWExMjhlZGQ4ZGMyMzgyMmJjZDYw",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-05-06T18:47:12Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-05-17T18:04:46Z"
+      },
+      "message": "Use SipHash-2-4 for CCoinsCache index\n\nThis is ~1.7x slower than the Lookup3-of-Xor-with-salt construct we were\nusing before, but it is a primitive designed for exactly this.",
+      "tree": {
+        "sha": "b1a769dd5188ad4785e73006941b4f20d5fdc82f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/b1a769dd5188ad4785e73006941b4f20d5fdc82f"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/382c871d28b95cc52309a128edd8dc23822bcd60",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/382c871d28b95cc52309a128edd8dc23822bcd60",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/382c871d28b95cc52309a128edd8dc23822bcd60",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/382c871d28b95cc52309a128edd8dc23822bcd60/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "0b1295b066b9369decb2e664e60b0129dbc30dfb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0b1295b066b9369decb2e664e60b0129dbc30dfb",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/0b1295b066b9369decb2e664e60b0129dbc30dfb"
+      }
+    ],
+    "stats": {
+      "total": 89,
+      "additions": 13,
+      "deletions": 76
+    },
+    "files": [
+      {
+        "sha": "b7dd293d69564b92593fd9c5832648e87931be5e",
+        "filename": "src/coins.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 1,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/382c871d28b95cc52309a128edd8dc23822bcd60/src/coins.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/382c871d28b95cc52309a128edd8dc23822bcd60/src/coins.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/coins.cpp?ref=382c871d28b95cc52309a128edd8dc23822bcd60",
+        "patch": "@@ -56,7 +56,11 @@ void CCoinsViewBacked::SetBackend(CCoinsView &viewIn) { base = &viewIn; }\n bool CCoinsViewBacked::BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock) { return base->BatchWrite(mapCoins, hashBlock); }\n CCoinsViewCursor *CCoinsViewBacked::Cursor() const { return base->Cursor(); }\n \n-CCoinsKeyHasher::CCoinsKeyHasher() : salt(GetRandHash()) {}\n+SaltedTxidHasher::SaltedTxidHasher()\n+{\n+    GetRandBytes((unsigned char*)&k0, sizeof(k0));\n+    GetRandBytes((unsigned char*)&k1, sizeof(k1));\n+}\n \n CCoinsViewCache::CCoinsViewCache(CCoinsView *baseIn) : CCoinsViewBacked(baseIn), hasModifier(false), cachedCoinsUsage(0) { }\n "
+      },
+      {
+        "sha": "1dd908700b12b8aea1d81b5eb957ed89ae55505e",
+        "filename": "src/coins.h",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 6,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/382c871d28b95cc52309a128edd8dc23822bcd60/src/coins.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/382c871d28b95cc52309a128edd8dc23822bcd60/src/coins.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/coins.h?ref=382c871d28b95cc52309a128edd8dc23822bcd60",
+        "patch": "@@ -8,6 +8,7 @@\n \n #include \"compressor.h\"\n #include \"core_memusage.h\"\n+#include \"hash.h\"\n #include \"memusage.h\"\n #include \"serialize.h\"\n #include \"uint256.h\"\n@@ -264,21 +265,22 @@ class CCoins\n     }\n };\n \n-class CCoinsKeyHasher\n+class SaltedTxidHasher\n {\n private:\n-    uint256 salt;\n+    /** Salt */\n+    uint64_t k0, k1;\n \n public:\n-    CCoinsKeyHasher();\n+    SaltedTxidHasher();\n \n     /**\n      * This *must* return size_t. With Boost 1.46 on 32-bit systems the\n      * unordered_map will behave unpredictably if the custom hasher returns a\n      * uint64_t, resulting in failures when syncing the chain (#4634).\n      */\n-    size_t operator()(const uint256& key) const {\n-        return key.GetHash(salt);\n+    size_t operator()(const uint256& txid) const {\n+        return SipHashUint256(k0, k1, txid);\n     }\n };\n \n@@ -295,7 +297,7 @@ struct CCoinsCacheEntry\n     CCoinsCacheEntry() : coins(), flags(0) {}\n };\n \n-typedef boost::unordered_map<uint256, CCoinsCacheEntry, CCoinsKeyHasher> CCoinsMap;\n+typedef boost::unordered_map<uint256, CCoinsCacheEntry, SaltedTxidHasher> CCoinsMap;\n \n /** Cursor for iterating over CoinsView state */\n class CCoinsViewCursor"
+      },
+      {
+        "sha": "f22ddcd1effce0e8588fcb5da3b9895db76a0f70",
+        "filename": "src/uint256.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 64,
+        "changes": 64,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/382c871d28b95cc52309a128edd8dc23822bcd60/src/uint256.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/382c871d28b95cc52309a128edd8dc23822bcd60/src/uint256.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/uint256.cpp?ref=382c871d28b95cc52309a128edd8dc23822bcd60",
+        "patch": "@@ -80,67 +80,3 @@ template std::string base_blob<256>::GetHex() const;\n template std::string base_blob<256>::ToString() const;\n template void base_blob<256>::SetHex(const char*);\n template void base_blob<256>::SetHex(const std::string&);\n-\n-static void inline HashMix(uint32_t& a, uint32_t& b, uint32_t& c)\n-{\n-    // Taken from lookup3, by Bob Jenkins.\n-    a -= c;\n-    a ^= ((c << 4) | (c >> 28));\n-    c += b;\n-    b -= a;\n-    b ^= ((a << 6) | (a >> 26));\n-    a += c;\n-    c -= b;\n-    c ^= ((b << 8) | (b >> 24));\n-    b += a;\n-    a -= c;\n-    a ^= ((c << 16) | (c >> 16));\n-    c += b;\n-    b -= a;\n-    b ^= ((a << 19) | (a >> 13));\n-    a += c;\n-    c -= b;\n-    c ^= ((b << 4) | (b >> 28));\n-    b += a;\n-}\n-\n-static void inline HashFinal(uint32_t& a, uint32_t& b, uint32_t& c)\n-{\n-    // Taken from lookup3, by Bob Jenkins.\n-    c ^= b;\n-    c -= ((b << 14) | (b >> 18));\n-    a ^= c;\n-    a -= ((c << 11) | (c >> 21));\n-    b ^= a;\n-    b -= ((a << 25) | (a >> 7));\n-    c ^= b;\n-    c -= ((b << 16) | (b >> 16));\n-    a ^= c;\n-    a -= ((c << 4) | (c >> 28));\n-    b ^= a;\n-    b -= ((a << 14) | (a >> 18));\n-    c ^= b;\n-    c -= ((b << 24) | (b >> 8));\n-}\n-\n-uint64_t uint256::GetHash(const uint256& salt) const\n-{\n-    uint32_t a, b, c;\n-    const uint32_t *pn = (const uint32_t*)data;\n-    const uint32_t *salt_pn = (const uint32_t*)salt.data;\n-    a = b = c = 0xdeadbeef + WIDTH;\n-\n-    a += pn[0] ^ salt_pn[0];\n-    b += pn[1] ^ salt_pn[1];\n-    c += pn[2] ^ salt_pn[2];\n-    HashMix(a, b, c);\n-    a += pn[3] ^ salt_pn[3];\n-    b += pn[4] ^ salt_pn[4];\n-    c += pn[5] ^ salt_pn[5];\n-    HashMix(a, b, c);\n-    a += pn[6] ^ salt_pn[6];\n-    b += pn[7] ^ salt_pn[7];\n-    HashFinal(a, b, c);\n-\n-    return ((((uint64_t)b) << 32) | c);\n-}"
+      },
+      {
+        "sha": "dd8432d74cab5390ace15890475956db36f2780d",
+        "filename": "src/uint256.h",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 5,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/382c871d28b95cc52309a128edd8dc23822bcd60/src/uint256.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/382c871d28b95cc52309a128edd8dc23822bcd60/src/uint256.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/uint256.h?ref=382c871d28b95cc52309a128edd8dc23822bcd60",
+        "patch": "@@ -140,11 +140,6 @@ class uint256 : public base_blob<256> {\n     {\n         return ReadLE64(data);\n     }\n-\n-    /** A more secure, salted hash function.\n-     * @note This hash is not stable between little and big endian.\n-     */\n-    uint64_t GetHash(const uint256& salt) const;\n };\n \n /* uint256 from const char *."
+      }
+    ]
+  },
+  {
+    "sha": "8cc9cfe1605432be43d49e09094121bdb93caac8",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4Y2M5Y2ZlMTYwNTQzMmJlNDNkNDllMDkwOTQxMjFiZGI5M2NhYWM4",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-05-06T19:36:36Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-05-17T18:04:46Z"
+      },
+      "message": "Switch CTxMempool::mapTx to use a hash index for txids",
+      "tree": {
+        "sha": "d4c27a8763402da2435492c97c697feed2516181",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/d4c27a8763402da2435492c97c697feed2516181"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/8cc9cfe1605432be43d49e09094121bdb93caac8",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8cc9cfe1605432be43d49e09094121bdb93caac8",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/8cc9cfe1605432be43d49e09094121bdb93caac8",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8cc9cfe1605432be43d49e09094121bdb93caac8/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "382c871d28b95cc52309a128edd8dc23822bcd60",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/382c871d28b95cc52309a128edd8dc23822bcd60",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/382c871d28b95cc52309a128edd8dc23822bcd60"
+      }
+    ],
+    "stats": {
+      "total": 3,
+      "additions": 2,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "3e1d387975b6fbe0c1b0fe1a45e48dae3f5cdbc1",
+        "filename": "src/txmempool.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 1,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8cc9cfe1605432be43d49e09094121bdb93caac8/src/txmempool.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8cc9cfe1605432be43d49e09094121bdb93caac8/src/txmempool.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.h?ref=8cc9cfe1605432be43d49e09094121bdb93caac8",
+        "patch": "@@ -17,6 +17,7 @@\n #undef foreach\n #include \"boost/multi_index_container.hpp\"\n #include \"boost/multi_index/ordered_index.hpp\"\n+#include \"boost/multi_index/hashed_index.hpp\"\n \n class CAutoFile;\n class CBlockIndex;\n@@ -422,7 +423,7 @@ class CTxMemPool\n         CTxMemPoolEntry,\n         boost::multi_index::indexed_by<\n             // sorted by txid\n-            boost::multi_index::ordered_unique<mempoolentry_txid>,\n+            boost::multi_index::hashed_unique<mempoolentry_txid, SaltedTxidHasher>,\n             // sorted by fee rate\n             boost::multi_index::ordered_non_unique<\n                 boost::multi_index::tag<descendant_score>,"
+      }
+    ]
+  },
+  {
+    "sha": "a68ec21f7ed2978d8945a0f4cfd7e80bfa5fd917",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphNjhlYzIxZjdlZDI5NzhkODk0NWEwZjRjZmQ3ZTgwYmZhNWZkOTE3",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-05-06T19:53:38Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2016-05-17T18:04:46Z"
+      },
+      "message": "Use SipHash-2-4 for address relay selection",
+      "tree": {
+        "sha": "680fcc243e0e9e0005cb8eeca1cf84795479a1b4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/680fcc243e0e9e0005cb8eeca1cf84795479a1b4"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a68ec21f7ed2978d8945a0f4cfd7e80bfa5fd917",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a68ec21f7ed2978d8945a0f4cfd7e80bfa5fd917",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a68ec21f7ed2978d8945a0f4cfd7e80bfa5fd917",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a68ec21f7ed2978d8945a0f4cfd7e80bfa5fd917/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "8cc9cfe1605432be43d49e09094121bdb93caac8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8cc9cfe1605432be43d49e09094121bdb93caac8",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/8cc9cfe1605432be43d49e09094121bdb93caac8"
+      }
+    ],
+    "stats": {
+      "total": 20,
+      "additions": 9,
+      "deletions": 11
+    },
+    "files": [
+      {
+        "sha": "a1c027bef38c51efcf0c8a4dc8b1f52fa4ea9451",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 11,
+        "changes": 20,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a68ec21f7ed2978d8945a0f4cfd7e80bfa5fd917/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a68ec21f7ed2978d8945a0f4cfd7e80bfa5fd917/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=a68ec21f7ed2978d8945a0f4cfd7e80bfa5fd917",
+        "patch": "@@ -4698,25 +4698,23 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv,\n                     LOCK(cs_vNodes);\n                     // Use deterministic randomness to send to the same nodes for 24 hours\n                     // at a time so the addrKnowns of the chosen nodes prevent repeats\n-                    static uint256 hashSalt;\n-                    if (hashSalt.IsNull())\n-                        hashSalt = GetRandHash();\n+                    static uint64_t salt0 = 0, salt1 = 0;\n+                    while (salt0 == 0 && salt1 == 0) {\n+                        GetRandBytes((unsigned char*)&salt0, sizeof(salt0));\n+                        GetRandBytes((unsigned char*)&salt1, sizeof(salt1));\n+                    }\n                     uint64_t hashAddr = addr.GetHash();\n-                    uint256 hashRand = ArithToUint256(UintToArith256(hashSalt) ^ (hashAddr<<32) ^ ((GetTime()+hashAddr)/(24*60*60)));\n-                    hashRand = Hash(BEGIN(hashRand), END(hashRand));\n-                    multimap<uint256, CNode*> mapMix;\n+                    multimap<uint64_t, CNode*> mapMix;\n+                    const CSipHasher hasher = CSipHasher(salt0, salt1).Write(hashAddr << 32).Write((GetTime() + hashAddr) / (24*60*60));\n                     BOOST_FOREACH(CNode* pnode, vNodes)\n                     {\n                         if (pnode->nVersion < CADDR_TIME_VERSION)\n                             continue;\n-                        unsigned int nPointer;\n-                        memcpy(&nPointer, &pnode, sizeof(nPointer));\n-                        uint256 hashKey = ArithToUint256(UintToArith256(hashRand) ^ nPointer);\n-                        hashKey = Hash(BEGIN(hashKey), END(hashKey));\n+                        uint64_t hashKey = CSipHasher(hasher).Write(pnode->id).Finalize();\n                         mapMix.insert(make_pair(hashKey, pnode));\n                     }\n                     int nRelayNodes = fReachable ? 2 : 1; // limited relaying of addresses outside our network(s)\n-                    for (multimap<uint256, CNode*>::iterator mi = mapMix.begin(); mi != mapMix.end() && nRelayNodes-- > 0; ++mi)\n+                    for (multimap<uint64_t, CNode*>::iterator mi = mapMix.begin(); mi != mapMix.end() && nRelayNodes-- > 0; ++mi)\n                         ((*mi).second)->PushAddress(addr);\n                 }\n             }"
+      }
+    ]
+  }
+]

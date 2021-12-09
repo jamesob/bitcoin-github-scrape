@@ -1,0 +1,942 @@
+[
+  {
+    "sha": "502c942dc65f53ccee6eb95e61f640cbb2633199",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1MDJjOTQyZGM2NWY1M2NjZWU2ZWI5NWU2MWY2NDBjYmIyNjMzMTk5",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-11-04T04:16:04Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-11-16T16:52:11Z"
+      },
+      "message": "[net] FinalizeNode on the message handler thread\n\nThis prevents any CNode refcount entries outside of net from\nblocking CNode deletion.",
+      "tree": {
+        "sha": "21fb1ccaa15196f0e3ec2155a7417e3b2651b228",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/21fb1ccaa15196f0e3ec2155a7417e3b2651b228"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/502c942dc65f53ccee6eb95e61f640cbb2633199",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/502c942dc65f53ccee6eb95e61f640cbb2633199",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/502c942dc65f53ccee6eb95e61f640cbb2633199",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/502c942dc65f53ccee6eb95e61f640cbb2633199/comments",
+    "author": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "99bc0b428b03b571afbc311b7f18fd3a707ac5af",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/99bc0b428b03b571afbc311b7f18fd3a707ac5af",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/99bc0b428b03b571afbc311b7f18fd3a707ac5af"
+      }
+    ],
+    "stats": {
+      "total": 71,
+      "additions": 55,
+      "deletions": 16
+    },
+    "files": [
+      {
+        "sha": "37146c0e5426c19596e606488e3ab988ec5983fb",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 40,
+        "deletions": 13,
+        "changes": 53,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/502c942dc65f53ccee6eb95e61f640cbb2633199/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/502c942dc65f53ccee6eb95e61f640cbb2633199/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=502c942dc65f53ccee6eb95e61f640cbb2633199",
+        "patch": "@@ -1161,13 +1161,17 @@ void CConnman::ThreadSocketHandler()\n \n                     // hold in disconnected pool until all refs are released\n                     pnode->Release();\n-                    vNodesDisconnected.push_back(pnode);\n+                    vNodesToFinalize.push_back(pnode);\n                 }\n             }\n         }\n         {\n-            // Delete disconnected nodes\n-            std::list<CNode*> vNodesDisconnectedCopy = vNodesDisconnected;\n+            // Delete finalized nodes\n+            std::list<CNode*> vNodesDisconnectedCopy;\n+            {\n+                LOCK(cs_vNodes);\n+                vNodesDisconnectedCopy = vNodesDisconnected;\n+            }\n             for (CNode* pnode : vNodesDisconnectedCopy)\n             {\n                 // wait until threads are done using it\n@@ -1183,8 +1187,11 @@ void CConnman::ThreadSocketHandler()\n                         }\n                     }\n                     if (fDelete) {\n-                        vNodesDisconnected.remove(pnode);\n-                        DeleteNode(pnode);\n+                        {\n+                            LOCK(cs_vNodes);\n+                            vNodesDisconnected.remove(pnode);\n+                        }\n+                        delete pnode;\n                     }\n                 }\n             }\n@@ -2030,6 +2037,17 @@ void CConnman::ThreadMessageHandler()\n                 pnode->Release();\n         }\n \n+        {\n+            LOCK(cs_vNodes);\n+            vNodesCopy = vNodesToFinalize;\n+            vNodesToFinalize.clear();\n+        }\n+        for (CNode* pnode : vNodesCopy) {\n+            FinalizeNode(pnode);\n+            LOCK(cs_vNodes);\n+            vNodesDisconnected.push_back(pnode);\n+        }\n+\n         std::unique_lock<std::mutex> lock(mutexMsgProc);\n         if (!fMoreWork) {\n             condMsgProc.wait_until(lock, std::chrono::steady_clock::now() + std::chrono::milliseconds(100), [this] { return fMsgProcWake; });\n@@ -2445,28 +2463,37 @@ void CConnman::Stop()\n                 LogPrintf(\"CloseSocket(hListenSocket) failed with error %s\\n\", NetworkErrorString(WSAGetLastError()));\n \n     // clean up some globals (to help leak detection)\n-    for (CNode *pnode : vNodes) {\n-        DeleteNode(pnode);\n+    std::vector<CNode*> nodes_to_clean_up;\n+    std::vector<CNode*> nodes_to_delete;\n+    {\n+        LOCK(cs_vNodes);\n+        nodes_to_clean_up.insert(nodes_to_clean_up.end(), vNodes.begin(), vNodes.end());\n+        vNodes.clear();\n+        nodes_to_clean_up.insert(nodes_to_clean_up.end(), vNodesToFinalize.begin(), vNodesToFinalize.end());\n+        vNodesToFinalize.clear();\n+        nodes_to_delete.insert(nodes_to_delete.end(), vNodesDisconnected.begin(), vNodesDisconnected.end());\n+        vNodesDisconnected.clear();\n+    }\n+    for (CNode *pnode : nodes_to_clean_up) {\n+        FinalizeNode(pnode);\n+        delete pnode;\n     }\n-    for (CNode *pnode : vNodesDisconnected) {\n-        DeleteNode(pnode);\n+    for (CNode *pnode : nodes_to_delete) {\n+        delete pnode;\n     }\n-    vNodes.clear();\n-    vNodesDisconnected.clear();\n     vhListenSocket.clear();\n     semOutbound.reset();\n     semAddnode.reset();\n }\n \n-void CConnman::DeleteNode(CNode* pnode)\n+void CConnman::FinalizeNode(CNode* pnode)\n {\n     assert(pnode);\n     bool fUpdateConnectionTime = false;\n     m_msgproc->FinalizeNode(pnode->GetId(), fUpdateConnectionTime);\n     if(fUpdateConnectionTime) {\n         addrman.Connected(pnode->addr);\n     }\n-    delete pnode;\n }\n \n CConnman::~CConnman()"
+      },
+      {
+        "sha": "fb9a6b50ebfb3af63cdae63fab3b97f4c5647b3c",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 15,
+        "deletions": 3,
+        "changes": 18,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/502c942dc65f53ccee6eb95e61f640cbb2633199/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/502c942dc65f53ccee6eb95e61f640cbb2633199/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=502c942dc65f53ccee6eb95e61f640cbb2633199",
+        "patch": "@@ -339,7 +339,7 @@ class CConnman\n     CNode* ConnectNode(CAddress addrConnect, const char *pszDest, bool fCountFailure);\n     bool IsWhitelistedRange(const CNetAddr &addr);\n \n-    void DeleteNode(CNode* pnode);\n+    void FinalizeNode(CNode* pnode);\n \n     NodeId GetNewNodeId();\n \n@@ -391,9 +391,21 @@ class CConnman\n     CCriticalSection cs_vOneShots;\n     std::vector<std::string> vAddedNodes;\n     CCriticalSection cs_vAddedNodes;\n-    std::vector<CNode*> vNodes;\n-    std::list<CNode*> vNodesDisconnected;\n+    /**\n+     * Nodes are first InitializeNode'd, then added to vNodes.\n+     * After that, all calls to NetEventsInterface functions happen on the\n+     * message handler thread to avoid calling two such functions at the same\n+     * time for the same peer. After a node gets fDisconnect we first close\n+     * the socket then move it to vNodesToFinalize on the socket handler\n+     * thread, then the message handler thread picks it up, calls\n+     * FinalizeNode on it, then moves it to vNodesDisconnected. From there,\n+     * the socket handler thread will eventually delete the CNode itself once\n+     * the refcount reaches 0.\n+     */\n     mutable CCriticalSection cs_vNodes;\n+    std::vector<CNode*> vNodes;\n+    std::vector<CNode*> vNodesToFinalize GUARDED_BY(cs_vNodes);\n+    std::list<CNode*> vNodesDisconnected GUARDED_BY(cs_vNodes);\n     std::atomic<NodeId> nLastNodeId;\n \n     /** Services this instance offers */"
+      }
+    ]
+  },
+  {
+    "sha": "6c8fd960852252af7ec52f44a96248d03515ae73",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2YzhmZDk2MDg1MjI1MmFmN2VjNTJmNDRhOTYyNDhkMDM1MTVhZTcz",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-11-03T23:45:05Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-11-16T16:52:11Z"
+      },
+      "message": "[net_processing] Keep a reference to the CNode in CNodeState\n\nThe CNode/CNodeState terminology is rather outdated now - CNode\nshould be considered representative of the connection for the\npurposes of telling CConnman where to send data, so giving\nCNodeState a reference to it makes perfect sense. This also allows\nus to migrate off of CConnman's ForEachNode/ForNode",
+      "tree": {
+        "sha": "1e9f2c7237b37dee7c4a7b011fa668294b083d8e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/1e9f2c7237b37dee7c4a7b011fa668294b083d8e"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/6c8fd960852252af7ec52f44a96248d03515ae73",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6c8fd960852252af7ec52f44a96248d03515ae73",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/6c8fd960852252af7ec52f44a96248d03515ae73",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6c8fd960852252af7ec52f44a96248d03515ae73/comments",
+    "author": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "502c942dc65f53ccee6eb95e61f640cbb2633199",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/502c942dc65f53ccee6eb95e61f640cbb2633199",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/502c942dc65f53ccee6eb95e61f640cbb2633199"
+      }
+    ],
+    "stats": {
+      "total": 10,
+      "additions": 6,
+      "deletions": 4
+    },
+    "files": [
+      {
+        "sha": "21f6e26fe0c358e76ee70e23f7f5b3a134d5b781",
+        "filename": "src/net_processing.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 4,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6c8fd960852252af7ec52f44a96248d03515ae73/src/net_processing.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6c8fd960852252af7ec52f44a96248d03515ae73/src/net_processing.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.cpp?ref=6c8fd960852252af7ec52f44a96248d03515ae73",
+        "patch": "@@ -153,6 +153,8 @@ struct CBlockReject {\n  * and we're no longer holding the node's locks.\n  */\n struct CNodeState {\n+    //! The CConnman reference to the connection\n+    CNode* connection;\n     //! The peer's address\n     const CService address;\n     //! Whether we have a fully established connection.\n@@ -238,7 +240,7 @@ struct CNodeState {\n     //! Time of last new block announcement\n     int64_t m_last_block_announcement;\n \n-    CNodeState(CAddress addrIn, std::string addrNameIn) : address(addrIn), name(addrNameIn) {\n+    CNodeState(CNode* connectionIn) : connection(connectionIn), address(connection->addr), name(connection->GetAddrName()) {\n         fCurrentlyConnected = false;\n         nMisbehavior = 0;\n         fShouldBan = false;\n@@ -567,12 +569,11 @@ bool IsOutboundDisconnectionCandidate(const CNode *node)\n }\n \n void PeerLogicValidation::InitializeNode(CNode *pnode) {\n-    CAddress addr = pnode->addr;\n-    std::string addrName = pnode->GetAddrName();\n     NodeId nodeid = pnode->GetId();\n+    pnode->AddRef();\n     {\n         LOCK(cs_main);\n-        mapNodeState.emplace_hint(mapNodeState.end(), std::piecewise_construct, std::forward_as_tuple(nodeid), std::forward_as_tuple(addr, std::move(addrName)));\n+        mapNodeState.emplace_hint(mapNodeState.end(), std::piecewise_construct, std::forward_as_tuple(nodeid), std::forward_as_tuple(pnode));\n     }\n     if(!pnode->fInbound)\n         PushNodeVersion(pnode, connman, GetTime());\n@@ -601,6 +602,7 @@ void PeerLogicValidation::FinalizeNode(NodeId nodeid, bool& fUpdateConnectionTim\n     g_outbound_peers_with_protect_from_disconnect -= state->m_chain_sync.m_protect;\n     assert(g_outbound_peers_with_protect_from_disconnect >= 0);\n \n+    state->connection->Release();\n     mapNodeState.erase(nodeid);\n \n     if (mapNodeState.empty()) {"
+      }
+    ]
+  },
+  {
+    "sha": "c01abb14daa48e9bcd35220f09af0b7bf45dec42",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjMDFhYmIxNGRhYTQ4ZTliY2QzNTIyMGYwOWFmMGI3YmY0NWRlYzQy",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-11-03T23:58:38Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-11-16T16:52:11Z"
+      },
+      "message": "Move nStartingHeight out of CNode into CNodeState\n\nIt is a \"protocol-level-logic\" field, and thus belongs in\nnet_processing and not in net.",
+      "tree": {
+        "sha": "481fc090d13be10b8fdb507b05b098a04f27dc28",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/481fc090d13be10b8fdb507b05b098a04f27dc28"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/c01abb14daa48e9bcd35220f09af0b7bf45dec42",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c01abb14daa48e9bcd35220f09af0b7bf45dec42",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/c01abb14daa48e9bcd35220f09af0b7bf45dec42",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c01abb14daa48e9bcd35220f09af0b7bf45dec42/comments",
+    "author": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "6c8fd960852252af7ec52f44a96248d03515ae73",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6c8fd960852252af7ec52f44a96248d03515ae73",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/6c8fd960852252af7ec52f44a96248d03515ae73"
+      }
+    ],
+    "stats": {
+      "total": 29,
+      "additions": 18,
+      "deletions": 11
+    },
+    "files": [
+      {
+        "sha": "96b6ab070bfd6e96b9a13597902ff78be7f04d94",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 2,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c01abb14daa48e9bcd35220f09af0b7bf45dec42/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c01abb14daa48e9bcd35220f09af0b7bf45dec42/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=c01abb14daa48e9bcd35220f09af0b7bf45dec42",
+        "patch": "@@ -685,7 +685,6 @@ void CNode::copyStats(CNodeStats &stats)\n     }\n     X(fInbound);\n     X(m_manual_connection);\n-    X(nStartingHeight);\n     {\n         LOCK(cs_vSend);\n         X(mapSendBytesPerMsgCmd);\n@@ -2759,7 +2758,6 @@ CNode::CNode(NodeId idIn, ServiceFlags nLocalServicesIn, int nMyStartingHeightIn\n     nSendSize = 0;\n     nSendOffset = 0;\n     hashContinue = uint256();\n-    nStartingHeight = -1;\n     filterInventoryKnown.reset();\n     fSendMempool = false;\n     fGetAddr = false;"
+      },
+      {
+        "sha": "ac68257056ffffbb510d35bfa02302df38630066",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 1,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c01abb14daa48e9bcd35220f09af0b7bf45dec42/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c01abb14daa48e9bcd35220f09af0b7bf45dec42/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=c01abb14daa48e9bcd35220f09af0b7bf45dec42",
+        "patch": "@@ -673,7 +673,6 @@ class CNode\n \n public:\n     uint256 hashContinue;\n-    std::atomic<int> nStartingHeight;\n \n     // flood relay\n     std::vector<CAddress> vAddrToSend;"
+      },
+      {
+        "sha": "03a700271a480151dd086a7a4025a577deb84470",
+        "filename": "src/net_processing.cpp",
+        "status": "modified",
+        "additions": 17,
+        "deletions": 8,
+        "changes": 25,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c01abb14daa48e9bcd35220f09af0b7bf45dec42/src/net_processing.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c01abb14daa48e9bcd35220f09af0b7bf45dec42/src/net_processing.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.cpp?ref=c01abb14daa48e9bcd35220f09af0b7bf45dec42",
+        "patch": "@@ -209,6 +209,8 @@ struct CNodeState {\n      * otherwise: whether this peer sends non-witnesses in cmpctblocks/blocktxns.\n      */\n     bool fSupportsDesiredCmpctVersion;\n+    //! The height this peer claimed to have in their version message\n+    int nStartingHeight;\n \n     /** State used to enforce CHAIN_SYNC_TIMEOUT\n       * Only in effect for outbound, non-manual connections, with\n@@ -262,6 +264,7 @@ struct CNodeState {\n         fHaveWitness = false;\n         fWantsCmpctWitness = false;\n         fSupportsDesiredCmpctVersion = false;\n+        nStartingHeight = -1;\n         m_chain_sync = { 0, nullptr, false, false };\n         m_last_block_announcement = 0;\n     }\n@@ -621,6 +624,7 @@ bool GetNodeStateStats(NodeId nodeid, CNodeStateStats &stats) {\n     if (state == nullptr)\n         return false;\n     stats.nMisbehavior = state->nMisbehavior;\n+    stats.nStartingHeight = state->nStartingHeight;\n     stats.nSyncHeight = state->pindexBestKnownBlock ? state->pindexBestKnownBlock->nHeight : -1;\n     stats.nCommonHeight = state->pindexLastCommonBlock ? state->pindexLastCommonBlock->nHeight : -1;\n     for (const QueuedBlock& queue : state->vBlocksInFlight) {\n@@ -904,14 +908,16 @@ void PeerLogicValidation::UpdatedBlockTip(const CBlockIndex *pindexNew, const CB\n                 break;\n             }\n         }\n+        LOCK(cs_main);\n         // Relay inventory, but don't relay old inventory during initial block download.\n-        connman->ForEachNode([nNewHeight, &vHashes](CNode* pnode) {\n-            if (nNewHeight > (pnode->nStartingHeight != -1 ? pnode->nStartingHeight - 2000 : 0)) {\n+        for (auto& node : mapNodeState) {\n+            CNodeState& nodestate = node.second;\n+            if (nNewHeight > (nodestate.nStartingHeight != -1 ? nodestate.nStartingHeight - 2000 : 0)) {\n                 for (const uint256& hash : reverse_iterate(vHashes)) {\n-                    pnode->PushBlockHash(hash);\n+                    nodestate.connection->PushBlockHash(hash);\n                 }\n             }\n-        });\n+        }\n         connman->WakeMessageHandler();\n     }\n \n@@ -1369,7 +1375,7 @@ bool static ProcessHeadersMessage(CNode *pfrom, CConnman *connman, const std::ve\n             // Headers message had its maximum size; the peer may have more headers.\n             // TODO: optimize: if pindexLast is an ancestor of chainActive.Tip or pindexBestHeader, continue\n             // from there instead.\n-            LogPrint(BCLog::NET, \"more getheaders (%d) to end to peer=%d (startheight:%d)\\n\", pindexLast->nHeight, pfrom->GetId(), pfrom->nStartingHeight);\n+            LogPrint(BCLog::NET, \"more getheaders (%d) to end to peer=%d (startheight:%d)\\n\", pindexLast->nHeight, pfrom->GetId(), nodestate->nStartingHeight);\n             connman->PushMessage(pfrom, msgMaker.Make(NetMsgType::GETHEADERS, chainActive.GetLocator(pindexLast), uint256()));\n         }\n \n@@ -1607,7 +1613,10 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr\n             pfrom->strSubVer = strSubVer;\n             pfrom->cleanSubVer = cleanSubVer;\n         }\n-        pfrom->nStartingHeight = nStartingHeight;\n+        {\n+            LOCK(cs_main);\n+            State(pfrom->GetId())->nStartingHeight = nStartingHeight;\n+        }\n         pfrom->fClient = !(nServices & NODE_NETWORK);\n         {\n             LOCK(pfrom->cs_filter);\n@@ -1663,7 +1672,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr\n \n         LogPrintf(\"receive version message: %s: version %d, blocks=%d, us=%s, peer=%d%s\\n\",\n                   cleanSubVer, pfrom->nVersion,\n-                  pfrom->nStartingHeight, addrMe.ToString(), pfrom->GetId(),\n+                  nStartingHeight, addrMe.ToString(), pfrom->GetId(),\n                   remoteAddr);\n \n         int64_t nTimeOffset = nTime - GetTime();\n@@ -3222,7 +3231,7 @@ bool PeerLogicValidation::SendMessages(CNode* pto, std::atomic<bool>& interruptM\n                    got back an empty response.  */\n                 if (pindexStart->pprev)\n                     pindexStart = pindexStart->pprev;\n-                LogPrint(BCLog::NET, \"initial getheaders (%d) to peer=%d (startheight:%d)\\n\", pindexStart->nHeight, pto->GetId(), pto->nStartingHeight);\n+                LogPrint(BCLog::NET, \"initial getheaders (%d) to peer=%d (startheight:%d)\\n\", pindexStart->nHeight, pto->GetId(), state.nStartingHeight);\n                 connman->PushMessage(pto, msgMaker.Make(NetMsgType::GETHEADERS, chainActive.GetLocator(pindexStart), uint256()));\n             }\n         }"
+      },
+      {
+        "sha": "13ca23d6736ad26d6890ade4ede546d885c82a92",
+        "filename": "src/net_processing.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c01abb14daa48e9bcd35220f09af0b7bf45dec42/src/net_processing.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c01abb14daa48e9bcd35220f09af0b7bf45dec42/src/net_processing.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.h?ref=c01abb14daa48e9bcd35220f09af0b7bf45dec42",
+        "patch": "@@ -71,6 +71,7 @@ class PeerLogicValidation : public CValidationInterface, public NetEventsInterfa\n \n struct CNodeStateStats {\n     int nMisbehavior;\n+    int nStartingHeight;\n     int nSyncHeight;\n     int nCommonHeight;\n     std::vector<int> vHeightInFlight;"
+      }
+    ]
+  },
+  {
+    "sha": "e72cc5f74e72bdad8dafbfb931ef17943ab4e77d",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplNzJjYzVmNzRlNzJiZGFkOGRhZmJmYjkzMWVmMTc5NDNhYjRlNzdk",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-11-04T00:12:47Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-11-16T16:52:11Z"
+      },
+      "message": "Remove all references to ForEachNode/ForNode in net_processing",
+      "tree": {
+        "sha": "20cd03be60b38cc7077440cc2844d96910ac7640",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/20cd03be60b38cc7077440cc2844d96910ac7640"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/e72cc5f74e72bdad8dafbfb931ef17943ab4e77d",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e72cc5f74e72bdad8dafbfb931ef17943ab4e77d",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/e72cc5f74e72bdad8dafbfb931ef17943ab4e77d",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e72cc5f74e72bdad8dafbfb931ef17943ab4e77d/comments",
+    "author": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "c01abb14daa48e9bcd35220f09af0b7bf45dec42",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c01abb14daa48e9bcd35220f09af0b7bf45dec42",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c01abb14daa48e9bcd35220f09af0b7bf45dec42"
+      }
+    ],
+    "stats": {
+      "total": 123,
+      "additions": 59,
+      "deletions": 64
+    },
+    "files": [
+      {
+        "sha": "4d8cd3d76970f16831fada21a6a0f3615dc3a032",
+        "filename": "src/net_processing.cpp",
+        "status": "modified",
+        "additions": 59,
+        "deletions": 64,
+        "changes": 123,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e72cc5f74e72bdad8dafbfb931ef17943ab4e77d/src/net_processing.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e72cc5f74e72bdad8dafbfb931ef17943ab4e77d/src/net_processing.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.cpp?ref=e72cc5f74e72bdad8dafbfb931ef17943ab4e77d",
+        "patch": "@@ -422,21 +422,20 @@ void MaybeSetPeerAsAnnouncingHeaderAndIDs(NodeId nodeid, CConnman* connman) {\n                 return;\n             }\n         }\n-        connman->ForNode(nodeid, [connman](CNode* pfrom){\n-            uint64_t nCMPCTBLOCKVersion = (pfrom->GetLocalServices() & NODE_WITNESS) ? 2 : 1;\n-            if (lNodesAnnouncingHeaderAndIDs.size() >= 3) {\n-                // As per BIP152, we only get 3 of our peers to announce\n-                // blocks using compact encodings.\n-                connman->ForNode(lNodesAnnouncingHeaderAndIDs.front(), [connman, nCMPCTBLOCKVersion](CNode* pnodeStop){\n-                    connman->PushMessage(pnodeStop, CNetMsgMaker(pnodeStop->GetSendVersion()).Make(NetMsgType::SENDCMPCT, /*fAnnounceUsingCMPCTBLOCK=*/false, nCMPCTBLOCKVersion));\n-                    return true;\n-                });\n-                lNodesAnnouncingHeaderAndIDs.pop_front();\n+        CNode* pfrom = nodestate->connection;\n+        uint64_t nCMPCTBLOCKVersion = (pfrom->GetLocalServices() & NODE_WITNESS) ? 2 : 1;\n+        if (lNodesAnnouncingHeaderAndIDs.size() >= 3) {\n+            // As per BIP152, we only get 3 of our peers to announce\n+            // blocks using compact encodings.\n+            CNodeState* stop_node = State(lNodesAnnouncingHeaderAndIDs.front());\n+            if (stop_node != nullptr) {\n+                CNode* pnodeStop = stop_node->connection;\n+                connman->PushMessage(pnodeStop, CNetMsgMaker(pnodeStop->GetSendVersion()).Make(NetMsgType::SENDCMPCT, /*fAnnounceUsingCMPCTBLOCK=*/false, nCMPCTBLOCKVersion));\n             }\n-            connman->PushMessage(pfrom, CNetMsgMaker(pfrom->GetSendVersion()).Make(NetMsgType::SENDCMPCT, /*fAnnounceUsingCMPCTBLOCK=*/true, nCMPCTBLOCKVersion));\n-            lNodesAnnouncingHeaderAndIDs.push_back(pfrom->GetId());\n-            return true;\n-        });\n+            lNodesAnnouncingHeaderAndIDs.pop_front();\n+        }\n+        connman->PushMessage(pfrom, CNetMsgMaker(pfrom->GetSendVersion()).Make(NetMsgType::SENDCMPCT, /*fAnnounceUsingCMPCTBLOCK=*/true, nCMPCTBLOCKVersion));\n+        lNodesAnnouncingHeaderAndIDs.push_back(pfrom->GetId());\n     }\n }\n \n@@ -872,12 +871,13 @@ void PeerLogicValidation::NewPoWValidBlock(const CBlockIndex *pindex, const std:\n         fWitnessesPresentInMostRecentCompactBlock = fWitnessEnabled;\n     }\n \n-    connman->ForEachNode([this, &pcmpctblock, pindex, &msgMaker, fWitnessEnabled, &hashBlock](CNode* pnode) {\n+    for (auto& node : mapNodeState) {\n+        CNode* pnode = node.second.connection;\n         // TODO: Avoid the repeated-serialization here\n         if (pnode->nVersion < INVALID_CB_NO_BAN_VERSION || pnode->fDisconnect)\n-            return;\n-        ProcessBlockAvailability(pnode->GetId());\n-        CNodeState &state = *State(pnode->GetId());\n+            continue;\n+        ProcessBlockAvailability(node.first);\n+        CNodeState &state = node.second;\n         // If the peer has, or we announced to them the previous block already,\n         // but we don't think they have this one, go ahead and announce it\n         if (state.fPreferHeaderAndIDs && (!fWitnessEnabled || state.fWantsCmpctWitness) &&\n@@ -888,7 +888,7 @@ void PeerLogicValidation::NewPoWValidBlock(const CBlockIndex *pindex, const std:\n             connman->PushMessage(pnode, msgMaker.Make(NetMsgType::CMPCTBLOCK, *pcmpctblock));\n             state.pindexBestHeaderSent = pindex;\n         }\n-    });\n+    }\n }\n \n void PeerLogicValidation::UpdatedBlockTip(const CBlockIndex *pindexNew, const CBlockIndex *pindexFork, bool fInitialDownload) {\n@@ -997,11 +997,12 @@ bool static AlreadyHave(const CInv& inv) EXCLUSIVE_LOCKS_REQUIRED(cs_main)\n \n static void RelayTransaction(const CTransaction& tx, CConnman* connman)\n {\n+    AssertLockHeld(cs_main);\n+\n     CInv inv(MSG_TX, tx.GetHash());\n-    connman->ForEachNode([&inv](CNode* pnode)\n-    {\n-        pnode->PushInventory(inv);\n-    });\n+    for (auto& node : mapNodeState) {\n+        node.second.connection->PushInventory(inv);\n+    }\n }\n \n static void RelayAddress(const CAddress& addr, bool fReachable, CConnman* connman)\n@@ -1018,9 +1019,11 @@ static void RelayAddress(const CAddress& addr, bool fReachable, CConnman* connma\n     std::array<std::pair<uint64_t, CNode*>,2> best{{{0, nullptr}, {0, nullptr}}};\n     assert(nRelayNodes <= best.size());\n \n-    auto sortfunc = [&best, &hasher, nRelayNodes](CNode* pnode) {\n+    LOCK(cs_main);\n+    for (auto& node : mapNodeState) {\n+        CNode* pnode = node.second.connection;\n         if (pnode->nVersion >= CADDR_TIME_VERSION) {\n-            uint64_t hashKey = CSipHasher(hasher).Write(pnode->GetId()).Finalize();\n+            uint64_t hashKey = CSipHasher(hasher).Write(node.first).Finalize();\n             for (unsigned int i = 0; i < nRelayNodes; i++) {\n                  if (hashKey > best[i].first) {\n                      std::copy(best.begin() + i, best.begin() + nRelayNodes - 1, best.begin() + i + 1);\n@@ -1029,15 +1032,11 @@ static void RelayAddress(const CAddress& addr, bool fReachable, CConnman* connma\n                  }\n             }\n         }\n-    };\n-\n-    auto pushfunc = [&addr, &best, nRelayNodes, &insecure_rand] {\n-        for (unsigned int i = 0; i < nRelayNodes && best[i].first != 0; i++) {\n-            best[i].second->PushAddress(addr, insecure_rand);\n-        }\n-    };\n+    }\n \n-    connman->ForEachNodeThen(std::move(sortfunc), std::move(pushfunc));\n+    for (unsigned int i = 0; i < nRelayNodes && best[i].first != 0; i++) {\n+        best[i].second->PushAddress(addr, insecure_rand);\n+    }\n }\n \n void static ProcessGetData(CNode* pfrom, const Consensus::Params& consensusParams, CConnman* connman, const std::atomic<bool>& interruptMsgProc)\n@@ -3042,48 +3041,44 @@ void PeerLogicValidation::EvictExtraOutboundPeers(int64_t time_in_seconds)\n         // Pick the outbound peer that least recently announced\n         // us a new block, with ties broken by choosing the more recent\n         // connection (higher node id)\n-        NodeId worst_peer = -1;\n+        CNodeState* worst_peer = nullptr;\n         int64_t oldest_block_announcement = std::numeric_limits<int64_t>::max();\n \n         LOCK(cs_main);\n \n-        connman->ForEachNode([&](CNode* pnode) {\n+        for (auto& node : mapNodeState) {\n+            CNode* pnode = node.second.connection;\n             // Ignore non-outbound peers, or nodes marked for disconnect already\n             if (!IsOutboundDisconnectionCandidate(pnode) || pnode->fDisconnect) return;\n-            CNodeState *state = State(pnode->GetId());\n-            if (state == nullptr) return; // shouldn't be possible, but just in case\n+            CNodeState *state = &node.second;\n             // Don't evict our protected peers\n             if (state->m_chain_sync.m_protect) return;\n-            if (state->m_last_block_announcement < oldest_block_announcement || (state->m_last_block_announcement == oldest_block_announcement && pnode->GetId() > worst_peer)) {\n-                worst_peer = pnode->GetId();\n+            if (state->m_last_block_announcement < oldest_block_announcement || (state->m_last_block_announcement == oldest_block_announcement &&\n+                        (!worst_peer || pnode->GetId() > worst_peer->connection->GetId()))) {\n+                worst_peer = state;\n                 oldest_block_announcement = state->m_last_block_announcement;\n             }\n-        });\n-        if (worst_peer != -1) {\n-            bool disconnected = connman->ForNode(worst_peer, [&](CNode *pnode) {\n-                // Only disconnect a peer that has been connected to us for\n-                // some reasonable fraction of our check-frequency, to give\n-                // it time for new information to have arrived.\n-                // Also don't disconnect any peer we're trying to download a\n-                // block from.\n-                CNodeState &state = *State(pnode->GetId());\n-                if (time_in_seconds - pnode->nTimeConnected > MINIMUM_CONNECT_TIME && state.nBlocksInFlight == 0) {\n-                    LogPrint(BCLog::NET, \"disconnecting extra outbound peer=%d (last block announcement received at time %d)\\n\", pnode->GetId(), oldest_block_announcement);\n-                    pnode->fDisconnect = true;\n-                    return true;\n-                } else {\n-                    LogPrint(BCLog::NET, \"keeping outbound peer=%d chosen for eviction (connect time: %d, blocks_in_flight: %d)\\n\", pnode->GetId(), pnode->nTimeConnected, state.nBlocksInFlight);\n-                    return false;\n-                }\n-            });\n-            if (disconnected) {\n-                // If we disconnected an extra peer, that means we successfully\n-                // connected to at least one peer after the last time we\n-                // detected a stale tip. Don't try any more extra peers until\n-                // we next detect a stale tip, to limit the load we put on the\n-                // network from these extra connections.\n-                connman->SetTryNewOutboundPeer(false);\n+        }\n+        if (worst_peer != nullptr) {\n+            // Only disconnect a peer that has been connected to us for\n+            // some reasonable fraction of our check-frequency, to give\n+            // it time for new information to have arrived.\n+            // Also don't disconnect any peer we're trying to download a\n+            // block from.\n+            CNode* pnode = worst_peer->connection;\n+            if (time_in_seconds - pnode->nTimeConnected > MINIMUM_CONNECT_TIME && worst_peer->nBlocksInFlight == 0) {\n+                LogPrint(BCLog::NET, \"disconnecting extra outbound peer=%d (last block announcement received at time %d)\\n\", pnode->GetId(), oldest_block_announcement);\n+                pnode->fDisconnect = true;\n+            } else {\n+                LogPrint(BCLog::NET, \"keeping outbound peer=%d chosen for eviction (connect time: %d, blocks_in_flight: %d)\\n\", pnode->GetId(), pnode->nTimeConnected, worst_peer->nBlocksInFlight);\n+                return;\n             }\n+            // If we disconnected an extra peer, that means we successfully\n+            // connected to at least one peer after the last time we\n+            // detected a stale tip. Don't try any more extra peers until\n+            // we next detect a stale tip, to limit the load we put on the\n+            // network from these extra connections.\n+            connman->SetTryNewOutboundPeer(false);\n         }\n     }\n }"
+      }
+    ]
+  },
+  {
+    "sha": "ce353ce2e87aa74c179e2adb8134a3a1c638dee5",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjZTM1M2NlMmU4N2FhNzRjMTc5ZTJhZGI4MTM0YTNhMWM2MzhkZWU1",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-11-04T00:23:30Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-11-16T16:54:12Z"
+      },
+      "message": "Use net_processing's RelayTransaction to relay txn, not CConnman\n\nThis is very clearly a \"protocol-level\" action, so belongs in\nnet_processing, not net.",
+      "tree": {
+        "sha": "3d95dce1761c7d52d946143f3baefc12a989a1ef",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/3d95dce1761c7d52d946143f3baefc12a989a1ef"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/ce353ce2e87aa74c179e2adb8134a3a1c638dee5",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ce353ce2e87aa74c179e2adb8134a3a1c638dee5",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/ce353ce2e87aa74c179e2adb8134a3a1c638dee5",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ce353ce2e87aa74c179e2adb8134a3a1c638dee5/comments",
+    "author": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "e72cc5f74e72bdad8dafbfb931ef17943ab4e77d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e72cc5f74e72bdad8dafbfb931ef17943ab4e77d",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/e72cc5f74e72bdad8dafbfb931ef17943ab4e77d"
+      }
+    ],
+    "stats": {
+      "total": 29,
+      "additions": 12,
+      "deletions": 17
+    },
+    "files": [
+      {
+        "sha": "7320ff7c21f33d5490dc9a6e987a4a3233fb5841",
+        "filename": "src/net_processing.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 6,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ce353ce2e87aa74c179e2adb8134a3a1c638dee5/src/net_processing.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ce353ce2e87aa74c179e2adb8134a3a1c638dee5/src/net_processing.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.cpp?ref=ce353ce2e87aa74c179e2adb8134a3a1c638dee5",
+        "patch": "@@ -995,11 +995,11 @@ bool static AlreadyHave(const CInv& inv) EXCLUSIVE_LOCKS_REQUIRED(cs_main)\n     return true;\n }\n \n-static void RelayTransaction(const CTransaction& tx, CConnman* connman)\n+void RelayTransaction(const uint256& tx_hash, CConnman* connman)\n {\n-    AssertLockHeld(cs_main);\n+    LOCK(cs_main);\n \n-    CInv inv(MSG_TX, tx.GetHash());\n+    CInv inv(MSG_TX, tx_hash);\n     for (auto& node : mapNodeState) {\n         node.second.connection->PushInventory(inv);\n     }\n@@ -2113,7 +2113,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr\n         if (!AlreadyHave(inv) &&\n             AcceptToMemoryPool(mempool, state, ptx, &fMissingInputs, &lRemovedTxn, false /* bypass_limits */, 0 /* nAbsurdFee */)) {\n             mempool.check(pcoinsTip.get());\n-            RelayTransaction(tx, connman);\n+            RelayTransaction(tx.GetHash(), connman);\n             for (unsigned int i = 0; i < tx.vout.size(); i++) {\n                 vWorkQueue.emplace_back(inv.hash, i);\n             }\n@@ -2151,7 +2151,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr\n                         continue;\n                     if (AcceptToMemoryPool(mempool, stateDummy, porphanTx, &fMissingInputs2, &lRemovedTxn, false /* bypass_limits */, 0 /* nAbsurdFee */)) {\n                         LogPrint(BCLog::MEMPOOL, \"   accepted orphan tx %s\\n\", orphanHash.ToString());\n-                        RelayTransaction(orphanTx, connman);\n+                        RelayTransaction(orphanTx.GetHash(), connman);\n                         for (unsigned int i = 0; i < orphanTx.vout.size(); i++) {\n                             vWorkQueue.emplace_back(orphanHash, i);\n                         }\n@@ -2242,7 +2242,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr\n                 int nDoS = 0;\n                 if (!state.IsInvalid(nDoS) || nDoS == 0) {\n                     LogPrintf(\"Force relaying tx %s from whitelisted peer=%d\\n\", tx.GetHash().ToString(), pfrom->GetId());\n-                    RelayTransaction(tx, connman);\n+                    RelayTransaction(tx.GetHash(), connman);\n                 } else {\n                     LogPrintf(\"Not relaying invalid transaction %s from whitelisted peer=%d (%s)\\n\", tx.GetHash().ToString(), pfrom->GetId(), FormatStateMessage(state));\n                 }"
+      },
+      {
+        "sha": "71f8df8b9145695e00020b9fe9693cfa9672d7f5",
+        "filename": "src/net_processing.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ce353ce2e87aa74c179e2adb8134a3a1c638dee5/src/net_processing.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ce353ce2e87aa74c179e2adb8134a3a1c638dee5/src/net_processing.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.h?ref=ce353ce2e87aa74c179e2adb8134a3a1c638dee5",
+        "patch": "@@ -81,5 +81,7 @@ struct CNodeStateStats {\n bool GetNodeStateStats(NodeId nodeid, CNodeStateStats &stats);\n /** Increase a node's misbehavior score. */\n void Misbehaving(NodeId nodeid, int howmuch);\n+/** Relay a transaction that is in mempool to all our peers */\n+void RelayTransaction(const uint256& tx_hash, CConnman* connman);\n \n #endif // BITCOIN_NET_PROCESSING_H"
+      },
+      {
+        "sha": "325fc7e92887f1154b45f0164235eebc4e4bb82c",
+        "filename": "src/rpc/rawtransaction.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 6,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ce353ce2e87aa74c179e2adb8134a3a1c638dee5/src/rpc/rawtransaction.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ce353ce2e87aa74c179e2adb8134a3a1c638dee5/src/rpc/rawtransaction.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/rawtransaction.cpp?ref=ce353ce2e87aa74c179e2adb8134a3a1c638dee5",
+        "patch": "@@ -14,6 +14,7 @@\n #include <validationinterface.h>\n #include <merkleblock.h>\n #include <net.h>\n+#include <net_processing.h>\n #include <policy/policy.h>\n #include <policy/rbf.h>\n #include <primitives/transaction.h>\n@@ -979,12 +980,7 @@ UniValue sendrawtransaction(const JSONRPCRequest& request)\n     if(!g_connman)\n         throw JSONRPCError(RPC_CLIENT_P2P_DISABLED, \"Error: Peer-to-peer functionality missing or disabled\");\n \n-    CInv inv(MSG_TX, hashTx);\n-    g_connman->ForEachNode([&inv](CNode* pnode)\n-    {\n-        pnode->PushInventory(inv);\n-    });\n-\n+    RelayTransaction(hashTx, g_connman.get());\n     return hashTx.GetHex();\n }\n "
+      },
+      {
+        "sha": "55a12c7118f76364e2f8e61077d173b7eaa87598",
+        "filename": "src/wallet/wallet.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 5,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ce353ce2e87aa74c179e2adb8134a3a1c638dee5/src/wallet/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ce353ce2e87aa74c179e2adb8134a3a1c638dee5/src/wallet/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.cpp?ref=ce353ce2e87aa74c179e2adb8134a3a1c638dee5",
+        "patch": "@@ -17,6 +17,7 @@\n #include <keystore.h>\n #include <validation.h>\n #include <net.h>\n+#include <net_processing.h>\n #include <policy/fees.h>\n #include <policy/policy.h>\n #include <policy/rbf.h>\n@@ -1733,11 +1734,7 @@ bool CWalletTx::RelayWalletTransaction(CConnman* connman)\n         if (InMempool() || AcceptToMemoryPool(maxTxFee, state)) {\n             LogPrintf(\"Relaying wtx %s\\n\", GetHash().ToString());\n             if (connman) {\n-                CInv inv(MSG_TX, GetHash());\n-                connman->ForEachNode([&inv](CNode* pnode)\n-                {\n-                    pnode->PushInventory(inv);\n-                });\n+                RelayTransaction(GetHash(), connman);\n                 return true;\n             }\n         }"
+      }
+    ]
+  },
+  {
+    "sha": "a744e30c74e7b1f50c3285a6334a24a729e39c00",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphNzQ0ZTMwYzc0ZTdiMWY1MGMzMjg1YTYzMzRhMjRhNzI5ZTM5YzAw",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-11-04T00:25:15Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-11-16T16:54:14Z"
+      },
+      "message": "Replace final ForEachNode with a QueuePingForAllPeers\n\nAgain, queueing pings is very much \"protocol-level\" logic, and\nbelongs in net_processing, not net.",
+      "tree": {
+        "sha": "57fbce6986ae0ec0932b92c8ba7ef9cade4c75c8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/57fbce6986ae0ec0932b92c8ba7ef9cade4c75c8"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a744e30c74e7b1f50c3285a6334a24a729e39c00",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a744e30c74e7b1f50c3285a6334a24a729e39c00",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a744e30c74e7b1f50c3285a6334a24a729e39c00",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a744e30c74e7b1f50c3285a6334a24a729e39c00/comments",
+    "author": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "ce353ce2e87aa74c179e2adb8134a3a1c638dee5",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ce353ce2e87aa74c179e2adb8134a3a1c638dee5",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/ce353ce2e87aa74c179e2adb8134a3a1c638dee5"
+      }
+    ],
+    "stats": {
+      "total": 40,
+      "additions": 24,
+      "deletions": 16
+    },
+    "files": [
+      {
+        "sha": "e6e49afa720e5e5ca5c5539bbf4724973f142fbf",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 1,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a744e30c74e7b1f50c3285a6334a24a729e39c00/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a744e30c74e7b1f50c3285a6334a24a729e39c00/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=a744e30c74e7b1f50c3285a6334a24a729e39c00",
+        "patch": "@@ -2773,7 +2773,6 @@ CNode::CNode(NodeId idIn, ServiceFlags nLocalServicesIn, int nMyStartingHeightIn\n     nPingNonceSent = 0;\n     nPingUsecStart = 0;\n     nPingUsecTime = 0;\n-    fPingQueued = false;\n     nMinPingUsecTime = std::numeric_limits<int64_t>::max();\n     minFeeFilter = 0;\n     lastSentFeeFilter = 0;"
+      },
+      {
+        "sha": "41ff87d928fec6e041a2572ee461895cd9057d44",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 2,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a744e30c74e7b1f50c3285a6334a24a729e39c00/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a744e30c74e7b1f50c3285a6334a24a729e39c00/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=a744e30c74e7b1f50c3285a6334a24a729e39c00",
+        "patch": "@@ -717,8 +717,6 @@ class CNode\n     std::atomic<int64_t> nPingUsecTime;\n     // Best measured round-trip time.\n     std::atomic<int64_t> nMinPingUsecTime;\n-    // Whether a ping is requested.\n-    std::atomic<bool> fPingQueued;\n     // Minimum fee rate with which to filter inv's to this node\n     CAmount minFeeFilter;\n     CCriticalSection cs_feeFilter;"
+      },
+      {
+        "sha": "719d1b724f43dd788c026bc93751d253fe35324d",
+        "filename": "src/net_processing.cpp",
+        "status": "modified",
+        "additions": 21,
+        "deletions": 10,
+        "changes": 31,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a744e30c74e7b1f50c3285a6334a24a729e39c00/src/net_processing.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a744e30c74e7b1f50c3285a6334a24a729e39c00/src/net_processing.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.cpp?ref=a744e30c74e7b1f50c3285a6334a24a729e39c00",
+        "patch": "@@ -211,6 +211,8 @@ struct CNodeState {\n     bool fSupportsDesiredCmpctVersion;\n     //! The height this peer claimed to have in their version message\n     int nStartingHeight;\n+    //! Whether we should send this peer a ping immediately\n+    bool fPingQueued;\n \n     /** State used to enforce CHAIN_SYNC_TIMEOUT\n       * Only in effect for outbound, non-manual connections, with\n@@ -265,6 +267,7 @@ struct CNodeState {\n         fWantsCmpctWitness = false;\n         fSupportsDesiredCmpctVersion = false;\n         nStartingHeight = -1;\n+        fPingQueued = false;\n         m_chain_sync = { 0, nullptr, false, false };\n         m_last_block_announcement = 0;\n     }\n@@ -1005,6 +1008,14 @@ void RelayTransaction(const uint256& tx_hash, CConnman* connman)\n     }\n }\n \n+void QueuePingForAllPeers()\n+{\n+    LOCK(cs_main);\n+    for (auto& node : mapNodeState) {\n+        node.second.fPingQueued = true;\n+    }\n+}\n+\n static void RelayAddress(const CAddress& addr, bool fReachable, CConnman* connman)\n {\n     unsigned int nRelayNodes = fReachable ? 2 : 1; // limited relaying of addresses outside our network(s)\n@@ -3133,11 +3144,19 @@ bool PeerLogicValidation::SendMessages(CNode* pto, std::atomic<bool>& interruptM\n         // If we get here, the outgoing message serialization version is set and can't change.\n         const CNetMsgMaker msgMaker(pto->GetSendVersion());\n \n+        TRY_LOCK(cs_main, lockMain); // Acquire cs_main for IsInitialBlockDownload() and CNodeState()\n+        if (!lockMain)\n+            return true;\n+\n+        if (SendRejectsAndCheckIfBanned(pto, connman))\n+            return true;\n+        CNodeState &state = *State(pto->GetId());\n+\n         //\n         // Message: ping\n         //\n         bool pingSend = false;\n-        if (pto->fPingQueued) {\n+        if (state.fPingQueued) {\n             // RPC ping request by user\n             pingSend = true;\n         }\n@@ -3150,7 +3169,7 @@ bool PeerLogicValidation::SendMessages(CNode* pto, std::atomic<bool>& interruptM\n             while (nonce == 0) {\n                 GetRandBytes((unsigned char*)&nonce, sizeof(nonce));\n             }\n-            pto->fPingQueued = false;\n+            state.fPingQueued = false;\n             pto->nPingUsecStart = GetTimeMicros();\n             if (pto->nVersion > BIP0031_VERSION) {\n                 pto->nPingNonceSent = nonce;\n@@ -3162,14 +3181,6 @@ bool PeerLogicValidation::SendMessages(CNode* pto, std::atomic<bool>& interruptM\n             }\n         }\n \n-        TRY_LOCK(cs_main, lockMain); // Acquire cs_main for IsInitialBlockDownload() and CNodeState()\n-        if (!lockMain)\n-            return true;\n-\n-        if (SendRejectsAndCheckIfBanned(pto, connman))\n-            return true;\n-        CNodeState &state = *State(pto->GetId());\n-\n         // Address refresh broadcast\n         int64_t nNow = GetTimeMicros();\n         if (!IsInitialBlockDownload() && pto->nNextLocalAddrSend < nNow) {"
+      },
+      {
+        "sha": "a9ca941e12f658e0432c0f0a4e048b08a0110fda",
+        "filename": "src/net_processing.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a744e30c74e7b1f50c3285a6334a24a729e39c00/src/net_processing.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a744e30c74e7b1f50c3285a6334a24a729e39c00/src/net_processing.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.h?ref=a744e30c74e7b1f50c3285a6334a24a729e39c00",
+        "patch": "@@ -83,5 +83,7 @@ bool GetNodeStateStats(NodeId nodeid, CNodeStateStats &stats);\n void Misbehaving(NodeId nodeid, int howmuch);\n /** Relay a transaction that is in mempool to all our peers */\n void RelayTransaction(const uint256& tx_hash, CConnman* connman);\n+/** Send all of our peers a ping */\n+void QueuePingForAllPeers();\n \n #endif // BITCOIN_NET_PROCESSING_H"
+      },
+      {
+        "sha": "79347a907423f768869e51743ca02c59e5800903",
+        "filename": "src/rpc/net.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 3,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a744e30c74e7b1f50c3285a6334a24a729e39c00/src/rpc/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a744e30c74e7b1f50c3285a6334a24a729e39c00/src/rpc/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/net.cpp?ref=a744e30c74e7b1f50c3285a6334a24a729e39c00",
+        "patch": "@@ -59,9 +59,7 @@ UniValue ping(const JSONRPCRequest& request)\n         throw JSONRPCError(RPC_CLIENT_P2P_DISABLED, \"Error: Peer-to-peer functionality missing or disabled\");\n \n     // Request that each node send a ping during next message processing pass\n-    g_connman->ForEachNode([](CNode* pnode) {\n-        pnode->fPingQueued = true;\n-    });\n+    QueuePingForAllPeers();\n     return NullUniValue;\n }\n "
+      }
+    ]
+  },
+  {
+    "sha": "2dda567283bbac77a23deafe336f88bfece3c5b8",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyZGRhNTY3MjgzYmJhYzc3YTIzZGVhZmUzMzZmODhiZmVjZTNjNWI4",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-11-04T00:29:27Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-11-16T16:54:14Z"
+      },
+      "message": "[net] Remove CConnman's (now unused) ForEachNode and ForNode",
+      "tree": {
+        "sha": "1d8ac868099eeb7417372dbf1f928ff699efae82",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/1d8ac868099eeb7417372dbf1f928ff699efae82"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/2dda567283bbac77a23deafe336f88bfece3c5b8",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2dda567283bbac77a23deafe336f88bfece3c5b8",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/2dda567283bbac77a23deafe336f88bfece3c5b8",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2dda567283bbac77a23deafe336f88bfece3c5b8/comments",
+    "author": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "a744e30c74e7b1f50c3285a6334a24a729e39c00",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a744e30c74e7b1f50c3285a6334a24a729e39c00",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/a744e30c74e7b1f50c3285a6334a24a729e39c00"
+      }
+    ],
+    "stats": {
+      "total": 65,
+      "additions": 0,
+      "deletions": 65
+    },
+    "files": [
+      {
+        "sha": "e738f47785c64fb37b09a497ef92effd345dafb0",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 18,
+        "changes": 18,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/2dda567283bbac77a23deafe336f88bfece3c5b8/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/2dda567283bbac77a23deafe336f88bfece3c5b8/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=2dda567283bbac77a23deafe336f88bfece3c5b8",
+        "patch": "@@ -2831,11 +2831,6 @@ void CNode::AskFor(const CInv& inv)\n     mapAskFor.insert(std::make_pair(nRequestTime, inv));\n }\n \n-bool CConnman::NodeFullyConnected(const CNode* pnode)\n-{\n-    return pnode && pnode->fSuccessfullyConnected && !pnode->fDisconnect;\n-}\n-\n void CConnman::PushMessage(CNode* pnode, CSerializedNetMsg&& msg)\n {\n     size_t nMessageSize = msg.data.size();\n@@ -2873,19 +2868,6 @@ void CConnman::PushMessage(CNode* pnode, CSerializedNetMsg&& msg)\n         RecordBytesSent(nBytesSent);\n }\n \n-bool CConnman::ForNode(NodeId id, std::function<bool(CNode* pnode)> func)\n-{\n-    CNode* found = nullptr;\n-    LOCK(cs_vNodes);\n-    for (auto&& pnode : vNodes) {\n-        if(pnode->GetId() == id) {\n-            found = pnode;\n-            break;\n-        }\n-    }\n-    return found != nullptr && NodeFullyConnected(found) && func(found);\n-}\n-\n int64_t PoissonNextSend(int64_t nNow, int average_interval_seconds) {\n     return nNow + (int64_t)(log1p(GetRand(1ULL << 48) * -0.0000000000000035527136788 /* -1/2^48 */) * average_interval_seconds * -1000000.0 + 0.5);\n }"
+      },
+      {
+        "sha": "dee758db734c083b919e35d51cd9b05569fa5f3c",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 47,
+        "changes": 47,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/2dda567283bbac77a23deafe336f88bfece3c5b8/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/2dda567283bbac77a23deafe336f88bfece3c5b8/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=2dda567283bbac77a23deafe336f88bfece3c5b8",
+        "patch": "@@ -174,52 +174,8 @@ class CConnman\n     bool OpenNetworkConnection(const CAddress& addrConnect, bool fCountFailure, CSemaphoreGrant *grantOutbound = nullptr, const char *strDest = nullptr, bool fOneShot = false, bool fFeeler = false, bool manual_connection = false);\n     bool CheckIncomingNonce(uint64_t nonce);\n \n-    bool ForNode(NodeId id, std::function<bool(CNode* pnode)> func);\n-\n     void PushMessage(CNode* pnode, CSerializedNetMsg&& msg);\n \n-    template<typename Callable>\n-    void ForEachNode(Callable&& func)\n-    {\n-        LOCK(cs_vNodes);\n-        for (auto&& node : vNodes) {\n-            if (NodeFullyConnected(node))\n-                func(node);\n-        }\n-    };\n-\n-    template<typename Callable>\n-    void ForEachNode(Callable&& func) const\n-    {\n-        LOCK(cs_vNodes);\n-        for (auto&& node : vNodes) {\n-            if (NodeFullyConnected(node))\n-                func(node);\n-        }\n-    };\n-\n-    template<typename Callable, typename CallableAfter>\n-    void ForEachNodeThen(Callable&& pre, CallableAfter&& post)\n-    {\n-        LOCK(cs_vNodes);\n-        for (auto&& node : vNodes) {\n-            if (NodeFullyConnected(node))\n-                pre(node);\n-        }\n-        post();\n-    };\n-\n-    template<typename Callable, typename CallableAfter>\n-    void ForEachNodeThen(Callable&& pre, CallableAfter&& post) const\n-    {\n-        LOCK(cs_vNodes);\n-        for (auto&& node : vNodes) {\n-            if (NodeFullyConnected(node))\n-                pre(node);\n-        }\n-        post();\n-    };\n-\n     // Addrman functions\n     size_t GetAddressCount() const;\n     void SetServices(const CService &addr, ServiceFlags nServices);\n@@ -358,9 +314,6 @@ class CConnman\n     void RecordBytesRecv(uint64_t bytes);\n     void RecordBytesSent(uint64_t bytes);\n \n-    // Whether the node should be passed out in ForEach* callbacks\n-    static bool NodeFullyConnected(const CNode* pnode);\n-\n     // Network usage totals\n     CCriticalSection cs_totalBytesRecv;\n     CCriticalSection cs_totalBytesSent;"
+      }
+    ]
+  },
+  {
+    "sha": "fd7e8ecb42e5789e858b47d35dfc55a82ff2e200",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmZDdlOGVjYjQyZTU3ODllODU4YjQ3ZDM1ZGZjNTVhODJmZjJlMjAw",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-06-07T21:57:29Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2017-11-16T16:54:14Z"
+      },
+      "message": "Improve LeaveCritical strictness",
+      "tree": {
+        "sha": "70f04f1b5c154ba85c1a0d9004a9360e7b50e2e8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/70f04f1b5c154ba85c1a0d9004a9360e7b50e2e8"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/fd7e8ecb42e5789e858b47d35dfc55a82ff2e200",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fd7e8ecb42e5789e858b47d35dfc55a82ff2e200",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/fd7e8ecb42e5789e858b47d35dfc55a82ff2e200",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fd7e8ecb42e5789e858b47d35dfc55a82ff2e200/comments",
+    "author": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "2dda567283bbac77a23deafe336f88bfece3c5b8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2dda567283bbac77a23deafe336f88bfece3c5b8",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/2dda567283bbac77a23deafe336f88bfece3c5b8"
+      }
+    ],
+    "stats": {
+      "total": 26,
+      "additions": 15,
+      "deletions": 11
+    },
+    "files": [
+      {
+        "sha": "f911defebf629a56dc62b6aa399fc6c969bdb8b3",
+        "filename": "src/sync.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 3,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fd7e8ecb42e5789e858b47d35dfc55a82ff2e200/src/sync.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fd7e8ecb42e5789e858b47d35dfc55a82ff2e200/src/sync.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/sync.cpp?ref=fd7e8ecb42e5789e858b47d35dfc55a82ff2e200",
+        "patch": "@@ -123,8 +123,12 @@ static void push_lock(void* c, const CLockLocation& locklocation)\n     }\n }\n \n-static void pop_lock()\n+static void pop_lock(void* cs)\n {\n+    // We assert here that locks are popped in the order they were locked.\n+    // This is a super-overly-restrictive requirement, but we need it to\n+    // make our deadlock detection work properly.\n+    assert((*lockstack).back().first == cs);\n     (*lockstack).pop_back();\n }\n \n@@ -133,9 +137,9 @@ void EnterCritical(const char* pszName, const char* pszFile, int nLine, void* cs\n     push_lock(cs, CLockLocation(pszName, pszFile, nLine, fTry));\n }\n \n-void LeaveCritical()\n+void LeaveCritical(void* cs)\n {\n-    pop_lock();\n+    pop_lock(cs);\n }\n \n std::string LocksHeld()"
+      },
+      {
+        "sha": "497c3762769c29b34f74f2e9c4a98fd617cf757e",
+        "filename": "src/sync.h",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 8,
+        "changes": 16,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fd7e8ecb42e5789e858b47d35dfc55a82ff2e200/src/sync.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fd7e8ecb42e5789e858b47d35dfc55a82ff2e200/src/sync.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/sync.h?ref=fd7e8ecb42e5789e858b47d35dfc55a82ff2e200",
+        "patch": "@@ -74,14 +74,14 @@ class LOCKABLE AnnotatedMixin : public PARENT\n \n #ifdef DEBUG_LOCKORDER\n void EnterCritical(const char* pszName, const char* pszFile, int nLine, void* cs, bool fTry = false);\n-void LeaveCritical();\n+void LeaveCritical(void* cs);\n std::string LocksHeld();\n void AssertLockHeldInternal(const char* pszName, const char* pszFile, int nLine, void* cs);\n void AssertLockNotHeldInternal(const char* pszName, const char* pszFile, int nLine, void* cs);\n void DeleteLock(void* cs);\n #else\n void static inline EnterCritical(const char* pszName, const char* pszFile, int nLine, void* cs, bool fTry = false) {}\n-void static inline LeaveCritical() {}\n+void static inline LeaveCritical(void* cs) {}\n void static inline AssertLockHeldInternal(const char* pszName, const char* pszFile, int nLine, void* cs) {}\n void static inline AssertLockNotHeldInternal(const char* pszName, const char* pszFile, int nLine, void* cs) {}\n void static inline DeleteLock(void* cs) {}\n@@ -138,7 +138,7 @@ class SCOPED_LOCKABLE CCriticalBlock\n         EnterCritical(pszName, pszFile, nLine, (void*)(lock.mutex()), true);\n         lock.try_lock();\n         if (!lock.owns_lock())\n-            LeaveCritical();\n+            LeaveCritical((void*)(lock.mutex()));\n         return lock.owns_lock();\n     }\n \n@@ -165,7 +165,7 @@ class SCOPED_LOCKABLE CCriticalBlock\n     ~CCriticalBlock() UNLOCK_FUNCTION()\n     {\n         if (lock.owns_lock())\n-            LeaveCritical();\n+            LeaveCritical((void*)(lock.mutex()));\n     }\n \n     operator bool()\n@@ -187,10 +187,10 @@ class SCOPED_LOCKABLE CCriticalBlock\n         (cs).lock();                                          \\\n     }\n \n-#define LEAVE_CRITICAL_SECTION(cs) \\\n-    {                              \\\n-        (cs).unlock();             \\\n-        LeaveCritical();           \\\n+#define LEAVE_CRITICAL_SECTION(cs)   \\\n+    {                                \\\n+        (cs).unlock();               \\\n+        LeaveCritical((void*)(&cs)); \\\n     }\n \n class CSemaphore"
+      }
+    ]
+  }
+]

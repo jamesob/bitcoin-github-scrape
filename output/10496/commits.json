@@ -1,0 +1,170 @@
+[
+  {
+    "sha": "ce79f3251851f6177f38009341802e6065cb70af",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjZTc5ZjMyNTE4NTFmNjE3N2YzODAwOTM0MTgwMmU2MDY1Y2I3MGFm",
+    "commit": {
+      "author": {
+        "name": "Marko Bencun",
+        "email": "marko.bencun@monetas.net",
+        "date": "2017-06-01T09:07:08Z"
+      },
+      "committer": {
+        "name": "Marko Bencun",
+        "email": "marko.bencun@monetas.net",
+        "date": "2017-06-15T21:06:12Z"
+      },
+      "message": "add WhitelistedRange to CConnman::Options\n\nPart of a series of changes to clean up the instantiation of connman\nby decoupling the command line arguments.",
+      "tree": {
+        "sha": "9ec347e23680be4583838e22a72940ab0cc33422",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/9ec347e23680be4583838e22a72940ab0cc33422"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/ce79f3251851f6177f38009341802e6065cb70af",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ce79f3251851f6177f38009341802e6065cb70af",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/ce79f3251851f6177f38009341802e6065cb70af",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ce79f3251851f6177f38009341802e6065cb70af/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "c2ab38bdd57a16e6c708dcc633d9162331c9d311",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c2ab38bdd57a16e6c708dcc633d9162331c9d311",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c2ab38bdd57a16e6c708dcc633d9162331c9d311"
+      }
+    ],
+    "stats": {
+      "total": 33,
+      "additions": 13,
+      "deletions": 20
+    },
+    "files": [
+      {
+        "sha": "aedad25bd26de4fecd2bf7877bcccca508ece4f2",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 10,
+        "deletions": 10,
+        "changes": 20,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ce79f3251851f6177f38009341802e6065cb70af/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ce79f3251851f6177f38009341802e6065cb70af/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=ce79f3251851f6177f38009341802e6065cb70af",
+        "patch": "@@ -1289,16 +1289,6 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)\n         }\n     }\n \n-    if (gArgs.IsArgSet(\"-whitelist\")) {\n-        for (const std::string& net : gArgs.GetArgs(\"-whitelist\")) {\n-            CSubNet subnet;\n-            LookupSubNet(net.c_str(), subnet);\n-            if (!subnet.IsValid())\n-                return InitError(strprintf(_(\"Invalid netmask specified in -whitelist: '%s'\"), net));\n-            connman.AddWhitelistedRange(subnet);\n-        }\n-    }\n-\n     // Check for host lookup allowed before parsing any network related parameters\n     fNameLookup = GetBoolArg(\"-dns\", DEFAULT_NAME_LOOKUP);\n \n@@ -1661,6 +1651,16 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)\n     connOptions.nMaxOutboundTimeframe = nMaxOutboundTimeframe;\n     connOptions.nMaxOutboundLimit = nMaxOutboundLimit;\n \n+    if (gArgs.IsArgSet(\"-whitelist\")) {\n+        for (const auto& net : gArgs.GetArgs(\"-whitelist\")) {\n+            CSubNet subnet;\n+            LookupSubNet(net.c_str(), subnet);\n+            if (!subnet.IsValid())\n+                return InitError(strprintf(_(\"Invalid netmask specified in -whitelist: '%s'\"), net));\n+            connOptions.vWhitelistedRange.push_back(subnet);\n+        }\n+    }\n+\n     if (gArgs.IsArgSet(\"-seednode\")) {\n         connOptions.vSeedNodes = gArgs.GetArgs(\"-seednode\");\n     }"
+      },
+      {
+        "sha": "cc4341e29ff1d3a2e1144f70880ab083b7c7eeee",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 7,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ce79f3251851f6177f38009341802e6065cb70af/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ce79f3251851f6177f38009341802e6065cb70af/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=ce79f3251851f6177f38009341802e6065cb70af",
+        "patch": "@@ -601,20 +601,13 @@ void CConnman::SetBannedSetDirty(bool dirty)\n \n \n bool CConnman::IsWhitelistedRange(const CNetAddr &addr) {\n-    LOCK(cs_vWhitelistedRange);\n     for (const CSubNet& subnet : vWhitelistedRange) {\n         if (subnet.Match(addr))\n             return true;\n     }\n     return false;\n }\n \n-void CConnman::AddWhitelistedRange(const CSubNet &subnet) {\n-    LOCK(cs_vWhitelistedRange);\n-    vWhitelistedRange.push_back(subnet);\n-}\n-\n-\n std::string CNode::GetAddrName() const {\n     LOCK(cs_addrName);\n     return addrName;\n@@ -2248,6 +2241,8 @@ bool CConnman::Start(CScheduler& scheduler, std::string& strNodeError, Options c\n \n     SetBestHeight(connOptions.nBestHeight);\n \n+    vWhitelistedRange = connOptions.vWhitelistedRange;\n+\n     for (const auto& strDest : connOptions.vSeedNodes) {\n         AddOneShot(strDest);\n     }"
+      },
+      {
+        "sha": "b11baab335dac0106445283b4c8236c6683426cd",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 3,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ce79f3251851f6177f38009341802e6065cb70af/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ce79f3251851f6177f38009341802e6065cb70af/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=ce79f3251851f6177f38009341802e6065cb70af",
+        "patch": "@@ -144,6 +144,7 @@ class CConnman\n         uint64_t nMaxOutboundTimeframe = 0;\n         uint64_t nMaxOutboundLimit = 0;\n         std::vector<std::string> vSeedNodes;\n+        std::vector<CSubNet> vWhitelistedRange;\n     };\n     CConnman(uint64_t seed0, uint64_t seed1);\n     ~CConnman();\n@@ -244,8 +245,6 @@ class CConnman\n \n     unsigned int GetSendBufferSize() const;\n \n-    void AddWhitelistedRange(const CSubNet &subnet);\n-\n     ServiceFlags GetLocalServices() const;\n \n     //!set the max outbound target in bytes\n@@ -346,7 +345,6 @@ class CConnman\n     // Whitelisted ranges. Any node connecting from these is automatically\n     // whitelisted (as well as those connecting to whitelisted binds).\n     std::vector<CSubNet> vWhitelistedRange;\n-    CCriticalSection cs_vWhitelistedRange;\n \n     unsigned int nSendBufferMaxSize;\n     unsigned int nReceiveFloodSize;"
+      }
+    ]
+  },
+  {
+    "sha": "07b2afef10bb6366a270e325fd41a8bc526c9ef3",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowN2IyYWZlZjEwYmI2MzY2YTI3MGUzMjVmZDQxYThiYzUyNmM5ZWYz",
+    "commit": {
+      "author": {
+        "name": "Marko Bencun",
+        "email": "marko.bencun@monetas.net",
+        "date": "2017-06-01T10:34:02Z"
+      },
+      "committer": {
+        "name": "Marko Bencun",
+        "email": "marko.bencun@monetas.net",
+        "date": "2017-06-15T21:07:14Z"
+      },
+      "message": "add Binds, WhiteBinds to CConnman::Options\n\nPart of a series of changes to clean up the instantiation of connman\nby decoupling the command line arguments.\n\nWe also now abort with an error when explicit binds are set with\n-listen=0.",
+      "tree": {
+        "sha": "a8395c86f903e74fc5e039efb2e8f99c27961045",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/a8395c86f903e74fc5e039efb2e8f99c27961045"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/07b2afef10bb6366a270e325fd41a8bc526c9ef3",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/07b2afef10bb6366a270e325fd41a8bc526c9ef3",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/07b2afef10bb6366a270e325fd41a8bc526c9ef3",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/07b2afef10bb6366a270e325fd41a8bc526c9ef3/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "ce79f3251851f6177f38009341802e6065cb70af",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ce79f3251851f6177f38009341802e6065cb70af",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/ce79f3251851f6177f38009341802e6065cb70af"
+      }
+    ],
+    "stats": {
+      "total": 149,
+      "additions": 90,
+      "deletions": 59
+    },
+    "files": [
+      {
+        "sha": "d1c196e35d5e74fbebd3c326e0dd5c837c4a79e8",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 34,
+        "deletions": 55,
+        "changes": 89,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/07b2afef10bb6366a270e325fd41a8bc526c9ef3/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/07b2afef10bb6366a270e325fd41a8bc526c9ef3/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=07b2afef10bb6366a270e325fd41a8bc526c9ef3",
+        "patch": "@@ -88,14 +88,6 @@ static CZMQNotificationInterface* pzmqNotificationInterface = NULL;\n #define MIN_CORE_FILEDESCRIPTORS 150\n #endif\n \n-/** Used to pass flags to the Bind() function */\n-enum BindFlags {\n-    BF_NONE         = 0,\n-    BF_EXPLICIT     = (1U << 0),\n-    BF_REPORT_ERROR = (1U << 1),\n-    BF_WHITELIST    = (1U << 2),\n-};\n-\n static const char* FEE_ESTIMATES_FILENAME=\"fee_estimates.dat\";\n \n //////////////////////////////////////////////////////////////////////////////\n@@ -296,17 +288,6 @@ static void registerSignalHandler(int signal, void(*handler)(int))\n }\n #endif\n \n-bool static Bind(CConnman& connman, const CService &addr, unsigned int flags) {\n-    if (!(flags & BF_EXPLICIT) && IsLimited(addr))\n-        return false;\n-    std::string strError;\n-    if (!connman.BindListenPort(addr, strError, (flags & BF_WHITELIST) != 0)) {\n-        if (flags & BF_REPORT_ERROR)\n-            return InitError(strError);\n-        return false;\n-    }\n-    return true;\n-}\n void OnRPCStarted()\n {\n     uiInterface.NotifyBlockTip.connect(&RPCNotifyBlockChange);\n@@ -900,10 +881,16 @@ bool AppInitParameterInteraction()\n             return InitError(_(\"Prune mode is incompatible with -txindex.\"));\n     }\n \n+    // -bind and -whitebind can't be set when not listening\n+    size_t nUserBind =\n+        (gArgs.IsArgSet(\"-bind\") ? gArgs.GetArgs(\"-bind\").size() : 0) +\n+        (gArgs.IsArgSet(\"-whitebind\") ? gArgs.GetArgs(\"-whitebind\").size() : 0);\n+    if (nUserBind != 0 && !gArgs.GetBoolArg(\"-listen\", DEFAULT_LISTEN)) {\n+        return InitError(\"Cannot set -bind or -whitebind together with -listen=0\");\n+    }\n+\n     // Make sure enough file descriptors are available\n-    int nBind = std::max(\n-                (gArgs.IsArgSet(\"-bind\") ? gArgs.GetArgs(\"-bind\").size() : 0) +\n-                (gArgs.IsArgSet(\"-whitebind\") ? gArgs.GetArgs(\"-whitebind\").size() : 0), size_t(1));\n+    int nBind = std::max(nUserBind, size_t(1));\n     nUserMaxConnections = GetArg(\"-maxconnections\", DEFAULT_MAX_PEER_CONNECTIONS);\n     nMaxConnections = std::max(nUserMaxConnections, 0);\n \n@@ -1339,36 +1326,6 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)\n     fDiscover = GetBoolArg(\"-discover\", true);\n     fRelayTxes = !GetBoolArg(\"-blocksonly\", DEFAULT_BLOCKSONLY);\n \n-    if (fListen) {\n-        bool fBound = false;\n-        if (gArgs.IsArgSet(\"-bind\")) {\n-            for (const std::string& strBind : gArgs.GetArgs(\"-bind\")) {\n-                CService addrBind;\n-                if (!Lookup(strBind.c_str(), addrBind, GetListenPort(), false))\n-                    return InitError(ResolveErrMsg(\"bind\", strBind));\n-                fBound |= Bind(connman, addrBind, (BF_EXPLICIT | BF_REPORT_ERROR));\n-            }\n-        }\n-        if (gArgs.IsArgSet(\"-whitebind\")) {\n-            for (const std::string& strBind : gArgs.GetArgs(\"-whitebind\")) {\n-                CService addrBind;\n-                if (!Lookup(strBind.c_str(), addrBind, 0, false))\n-                    return InitError(ResolveErrMsg(\"whitebind\", strBind));\n-                if (addrBind.GetPort() == 0)\n-                    return InitError(strprintf(_(\"Need to specify a port with -whitebind: '%s'\"), strBind));\n-                fBound |= Bind(connman, addrBind, (BF_EXPLICIT | BF_REPORT_ERROR | BF_WHITELIST));\n-            }\n-        }\n-        if (!gArgs.IsArgSet(\"-bind\") && !gArgs.IsArgSet(\"-whitebind\")) {\n-            struct in_addr inaddr_any;\n-            inaddr_any.s_addr = INADDR_ANY;\n-            fBound |= Bind(connman, CService(in6addr_any, GetListenPort()), BF_NONE);\n-            fBound |= Bind(connman, CService(inaddr_any, GetListenPort()), !fBound ? BF_REPORT_ERROR : BF_NONE);\n-        }\n-        if (!fBound)\n-            return InitError(_(\"Failed to listen on any port. Use -listen=0 if you want this.\"));\n-    }\n-\n     if (gArgs.IsArgSet(\"-externalip\")) {\n         for (const std::string& strAddr : gArgs.GetArgs(\"-externalip\")) {\n             CService addrLocal;\n@@ -1635,7 +1592,6 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)\n     // Map ports with UPnP\n     MapPort(GetBoolArg(\"-upnp\", DEFAULT_UPNP));\n \n-    std::string strNodeError;\n     CConnman::Options connOptions;\n     connOptions.nLocalServices = nLocalServices;\n     connOptions.nRelevantServices = nRelevantServices;\n@@ -1651,6 +1607,28 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)\n     connOptions.nMaxOutboundTimeframe = nMaxOutboundTimeframe;\n     connOptions.nMaxOutboundLimit = nMaxOutboundLimit;\n \n+    if (gArgs.IsArgSet(\"-bind\")) {\n+        for (const std::string& strBind : gArgs.GetArgs(\"-bind\")) {\n+            CService addrBind;\n+            if (!Lookup(strBind.c_str(), addrBind, GetListenPort(), false)) {\n+                return InitError(ResolveErrMsg(\"bind\", strBind));\n+            }\n+            connOptions.vBinds.push_back(addrBind);\n+        }\n+    }\n+    if (gArgs.IsArgSet(\"-whitebind\")) {\n+        for (const std::string& strBind : gArgs.GetArgs(\"-whitebind\")) {\n+            CService addrBind;\n+            if (!Lookup(strBind.c_str(), addrBind, 0, false)) {\n+                return InitError(ResolveErrMsg(\"whitebind\", strBind));\n+            }\n+            if (addrBind.GetPort() == 0) {\n+                return InitError(strprintf(_(\"Need to specify a port with -whitebind: '%s'\"), strBind));\n+            }\n+            connOptions.vWhiteBinds.push_back(addrBind);\n+        }\n+    }\n+\n     if (gArgs.IsArgSet(\"-whitelist\")) {\n         for (const auto& net : gArgs.GetArgs(\"-whitelist\")) {\n             CSubNet subnet;\n@@ -1665,8 +1643,9 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)\n         connOptions.vSeedNodes = gArgs.GetArgs(\"-seednode\");\n     }\n \n-    if (!connman.Start(scheduler, strNodeError, connOptions))\n-        return InitError(strNodeError);\n+    if (!connman.Start(scheduler, connOptions)) {\n+        return false;\n+    }\n \n     // ********************************************************* Step 12: finished\n "
+      },
+      {
+        "sha": "9adad0327078e5f55e05ea5d600a180567851fef",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 51,
+        "deletions": 2,
+        "changes": 53,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/07b2afef10bb6366a270e325fd41a8bc526c9ef3/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/07b2afef10bb6366a270e325fd41a8bc526c9ef3/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=07b2afef10bb6366a270e325fd41a8bc526c9ef3",
+        "patch": "@@ -64,6 +64,14 @@\n #endif\n #endif\n \n+/** Used to pass flags to the Bind() function */\n+enum BindFlags {\n+    BF_NONE         = 0,\n+    BF_EXPLICIT     = (1U << 0),\n+    BF_REPORT_ERROR = (1U << 1),\n+    BF_WHITELIST    = (1U << 2),\n+};\n+\n const static std::string NET_MESSAGE_COMMAND_OTHER = \"*other*\";\n \n static const uint64_t RANDOMIZER_ID_NETGROUP = 0x6c0edd8036ef4036ULL; // SHA256(\"netgroup\")[0:8]\n@@ -2219,7 +2227,38 @@ NodeId CConnman::GetNewNodeId()\n     return nLastNodeId.fetch_add(1, std::memory_order_relaxed);\n }\n \n-bool CConnman::Start(CScheduler& scheduler, std::string& strNodeError, Options connOptions)\n+\n+bool CConnman::Bind(const CService &addr, unsigned int flags) {\n+    if (!(flags & BF_EXPLICIT) && IsLimited(addr))\n+        return false;\n+    std::string strError;\n+    if (!BindListenPort(addr, strError, (flags & BF_WHITELIST) != 0)) {\n+        if ((flags & BF_REPORT_ERROR) && clientInterface) {\n+            clientInterface->ThreadSafeMessageBox(strError, \"\", CClientUIInterface::MSG_ERROR);\n+        }\n+        return false;\n+    }\n+    return true;\n+}\n+\n+bool CConnman::InitBinds(const std::vector<CService>& binds, const std::vector<CService>& whiteBinds) {\n+    bool fBound = false;\n+    for (const auto& addrBind : binds) {\n+        fBound |= Bind(addrBind, (BF_EXPLICIT | BF_REPORT_ERROR));\n+    }\n+    for (const auto& addrBind : whiteBinds) {\n+        fBound |= Bind(addrBind, (BF_EXPLICIT | BF_REPORT_ERROR | BF_WHITELIST));\n+    }\n+    if (binds.empty() && whiteBinds.empty()) {\n+        struct in_addr inaddr_any;\n+        inaddr_any.s_addr = INADDR_ANY;\n+        fBound |= Bind(CService(in6addr_any, GetListenPort()), BF_NONE);\n+        fBound |= Bind(CService(inaddr_any, GetListenPort()), !fBound ? BF_REPORT_ERROR : BF_NONE);\n+    }\n+    return fBound;\n+}\n+\n+bool CConnman::Start(CScheduler& scheduler, Options connOptions)\n {\n     nTotalBytesRecv = 0;\n     nTotalBytesSent = 0;\n@@ -2241,13 +2280,23 @@ bool CConnman::Start(CScheduler& scheduler, std::string& strNodeError, Options c\n \n     SetBestHeight(connOptions.nBestHeight);\n \n+    clientInterface = connOptions.uiInterface;\n+\n+    if (fListen && !InitBinds(connOptions.vBinds, connOptions.vWhiteBinds)) {\n+        if (clientInterface) {\n+            clientInterface->ThreadSafeMessageBox(\n+                _(\"Failed to listen on any port. Use -listen=0 if you want this.\"),\n+                \"\", CClientUIInterface::MSG_ERROR);\n+        }\n+        return false;\n+    }\n+\n     vWhitelistedRange = connOptions.vWhitelistedRange;\n \n     for (const auto& strDest : connOptions.vSeedNodes) {\n         AddOneShot(strDest);\n     }\n \n-    clientInterface = connOptions.uiInterface;\n     if (clientInterface) {\n         clientInterface->InitMessage(_(\"Loading P2P addresses...\"));\n     }"
+      },
+      {
+        "sha": "dc25e7a5dd6c33db12bf8e70579ed08b6051b810",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 2,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/07b2afef10bb6366a270e325fd41a8bc526c9ef3/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/07b2afef10bb6366a270e325fd41a8bc526c9ef3/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=07b2afef10bb6366a270e325fd41a8bc526c9ef3",
+        "patch": "@@ -145,13 +145,13 @@ class CConnman\n         uint64_t nMaxOutboundLimit = 0;\n         std::vector<std::string> vSeedNodes;\n         std::vector<CSubNet> vWhitelistedRange;\n+        std::vector<CService> vBinds, vWhiteBinds;\n     };\n     CConnman(uint64_t seed0, uint64_t seed1);\n     ~CConnman();\n-    bool Start(CScheduler& scheduler, std::string& strNodeError, Options options);\n+    bool Start(CScheduler& scheduler, Options options);\n     void Stop();\n     void Interrupt();\n-    bool BindListenPort(const CService &bindAddr, std::string& strError, bool fWhitelisted = false);\n     bool GetNetworkActive() const { return fNetworkActive; };\n     void SetNetworkActive(bool active);\n     bool OpenNetworkConnection(const CAddress& addrConnect, bool fCountFailure, CSemaphoreGrant *grantOutbound = NULL, const char *strDest = NULL, bool fOneShot = false, bool fFeeler = false, bool fAddnode = false);\n@@ -288,6 +288,9 @@ class CConnman\n         ListenSocket(SOCKET socket_, bool whitelisted_) : socket(socket_), whitelisted(whitelisted_) {}\n     };\n \n+    bool BindListenPort(const CService &bindAddr, std::string& strError, bool fWhitelisted = false);\n+    bool Bind(const CService &addr, unsigned int flags);\n+    bool InitBinds(const std::vector<CService>& binds, const std::vector<CService>& whiteBinds);\n     void ThreadOpenAddedConnections();\n     void AddOneShot(const std::string& strDest);\n     void ProcessOneShot();"
+      }
+    ]
+  }
+]

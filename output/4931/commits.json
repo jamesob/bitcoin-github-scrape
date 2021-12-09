@@ -1,0 +1,158 @@
+[
+  {
+    "sha": "22d7e7014f2064fb9e52c634f68b3c5e965faec0",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyMmQ3ZTcwMTRmMjA2NGZiOWU1MmM2MzRmNjhiM2M1ZTk2NWZhZWMw",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-09-16T13:16:29Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-09-18T05:21:49Z"
+      },
+      "message": "prefer const string& over char* in CDB and CWalletDB constructor\n\n- also make parameter of CDBEnv::CheckpointLSN a constant reference",
+      "tree": {
+        "sha": "e958045998cf5cb60b30a3915e4b08f84731e9a9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/e958045998cf5cb60b30a3915e4b08f84731e9a9"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/22d7e7014f2064fb9e52c634f68b3c5e965faec0",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/22d7e7014f2064fb9e52c634f68b3c5e965faec0",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/22d7e7014f2064fb9e52c634f68b3c5e965faec0",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/22d7e7014f2064fb9e52c634f68b3c5e965faec0/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "438c7e4cd2179170aeadb4aa1c902ccd1256dee6",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/438c7e4cd2179170aeadb4aa1c902ccd1256dee6",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/438c7e4cd2179170aeadb4aa1c902ccd1256dee6"
+      }
+    ],
+    "stats": {
+      "total": 30,
+      "additions": 16,
+      "deletions": 14
+    },
+    "files": [
+      {
+        "sha": "24206d34e131fb538c78f74207665ef9ff9a21bc",
+        "filename": "src/db.cpp",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 11,
+        "changes": 22,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/22d7e7014f2064fb9e52c634f68b3c5e965faec0/src/db.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/22d7e7014f2064fb9e52c634f68b3c5e965faec0/src/db.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.cpp?ref=22d7e7014f2064fb9e52c634f68b3c5e965faec0",
+        "patch": "@@ -215,7 +215,7 @@ bool CDBEnv::Salvage(std::string strFile, bool fAggressive,\n }\n \n \n-void CDBEnv::CheckpointLSN(std::string strFile)\n+void CDBEnv::CheckpointLSN(const std::string& strFile)\n {\n     dbenv.txn_checkpoint(0, 0, 0);\n     if (fMockDb)\n@@ -224,12 +224,12 @@ void CDBEnv::CheckpointLSN(std::string strFile)\n }\n \n \n-CDB::CDB(const char *pszFile, const char* pszMode) :\n+CDB::CDB(const std::string& strFilename, const char* pszMode) :\n     pdb(NULL), activeTxn(NULL)\n {\n     int ret;\n     fReadOnly = (!strchr(pszMode, '+') && !strchr(pszMode, 'w'));\n-    if (pszFile == NULL)\n+    if (strFilename.empty())\n         return;\n \n     bool fCreate = strchr(pszMode, 'c') != NULL;\n@@ -242,7 +242,7 @@ CDB::CDB(const char *pszFile, const char* pszMode) :\n         if (!bitdb.Open(GetDataDir()))\n             throw runtime_error(\"CDB : Failed to open database environment.\");\n \n-        strFile = pszFile;\n+        strFile = strFilename;\n         ++bitdb.mapFileUseCount[strFile];\n         pdb = bitdb.mapDb[strFile];\n         if (pdb == NULL)\n@@ -255,14 +255,14 @@ CDB::CDB(const char *pszFile, const char* pszMode) :\n                 DbMpoolFile*mpf = pdb->get_mpf();\n                 ret = mpf->set_flags(DB_MPOOL_NOFILE, 1);\n                 if (ret != 0)\n-                    throw runtime_error(strprintf(\"CDB : Failed to configure for no temp file backing for database %s\", pszFile));\n+                    throw runtime_error(strprintf(\"CDB : Failed to configure for no temp file backing for database %s\", strFile));\n             }\n \n-            ret = pdb->open(NULL,      // Txn pointer\n-                            fMockDb ? NULL : pszFile,   // Filename\n-                            fMockDb ? pszFile : \"main\", // Logical db name\n-                            DB_BTREE,  // Database type\n-                            nFlags,    // Flags\n+            ret = pdb->open(NULL, // Txn pointer\n+                            fMockDb ? NULL : strFile.c_str(), // Filename\n+                            fMockDb ? strFile.c_str() : \"main\", // Logical db name\n+                            DB_BTREE, // Database type\n+                            nFlags, // Flags\n                             0);\n \n             if (ret != 0)\n@@ -271,7 +271,7 @@ CDB::CDB(const char *pszFile, const char* pszMode) :\n                 pdb = NULL;\n                 --bitdb.mapFileUseCount[strFile];\n                 strFile = \"\";\n-                throw runtime_error(strprintf(\"CDB : Error %d, can't open database %s\", ret, pszFile));\n+                throw runtime_error(strprintf(\"CDB : Error %d, can't open database %s\", ret, strFile));\n             }\n \n             if (fCreate && !Exists(string(\"version\")))"
+      },
+      {
+        "sha": "eab27f43af5a8fa45d7ae08b72cfdadf72d940d5",
+        "filename": "src/db.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 2,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/22d7e7014f2064fb9e52c634f68b3c5e965faec0/src/db.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/22d7e7014f2064fb9e52c634f68b3c5e965faec0/src/db.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.h?ref=22d7e7014f2064fb9e52c634f68b3c5e965faec0",
+        "patch": "@@ -69,7 +69,7 @@ class CDBEnv\n     bool Open(const boost::filesystem::path &path);\n     void Close();\n     void Flush(bool fShutdown);\n-    void CheckpointLSN(std::string strFile);\n+    void CheckpointLSN(const std::string& strFile);\n \n     void CloseDb(const std::string& strFile);\n     bool RemoveDb(const std::string& strFile);\n@@ -96,11 +96,13 @@ class CDB\n     DbTxn *activeTxn;\n     bool fReadOnly;\n \n-    explicit CDB(const char* pszFile, const char* pszMode=\"r+\");\n+    explicit CDB(const std::string& strFilename, const char* pszMode=\"r+\");\n     ~CDB() { Close(); }\n+\n public:\n     void Flush();\n     void Close();\n+\n private:\n     CDB(const CDB&);\n     void operator=(const CDB&);"
+      },
+      {
+        "sha": "475d4fb96dacd57b15c740d7db43a569cb549424",
+        "filename": "src/walletdb.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/22d7e7014f2064fb9e52c634f68b3c5e965faec0/src/walletdb.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/22d7e7014f2064fb9e52c634f68b3c5e965faec0/src/walletdb.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/walletdb.h?ref=22d7e7014f2064fb9e52c634f68b3c5e965faec0",
+        "patch": "@@ -75,7 +75,7 @@ class CKeyMetadata\n class CWalletDB : public CDB\n {\n public:\n-    CWalletDB(std::string strFilename, const char* pszMode=\"r+\") : CDB(strFilename.c_str(), pszMode)\n+    CWalletDB(const std::string& strFilename, const char* pszMode = \"r+\") : CDB(strFilename, pszMode)\n     {\n     }\n private:"
+      }
+    ]
+  },
+  {
+    "sha": "93f84d0417e8e1c590b405bde6e153b413bd43f2",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5M2Y4NGQwNDE3ZThlMWM1OTBiNDA1YmRlNmUxNTNiNDEzYmQ0M2Yy",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-09-16T13:18:33Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-09-18T05:21:49Z"
+      },
+      "message": "cleanup class private and public areas in walletdb\n\n- only code movement",
+      "tree": {
+        "sha": "76845cdeb266c172ed97ddf1d81fcdffc1938cdd",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/76845cdeb266c172ed97ddf1d81fcdffc1938cdd"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/93f84d0417e8e1c590b405bde6e153b413bd43f2",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/93f84d0417e8e1c590b405bde6e153b413bd43f2",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/93f84d0417e8e1c590b405bde6e153b413bd43f2",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/93f84d0417e8e1c590b405bde6e153b413bd43f2/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "22d7e7014f2064fb9e52c634f68b3c5e965faec0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/22d7e7014f2064fb9e52c634f68b3c5e965faec0",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/22d7e7014f2064fb9e52c634f68b3c5e965faec0"
+      }
+    ],
+    "stats": {
+      "total": 21,
+      "additions": 10,
+      "deletions": 11
+    },
+    "files": [
+      {
+        "sha": "a84f44db01b35c9f7265d429ffe2fd7f22c19455",
+        "filename": "src/walletdb.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 3,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/93f84d0417e8e1c590b405bde6e153b413bd43f2/src/walletdb.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/93f84d0417e8e1c590b405bde6e153b413bd43f2/src/walletdb.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/walletdb.cpp?ref=93f84d0417e8e1c590b405bde6e153b413bd43f2",
+        "patch": "@@ -242,9 +242,7 @@ void CWalletDB::ListAccountCreditDebit(const string& strAccount, list<CAccountin\n     pcursor->close();\n }\n \n-\n-DBErrors\n-CWalletDB::ReorderTransactions(CWallet* pwallet)\n+DBErrors CWalletDB::ReorderTransactions(CWallet* pwallet)\n {\n     LOCK(pwallet->cs_wallet);\n     // Old wallets didn't have any defined order for transactions"
+      },
+      {
+        "sha": "2c5b608f3db2651bdd62ab694615973c841d17f6",
+        "filename": "src/walletdb.h",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 8,
+        "changes": 17,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/93f84d0417e8e1c590b405bde6e153b413bd43f2/src/walletdb.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/93f84d0417e8e1c590b405bde6e153b413bd43f2/src/walletdb.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/walletdb.h?ref=93f84d0417e8e1c590b405bde6e153b413bd43f2",
+        "patch": "@@ -78,10 +78,7 @@ class CWalletDB : public CDB\n     CWalletDB(const std::string& strFilename, const char* pszMode = \"r+\") : CDB(strFilename, pszMode)\n     {\n     }\n-private:\n-    CWalletDB(const CWalletDB&);\n-    void operator=(const CWalletDB&);\n-public:\n+\n     bool WriteName(const std::string& strAddress, const std::string& strName);\n     bool EraseName(const std::string& strAddress);\n \n@@ -119,19 +116,23 @@ class CWalletDB : public CDB\n     bool WriteDestData(const std::string &address, const std::string &key, const std::string &value);\n     /// Erase destination data tuple from wallet database\n     bool EraseDestData(const std::string &address, const std::string &key);\n-private:\n-    bool WriteAccountingEntry(const uint64_t nAccEntryNum, const CAccountingEntry& acentry);\n-public:\n+\n     bool WriteAccountingEntry(const CAccountingEntry& acentry);\n     int64_t GetAccountCreditDebit(const std::string& strAccount);\n     void ListAccountCreditDebit(const std::string& strAccount, std::list<CAccountingEntry>& acentries);\n \n-    DBErrors ReorderTransactions(CWallet*);\n+    DBErrors ReorderTransactions(CWallet* pwallet);\n     DBErrors LoadWallet(CWallet* pwallet);\n     DBErrors FindWalletTx(CWallet* pwallet, std::vector<uint256>& vTxHash, std::vector<CWalletTx>& vWtx);\n     DBErrors ZapWalletTx(CWallet* pwallet, std::vector<CWalletTx>& vWtx);\n     static bool Recover(CDBEnv& dbenv, std::string filename, bool fOnlyKeys);\n     static bool Recover(CDBEnv& dbenv, std::string filename);\n+\n+private:\n+    CWalletDB(const CWalletDB&);\n+    void operator=(const CWalletDB&);\n+\n+    bool WriteAccountingEntry(const uint64_t nAccEntryNum, const CAccountingEntry& acentry);\n };\n \n bool BackupWallet(const CWallet& wallet, const std::string& strDest);"
+      }
+    ]
+  }
+]

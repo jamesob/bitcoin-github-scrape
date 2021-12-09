@@ -1,0 +1,230 @@
+[
+  {
+    "sha": "0568067ba0649c21bca363f567bc5f55de48d291",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowNTY4MDY3YmEwNjQ5YzIxYmNhMzYzZjU2N2JjNWY1NWRlNDhkMjkx",
+    "commit": {
+      "author": {
+        "name": "Abe Stanway",
+        "email": "abestanway@gmail.com",
+        "date": "2017-11-06T00:33:02Z"
+      },
+      "committer": {
+        "name": "Abe Stanway",
+        "email": "abestanway@gmail.com",
+        "date": "2017-11-06T00:33:02Z"
+      },
+      "message": "ZMQ: Add decodedtx topic for JSON tx publishing",
+      "tree": {
+        "sha": "a111f64860e21e10e55253f5ce62d0f9b556ebd2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/a111f64860e21e10e55253f5ce62d0f9b556ebd2"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/0568067ba0649c21bca363f567bc5f55de48d291",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0568067ba0649c21bca363f567bc5f55de48d291",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/0568067ba0649c21bca363f567bc5f55de48d291",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0568067ba0649c21bca363f567bc5f55de48d291/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "2f959a58744d42859d74579220922e25ac3d2925",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2f959a58744d42859d74579220922e25ac3d2925",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/2f959a58744d42859d74579220922e25ac3d2925"
+      }
+    ],
+    "stats": {
+      "total": 41,
+      "additions": 36,
+      "deletions": 5
+    },
+    "files": [
+      {
+        "sha": "b8401ad3e4daf2b7b8a90095d006c4bf5ddc00ac",
+        "filename": "src/zmq/zmqnotificationinterface.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0568067ba0649c21bca363f567bc5f55de48d291/src/zmq/zmqnotificationinterface.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0568067ba0649c21bca363f567bc5f55de48d291/src/zmq/zmqnotificationinterface.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/zmq/zmqnotificationinterface.cpp?ref=0568067ba0649c21bca363f567bc5f55de48d291",
+        "patch": "@@ -39,6 +39,7 @@ CZMQNotificationInterface* CZMQNotificationInterface::Create()\n     factories[\"pubhashtx\"] = CZMQAbstractNotifier::Create<CZMQPublishHashTransactionNotifier>;\n     factories[\"pubrawblock\"] = CZMQAbstractNotifier::Create<CZMQPublishRawBlockNotifier>;\n     factories[\"pubrawtx\"] = CZMQAbstractNotifier::Create<CZMQPublishRawTransactionNotifier>;\n+    factories[\"pubdecodedtx\"] = CZMQAbstractNotifier::Create<CZMQPublishDecodedTransactionNotifier>;\n \n     for (std::map<std::string, CZMQNotifierFactory>::const_iterator i=factories.begin(); i!=factories.end(); ++i)\n     {"
+      },
+      {
+        "sha": "27d101f33945f4e08a4c9239616218030c4b6cb6",
+        "filename": "src/zmq/zmqpublishnotifier.cpp",
+        "status": "modified",
+        "additions": 19,
+        "deletions": 4,
+        "changes": 23,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0568067ba0649c21bca363f567bc5f55de48d291/src/zmq/zmqpublishnotifier.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0568067ba0649c21bca363f567bc5f55de48d291/src/zmq/zmqpublishnotifier.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/zmq/zmqpublishnotifier.cpp?ref=0568067ba0649c21bca363f567bc5f55de48d291",
+        "patch": "@@ -9,13 +9,17 @@\n #include \"validation.h\"\n #include \"util.h\"\n #include \"rpc/server.h\"\n+#include \"rpc/protocol.h\"\n+#include <univalue.h>\n+#include \"core_io.h\"\n \n static std::multimap<std::string, CZMQAbstractPublishNotifier*> mapPublishNotifiers;\n \n-static const char *MSG_HASHBLOCK = \"hashblock\";\n-static const char *MSG_HASHTX    = \"hashtx\";\n-static const char *MSG_RAWBLOCK  = \"rawblock\";\n-static const char *MSG_RAWTX     = \"rawtx\";\n+static const char *MSG_HASHBLOCK     = \"hashblock\";\n+static const char *MSG_HASHTX        = \"hashtx\";\n+static const char *MSG_RAWBLOCK      = \"rawblock\";\n+static const char *MSG_RAWTX         = \"rawtx\";\n+static const char *MSG_DECODEDTX     = \"decodedtx\";\n \n // Internal function to send multipart message\n static int zmq_send_multipart(void *sock, const void* data, size_t size, ...)\n@@ -195,3 +199,14 @@ bool CZMQPublishRawTransactionNotifier::NotifyTransaction(const CTransaction &tr\n     ss << transaction;\n     return SendMessage(MSG_RAWTX, &(*ss.begin()), ss.size());\n }\n+\n+bool CZMQPublishDecodedTransactionNotifier::NotifyTransaction(const CTransaction &transaction)\n+{\n+    uint256 hash = transaction.GetHash();\n+    LogPrint(BCLog::ZMQ, \"zmq: Publish decodedtx %s\\n\", hash.GetHex());\n+    UniValue result(UniValue::VOBJ);\n+    TxToUniv(transaction, uint256(), result, false);\n+    CDataStream ss(SER_NETWORK, PROTOCOL_VERSION | RPCSerializationFlags());\n+    ss << result.write();\n+    return SendMessage(MSG_DECODEDTX, &(*ss.begin()), ss.size());\n+}\n\\ No newline at end of file"
+      },
+      {
+        "sha": "79d04bb156dd199bf76a5abe0e019ab083f8c552",
+        "filename": "src/zmq/zmqpublishnotifier.h",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 0,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0568067ba0649c21bca363f567bc5f55de48d291/src/zmq/zmqpublishnotifier.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0568067ba0649c21bca363f567bc5f55de48d291/src/zmq/zmqpublishnotifier.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/zmq/zmqpublishnotifier.h?ref=0568067ba0649c21bca363f567bc5f55de48d291",
+        "patch": "@@ -52,4 +52,10 @@ class CZMQPublishRawTransactionNotifier : public CZMQAbstractPublishNotifier\n     bool NotifyTransaction(const CTransaction &transaction) override;\n };\n \n+class CZMQPublishDecodedTransactionNotifier : public CZMQAbstractPublishNotifier\n+{\n+public:\n+    bool NotifyTransaction(const CTransaction &transaction) override;\n+};\n+\n #endif // BITCOIN_ZMQ_ZMQPUBLISHNOTIFIER_H"
+      },
+      {
+        "sha": "1b1ba7f6baa4e0ec40367935b8cd49dc598e8228",
+        "filename": "test/functional/zmq_test.py",
+        "status": "modified",
+        "additions": 10,
+        "deletions": 1,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0568067ba0649c21bca363f567bc5f55de48d291/test/functional/zmq_test.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0568067ba0649c21bca363f567bc5f55de48d291/test/functional/zmq_test.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/zmq_test.py?ref=0568067ba0649c21bca363f567bc5f55de48d291",
+        "patch": "@@ -6,6 +6,7 @@\n import configparser\n import os\n import struct\n+import json\n \n from test_framework.test_framework import BitcoinTestFramework, SkipTest\n from test_framework.util import (assert_equal,\n@@ -68,8 +69,9 @@ def setup_nodes(self):\n         self.hashtx = ZMQSubscriber(socket, b\"hashtx\")\n         self.rawblock = ZMQSubscriber(socket, b\"rawblock\")\n         self.rawtx = ZMQSubscriber(socket, b\"rawtx\")\n+        self.decodedtx = ZMQSubscriber(socket, b\"decodedtx\")\n \n-        self.extra_args = [[\"-zmqpub%s=%s\" % (sub.topic.decode(), address) for sub in [self.hashblock, self.hashtx, self.rawblock, self.rawtx]], []]\n+        self.extra_args = [[\"-zmqpub%s=%s\" % (sub.topic.decode(), address) for sub in [self.hashblock, self.hashtx, self.rawblock, self.rawtx, self.decodedtx]], []]\n         self.add_nodes(self.num_nodes, self.extra_args)\n         self.start_nodes()\n \n@@ -88,6 +90,9 @@ def _zmq_test(self):\n         self.sync_all()\n \n         for x in range(num_blocks):\n+            # Should receive the json broadcasted raw transaction.\n+            decodedtx = self.decodedtx.receive()\n+\n             # Should receive the coinbase txid.\n             txid = self.hashtx.receive()\n \n@@ -109,6 +114,10 @@ def _zmq_test(self):\n         payment_txid = self.nodes[1].sendtoaddress(self.nodes[0].getnewaddress(), 1.0)\n         self.sync_all()\n \n+        # Should receive the json broadcasted raw transaction.\n+        decodedtx = self.decodedtx.receive()\n+        assert_equal(payment_txid, json.loads(decodedtx[3:])['txid'])\n+\n         # Should receive the broadcasted txid.\n         txid = self.hashtx.receive()\n         assert_equal(payment_txid, bytes_to_hex_str(txid))"
+      }
+    ]
+  },
+  {
+    "sha": "c96e4fe391af4573d07b5b19bcdf8ffdf6fc2e98",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjOTZlNGZlMzkxYWY0NTczZDA3YjViMTliY2RmOGZmZGY2ZmMyZTk4",
+    "commit": {
+      "author": {
+        "name": "Abe Stanway",
+        "email": "abestanway@gmail.com",
+        "date": "2017-11-06T02:15:31Z"
+      },
+      "committer": {
+        "name": "Abe Stanway",
+        "email": "abestanway@gmail.com",
+        "date": "2017-11-06T02:15:31Z"
+      },
+      "message": "Address nits and decode utf-8 to pass build",
+      "tree": {
+        "sha": "f27b94b941a80a0626483f13fed0deada03210e3",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f27b94b941a80a0626483f13fed0deada03210e3"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/c96e4fe391af4573d07b5b19bcdf8ffdf6fc2e98",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c96e4fe391af4573d07b5b19bcdf8ffdf6fc2e98",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/c96e4fe391af4573d07b5b19bcdf8ffdf6fc2e98",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c96e4fe391af4573d07b5b19bcdf8ffdf6fc2e98/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "0568067ba0649c21bca363f567bc5f55de48d291",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0568067ba0649c21bca363f567bc5f55de48d291",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/0568067ba0649c21bca363f567bc5f55de48d291"
+      }
+    ],
+    "stats": {
+      "total": 39,
+      "additions": 20,
+      "deletions": 19
+    },
+    "files": [
+      {
+        "sha": "32c63a4dc6ebba225b392f0530f982c06121e039",
+        "filename": "src/zmq/zmqpublishnotifier.cpp",
+        "status": "modified",
+        "additions": 14,
+        "deletions": 15,
+        "changes": 29,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c96e4fe391af4573d07b5b19bcdf8ffdf6fc2e98/src/zmq/zmqpublishnotifier.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c96e4fe391af4573d07b5b19bcdf8ffdf6fc2e98/src/zmq/zmqpublishnotifier.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/zmq/zmqpublishnotifier.cpp?ref=c96e4fe391af4573d07b5b19bcdf8ffdf6fc2e98",
+        "patch": "@@ -4,22 +4,21 @@\n \n #include \"chain.h\"\n #include \"chainparams.h\"\n-#include \"streams.h\"\n-#include \"zmqpublishnotifier.h\"\n-#include \"validation.h\"\n-#include \"util.h\"\n+#include \"core_io.h\"\n #include \"rpc/server.h\"\n-#include \"rpc/protocol.h\"\n+#include \"streams.h\"\n #include <univalue.h>\n-#include \"core_io.h\"\n+#include \"util.h\"\n+#include \"validation.h\"\n+#include \"zmqpublishnotifier.h\"\n \n static std::multimap<std::string, CZMQAbstractPublishNotifier*> mapPublishNotifiers;\n \n-static const char *MSG_HASHBLOCK     = \"hashblock\";\n-static const char *MSG_HASHTX        = \"hashtx\";\n-static const char *MSG_RAWBLOCK      = \"rawblock\";\n-static const char *MSG_RAWTX         = \"rawtx\";\n-static const char *MSG_DECODEDTX     = \"decodedtx\";\n+static const char *MSG_DECODEDTX = \"decodedtx\";\n+static const char *MSG_HASHBLOCK = \"hashblock\";\n+static const char *MSG_HASHTX    = \"hashtx\";\n+static const char *MSG_RAWBLOCK  = \"rawblock\";\n+static const char *MSG_RAWTX     = \"rawtx\";\n \n // Internal function to send multipart message\n static int zmq_send_multipart(void *sock, const void* data, size_t size, ...)\n@@ -206,7 +205,7 @@ bool CZMQPublishDecodedTransactionNotifier::NotifyTransaction(const CTransaction\n     LogPrint(BCLog::ZMQ, \"zmq: Publish decodedtx %s\\n\", hash.GetHex());\n     UniValue result(UniValue::VOBJ);\n     TxToUniv(transaction, uint256(), result, false);\n-    CDataStream ss(SER_NETWORK, PROTOCOL_VERSION | RPCSerializationFlags());\n-    ss << result.write();\n-    return SendMessage(MSG_DECODEDTX, &(*ss.begin()), ss.size());\n-}\n\\ No newline at end of file\n+    std::string jsontx = result.write();\n+    const char *output = jsontx.c_str();\n+    return SendMessage(MSG_DECODEDTX, &(*output), strlen(output));\n+}"
+      },
+      {
+        "sha": "679a91c93c52f3f3af6a51beb495515960662f89",
+        "filename": "test/functional/zmq_test.py",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 4,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c96e4fe391af4573d07b5b19bcdf8ffdf6fc2e98/test/functional/zmq_test.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c96e4fe391af4573d07b5b19bcdf8ffdf6fc2e98/test/functional/zmq_test.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/zmq_test.py?ref=c96e4fe391af4573d07b5b19bcdf8ffdf6fc2e98",
+        "patch": "@@ -25,6 +25,7 @@ def __init__(self, socket, topic):\n \n     def receive(self):\n         topic, body, seq = self.socket.recv_multipart()\n+\n         # Topic should match the subscriber topic.\n         assert_equal(topic, self.topic)\n         # Sequence should be incremental.\n@@ -90,11 +91,12 @@ def _zmq_test(self):\n         self.sync_all()\n \n         for x in range(num_blocks):\n-            # Should receive the json broadcasted raw transaction.\n+            # Should receive the json decoded transaction.\n             decodedtx = self.decodedtx.receive()\n \n             # Should receive the coinbase txid.\n             txid = self.hashtx.receive()\n+            assert_equal(bytes_to_hex_str(txid), json.loads(decodedtx.decode('utf-8'))['txid'])\n \n             # Should receive the coinbase raw transaction.\n             hex = self.rawtx.receive()\n@@ -116,15 +118,15 @@ def _zmq_test(self):\n \n         # Should receive the json broadcasted raw transaction.\n         decodedtx = self.decodedtx.receive()\n-        assert_equal(payment_txid, json.loads(decodedtx[3:])['txid'])\n+        assert_equal(payment_txid, json.loads(decodedtx.decode('utf-8'))['txid'])\n \n         # Should receive the broadcasted txid.\n         txid = self.hashtx.receive()\n         assert_equal(payment_txid, bytes_to_hex_str(txid))\n \n-        # Should receive the broadcasted raw transaction.\n+        # Should receive the json decoded transaction.\n         hex = self.rawtx.receive()\n         assert_equal(payment_txid, bytes_to_hex_str(hash256(hex)))\n \n if __name__ == '__main__':\n-    ZMQTest().main()\n+    ZMQTest().main()\n\\ No newline at end of file"
+      }
+    ]
+  },
+  {
+    "sha": "740841e7dfa774407dd44b27f5d4ae3fdc56f22d",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3NDA4NDFlN2RmYTc3NDQwN2RkNDRiMjdmNWQ0YWUzZmRjNTZmMjJk",
+    "commit": {
+      "author": {
+        "name": "Abe Stanway",
+        "email": "abestanway@gmail.com",
+        "date": "2017-11-06T02:27:14Z"
+      },
+      "committer": {
+        "name": "Abe Stanway",
+        "email": "abestanway@gmail.com",
+        "date": "2017-11-06T02:27:14Z"
+      },
+      "message": "Fix comment",
+      "tree": {
+        "sha": "798fdb32f94cd43ca31695cb8fdf259216c167c3",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/798fdb32f94cd43ca31695cb8fdf259216c167c3"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/740841e7dfa774407dd44b27f5d4ae3fdc56f22d",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/740841e7dfa774407dd44b27f5d4ae3fdc56f22d",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/740841e7dfa774407dd44b27f5d4ae3fdc56f22d",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/740841e7dfa774407dd44b27f5d4ae3fdc56f22d/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "c96e4fe391af4573d07b5b19bcdf8ffdf6fc2e98",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c96e4fe391af4573d07b5b19bcdf8ffdf6fc2e98",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c96e4fe391af4573d07b5b19bcdf8ffdf6fc2e98"
+      }
+    ],
+    "stats": {
+      "total": 4,
+      "additions": 2,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "f84bf1162b2faaff8873cd00cc97487cc8a03c98",
+        "filename": "test/functional/zmq_test.py",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/740841e7dfa774407dd44b27f5d4ae3fdc56f22d/test/functional/zmq_test.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/740841e7dfa774407dd44b27f5d4ae3fdc56f22d/test/functional/zmq_test.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/zmq_test.py?ref=740841e7dfa774407dd44b27f5d4ae3fdc56f22d",
+        "patch": "@@ -116,15 +116,15 @@ def _zmq_test(self):\n         payment_txid = self.nodes[1].sendtoaddress(self.nodes[0].getnewaddress(), 1.0)\n         self.sync_all()\n \n-        # Should receive the json broadcasted raw transaction.\n+        # Should receive the json decoded transaction.\n         decodedtx = self.decodedtx.receive()\n         assert_equal(payment_txid, json.loads(decodedtx.decode('utf-8'))['txid'])\n \n         # Should receive the broadcasted txid.\n         txid = self.hashtx.receive()\n         assert_equal(payment_txid, bytes_to_hex_str(txid))\n \n-        # Should receive the json decoded transaction.\n+        # Should receive the broadcasted raw transaction.\n         hex = self.rawtx.receive()\n         assert_equal(payment_txid, bytes_to_hex_str(hash256(hex)))\n "
+      }
+    ]
+  }
+]

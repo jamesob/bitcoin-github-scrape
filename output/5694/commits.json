@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "25cf6f3d41b33c4d8523b6613f0169772fd3937f",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyNWNmNmYzZDQxYjMzYzRkODUyM2I2NjEzZjAxNjk3NzJmZDM5Mzdm",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-12-09T13:50:01Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2015-02-04T14:11:54Z"
+      },
+      "message": "minor rework of SendMoney in rpcwallet\n\n- rework the function to not log errors but use throw JSONRPCError\n- remove a check for IsLocked() that is done in sendtoaddress and\n  sendfrom RPC calls already\n- cache GetBalance() return value, because it's possibly used twice",
+      "tree": {
+        "sha": "c649b253c2dff8bdba5649bb7a8d833b668577d1",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/c649b253c2dff8bdba5649bb7a8d833b668577d1"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/25cf6f3d41b33c4d8523b6613f0169772fd3937f",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/25cf6f3d41b33c4d8523b6613f0169772fd3937f",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/25cf6f3d41b33c4d8523b6613f0169772fd3937f",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/25cf6f3d41b33c4d8523b6613f0169772fd3937f/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "93b7544501d6154f1d6530b670319d72754636ae",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/93b7544501d6154f1d6530b670319d72754636ae",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/93b7544501d6154f1d6530b670319d72754636ae"
+      }
+    ],
+    "stats": {
+      "total": 27,
+      "additions": 11,
+      "deletions": 16
+    },
+    "files": [
+      {
+        "sha": "d097b6a0fafc2042efbcc220216e308742b72348",
+        "filename": "src/rpcwallet.cpp",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 16,
+        "changes": 27,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/25cf6f3d41b33c4d8523b6613f0169772fd3937f/src/rpcwallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/25cf6f3d41b33c4d8523b6613f0169772fd3937f/src/rpcwallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcwallet.cpp?ref=25cf6f3d41b33c4d8523b6613f0169772fd3937f",
+        "patch": "@@ -19,6 +19,7 @@\n #include <stdint.h>\n \n #include <boost/assign/list_of.hpp>\n+\n #include \"json/json_spirit_utils.h\"\n #include \"json/json_spirit_value.h\"\n \n@@ -316,35 +317,29 @@ Value getaddressesbyaccount(const Array& params, bool fHelp)\n     return ret;\n }\n \n-void SendMoney(const CTxDestination &address, CAmount nValue, CWalletTx& wtxNew)\n+static void SendMoney(const CTxDestination &address, CAmount nValue, CWalletTx& wtxNew)\n {\n+    CAmount curBalance = pwalletMain->GetBalance();\n+\n     // Check amount\n     if (nValue <= 0)\n         throw JSONRPCError(RPC_INVALID_PARAMETER, \"Invalid amount\");\n \n-    if (nValue > pwalletMain->GetBalance())\n+    if (nValue > curBalance)\n         throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, \"Insufficient funds\");\n \n-    string strError;\n-    if (pwalletMain->IsLocked())\n-    {\n-        strError = \"Error: Wallet locked, unable to create transaction!\";\n-        LogPrintf(\"SendMoney(): %s\", strError);\n-        throw JSONRPCError(RPC_WALLET_ERROR, strError);\n-    }\n-\n     // Parse Bitcoin address\n     CScript scriptPubKey = GetScriptForDestination(address);\n \n     // Create and send the transaction\n     CReserveKey reservekey(pwalletMain);\n     CAmount nFeeRequired;\n-    if (!pwalletMain->CreateTransaction(scriptPubKey, nValue, wtxNew, reservekey, nFeeRequired, strError))\n-    {\n-        if (nValue + nFeeRequired > pwalletMain->GetBalance())\n-            strError = strprintf(\"Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds!\", FormatMoney(nFeeRequired));\n-        LogPrintf(\"SendMoney(): %s\\n\", strError);\n-        throw JSONRPCError(RPC_WALLET_ERROR, strError);\n+    std::string strError;\n+    if (!pwalletMain->CreateTransaction(scriptPubKey, nValue, wtxNew, reservekey, nFeeRequired, strError)) {\n+        if (nValue + nFeeRequired > curBalance)\n+            throw JSONRPCError(RPC_WALLET_ERROR, strprintf(\"Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds!\", FormatMoney(nFeeRequired)));\n+        else\n+            throw JSONRPCError(RPC_WALLET_ERROR, strError);\n     }\n     if (!pwalletMain->CommitTransaction(wtxNew, reservekey))\n         throw JSONRPCError(RPC_WALLET_ERROR, \"Error: The transaction was rejected! This might happen if some of the coins in your wallet were already spent, such as if you used a copy of wallet.dat and coins were spent in the copy but not marked as spent here.\");"
+      }
+    ]
+  }
+]

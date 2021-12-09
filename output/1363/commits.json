@@ -1,0 +1,74 @@
+[
+  {
+    "sha": "00fb08158d8a3a0d00f9d0360f376782b42f7d02",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowMGZiMDgxNThkOGEzYTBkMDBmOWQwMzYwZjM3Njc4MmI0MmY3ZDAy",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-05-19T22:46:23Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-05-19T22:48:34Z"
+      },
+      "message": "remove strncasecmp() + strnicmp() calls and replace that code via boost::algorithm::istarts_with() / do not call ipcInit() on Mac and Windows as this is unneeded currently",
+      "tree": {
+        "sha": "7acd0115044548380f228cf97e0f732d98e04688",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/7acd0115044548380f228cf97e0f732d98e04688"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/00fb08158d8a3a0d00f9d0360f376782b42f7d02",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/00fb08158d8a3a0d00f9d0360f376782b42f7d02",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/00fb08158d8a3a0d00f9d0360f376782b42f7d02",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/00fb08158d8a3a0d00f9d0360f376782b42f7d02/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "cde87ee75cd95b076259e146705bf34b66cd83aa",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/cde87ee75cd95b076259e146705bf34b66cd83aa",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/cde87ee75cd95b076259e146705bf34b66cd83aa"
+      }
+    ],
+    "stats": {
+      "total": 16,
+      "additions": 7,
+      "deletions": 9
+    },
+    "files": [
+      {
+        "sha": "524c68138ccb5814d7a50c50309ebb4f2fa0c17f",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 1,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/00fb08158d8a3a0d00f9d0360f376782b42f7d02/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/00fb08158d8a3a0d00f9d0360f376782b42f7d02/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=00fb08158d8a3a0d00f9d0360f376782b42f7d02",
+        "patch": "@@ -13,6 +13,7 @@\n #include <boost/filesystem/fstream.hpp>\n #include <boost/filesystem/convenience.hpp>\n #include <boost/interprocess/sync/file_lock.hpp>\n+#include <boost/algorithm/string/predicate.hpp>\n \n #ifndef WIN32\n #include <signal.h>\n@@ -136,7 +137,7 @@ bool AppInit(int argc, char* argv[])\n \n         // Command-line RPC\n         for (int i = 1; i < argc; i++)\n-            if (!IsSwitchChar(argv[i][0]) && !(strlen(argv[i]) > 7 && strncasecmp(argv[i], \"bitcoin:\", 8) == 0))\n+            if (!IsSwitchChar(argv[i][0]) && !boost::algorithm::istarts_with(argv[i], \"bitcoin:\"))\n                 fCommandLine = true;\n \n         if (fCommandLine)"
+      },
+      {
+        "sha": "479638714fd1836d64348b4ecbe77ba62c88df24",
+        "filename": "src/qt/bitcoin.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 8,
+        "changes": 13,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/00fb08158d8a3a0d00f9d0360f376782b42f7d02/src/qt/bitcoin.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/00fb08158d8a3a0d00f9d0360f376782b42f7d02/src/qt/bitcoin.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoin.cpp?ref=00fb08158d8a3a0d00f9d0360f376782b42f7d02",
+        "patch": "@@ -21,6 +21,7 @@\n #include <QLibraryInfo>\n \n #include <boost/interprocess/ipc/message_queue.hpp>\n+#include <boost/algorithm/string/predicate.hpp>\n \n #if defined(BITCOIN_NEED_QT_PLUGINS) && !defined(_BITCOIN_QT_PLUGINS_INCLUDED)\n #define _BITCOIN_QT_PLUGINS_INCLUDED\n@@ -177,9 +178,6 @@ void HelpMessageBox::exec()\n #endif\n }\n \n-#ifdef WIN32\n-#define strncasecmp strnicmp\n-#endif\n #ifndef BITCOIN_QT_TEST\n int main(int argc, char *argv[])\n {\n@@ -189,7 +187,7 @@ int main(int argc, char *argv[])\n     // Do this early as we don't want to bother initializing if we are just calling IPC\n     for (int i = 1; i < argc; i++)\n     {\n-        if (strlen(argv[i]) > 7 && strncasecmp(argv[i], \"bitcoin:\", 8) == 0)\n+        if (boost::algorithm::istarts_with(argv[i], \"bitcoin:\"))\n         {\n             const char *strURI = argv[i];\n             try {\n@@ -323,17 +321,16 @@ int main(int argc, char *argv[])\n                 {\n                     window.show();\n                 }\n+#if !defined(MAC_OSX) && !defined(WIN32)\n+// TODO: implement qtipcserver.cpp for Mac and Windows\n \n                 // Place this here as guiref has to be defined if we dont want to lose URIs\n                 ipcInit();\n \n-#if !defined(MAC_OSX) && !defined(WIN32)\n-// TODO: implement qtipcserver.cpp for Mac and Windows\n-\n                 // Check for URI in argv\n                 for (int i = 1; i < argc; i++)\n                 {\n-                    if (strlen(argv[i]) > 7 && strncasecmp(argv[i], \"bitcoin:\", 8) == 0)\n+                    if (boost::algorithm::istarts_with(argv[i], \"bitcoin:\"))\n                     {\n                         const char *strURI = argv[i];\n                         try {"
+      }
+    ]
+  }
+]

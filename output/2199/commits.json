@@ -1,0 +1,122 @@
+[
+  {
+    "sha": "f2cb7f4d1220375bb340309c12f67689448f4e7f",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmMmNiN2Y0ZDEyMjAzNzViYjM0MDMwOWMxMmY2NzY4OTQ0OGY0ZTdm",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-01-22T17:11:36Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-01-23T06:36:48Z"
+      },
+      "message": "Rework the clients thread priority handling\n\n- removes SetThreadPriority() and integrates that into NewThread() with a\n  default of THREAD_PRIORITY_NORMAL\n- removes special-casing (priority switching) for internal Bitcoin miner\n- uses a new default for the following threads: ThreadScriptCheck (below\n  normal - because normal prio threads on every CPU core could slowdown UX),\n  ThreadImport (above normal - to speed it up a little) and\n  ThreadBitcoinMiner (below normal - to compensate the removed special\n  casing)\n- removes thread priority code for non-Windows OSes, so these will just\n  get a no-op",
+      "tree": {
+        "sha": "bcde597e2f9bb3c07020cfb09aed635a818d3091",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/bcde597e2f9bb3c07020cfb09aed635a818d3091"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/f2cb7f4d1220375bb340309c12f67689448f4e7f",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f2cb7f4d1220375bb340309c12f67689448f4e7f",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/f2cb7f4d1220375bb340309c12f67689448f4e7f",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f2cb7f4d1220375bb340309c12f67689448f4e7f/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "d40c164369ef4df7c37e8c25a0fa6955a4dbcbb1",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d40c164369ef4df7c37e8c25a0fa6955a4dbcbb1",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/d40c164369ef4df7c37e8c25a0fa6955a4dbcbb1"
+      }
+    ],
+    "stats": {
+      "total": 56,
+      "additions": 21,
+      "deletions": 35
+    },
+    "files": [
+      {
+        "sha": "a9eaefb0382642f005b2f8f7ab9c265c5090762b",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f2cb7f4d1220375bb340309c12f67689448f4e7f/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f2cb7f4d1220375bb340309c12f67689448f4e7f/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=f2cb7f4d1220375bb340309c12f67689448f4e7f",
+        "patch": "@@ -596,7 +596,7 @@ bool AppInit2()\n     if (nScriptCheckThreads) {\n         printf(\"Using %u threads for script verification\\n\", nScriptCheckThreads);\n         for (int i=0; i<nScriptCheckThreads-1; i++)\n-            NewThread(ThreadScriptCheck, NULL);\n+            NewThread(ThreadScriptCheck, NULL, THREAD_PRIORITY_BELOW_NORMAL);\n     }\n \n     int64 nStart;\n@@ -941,7 +941,7 @@ bool AppInit2()\n         BOOST_FOREACH(string strFile, mapMultiArgs[\"-loadblock\"])\n             pimport->vFiles.push_back(strFile);\n     }\n-    NewThread(ThreadImport, pimport);\n+    NewThread(ThreadImport, pimport, THREAD_PRIORITY_ABOVE_NORMAL);\n \n     // ********************************************************* Step 10: load peers\n "
+      },
+      {
+        "sha": "29669b4834091efecfa5d9dc9b74726d9836f794",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 4,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f2cb7f4d1220375bb340309c12f67689448f4e7f/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f2cb7f4d1220375bb340309c12f67689448f4e7f/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=f2cb7f4d1220375bb340309c12f67689448f4e7f",
+        "patch": "@@ -4402,7 +4402,6 @@ static int nLimitProcessors = -1;\n void static BitcoinMiner(CWallet *pwallet)\n {\n     printf(\"BitcoinMiner started\\n\");\n-    SetThreadPriority(THREAD_PRIORITY_LOWEST);\n \n     // Make this thread recognisable as the mining thread\n     RenameThread(\"bitcoin-miner\");\n@@ -4483,9 +4482,7 @@ void static BitcoinMiner(CWallet *pwallet)\n                     pblock->nNonce = ByteReverse(nNonceFound);\n                     assert(hash == pblock->GetHash());\n \n-                    SetThreadPriority(THREAD_PRIORITY_NORMAL);\n                     CheckWork(pblock, *pwalletMain, reservekey);\n-                    SetThreadPriority(THREAD_PRIORITY_LOWEST);\n                     break;\n                 }\n             }\n@@ -4591,7 +4588,7 @@ void GenerateBitcoins(bool fGenerate, CWallet* pwallet)\n         printf(\"Starting %d BitcoinMiner threads\\n\", nAddThreads);\n         for (int i = 0; i < nAddThreads; i++)\n         {\n-            if (!NewThread(ThreadBitcoinMiner, pwallet))\n+            if (!NewThread(ThreadBitcoinMiner, pwallet, THREAD_PRIORITY_BELOW_NORMAL))\n                 printf(\"Error: NewThread(ThreadBitcoinMiner) failed\\n\");\n             Sleep(10);\n         }"
+      },
+      {
+        "sha": "929e8a898e77ac4fcc02de5ba1437d5a47d1a5e1",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f2cb7f4d1220375bb340309c12f67689448f4e7f/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f2cb7f4d1220375bb340309c12f67689448f4e7f/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=f2cb7f4d1220375bb340309c12f67689448f4e7f",
+        "patch": "@@ -1653,7 +1653,7 @@ void ThreadMessageHandler(void* parg)\n void ThreadMessageHandler2(void* parg)\n {\n     printf(\"ThreadMessageHandler started\\n\");\n-    SetThreadPriority(THREAD_PRIORITY_BELOW_NORMAL);\n+\n     while (!fShutdown)\n     {\n         vector<CNode*> vNodesCopy;\n@@ -1923,7 +1923,7 @@ void StartNode(void* parg)\n         printf(\"Error: NewThread(ThreadOpenConnections) failed\\n\");\n \n     // Process messages\n-    if (!NewThread(ThreadMessageHandler, NULL))\n+    if (!NewThread(ThreadMessageHandler, NULL, THREAD_PRIORITY_BELOW_NORMAL))\n         printf(\"Error: NewThread(ThreadMessageHandler) failed\\n\");\n \n     // Dump network addresses"
+      },
+      {
+        "sha": "19c1c89c20a0f4bc89757d13188cd28ff9c5bae1",
+        "filename": "src/test/test_bitcoin.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f2cb7f4d1220375bb340309c12f67689448f4e7f/src/test/test_bitcoin.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f2cb7f4d1220375bb340309c12f67689448f4e7f/src/test/test_bitcoin.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/test_bitcoin.cpp?ref=f2cb7f4d1220375bb340309c12f67689448f4e7f",
+        "patch": "@@ -35,7 +35,7 @@ struct TestingSetup {\n         RegisterWallet(pwalletMain);\n         nScriptCheckThreads = 3;\n         for (int i=0; i < nScriptCheckThreads-1; i++)\n-            NewThread(ThreadScriptCheck, NULL);\n+            NewThread(ThreadScriptCheck, NULL, THREAD_PRIORITY_BELOW_NORMAL);\n     }\n     ~TestingSetup()\n     {"
+      },
+      {
+        "sha": "bc668b2f386ebfd22d500409d1f85e47b130d0af",
+        "filename": "src/util.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 3,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f2cb7f4d1220375bb340309c12f67689448f4e7f/src/util.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f2cb7f4d1220375bb340309c12f67689448f4e7f/src/util.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/util.cpp?ref=f2cb7f4d1220375bb340309c12f67689448f4e7f",
+        "patch": "@@ -1375,13 +1375,18 @@ void RenameThread(const char* name)\n #endif\n }\n \n-bool NewThread(void(*pfn)(void*), void* parg)\n+bool NewThread(void(*pfn)(void*), void* parg, int nPriority)\n {\n     try\n     {\n-        boost::thread(pfn, parg); // thread detaches when out of scope\n+        boost::thread newThread(pfn, parg); // thread detaches when out of scope\n+#ifdef WIN32\n+        bool bResult = SetThreadPriority(newThread.native_handle(), nPriority);\n+        if (!bResult)\n+            printf(\"NewThread() : Error setting thread priority to %i\\n\", nPriority);\n+#endif\n     } catch(boost::thread_resource_error &e) {\n-        printf(\"Error creating thread: %s\\n\", e.what());\n+        printf(\"NewThread() : Error creating thread: %s\\n\", e.what());\n         return false;\n     }\n     return true;"
+      },
+      {
+        "sha": "9426e18e82708b22e23d7e3f79e8b5ba5bcbd2bd",
+        "filename": "src/util.h",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 23,
+        "changes": 30,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f2cb7f4d1220375bb340309c12f67689448f4e7f/src/util.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f2cb7f4d1220375bb340309c12f67689448f4e7f/src/util.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/util.h?ref=f2cb7f4d1220375bb340309c12f67689448f4e7f",
+        "patch": "@@ -467,37 +467,22 @@ template <typename T> class CMedianFilter\n     }\n };\n \n-bool NewThread(void(*pfn)(void*), void* parg);\n-\n-#ifdef WIN32\n-inline void SetThreadPriority(int nPriority)\n-{\n-    SetThreadPriority(GetCurrentThread(), nPriority);\n-}\n-#else\n-\n+#ifndef WIN32\n+// These are here to prevent compilation failures because of missing defines for\n+// non-Windows OSes and result in a no-op.\n #define THREAD_PRIORITY_LOWEST          PRIO_MAX\n #define THREAD_PRIORITY_BELOW_NORMAL    2\n #define THREAD_PRIORITY_NORMAL          0\n-#define THREAD_PRIORITY_ABOVE_NORMAL    0\n-\n-inline void SetThreadPriority(int nPriority)\n-{\n-    // It's unclear if it's even possible to change thread priorities on Linux,\n-    // but we really and truly need it for the generation threads.\n-#ifdef PRIO_THREAD\n-    setpriority(PRIO_THREAD, 0, nPriority);\n-#else\n-    setpriority(PRIO_PROCESS, 0, nPriority);\n-#endif\n-}\n+#define THREAD_PRIORITY_ABOVE_NORMAL    (-2)\n \n inline void ExitThread(size_t nExitCode)\n {\n     pthread_exit((void*)nExitCode);\n }\n #endif\n \n+bool NewThread(void(*pfn)(void*), void* parg, int nPriority = THREAD_PRIORITY_NORMAL);\n+\n void RenameThread(const char* name);\n \n inline uint32_t ByteReverse(uint32_t value)\n@@ -506,5 +491,4 @@ inline uint32_t ByteReverse(uint32_t value)\n     return (value<<16) | (value>>16);\n }\n \n-#endif\n-\n+#endif // BITCOIN_UTIL_H"
+      }
+    ]
+  }
+]

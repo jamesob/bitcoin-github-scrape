@@ -1,0 +1,296 @@
+[
+  {
+    "sha": "8894da2059a3abd4789b8396749f915114ead687",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4ODk0ZGEyMDU5YTNhYmQ0Nzg5YjgzOTY3NDlmOTE1MTE0ZWFkNjg3",
+    "commit": {
+      "author": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2020-06-06T21:05:40Z"
+      },
+      "committer": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2020-06-06T21:08:37Z"
+      },
+      "message": "wallet: Simplify logic in ScanForWalletTransactions\n\nlogic isn't changed except in the case that a reorg has occured we always set the FAILURE flag\npreviously the FAILURE flag would only be set if a reorg occured and findBlock failed.",
+      "tree": {
+        "sha": "63cfdb48bee636c555559d043481b368c1ec5b1f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/63cfdb48bee636c555559d043481b368c1ec5b1f"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/8894da2059a3abd4789b8396749f915114ead687",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8894da2059a3abd4789b8396749f915114ead687",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/8894da2059a3abd4789b8396749f915114ead687",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8894da2059a3abd4789b8396749f915114ead687/comments",
+    "author": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "b1b173994406158e5faa3c83b113da9d971ac104",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b1b173994406158e5faa3c83b113da9d971ac104",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b1b173994406158e5faa3c83b113da9d971ac104"
+      }
+    ],
+    "stats": {
+      "total": 22,
+      "additions": 11,
+      "deletions": 11
+    },
+    "files": [
+      {
+        "sha": "388af745356d671242ba9b418afdd5ecb429a264",
+        "filename": "src/wallet/wallet.cpp",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 11,
+        "changes": 22,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8894da2059a3abd4789b8396749f915114ead687/src/wallet/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8894da2059a3abd4789b8396749f915114ead687/src/wallet/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.cpp?ref=8894da2059a3abd4789b8396749f915114ead687",
+        "patch": "@@ -1700,18 +1700,19 @@ CWallet::ScanResult CWallet::ScanForWalletTransactions(const uint256& start_bloc\n         bool next_block;\n         uint256 next_block_hash;\n         bool reorg = false;\n+\n+        next_block = chain().findNextBlock(block_hash, block_height, FoundBlock().hash(next_block_hash), &reorg);\n+        if (reorg) {\n+            // Abort scan if current block is no longer active, to prevent\n+            // marking transactions as coming from the wrong block.\n+            // TODO: This should return success instead of failure, see\n+            // https://github.com/bitcoin/bitcoin/pull/14711#issuecomment-458342518\n+            result.last_failed_block = block_hash;\n+            result.status = ScanResult::FAILURE;\n+            break;\n+        }\n         if (chain().findBlock(block_hash, FoundBlock().data(block)) && !block.IsNull()) {\n             LOCK(cs_wallet);\n-            next_block = chain().findNextBlock(block_hash, block_height, FoundBlock().hash(next_block_hash), &reorg);\n-            if (reorg) {\n-                // Abort scan if current block is no longer active, to prevent\n-                // marking transactions as coming from the wrong block.\n-                // TODO: This should return success instead of failure, see\n-                // https://github.com/bitcoin/bitcoin/pull/14711#issuecomment-458342518\n-                result.last_failed_block = block_hash;\n-                result.status = ScanResult::FAILURE;\n-                break;\n-            }\n             for (size_t posInBlock = 0; posInBlock < block.vtx.size(); ++posInBlock) {\n                 SyncTransaction(block.vtx[posInBlock], {CWalletTx::Status::CONFIRMED, block_height, block_hash, (int)posInBlock}, fUpdate);\n             }\n@@ -1722,7 +1723,6 @@ CWallet::ScanResult CWallet::ScanForWalletTransactions(const uint256& start_bloc\n             // could not scan block, keep scanning but record this block as the most recent failure\n             result.last_failed_block = block_hash;\n             result.status = ScanResult::FAILURE;\n-            next_block = chain().findNextBlock(block_hash, block_height, FoundBlock().hash(next_block_hash), &reorg);\n         }\n         if (max_height && block_height >= *max_height) {\n             break;"
+      }
+    ]
+  },
+  {
+    "sha": "e526bf7080af94ad0d810908c5a249b719b97707",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplNTI2YmY3MDgwYWY5NGFkMGQ4MTA5MDhjNWEyNDliNzE5Yjk3NzA3",
+    "commit": {
+      "author": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2020-06-06T21:15:01Z"
+      },
+      "committer": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2020-06-06T21:15:01Z"
+      },
+      "message": "wallet: resolve inconsistent ScanForWalletTransactions result",
+      "tree": {
+        "sha": "ae7dae016f6b7f9adf4826e31ed70cb17b5f560a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/ae7dae016f6b7f9adf4826e31ed70cb17b5f560a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/e526bf7080af94ad0d810908c5a249b719b97707",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e526bf7080af94ad0d810908c5a249b719b97707",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/e526bf7080af94ad0d810908c5a249b719b97707",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e526bf7080af94ad0d810908c5a249b719b97707/comments",
+    "author": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "8894da2059a3abd4789b8396749f915114ead687",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8894da2059a3abd4789b8396749f915114ead687",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/8894da2059a3abd4789b8396749f915114ead687"
+      }
+    ],
+    "stats": {
+      "total": 9,
+      "additions": 3,
+      "deletions": 6
+    },
+    "files": [
+      {
+        "sha": "64b5cbd67d32bdb4bf9a8431ca3f01fc841ea152",
+        "filename": "src/wallet/wallet.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 6,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e526bf7080af94ad0d810908c5a249b719b97707/src/wallet/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e526bf7080af94ad0d810908c5a249b719b97707/src/wallet/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.cpp?ref=e526bf7080af94ad0d810908c5a249b719b97707",
+        "patch": "@@ -1705,10 +1705,8 @@ CWallet::ScanResult CWallet::ScanForWalletTransactions(const uint256& start_bloc\n         if (reorg) {\n             // Abort scan if current block is no longer active, to prevent\n             // marking transactions as coming from the wrong block.\n-            // TODO: This should return success instead of failure, see\n+            // break successfully when reorg occurs, reorg will scan blocks for transactions\n             // https://github.com/bitcoin/bitcoin/pull/14711#issuecomment-458342518\n-            result.last_failed_block = block_hash;\n-            result.status = ScanResult::FAILURE;\n             break;\n         }\n         if (chain().findBlock(block_hash, FoundBlock().data(block)) && !block.IsNull()) {\n@@ -1728,9 +1726,8 @@ CWallet::ScanResult CWallet::ScanForWalletTransactions(const uint256& start_bloc\n             break;\n         }\n         {\n-            if (!next_block || reorg) {\n-                // break successfully when rescan has reached the tip, or\n-                // previous block is no longer on the chain due to a reorg\n+            if (!next_block) {\n+                // break successfully when rescan has reached the tip\n                 break;\n             }\n "
+      }
+    ]
+  },
+  {
+    "sha": "8f64ee27ef9132cd834ec583daf61581a8faf66c",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4ZjY0ZWUyN2VmOTEzMmNkODM0ZWM1ODNkYWY2MTU4MWE4ZmFmNjZj",
+    "commit": {
+      "author": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2020-06-06T22:45:36Z"
+      },
+      "committer": {
+        "name": "Patrick Strateman",
+        "email": "patrick.strateman@gmail.com",
+        "date": "2020-06-06T22:45:36Z"
+      },
+      "message": "wallet: fix test to be in line with results from ScanForWalletTransactions",
+      "tree": {
+        "sha": "b3d129ecb2f3a11613e1c6179653ed88c4c0918e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/b3d129ecb2f3a11613e1c6179653ed88c4c0918e"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/8f64ee27ef9132cd834ec583daf61581a8faf66c",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8f64ee27ef9132cd834ec583daf61581a8faf66c",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/8f64ee27ef9132cd834ec583daf61581a8faf66c",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8f64ee27ef9132cd834ec583daf61581a8faf66c/comments",
+    "author": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "pstratem",
+      "id": 620611,
+      "node_id": "MDQ6VXNlcjYyMDYxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/620611?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/pstratem",
+      "html_url": "https://github.com/pstratem",
+      "followers_url": "https://api.github.com/users/pstratem/followers",
+      "following_url": "https://api.github.com/users/pstratem/following{/other_user}",
+      "gists_url": "https://api.github.com/users/pstratem/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/pstratem/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/pstratem/subscriptions",
+      "organizations_url": "https://api.github.com/users/pstratem/orgs",
+      "repos_url": "https://api.github.com/users/pstratem/repos",
+      "events_url": "https://api.github.com/users/pstratem/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/pstratem/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "e526bf7080af94ad0d810908c5a249b719b97707",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e526bf7080af94ad0d810908c5a249b719b97707",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/e526bf7080af94ad0d810908c5a249b719b97707"
+      }
+    ],
+    "stats": {
+      "total": 4,
+      "additions": 2,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "6bbd218e42e9067fc9efe7661d8115b6f850e443",
+        "filename": "src/wallet/test/wallet_tests.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8f64ee27ef9132cd834ec583daf61581a8faf66c/src/wallet/test/wallet_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8f64ee27ef9132cd834ec583daf61581a8faf66c/src/wallet/test/wallet_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/test/wallet_tests.cpp?ref=8f64ee27ef9132cd834ec583daf61581a8faf66c",
+        "patch": "@@ -78,7 +78,7 @@ BOOST_FIXTURE_TEST_CASE(scan_for_wallet_transactions, TestChain100Setup)\n     NodeContext node;\n     auto chain = interfaces::MakeChain(node);\n \n-    // Verify ScanForWalletTransactions fails to read an unknown start block.\n+    // Verify ScanForWalletTransactions returns success on a start block reorg.\n     {\n         CWallet wallet(chain.get(), WalletLocation(), WalletDatabase::CreateDummy());\n         {\n@@ -89,7 +89,7 @@ BOOST_FIXTURE_TEST_CASE(scan_for_wallet_transactions, TestChain100Setup)\n         WalletRescanReserver reserver(wallet);\n         reserver.reserve();\n         CWallet::ScanResult result = wallet.ScanForWalletTransactions({} /* start_block */, 0 /* start_height */, {} /* max_height */, reserver, false /* update */);\n-        BOOST_CHECK_EQUAL(result.status, CWallet::ScanResult::FAILURE);\n+        BOOST_CHECK_EQUAL(result.status, CWallet::ScanResult::SUCCESS);\n         BOOST_CHECK(result.last_failed_block.IsNull());\n         BOOST_CHECK(result.last_scanned_block.IsNull());\n         BOOST_CHECK(!result.last_scanned_height);"
+      }
+    ]
+  }
+]

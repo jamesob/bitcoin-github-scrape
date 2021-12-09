@@ -1,0 +1,482 @@
+[
+  {
+    "sha": "9ceae8acea658d3e9d6bfe851e0d904c191c6f81",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5Y2VhZThhY2VhNjU4ZDNlOWQ2YmZlODUxZTBkOTA0YzE5MWM2Zjgx",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-04-02T05:57:54Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-04-02T21:48:21Z"
+      },
+      "message": "modified block DL progressbar to be dynamic and more precise",
+      "tree": {
+        "sha": "7144c5bd23bed24249017fd54a07720f9f93846a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/7144c5bd23bed24249017fd54a07720f9f93846a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/9ceae8acea658d3e9d6bfe851e0d904c191c6f81",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9ceae8acea658d3e9d6bfe851e0d904c191c6f81",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/9ceae8acea658d3e9d6bfe851e0d904c191c6f81",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9ceae8acea658d3e9d6bfe851e0d904c191c6f81/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "85ea8b4f4380dac803d43cd0b7829b107cc09e38",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/85ea8b4f4380dac803d43cd0b7829b107cc09e38",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/85ea8b4f4380dac803d43cd0b7829b107cc09e38"
+      }
+    ],
+    "stats": {
+      "total": 35,
+      "additions": 27,
+      "deletions": 8
+    },
+    "files": [
+      {
+        "sha": "464fb8c482be1fb0a3703c8964e6868c4e363c78",
+        "filename": "src/qt/bitcoingui.cpp",
+        "status": "modified",
+        "additions": 27,
+        "deletions": 8,
+        "changes": 35,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9ceae8acea658d3e9d6bfe851e0d904c191c6f81/src/qt/bitcoingui.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9ceae8acea658d3e9d6bfe851e0d904c191c6f81/src/qt/bitcoingui.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoingui.cpp?ref=9ceae8acea658d3e9d6bfe851e0d904c191c6f81",
+        "patch": "@@ -332,8 +332,12 @@ void BitcoinGUI::setClientModel(ClientModel *clientModel)\n         setNumConnections(clientModel->getNumConnections());\n         connect(clientModel, SIGNAL(numConnectionsChanged(int)), this, SLOT(setNumConnections(int)));\n \n-        setNumBlocks(clientModel->getNumBlocks());\n-        connect(clientModel, SIGNAL(numBlocksChanged(int)), this, SLOT(setNumBlocks(int)));\n+        // don't display the sync. message, if we are not connected to the network\n+        if (clientModel->getNumConnections() > 0)\n+        {\n+            setNumBlocks(clientModel->getNumBlocks());\n+            connect(clientModel, SIGNAL(numBlocksChanged(int)), this, SLOT(setNumBlocks(int)));\n+        }\n \n         // Report errors from network/worker thread\n         connect(clientModel, SIGNAL(error(QString,QString)), this, SLOT(error(QString,QString)));\n@@ -453,26 +457,41 @@ void BitcoinGUI::setNumBlocks(int count)\n {\n     if(!clientModel)\n         return;\n-    int total = clientModel->getNumBlocksOfPeers();\n+    int nTotal = clientModel->getNumBlocksOfPeers();\n+    int nInitTotal = clientModel->getNumBlocksAtStartup();\n+    int nPercentageLeft = 100 - (count / (nTotal / 100));\n     QString tooltip;\n \n-    if(count < total)\n+    if(count < nTotal)\n     {\n         if (clientModel->getStatusBarWarnings() == \"\")\n         {\n             progressBarLabel->setVisible(true);\n-            progressBarLabel->setText(tr(\"Synchronizing with network...\"));\n             progressBar->setVisible(true);\n-            progressBar->setMaximum(total);\n-            progressBar->setValue(count);\n+            progressBar->setFormat(tr(\"%v of %m blocks (%p%)\"));\n+            progressBar->setAlignment(Qt::AlignCenter);\n+            // display absolute bar if the difference between count and nTotal is > 10%\n+            if (nPercentageLeft > 10)\n+            {\n+                progressBarLabel->setText(tr(\"Synchronizing with network... (abs. display)\"));\n+                progressBar->setMaximum(nTotal);\n+                progressBar->setValue(count);\n+            }\n+            else\n+            {\n+                progressBarLabel->setText(tr(\"Synchronizing with network... (rel. display)\"));\n+                progressBar->setMaximum(nTotal - nInitTotal);\n+                progressBar->setValue(count - nInitTotal);\n+            }\n+\n         }\n         else\n         {\n             progressBarLabel->setText(clientModel->getStatusBarWarnings());\n             progressBarLabel->setVisible(true);\n             progressBar->setVisible(false);\n         }\n-        tooltip = tr(\"Downloaded %1 of %2 blocks of transaction history.\").arg(count).arg(total);\n+        tooltip = tr(\"Downloaded %1 of %2 blocks of transaction history (%3% left).\").arg(count).arg(nTotal).arg(nPercentageLeft);\n     }\n     else\n     {"
+      }
+    ]
+  },
+  {
+    "sha": "068ed1e8384dd0e12ef68c0dc91c7064b6aae8ec",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowNjhlZDFlODM4NGRkMGUxMmVmNjhjMGRjOTFjNzA2NGI2YWFlOGVj",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-04-02T08:18:51Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-04-02T21:48:22Z"
+      },
+      "message": "removed relative progressbar display and moved re-worked network detection code to setNumBlocks()",
+      "tree": {
+        "sha": "fbb876ba4c8e5f73c79b91acf429f6750c921eb0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/fbb876ba4c8e5f73c79b91acf429f6750c921eb0"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/068ed1e8384dd0e12ef68c0dc91c7064b6aae8ec",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/068ed1e8384dd0e12ef68c0dc91c7064b6aae8ec",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/068ed1e8384dd0e12ef68c0dc91c7064b6aae8ec",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/068ed1e8384dd0e12ef68c0dc91c7064b6aae8ec/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "9ceae8acea658d3e9d6bfe851e0d904c191c6f81",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9ceae8acea658d3e9d6bfe851e0d904c191c6f81",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/9ceae8acea658d3e9d6bfe851e0d904c191c6f81"
+      }
+    ],
+    "stats": {
+      "total": 35,
+      "additions": 13,
+      "deletions": 22
+    },
+    "files": [
+      {
+        "sha": "c8294cfe3dc09f3b16c25540b73867bd53d3d1f8",
+        "filename": "src/qt/bitcoingui.cpp",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 22,
+        "changes": 35,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/068ed1e8384dd0e12ef68c0dc91c7064b6aae8ec/src/qt/bitcoingui.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/068ed1e8384dd0e12ef68c0dc91c7064b6aae8ec/src/qt/bitcoingui.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoingui.cpp?ref=068ed1e8384dd0e12ef68c0dc91c7064b6aae8ec",
+        "patch": "@@ -332,12 +332,8 @@ void BitcoinGUI::setClientModel(ClientModel *clientModel)\n         setNumConnections(clientModel->getNumConnections());\n         connect(clientModel, SIGNAL(numConnectionsChanged(int)), this, SLOT(setNumConnections(int)));\n \n-        // don't display the sync. message, if we are not connected to the network\n-        if (clientModel->getNumConnections() > 0)\n-        {\n-            setNumBlocks(clientModel->getNumBlocks());\n-            connect(clientModel, SIGNAL(numBlocksChanged(int)), this, SLOT(setNumBlocks(int)));\n-        }\n+        setNumBlocks(clientModel->getNumBlocks());\n+        connect(clientModel, SIGNAL(numBlocksChanged(int)), this, SLOT(setNumBlocks(int)));\n \n         // Report errors from network/worker thread\n         connect(clientModel, SIGNAL(error(QString,QString)), this, SLOT(error(QString,QString)));\n@@ -455,10 +451,16 @@ void BitcoinGUI::setNumConnections(int count)\n \n void BitcoinGUI::setNumBlocks(int count)\n {\n-    if(!clientModel)\n+    // don't show / hide progressBar and it's label if we have no connection(s) to the network\n+    if (!clientModel || clientModel->getNumConnections() == 0)\n+    {\n+        progressBarLabel->setVisible(false);\n+        progressBar->setVisible(false);\n+\n         return;\n+    }\n+\n     int nTotal = clientModel->getNumBlocksOfPeers();\n-    int nInitTotal = clientModel->getNumBlocksAtStartup();\n     int nPercentageLeft = 100 - (count / (nTotal / 100));\n     QString tooltip;\n \n@@ -467,23 +469,12 @@ void BitcoinGUI::setNumBlocks(int count)\n         if (clientModel->getStatusBarWarnings() == \"\")\n         {\n             progressBarLabel->setVisible(true);\n+            progressBarLabel->setText(tr(\"Synchronizing with network...\"));\n             progressBar->setVisible(true);\n             progressBar->setFormat(tr(\"%v of %m blocks (%p%)\"));\n             progressBar->setAlignment(Qt::AlignCenter);\n-            // display absolute bar if the difference between count and nTotal is > 10%\n-            if (nPercentageLeft > 10)\n-            {\n-                progressBarLabel->setText(tr(\"Synchronizing with network... (abs. display)\"));\n-                progressBar->setMaximum(nTotal);\n-                progressBar->setValue(count);\n-            }\n-            else\n-            {\n-                progressBarLabel->setText(tr(\"Synchronizing with network... (rel. display)\"));\n-                progressBar->setMaximum(nTotal - nInitTotal);\n-                progressBar->setValue(count - nInitTotal);\n-            }\n-\n+            progressBar->setMaximum(nTotal);\n+            progressBar->setValue(count);\n         }\n         else\n         {"
+      }
+    ]
+  },
+  {
+    "sha": "5519660a0d80bdbfeadfe8c68303c936048635d0",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1NTE5NjYwYTBkODBiZGJmZWFkZmU4YzY4MzAzYzkzNjA0ODYzNWQw",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-04-02T13:28:53Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-04-02T21:48:22Z"
+      },
+      "message": "changed progressbar text to \"~n blocks remaining\"",
+      "tree": {
+        "sha": "6ae78b829179da781615f8dc328d08b906c78804",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/6ae78b829179da781615f8dc328d08b906c78804"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/5519660a0d80bdbfeadfe8c68303c936048635d0",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5519660a0d80bdbfeadfe8c68303c936048635d0",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/5519660a0d80bdbfeadfe8c68303c936048635d0",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5519660a0d80bdbfeadfe8c68303c936048635d0/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "068ed1e8384dd0e12ef68c0dc91c7064b6aae8ec",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/068ed1e8384dd0e12ef68c0dc91c7064b6aae8ec",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/068ed1e8384dd0e12ef68c0dc91c7064b6aae8ec"
+      }
+    ],
+    "stats": {
+      "total": 13,
+      "additions": 8,
+      "deletions": 5
+    },
+    "files": [
+      {
+        "sha": "319a2f92ecfa93d0c2e6022a5456ad95c7d616aa",
+        "filename": "src/qt/bitcoingui.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 5,
+        "changes": 13,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5519660a0d80bdbfeadfe8c68303c936048635d0/src/qt/bitcoingui.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5519660a0d80bdbfeadfe8c68303c936048635d0/src/qt/bitcoingui.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoingui.cpp?ref=5519660a0d80bdbfeadfe8c68303c936048635d0",
+        "patch": "@@ -461,28 +461,31 @@ void BitcoinGUI::setNumBlocks(int count)\n     }\n \n     int nTotal = clientModel->getNumBlocksOfPeers();\n-    int nPercentageLeft = 100 - (count / (nTotal / 100));\n     QString tooltip;\n \n     if(count < nTotal)\n     {\n+        int nCurMax = nTotal - count;\n+        int nOnePercentCurMax = nCurMax / 100;\n+        int nPercentageDone = (count / (nTotal / 100));\n+\n         if (clientModel->getStatusBarWarnings() == \"\")\n         {\n             progressBarLabel->setVisible(true);\n             progressBarLabel->setText(tr(\"Synchronizing with network...\"));\n             progressBar->setVisible(true);\n-            progressBar->setFormat(tr(\"%v of %m blocks (%p%)\"));\n+            progressBar->setFormat(tr(\"~%m blocks remaining\"));\n             progressBar->setAlignment(Qt::AlignCenter);\n-            progressBar->setMaximum(nTotal);\n-            progressBar->setValue(count);\n+            progressBar->setMaximum(nCurMax);\n+            progressBar->setValue(nOnePercentCurMax * nPercentageDone);\n         }\n         else\n         {\n             progressBarLabel->setText(clientModel->getStatusBarWarnings());\n             progressBarLabel->setVisible(true);\n             progressBar->setVisible(false);\n         }\n-        tooltip = tr(\"Downloaded %1 of %2 blocks of transaction history (%3% left).\").arg(count).arg(nTotal).arg(nPercentageLeft);\n+        tooltip = tr(\"Downloaded %1 of %2 blocks of transaction history (%3% done).\").arg(count).arg(nTotal).arg(nPercentageDone);\n     }\n     else\n     {"
+      }
+    ]
+  },
+  {
+    "sha": "c7c0c93172e4ecfebf78432a2530599c77f8eddd",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjN2MwYzkzMTcyZTRlY2ZlYmY3ODQzMmEyNTMwNTk5Yzc3ZjhlZGRk",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-04-02T17:07:03Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-04-02T21:48:23Z"
+      },
+      "message": "implemented OS independent progress bar style / moved one-time functions used on the bar to a better code location",
+      "tree": {
+        "sha": "0b918406fc1c5ea0d7b8503f6dd493fa3582d38b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/0b918406fc1c5ea0d7b8503f6dd493fa3582d38b"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/c7c0c93172e4ecfebf78432a2530599c77f8eddd",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c7c0c93172e4ecfebf78432a2530599c77f8eddd",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/c7c0c93172e4ecfebf78432a2530599c77f8eddd",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c7c0c93172e4ecfebf78432a2530599c77f8eddd/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "5519660a0d80bdbfeadfe8c68303c936048635d0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5519660a0d80bdbfeadfe8c68303c936048635d0",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/5519660a0d80bdbfeadfe8c68303c936048635d0"
+      }
+    ],
+    "stats": {
+      "total": 16,
+      "additions": 9,
+      "deletions": 7
+    },
+    "files": [
+      {
+        "sha": "8e7f345046ca030e87cbf3011b91d1b18c71cb23",
+        "filename": "src/qt/bitcoingui.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 7,
+        "changes": 16,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c7c0c93172e4ecfebf78432a2530599c77f8eddd/src/qt/bitcoingui.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c7c0c93172e4ecfebf78432a2530599c77f8eddd/src/qt/bitcoingui.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoingui.cpp?ref=c7c0c93172e4ecfebf78432a2530599c77f8eddd",
+        "patch": "@@ -138,17 +138,21 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):\n     frameBlocksLayout->addWidget(labelBlocksIcon);\n     frameBlocksLayout->addStretch();\n \n-    // Progress bar for blocks download\n-    progressBarLabel = new QLabel(tr(\"Synchronizing with network...\"));\n+    // Progress bar and label for blocks download\n+    progressBarLabel = new QLabel();\n     progressBarLabel->setVisible(false);\n     progressBar = new QProgressBar();\n-    progressBar->setToolTip(tr(\"Block chain synchronization in progress\"));\n     progressBar->setVisible(false);\n \n     statusBar()->addWidget(progressBarLabel);\n     statusBar()->addWidget(progressBar);\n     statusBar()->addPermanentWidget(frameBlocks);\n \n+    // define progress bar format\n+    progressBar->setFormat(tr(\"~%m blocks remaining\"));\n+    // define OS independent progress bar style (has to be after addWidget(), otherwise we crash)\n+    progressBar->setStyleSheet(\"QProgressBar { background-color: transparent; border: 1px solid grey; border-radius: 5px; text-align: center; } QProgressBar::chunk { background: QLinearGradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 transparent, stop: 1 orange); margin: 0px; }\");\n+\n     syncIconMovie = new QMovie(\":/movies/update_spinner\", \"mng\", this);\n \n     // Clicking on a transaction on the overview page simply sends you to transaction history page\n@@ -471,13 +475,11 @@ void BitcoinGUI::setNumBlocks(int count)\n \n         if (clientModel->getStatusBarWarnings() == \"\")\n         {\n-            progressBarLabel->setVisible(true);\n             progressBarLabel->setText(tr(\"Synchronizing with network...\"));\n-            progressBar->setVisible(true);\n-            progressBar->setFormat(tr(\"~%m blocks remaining\"));\n-            progressBar->setAlignment(Qt::AlignCenter);\n+            progressBarLabel->setVisible(true);\n             progressBar->setMaximum(nCurMax);\n             progressBar->setValue(nOnePercentCurMax * nPercentageDone);\n+            progressBar->setVisible(true);\n         }\n         else\n         {"
+      }
+    ]
+  },
+  {
+    "sha": "e9de46c43667de8bb2e5d9ef931a8b93132c41ff",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplOWRlNDZjNDM2NjdkZThiYjJlNWQ5ZWY5MzFhOGI5MzEzMmM0MWZm",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-04-02T18:29:07Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-04-02T21:48:24Z"
+      },
+      "message": "color update for progress bar",
+      "tree": {
+        "sha": "a663572b29bbb7009d11a9b9d16caaaf3309c807",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/a663572b29bbb7009d11a9b9d16caaaf3309c807"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/e9de46c43667de8bb2e5d9ef931a8b93132c41ff",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e9de46c43667de8bb2e5d9ef931a8b93132c41ff",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/e9de46c43667de8bb2e5d9ef931a8b93132c41ff",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e9de46c43667de8bb2e5d9ef931a8b93132c41ff/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "c7c0c93172e4ecfebf78432a2530599c77f8eddd",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c7c0c93172e4ecfebf78432a2530599c77f8eddd",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c7c0c93172e4ecfebf78432a2530599c77f8eddd"
+      }
+    ],
+    "stats": {
+      "total": 2,
+      "additions": 1,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "91ef9eb1da80a99c2d10e9b450cabfde9d0ddc4d",
+        "filename": "src/qt/bitcoingui.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e9de46c43667de8bb2e5d9ef931a8b93132c41ff/src/qt/bitcoingui.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e9de46c43667de8bb2e5d9ef931a8b93132c41ff/src/qt/bitcoingui.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoingui.cpp?ref=e9de46c43667de8bb2e5d9ef931a8b93132c41ff",
+        "patch": "@@ -151,7 +151,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):\n     // define progress bar format\n     progressBar->setFormat(tr(\"~%m blocks remaining\"));\n     // define OS independent progress bar style (has to be after addWidget(), otherwise we crash)\n-    progressBar->setStyleSheet(\"QProgressBar { background-color: transparent; border: 1px solid grey; border-radius: 5px; text-align: center; } QProgressBar::chunk { background: QLinearGradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 transparent, stop: 1 orange); margin: 0px; }\");\n+    progressBar->setStyleSheet(\"QProgressBar { background-color: transparent; border: 1px solid grey; border-radius: 5px; text-align: center; } QProgressBar::chunk { background: QLinearGradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 #FF8000, stop: 1 orange); margin: 0px; }\");\n \n     syncIconMovie = new QMovie(\":/movies/update_spinner\", \"mng\", this);\n "
+      }
+    ]
+  },
+  {
+    "sha": "a7a69cd07a97dddd7dd74b0b1a6b2f82fe750261",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphN2E2OWNkMDdhOTdkZGRkN2RkNzRiMGIxYTZiMmY4MmZlNzUwMjYx",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-04-02T21:51:40Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-04-02T21:51:40Z"
+      },
+      "message": "polished code and fixed progress display (was very jerky at the end of a sync)",
+      "tree": {
+        "sha": "7ac5b335d482a40e77a8ac1468e52de453565a9a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/7ac5b335d482a40e77a8ac1468e52de453565a9a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a7a69cd07a97dddd7dd74b0b1a6b2f82fe750261",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a7a69cd07a97dddd7dd74b0b1a6b2f82fe750261",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a7a69cd07a97dddd7dd74b0b1a6b2f82fe750261",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a7a69cd07a97dddd7dd74b0b1a6b2f82fe750261/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "e9de46c43667de8bb2e5d9ef931a8b93132c41ff",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e9de46c43667de8bb2e5d9ef931a8b93132c41ff",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/e9de46c43667de8bb2e5d9ef931a8b93132c41ff"
+      }
+    ],
+    "stats": {
+      "total": 20,
+      "additions": 9,
+      "deletions": 11
+    },
+    "files": [
+      {
+        "sha": "2befcdf786c4ee0d4c1e7a9ca0da9bc2d53a8872",
+        "filename": "src/qt/bitcoingui.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 11,
+        "changes": 20,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a7a69cd07a97dddd7dd74b0b1a6b2f82fe750261/src/qt/bitcoingui.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a7a69cd07a97dddd7dd74b0b1a6b2f82fe750261/src/qt/bitcoingui.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoingui.cpp?ref=a7a69cd07a97dddd7dd74b0b1a6b2f82fe750261",
+        "patch": "@@ -148,10 +148,8 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):\n     statusBar()->addWidget(progressBar);\n     statusBar()->addPermanentWidget(frameBlocks);\n \n-    // define progress bar format\n-    progressBar->setFormat(tr(\"~%m blocks remaining\"));\n     // define OS independent progress bar style (has to be after addWidget(), otherwise we crash)\n-    progressBar->setStyleSheet(\"QProgressBar { background-color: transparent; border: 1px solid grey; border-radius: 5px; text-align: center; } QProgressBar::chunk { background: QLinearGradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 #FF8000, stop: 1 orange); margin: 0px; }\");\n+    progressBar->setStyleSheet(\"QProgressBar { background-color: transparent; border: 1px solid grey; border-radius: 2px; padding: 1px; text-align: center; } QProgressBar::chunk { background: QLinearGradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 #FF8000, stop: 1 orange); margin: 0px; }\");\n \n     syncIconMovie = new QMovie(\":/movies/update_spinner\", \"mng\", this);\n \n@@ -464,21 +462,21 @@ void BitcoinGUI::setNumBlocks(int count)\n         return;\n     }\n \n-    int nTotal = clientModel->getNumBlocksOfPeers();\n+    int nTotalBlocks = clientModel->getNumBlocksOfPeers();\n     QString tooltip;\n \n-    if(count < nTotal)\n+    if(count < nTotalBlocks)\n     {\n-        int nCurMax = nTotal - count;\n-        int nOnePercentCurMax = nCurMax / 100;\n-        int nPercentageDone = (count / (nTotal / 100));\n+        int nRemainingBlocks = nTotalBlocks - count;\n+        int nPercentageDone = (count / ((nTotalBlocks / 100) + 0.5f));\n \n         if (clientModel->getStatusBarWarnings() == \"\")\n         {\n             progressBarLabel->setText(tr(\"Synchronizing with network...\"));\n             progressBarLabel->setVisible(true);\n-            progressBar->setMaximum(nCurMax);\n-            progressBar->setValue(nOnePercentCurMax * nPercentageDone);\n+            progressBar->setFormat(\"~\" + QString::number(nRemainingBlocks)+ tr(\" blocks remaining\"));\n+            progressBar->setMaximum(nTotalBlocks);\n+            progressBar->setValue(count);\n             progressBar->setVisible(true);\n         }\n         else\n@@ -487,7 +485,7 @@ void BitcoinGUI::setNumBlocks(int count)\n             progressBarLabel->setVisible(true);\n             progressBar->setVisible(false);\n         }\n-        tooltip = tr(\"Downloaded %1 of %2 blocks of transaction history (%3% done).\").arg(count).arg(nTotal).arg(nPercentageDone);\n+        tooltip = tr(\"Downloaded %1 of %2 blocks of transaction history (%3% done).\").arg(count).arg(nTotalBlocks).arg(nPercentageDone);\n     }\n     else\n     {"
+      }
+    ]
+  },
+  {
+    "sha": "ec9a4904f38c6c8b9a889e28bb7101dbc0eb5e97",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplYzlhNDkwNGYzOGM2YzhiOWE4ODllMjhiYjcxMDFkYmMwZWI1ZTk3",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-04-03T06:30:13Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-04-03T06:30:13Z"
+      },
+      "message": "changed percentage done in tooltip to float to be more precise / allowed plurals in translation for \"x block(s) remaining\"",
+      "tree": {
+        "sha": "130eab2f40611a8c3855092919007d74c272d27d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/130eab2f40611a8c3855092919007d74c272d27d"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/ec9a4904f38c6c8b9a889e28bb7101dbc0eb5e97",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ec9a4904f38c6c8b9a889e28bb7101dbc0eb5e97",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/ec9a4904f38c6c8b9a889e28bb7101dbc0eb5e97",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ec9a4904f38c6c8b9a889e28bb7101dbc0eb5e97/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "a7a69cd07a97dddd7dd74b0b1a6b2f82fe750261",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a7a69cd07a97dddd7dd74b0b1a6b2f82fe750261",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/a7a69cd07a97dddd7dd74b0b1a6b2f82fe750261"
+      }
+    ],
+    "stats": {
+      "total": 8,
+      "additions": 4,
+      "deletions": 4
+    },
+    "files": [
+      {
+        "sha": "6d710acea8502393cc28f59232ee1e5785c795d5",
+        "filename": "src/qt/bitcoingui.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 4,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ec9a4904f38c6c8b9a889e28bb7101dbc0eb5e97/src/qt/bitcoingui.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ec9a4904f38c6c8b9a889e28bb7101dbc0eb5e97/src/qt/bitcoingui.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoingui.cpp?ref=ec9a4904f38c6c8b9a889e28bb7101dbc0eb5e97",
+        "patch": "@@ -148,7 +148,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):\n     statusBar()->addWidget(progressBar);\n     statusBar()->addPermanentWidget(frameBlocks);\n \n-    // define OS independent progress bar style (has to be after addWidget(), otherwise we crash)\n+    // define OS independent progress bar style (has to be placed after addWidget(), otherwise we crash)\n     progressBar->setStyleSheet(\"QProgressBar { background-color: transparent; border: 1px solid grey; border-radius: 2px; padding: 1px; text-align: center; } QProgressBar::chunk { background: QLinearGradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 #FF8000, stop: 1 orange); margin: 0px; }\");\n \n     syncIconMovie = new QMovie(\":/movies/update_spinner\", \"mng\", this);\n@@ -468,13 +468,13 @@ void BitcoinGUI::setNumBlocks(int count)\n     if(count < nTotalBlocks)\n     {\n         int nRemainingBlocks = nTotalBlocks - count;\n-        int nPercentageDone = (count / ((nTotalBlocks / 100) + 0.5f));\n+        float nPercentageDone = count / (nTotalBlocks * 0.01f);\n \n         if (clientModel->getStatusBarWarnings() == \"\")\n         {\n             progressBarLabel->setText(tr(\"Synchronizing with network...\"));\n             progressBarLabel->setVisible(true);\n-            progressBar->setFormat(\"~\" + QString::number(nRemainingBlocks)+ tr(\" blocks remaining\"));\n+            progressBar->setFormat(\"~\" + tr(\"%n block(s) remaining\", \"\", nRemainingBlocks));\n             progressBar->setMaximum(nTotalBlocks);\n             progressBar->setValue(count);\n             progressBar->setVisible(true);\n@@ -485,7 +485,7 @@ void BitcoinGUI::setNumBlocks(int count)\n             progressBarLabel->setVisible(true);\n             progressBar->setVisible(false);\n         }\n-        tooltip = tr(\"Downloaded %1 of %2 blocks of transaction history (%3% done).\").arg(count).arg(nTotalBlocks).arg(nPercentageDone);\n+        tooltip = tr(\"Downloaded %1 of %2 blocks of transaction history (%3% done).\").arg(count).arg(nTotalBlocks).arg(nPercentageDone, 0, 'f', 2);\n     }\n     else\n     {"
+      }
+    ]
+  },
+  {
+    "sha": "853a4a81b33a5c636c296f136822016cc65ab698",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4NTNhNGE4MWIzM2E1YzYzNmMyOTZmMTM2ODIyMDE2Y2M2NWFiNjk4",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-04-03T07:42:34Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-04-03T07:42:34Z"
+      },
+      "message": "clarified comment why we use an own progressbar style / included \"~\" in the tr() call",
+      "tree": {
+        "sha": "52099bfdc4ba398b1aab2c916eef91e3cb91ca66",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/52099bfdc4ba398b1aab2c916eef91e3cb91ca66"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/853a4a81b33a5c636c296f136822016cc65ab698",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/853a4a81b33a5c636c296f136822016cc65ab698",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/853a4a81b33a5c636c296f136822016cc65ab698",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/853a4a81b33a5c636c296f136822016cc65ab698/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "ec9a4904f38c6c8b9a889e28bb7101dbc0eb5e97",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ec9a4904f38c6c8b9a889e28bb7101dbc0eb5e97",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/ec9a4904f38c6c8b9a889e28bb7101dbc0eb5e97"
+      }
+    ],
+    "stats": {
+      "total": 3,
+      "additions": 2,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "04cf7031ed477ea0e006a598a0407d6b18175f0e",
+        "filename": "src/qt/bitcoingui.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 1,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/853a4a81b33a5c636c296f136822016cc65ab698/src/qt/bitcoingui.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/853a4a81b33a5c636c296f136822016cc65ab698/src/qt/bitcoingui.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoingui.cpp?ref=853a4a81b33a5c636c296f136822016cc65ab698",
+        "patch": "@@ -149,6 +149,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):\n     statusBar()->addPermanentWidget(frameBlocks);\n \n     // define OS independent progress bar style (has to be placed after addWidget(), otherwise we crash)\n+    // we did this, because with some OSes default style, text on the progress bar is unreadable\n     progressBar->setStyleSheet(\"QProgressBar { background-color: transparent; border: 1px solid grey; border-radius: 2px; padding: 1px; text-align: center; } QProgressBar::chunk { background: QLinearGradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 #FF8000, stop: 1 orange); margin: 0px; }\");\n \n     syncIconMovie = new QMovie(\":/movies/update_spinner\", \"mng\", this);\n@@ -474,7 +475,7 @@ void BitcoinGUI::setNumBlocks(int count)\n         {\n             progressBarLabel->setText(tr(\"Synchronizing with network...\"));\n             progressBarLabel->setVisible(true);\n-            progressBar->setFormat(\"~\" + tr(\"%n block(s) remaining\", \"\", nRemainingBlocks));\n+            progressBar->setFormat(tr(\"~%n block(s) remaining\", \"\", nRemainingBlocks));\n             progressBar->setMaximum(nTotalBlocks);\n             progressBar->setValue(count);\n             progressBar->setVisible(true);"
+      }
+    ]
+  }
+]

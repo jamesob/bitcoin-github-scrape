@@ -1,0 +1,198 @@
+[
+  {
+    "sha": "9a3670930eaf6b495f81ef9c5f6e68883a3a2750",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5YTM2NzA5MzBlYWY2YjQ5NWY4MWVmOWM1ZjZlNjg4ODNhM2EyNzUw",
+    "commit": {
+      "author": {
+        "name": "Sebastian Falbesoner",
+        "email": "sebastian.falbesoner@gmail.com",
+        "date": "2021-03-28T12:52:10Z"
+      },
+      "committer": {
+        "name": "Sebastian Falbesoner",
+        "email": "sebastian.falbesoner@gmail.com",
+        "date": "2021-04-02T13:47:11Z"
+      },
+      "message": "wallet: refactor: dedup sqlite statement preparations",
+      "tree": {
+        "sha": "5a5143d91481955ca780db28c678517f2d6388ac",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/5a5143d91481955ca780db28c678517f2d6388ac"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/9a3670930eaf6b495f81ef9c5f6e68883a3a2750",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9a3670930eaf6b495f81ef9c5f6e68883a3a2750",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/9a3670930eaf6b495f81ef9c5f6e68883a3a2750",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9a3670930eaf6b495f81ef9c5f6e68883a3a2750/comments",
+    "author": {
+      "login": "theStack",
+      "id": 91535,
+      "node_id": "MDQ6VXNlcjkxNTM1",
+      "avatar_url": "https://avatars.githubusercontent.com/u/91535?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/theStack",
+      "html_url": "https://github.com/theStack",
+      "followers_url": "https://api.github.com/users/theStack/followers",
+      "following_url": "https://api.github.com/users/theStack/following{/other_user}",
+      "gists_url": "https://api.github.com/users/theStack/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/theStack/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/theStack/subscriptions",
+      "organizations_url": "https://api.github.com/users/theStack/orgs",
+      "repos_url": "https://api.github.com/users/theStack/repos",
+      "events_url": "https://api.github.com/users/theStack/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/theStack/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "theStack",
+      "id": 91535,
+      "node_id": "MDQ6VXNlcjkxNTM1",
+      "avatar_url": "https://avatars.githubusercontent.com/u/91535?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/theStack",
+      "html_url": "https://github.com/theStack",
+      "followers_url": "https://api.github.com/users/theStack/followers",
+      "following_url": "https://api.github.com/users/theStack/following{/other_user}",
+      "gists_url": "https://api.github.com/users/theStack/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/theStack/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/theStack/subscriptions",
+      "organizations_url": "https://api.github.com/users/theStack/orgs",
+      "repos_url": "https://api.github.com/users/theStack/repos",
+      "events_url": "https://api.github.com/users/theStack/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/theStack/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "e658b0e49bee257e197dd8ca37ee3ffa73092d92",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e658b0e49bee257e197dd8ca37ee3ffa73092d92",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/e658b0e49bee257e197dd8ca37ee3ffa73092d92"
+      }
+    ],
+    "stats": {
+      "total": 42,
+      "additions": 18,
+      "deletions": 24
+    },
+    "files": [
+      {
+        "sha": "f7aa576956b8aea6d5b664278f2f50cec6587be8",
+        "filename": "src/wallet/sqlite.cpp",
+        "status": "modified",
+        "additions": 18,
+        "deletions": 24,
+        "changes": 42,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9a3670930eaf6b495f81ef9c5f6e68883a3a2750/src/wallet/sqlite.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9a3670930eaf6b495f81ef9c5f6e68883a3a2750/src/wallet/sqlite.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/sqlite.cpp?ref=9a3670930eaf6b495f81ef9c5f6e68883a3a2750",
+        "patch": "@@ -16,6 +16,9 @@\n #include <sqlite3.h>\n #include <stdint.h>\n \n+#include <utility>\n+#include <vector>\n+\n static constexpr int32_t WALLET_SCHEMA_VERSION = 0;\n \n static Mutex g_sqlite_mutex;\n@@ -69,30 +72,21 @@ SQLiteDatabase::SQLiteDatabase(const fs::path& dir_path, const fs::path& file_pa\n \n void SQLiteBatch::SetupSQLStatements()\n {\n-    int res;\n-    if (!m_read_stmt) {\n-        if ((res = sqlite3_prepare_v2(m_database.m_db, \"SELECT value FROM main WHERE key = ?\", -1, &m_read_stmt, nullptr)) != SQLITE_OK) {\n-            throw std::runtime_error(strprintf(\"SQLiteDatabase: Failed to setup SQL statements: %s\\n\", sqlite3_errstr(res)));\n-        }\n-    }\n-    if (!m_insert_stmt) {\n-        if ((res = sqlite3_prepare_v2(m_database.m_db, \"INSERT INTO main VALUES(?, ?)\", -1, &m_insert_stmt, nullptr)) != SQLITE_OK) {\n-            throw std::runtime_error(strprintf(\"SQLiteDatabase: Failed to setup SQL statements: %s\\n\", sqlite3_errstr(res)));\n-        }\n-    }\n-    if (!m_overwrite_stmt) {\n-        if ((res = sqlite3_prepare_v2(m_database.m_db, \"INSERT or REPLACE into main values(?, ?)\", -1, &m_overwrite_stmt, nullptr)) != SQLITE_OK) {\n-            throw std::runtime_error(strprintf(\"SQLiteDatabase: Failed to setup SQL statements: %s\\n\", sqlite3_errstr(res)));\n-        }\n-    }\n-    if (!m_delete_stmt) {\n-        if ((res = sqlite3_prepare_v2(m_database.m_db, \"DELETE FROM main WHERE key = ?\", -1, &m_delete_stmt, nullptr)) != SQLITE_OK) {\n-            throw std::runtime_error(strprintf(\"SQLiteDatabase: Failed to setup SQL statements: %s\\n\", sqlite3_errstr(res)));\n-        }\n-    }\n-    if (!m_cursor_stmt) {\n-        if ((res = sqlite3_prepare_v2(m_database.m_db, \"SELECT key, value FROM main\", -1, &m_cursor_stmt, nullptr)) != SQLITE_OK) {\n-            throw std::runtime_error(strprintf(\"SQLiteDatabase: Failed to setup SQL statements : %s\\n\", sqlite3_errstr(res)));\n+    const std::vector<std::pair<sqlite3_stmt**, const char*>> statements{\n+        {&m_read_stmt, \"SELECT value FROM main WHERE key = ?\"},\n+        {&m_insert_stmt, \"INSERT INTO main VALUES(?, ?)\"},\n+        {&m_overwrite_stmt, \"INSERT or REPLACE into main values(?, ?)\"},\n+        {&m_delete_stmt, \"DELETE FROM main WHERE key = ?\"},\n+        {&m_cursor_stmt, \"SELECT key, value FROM main\"},\n+    };\n+\n+    for (const auto& [stmt_prepared, stmt_text] : statements) {\n+        if (*stmt_prepared == nullptr) {\n+            int res = sqlite3_prepare_v2(m_database.m_db, stmt_text, -1, stmt_prepared, nullptr);\n+            if (res != SQLITE_OK) {\n+                throw std::runtime_error(strprintf(\n+                    \"SQLiteDatabase: Failed to setup SQL statements: %s\\n\", sqlite3_errstr(res)));\n+            }\n         }\n     }\n }"
+      }
+    ]
+  },
+  {
+    "sha": "ea19cc844e780b29825b26aee321204be981a3ae",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplYTE5Y2M4NDRlNzgwYjI5ODI1YjI2YWVlMzIxMjA0YmU5ODFhM2Fl",
+    "commit": {
+      "author": {
+        "name": "Sebastian Falbesoner",
+        "email": "sebastian.falbesoner@gmail.com",
+        "date": "2021-04-02T13:22:21Z"
+      },
+      "committer": {
+        "name": "Sebastian Falbesoner",
+        "email": "sebastian.falbesoner@gmail.com",
+        "date": "2021-04-02T13:48:02Z"
+      },
+      "message": "wallet: refactor: dedup sqlite statement deletions",
+      "tree": {
+        "sha": "21b05007992bd5ebafd876dfe1ece62eda2a2aab",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/21b05007992bd5ebafd876dfe1ece62eda2a2aab"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/ea19cc844e780b29825b26aee321204be981a3ae",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ea19cc844e780b29825b26aee321204be981a3ae",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/ea19cc844e780b29825b26aee321204be981a3ae",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ea19cc844e780b29825b26aee321204be981a3ae/comments",
+    "author": {
+      "login": "theStack",
+      "id": 91535,
+      "node_id": "MDQ6VXNlcjkxNTM1",
+      "avatar_url": "https://avatars.githubusercontent.com/u/91535?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/theStack",
+      "html_url": "https://github.com/theStack",
+      "followers_url": "https://api.github.com/users/theStack/followers",
+      "following_url": "https://api.github.com/users/theStack/following{/other_user}",
+      "gists_url": "https://api.github.com/users/theStack/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/theStack/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/theStack/subscriptions",
+      "organizations_url": "https://api.github.com/users/theStack/orgs",
+      "repos_url": "https://api.github.com/users/theStack/repos",
+      "events_url": "https://api.github.com/users/theStack/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/theStack/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "theStack",
+      "id": 91535,
+      "node_id": "MDQ6VXNlcjkxNTM1",
+      "avatar_url": "https://avatars.githubusercontent.com/u/91535?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/theStack",
+      "html_url": "https://github.com/theStack",
+      "followers_url": "https://api.github.com/users/theStack/followers",
+      "following_url": "https://api.github.com/users/theStack/following{/other_user}",
+      "gists_url": "https://api.github.com/users/theStack/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/theStack/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/theStack/subscriptions",
+      "organizations_url": "https://api.github.com/users/theStack/orgs",
+      "repos_url": "https://api.github.com/users/theStack/repos",
+      "events_url": "https://api.github.com/users/theStack/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/theStack/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "9a3670930eaf6b495f81ef9c5f6e68883a3a2750",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9a3670930eaf6b495f81ef9c5f6e68883a3a2750",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/9a3670930eaf6b495f81ef9c5f6e68883a3a2750"
+      }
+    ],
+    "stats": {
+      "total": 39,
+      "additions": 15,
+      "deletions": 24
+    },
+    "files": [
+      {
+        "sha": "91891c5fc2c0ece0c1cc671f14352eab6dd4f391",
+        "filename": "src/wallet/sqlite.cpp",
+        "status": "modified",
+        "additions": 15,
+        "deletions": 24,
+        "changes": 39,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ea19cc844e780b29825b26aee321204be981a3ae/src/wallet/sqlite.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ea19cc844e780b29825b26aee321204be981a3ae/src/wallet/sqlite.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/sqlite.cpp?ref=ea19cc844e780b29825b26aee321204be981a3ae",
+        "patch": "@@ -347,31 +347,22 @@ void SQLiteBatch::Close()\n     }\n \n     // Free all of the prepared statements\n-    int ret = sqlite3_finalize(m_read_stmt);\n-    if (ret != SQLITE_OK) {\n-        LogPrintf(\"SQLiteBatch: Batch closed but could not finalize read statement: %s\\n\", sqlite3_errstr(ret));\n-    }\n-    ret = sqlite3_finalize(m_insert_stmt);\n-    if (ret != SQLITE_OK) {\n-        LogPrintf(\"SQLiteBatch: Batch closed but could not finalize insert statement: %s\\n\", sqlite3_errstr(ret));\n-    }\n-    ret = sqlite3_finalize(m_overwrite_stmt);\n-    if (ret != SQLITE_OK) {\n-        LogPrintf(\"SQLiteBatch: Batch closed but could not finalize overwrite statement: %s\\n\", sqlite3_errstr(ret));\n-    }\n-    ret = sqlite3_finalize(m_delete_stmt);\n-    if (ret != SQLITE_OK) {\n-        LogPrintf(\"SQLiteBatch: Batch closed but could not finalize delete statement: %s\\n\", sqlite3_errstr(ret));\n-    }\n-    ret = sqlite3_finalize(m_cursor_stmt);\n-    if (ret != SQLITE_OK) {\n-        LogPrintf(\"SQLiteBatch: Batch closed but could not finalize cursor statement: %s\\n\", sqlite3_errstr(ret));\n+    const std::vector<std::pair<sqlite3_stmt**, const char*>> statements{\n+        {&m_read_stmt, \"read\"},\n+        {&m_insert_stmt, \"insert\"},\n+        {&m_overwrite_stmt, \"overwrite\"},\n+        {&m_delete_stmt, \"delete\"},\n+        {&m_cursor_stmt, \"cursor\"},\n+    };\n+\n+    for (const auto& [stmt_prepared, stmt_description] : statements) {\n+        int res = sqlite3_finalize(*stmt_prepared);\n+        if (res != SQLITE_OK) {\n+            LogPrintf(\"SQLiteBatch: Batch closed but could not finalize %s statement: %s\\n\",\n+                      stmt_description, sqlite3_errstr(res));\n+        }\n+        *stmt_prepared = nullptr;\n     }\n-    m_read_stmt = nullptr;\n-    m_insert_stmt = nullptr;\n-    m_overwrite_stmt = nullptr;\n-    m_delete_stmt = nullptr;\n-    m_cursor_stmt = nullptr;\n }\n \n bool SQLiteBatch::ReadKey(CDataStream&& key, CDataStream& value)"
+      }
+    ]
+  }
+]

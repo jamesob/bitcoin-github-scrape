@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "788de9770b90858a9d856e806f116cbcf85faf47",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3ODhkZTk3NzBiOTA4NThhOWQ4NTZlODA2ZjExNmNiY2Y4NWZhZjQ3",
+    "commit": {
+      "author": {
+        "name": "win32re",
+        "email": "win32@win32.re",
+        "date": "2014-10-04T12:10:51Z"
+      },
+      "committer": {
+        "name": "win32re",
+        "email": "win32@win32.re",
+        "date": "2014-10-04T12:10:51Z"
+      },
+      "message": "Cleaned up some code.",
+      "tree": {
+        "sha": "e4a41ac4efa7cef1f0cdf322c1a06aaef9809004",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/e4a41ac4efa7cef1f0cdf322c1a06aaef9809004"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/788de9770b90858a9d856e806f116cbcf85faf47",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/788de9770b90858a9d856e806f116cbcf85faf47",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/788de9770b90858a9d856e806f116cbcf85faf47",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/788de9770b90858a9d856e806f116cbcf85faf47/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "5bf029603c60305cafcb1734c4d3f8b9eddfa4ee",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5bf029603c60305cafcb1734c4d3f8b9eddfa4ee",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/5bf029603c60305cafcb1734c4d3f8b9eddfa4ee"
+      }
+    ],
+    "stats": {
+      "total": 47,
+      "additions": 34,
+      "deletions": 13
+    },
+    "files": [
+      {
+        "sha": "639d6e1fef5c5c432c903022a6621228a064fed5",
+        "filename": "src/rpcnet.cpp",
+        "status": "modified",
+        "additions": 34,
+        "deletions": 13,
+        "changes": 47,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/788de9770b90858a9d856e806f116cbcf85faf47/src/rpcnet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/788de9770b90858a9d856e806f116cbcf85faf47/src/rpcnet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcnet.cpp?ref=788de9770b90858a9d856e806f116cbcf85faf47",
+        "patch": "@@ -111,34 +111,46 @@ Value getpeerinfo(const Array& params, bool fHelp)\n \n     Array ret;\n \n-    BOOST_FOREACH(const CNodeStats& stats, vstats) {\n+    BOOST_FOREACH(const CNodeStats& stats, vstats)\n+    {\n         Object obj;\n         CNodeStateStats statestats;\n         bool fStateStats = GetNodeStateStats(stats.nodeid, statestats);\n         obj.push_back(Pair(\"id\", stats.nodeid));\n         obj.push_back(Pair(\"addr\", stats.addrName));\n+        \n         if (!(stats.addrLocal.empty()))\n+        {\n             obj.push_back(Pair(\"addrlocal\", stats.addrLocal));\n+        }\n+        \n         obj.push_back(Pair(\"services\", strprintf(\"%016x\", stats.nServices)));\n         obj.push_back(Pair(\"lastsend\", stats.nLastSend));\n         obj.push_back(Pair(\"lastrecv\", stats.nLastRecv));\n         obj.push_back(Pair(\"bytessent\", stats.nSendBytes));\n         obj.push_back(Pair(\"bytesrecv\", stats.nRecvBytes));\n         obj.push_back(Pair(\"conntime\", stats.nTimeConnected));\n         obj.push_back(Pair(\"pingtime\", stats.dPingTime));\n+        \n         if (stats.dPingWait > 0.0)\n+        {\n             obj.push_back(Pair(\"pingwait\", stats.dPingWait));\n+        }\n+        \n         obj.push_back(Pair(\"version\", stats.nVersion));\n         // Use the sanitized form of subver here, to avoid tricksy remote peers from\n         // corrupting or modifiying the JSON output by putting special characters in\n         // their ver message.\n         obj.push_back(Pair(\"subver\", stats.cleanSubVer));\n         obj.push_back(Pair(\"inbound\", stats.fInbound));\n         obj.push_back(Pair(\"startingheight\", stats.nStartingHeight));\n-        if (fStateStats) {\n+        \n+        if (fStateStats)\n+        {\n             obj.push_back(Pair(\"banscore\", statestats.nMisbehavior));\n             obj.push_back(Pair(\"syncheight\", statestats.nSyncHeight));\n         }\n+        \n         obj.push_back(Pair(\"syncnode\", stats.fSyncNode));\n         obj.push_back(Pair(\"whitelisted\", stats.fWhitelisted));\n \n@@ -178,9 +190,14 @@ Value addnode(const Array& params, bool fHelp)\n \n     LOCK(cs_vAddedNodes);\n     vector<string>::iterator it = vAddedNodes.begin();\n-    for(; it != vAddedNodes.end(); it++)\n+    \n+    for (; it != vAddedNodes.end(); it++)\n+    {\n         if (strNode == *it)\n+        {\n             break;\n+        }\n+    }\n \n     if (strCommand == \"add\")\n     {\n@@ -337,13 +354,15 @@ Value getnettotals(const Array& params, bool fHelp)\n     obj.push_back(Pair(\"totalbytesrecv\", CNode::GetTotalBytesRecv()));\n     obj.push_back(Pair(\"totalbytessent\", CNode::GetTotalBytesSent()));\n     obj.push_back(Pair(\"timemillis\", GetTimeMillis()));\n+    \n     return obj;\n }\n \n static Array GetNetworksInfo()\n {\n     Array networks;\n-    for(int n=0; n<NET_MAX; ++n)\n+    \n+    for (int n=0; n<NET_MAX; ++n)\n     {\n         enum Network network = static_cast<enum Network>(n);\n         if(network == NET_UNROUTABLE)\n@@ -357,6 +376,7 @@ static Array GetNetworksInfo()\n         obj.push_back(Pair(\"proxy\", proxy.IsValid() ? proxy.ToStringIPPort() : string()));\n         networks.push_back(obj);\n     }\n+    \n     return networks;\n }\n \n@@ -399,15 +419,15 @@ Value getnetworkinfo(const Array& params, bool fHelp)\n         );\n \n     Object obj;\n-    obj.push_back(Pair(\"version\",       CLIENT_VERSION));\n-    obj.push_back(Pair(\"subversion\",\n-        FormatSubVersion(CLIENT_NAME, CLIENT_VERSION, std::vector<string>())));\n-    obj.push_back(Pair(\"protocolversion\",PROTOCOL_VERSION));\n-    obj.push_back(Pair(\"localservices\",       strprintf(\"%016x\", nLocalServices)));\n-    obj.push_back(Pair(\"timeoffset\",    GetTimeOffset()));\n-    obj.push_back(Pair(\"connections\",   (int)vNodes.size()));\n-    obj.push_back(Pair(\"networks\",      GetNetworksInfo()));\n-    obj.push_back(Pair(\"relayfee\",      ValueFromAmount(::minRelayTxFee.GetFeePerK())));\n+    obj.push_back(Pair(\"version\", CLIENT_VERSION));\n+    obj.push_back(Pair(\"subversion\", FormatSubVersion(CLIENT_NAME, CLIENT_VERSION, std::vector<string>())));\n+    obj.push_back(Pair(\"protocolversion\", PROTOCOL_VERSION));\n+    obj.push_back(Pair(\"localservices\", strprintf(\"%016x\", nLocalServices)));\n+    obj.push_back(Pair(\"timeoffset\", GetTimeOffset()));\n+    obj.push_back(Pair(\"connections\", (int)vNodes.size()));\n+    obj.push_back(Pair(\"networks\", GetNetworksInfo()));\n+    obj.push_back(Pair(\"relayfee\", ValueFromAmount(::minRelayTxFee.GetFeePerK())));\n+    \n     Array localAddresses;\n     {\n         LOCK(cs_mapLocalHost);\n@@ -420,6 +440,7 @@ Value getnetworkinfo(const Array& params, bool fHelp)\n             localAddresses.push_back(rec);\n         }\n     }\n+    \n     obj.push_back(Pair(\"localaddresses\", localAddresses));\n     return obj;\n }"
+      }
+    ]
+  }
+]

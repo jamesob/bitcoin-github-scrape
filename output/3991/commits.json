@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "d34b958406869018dec6302ae2ed3aa062ea7516",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkMzRiOTU4NDA2ODY5MDE4ZGVjNjMwMmFlMmVkM2FhMDYyZWE3NTE2",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-04-01T08:08:35Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-04-01T08:11:18Z"
+      },
+      "message": "[Qt] small cleanup of coincontroldialog\n\n- use a little more Qt-style\n- check for NULL pointers first and return in updateView()\n- small space and formating changes",
+      "tree": {
+        "sha": "0c2d3e767c117e5ded0844278de3659ab0e3fe61",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/0c2d3e767c117e5ded0844278de3659ab0e3fe61"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/d34b958406869018dec6302ae2ed3aa062ea7516",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d34b958406869018dec6302ae2ed3aa062ea7516",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/d34b958406869018dec6302ae2ed3aa062ea7516",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d34b958406869018dec6302ae2ed3aa062ea7516/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "d8dcfb9034131fec2bbf9791d8c49b546ce29043",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d8dcfb9034131fec2bbf9791d8c49b546ce29043",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/d8dcfb9034131fec2bbf9791d8c49b546ce29043"
+      }
+    ],
+    "stats": {
+      "total": 33,
+      "additions": 16,
+      "deletions": 17
+    },
+    "files": [
+      {
+        "sha": "dc9d2afe2704431f7195ae2c376b79aaff7c3899",
+        "filename": "src/qt/coincontroldialog.cpp",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 17,
+        "changes": 33,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d34b958406869018dec6302ae2ed3aa062ea7516/src/qt/coincontroldialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d34b958406869018dec6302ae2ed3aa062ea7516/src/qt/coincontroldialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/coincontroldialog.cpp?ref=d34b958406869018dec6302ae2ed3aa062ea7516",
+        "patch": "@@ -97,7 +97,7 @@ CoinControlDialog::CoinControlDialog(QWidget *parent) :\n     connect(ui->radioListMode, SIGNAL(toggled(bool)), this, SLOT(radioListMode(bool)));\n \n     // click on checkbox\n-    connect(ui->treeWidget, SIGNAL(itemChanged( QTreeWidgetItem*, int)), this, SLOT(viewItemChanged( QTreeWidgetItem*, int)));\n+    connect(ui->treeWidget, SIGNAL(itemChanged(QTreeWidgetItem*, int)), this, SLOT(viewItemChanged(QTreeWidgetItem*, int)));\n \n     // click on header\n #if QT_VERSION < 0x050000\n@@ -434,7 +434,8 @@ void CoinControlDialog::updateLabelLocked()\n \n void CoinControlDialog::updateLabels(WalletModel *model, QDialog* dialog)\n {\n-    if (!model) return;\n+    if (!model)\n+        return;\n \n     // nPayAmount\n     qint64 nPayAmount = 0;\n@@ -640,29 +641,29 @@ void CoinControlDialog::updateLabels(WalletModel *model, QDialog* dialog)\n \n void CoinControlDialog::updateView()\n {\n+    if (!model || !model->getOptionsModel() || !model->getAddressTableModel())\n+        return;\n+\n     bool treeMode = ui->radioTreeMode->isChecked();\n \n     ui->treeWidget->clear();\n     ui->treeWidget->setEnabled(false); // performance, otherwise updateLabels would be called for every checked checkbox\n     ui->treeWidget->setAlternatingRowColors(!treeMode);\n-    QFlags<Qt::ItemFlag> flgCheckbox=Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsUserCheckable;\n-    QFlags<Qt::ItemFlag> flgTristate=Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsUserCheckable | Qt::ItemIsTristate;\n+    QFlags<Qt::ItemFlag> flgCheckbox = Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsUserCheckable;\n+    QFlags<Qt::ItemFlag> flgTristate = Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsUserCheckable | Qt::ItemIsTristate;\n \n-    int nDisplayUnit = BitcoinUnits::BTC;\n-    if (model && model->getOptionsModel())\n-        nDisplayUnit = model->getOptionsModel()->getDisplayUnit();\n+    int nDisplayUnit = model->getOptionsModel()->getDisplayUnit();\n \n     map<QString, vector<COutput> > mapCoins;\n     model->listCoins(mapCoins);\n \n     BOOST_FOREACH(PAIRTYPE(QString, vector<COutput>) coins, mapCoins)\n     {\n         QTreeWidgetItem *itemWalletAddress = new QTreeWidgetItem();\n+        itemWalletAddress->setCheckState(COLUMN_CHECKBOX, Qt::Unchecked);\n         QString sWalletAddress = coins.first;\n-        QString sWalletLabel = \"\";\n-        if (model->getAddressTableModel())\n-            sWalletLabel = model->getAddressTableModel()->labelForAddress(sWalletAddress);\n-        if (sWalletLabel.length() == 0)\n+        QString sWalletLabel = model->getAddressTableModel()->labelForAddress(sWalletAddress);\n+        if (sWalletLabel.isEmpty())\n             sWalletLabel = tr(\"(no label)\");\n \n         if (treeMode)\n@@ -671,7 +672,7 @@ void CoinControlDialog::updateView()\n             ui->treeWidget->addTopLevelItem(itemWalletAddress);\n \n             itemWalletAddress->setFlags(flgTristate);\n-            itemWalletAddress->setCheckState(COLUMN_CHECKBOX,Qt::Unchecked);\n+            itemWalletAddress->setCheckState(COLUMN_CHECKBOX, Qt::Unchecked);\n \n             // label\n             itemWalletAddress->setText(COLUMN_LABEL, sWalletLabel);\n@@ -722,10 +723,8 @@ void CoinControlDialog::updateView()\n             }\n             else if (!treeMode)\n             {\n-                QString sLabel = \"\";\n-                if (model->getAddressTableModel())\n-                    sLabel = model->getAddressTableModel()->labelForAddress(sAddress);\n-                if (sLabel.length() == 0)\n+                QString sLabel = model->getAddressTableModel()->labelForAddress(sAddress);\n+                if (sLabel.isEmpty())\n                     sLabel = tr(\"(no label)\");\n                 itemOutput->setText(COLUMN_LABEL, sLabel);\n             }\n@@ -766,7 +765,7 @@ void CoinControlDialog::updateView()\n \n             // set checkbox\n             if (coinControl->IsSelected(txhash, out.i))\n-                itemOutput->setCheckState(COLUMN_CHECKBOX,Qt::Checked);\n+                itemOutput->setCheckState(COLUMN_CHECKBOX, Qt::Checked);\n         }\n \n         // amount"
+      }
+    ]
+  }
+]

@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "c73323eec9fb287af6e2b9e68d0aa3c157fdb0c2",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjNzMzMjNlZWM5ZmIyODdhZjZlMmI5ZTY4ZDBhYTNjMTU3ZmRiMGMy",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-09-03T13:54:47Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-11-09T23:29:12Z"
+      },
+      "message": "allow listening on -bind=address for blocked networks\n\n- this allows the client to listen on via -bind specified addresses\n  (e.g. 127.0.0.1), even when a network (IPv4 in that case) was blocked\n  via e.g -onlynet=\"Tor\"\n- introduce enum BindFlags to avoid passing multiple bools to Bind()\n- make -bind help text clear we ALWAYS listen on the specified address\n- remove an unused variable\n- remove 2 unneeded IsLimited() checks before calling Bind(), which does\n  these checks anyway\n\n- usage case: specify -bind=127.0.0.1 -onlynet=\"Tor\" to allow incoming\n  connections to a Tor hidden service, but still don't allow other IPv4\n  nodes to connect / get connected",
+      "tree": {
+        "sha": "9ff058dd9671f847df69a67612b0026a21e5ab24",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/9ff058dd9671f847df69a67612b0026a21e5ab24"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/c73323eec9fb287af6e2b9e68d0aa3c157fdb0c2",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c73323eec9fb287af6e2b9e68d0aa3c157fdb0c2",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/c73323eec9fb287af6e2b9e68d0aa3c157fdb0c2",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c73323eec9fb287af6e2b9e68d0aa3c157fdb0c2/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "c7075c4b65561e4579fec7f4d821375921f69728",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c7075c4b65561e4579fec7f4d821375921f69728",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c7075c4b65561e4579fec7f4d821375921f69728"
+      }
+    ],
+    "stats": {
+      "total": 34,
+      "additions": 18,
+      "deletions": 16
+    },
+    "files": [
+      {
+        "sha": "f6df4055fc3273331bced9b74f4ec05d8c02a7a2",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 18,
+        "deletions": 16,
+        "changes": 34,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c73323eec9fb287af6e2b9e68d0aa3c157fdb0c2/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c73323eec9fb287af6e2b9e68d0aa3c157fdb0c2/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=c73323eec9fb287af6e2b9e68d0aa3c157fdb0c2",
+        "patch": "@@ -26,6 +26,13 @@ using namespace boost;\n CWallet* pwalletMain;\n CClientUIInterface uiInterface;\n \n+// Used to pass flags to the Bind() function\n+enum BindFlags {\n+    BF_NONE = 0,\n+    BF_EXPLICIT = 1,\n+    BF_REPORT_ERROR = 2\n+};\n+\n //////////////////////////////////////////////////////////////////////////////\n //\n // Shutdown\n@@ -213,12 +220,12 @@ bool static InitWarning(const std::string &str)\n }\n \n \n-bool static Bind(const CService &addr, bool fError = true) {\n-    if (IsLimited(addr))\n+bool static Bind(const CService &addr, int flags) {\n+    if (!(flags & BF_EXPLICIT) && IsLimited(addr))\n         return false;\n     std::string strError;\n     if (!BindListenPort(addr, strError)) {\n-        if (fError)\n+        if (flags & BF_REPORT_ERROR)\n             return InitError(strError);\n         return false;\n     }\n@@ -251,7 +258,7 @@ std::string HelpMessage()\n         \"  -discover              \" + _(\"Discover own IP address (default: 1 when listening and no -externalip)\") + \"\\n\" +\n         \"  -irc                   \" + _(\"Find peers using internet relay chat (default: 0)\") + \"\\n\" +\n         \"  -listen                \" + _(\"Accept connections from outside (default: 1 if no -proxy or -connect)\") + \"\\n\" +\n-        \"  -bind=<addr>           \" + _(\"Bind to given address. Use [host]:port notation for IPv6\") + \"\\n\" +\n+        \"  -bind=<addr>           \" + _(\"Bind to given address and always listen on it. Use [host]:port notation for IPv6\") + \"\\n\" +\n         \"  -dnsseed               \" + _(\"Find peers using DNS lookup (default: 1 unless -connect)\") + \"\\n\" +\n         \"  -banscore=<n>          \" + _(\"Threshold for disconnecting misbehaving peers (default: 100)\") + \"\\n\" +\n         \"  -bantime=<n>           \" + _(\"Number of seconds to keep misbehaving peers from reconnecting (default: 86400)\") + \"\\n\" +\n@@ -309,7 +316,6 @@ std::string HelpMessage()\n     return strUsage;\n }\n \n-\n struct CImportingNow\n {\n     CImportingNow() {\n@@ -677,32 +683,28 @@ bool AppInit2()\n #endif\n \n     bool fBound = false;\n-    if (!fNoListen)\n-    {\n-        std::string strError;\n+    if (!fNoListen) {\n         if (mapArgs.count(\"-bind\")) {\n             BOOST_FOREACH(std::string strBind, mapMultiArgs[\"-bind\"]) {\n                 CService addrBind;\n                 if (!Lookup(strBind.c_str(), addrBind, GetListenPort(), false))\n                     return InitError(strprintf(_(\"Cannot resolve -bind address: '%s'\"), strBind.c_str()));\n-                fBound |= Bind(addrBind);\n+                fBound |= Bind(addrBind, (BF_EXPLICIT | BF_REPORT_ERROR));\n             }\n-        } else {\n+        }\n+        else {\n             struct in_addr inaddr_any;\n             inaddr_any.s_addr = INADDR_ANY;\n #ifdef USE_IPV6\n-            if (!IsLimited(NET_IPV6))\n-                fBound |= Bind(CService(in6addr_any, GetListenPort()), false);\n+            fBound |= Bind(CService(in6addr_any, GetListenPort()), BF_NONE);\n #endif\n-            if (!IsLimited(NET_IPV4))\n-                fBound |= Bind(CService(inaddr_any, GetListenPort()), !fBound);\n+            fBound |= Bind(CService(inaddr_any, GetListenPort()), !fBound ? BF_REPORT_ERROR : BF_NONE);\n         }\n         if (!fBound)\n             return InitError(_(\"Failed to listen on any port. Use -listen=0 if you want this.\"));\n     }\n \n-    if (mapArgs.count(\"-externalip\"))\n-    {\n+    if (mapArgs.count(\"-externalip\")) {\n         BOOST_FOREACH(string strAddr, mapMultiArgs[\"-externalip\"]) {\n             CService addrLocal(strAddr, GetListenPort(), fNameLookup);\n             if (!addrLocal.IsValid())"
+      }
+    ]
+  }
+]

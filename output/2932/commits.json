@@ -1,0 +1,122 @@
+[
+  {
+    "sha": "4e5d555f05ccd25ddf0efb1c993b2d29de605e3e",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0ZTVkNTU1ZjA1Y2NkMjVkZGYwZWZiMWM5OTNiMmQyOWRlNjA1ZTNl",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-08-24T13:26:33Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-09-28T13:18:19Z"
+      },
+      "message": "extend ParseParameters() with bitcoin: URI check\n\n- this allows to remove some URI related double processing of passed\n  command-line arguments for Bitcoin-Qt and bitcoind by collecting a\n  vector of URIs in ParseParameters()\n- rename ipcSendCommandLine() to ipcSendUris() to reflect we do not send\n  the whole command-line, but just pre-filtered URIs\n- also just install an OSX-specific event filter in paymentserver on Mac\n- fCommandLine is also no longer a global in util, but a local variable\n  in bitcoind.cpp",
+      "tree": {
+        "sha": "06a2489ff5e7f12c4d43f1201b3700838f919306",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/06a2489ff5e7f12c4d43f1201b3700838f919306"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/4e5d555f05ccd25ddf0efb1c993b2d29de605e3e",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4e5d555f05ccd25ddf0efb1c993b2d29de605e3e",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/4e5d555f05ccd25ddf0efb1c993b2d29de605e3e",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4e5d555f05ccd25ddf0efb1c993b2d29de605e3e/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "b41fa66ba7eaf3e56ce43bfb28114f59a7ea58ac",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b41fa66ba7eaf3e56ce43bfb28114f59a7ea58ac",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b41fa66ba7eaf3e56ce43bfb28114f59a7ea58ac"
+      }
+    ],
+    "stats": {
+      "total": 88,
+      "additions": 51,
+      "deletions": 37
+    },
+    "files": [
+      {
+        "sha": "3688eefc2f54a1fbbeb3e21aafe795bca3f6185e",
+        "filename": "src/bitcoind.cpp",
+        "status": "modified",
+        "additions": 14,
+        "deletions": 9,
+        "changes": 23,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4e5d555f05ccd25ddf0efb1c993b2d29de605e3e/src/bitcoind.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4e5d555f05ccd25ddf0efb1c993b2d29de605e3e/src/bitcoind.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoind.cpp?ref=4e5d555f05ccd25ddf0efb1c993b2d29de605e3e",
+        "patch": "@@ -5,7 +5,8 @@\n \n #include \"init.h\"\n #include \"bitcoinrpc.h\"\n-#include <boost/algorithm/string/predicate.hpp>\n+\n+#include <vector>\n \n void DetectShutdownThread(boost::thread_group* threadGroup)\n {\n@@ -36,7 +37,7 @@ bool AppInit(int argc, char* argv[])\n         // Parameters\n         //\n         // If Qt is used, parameters/bitcoin.conf are parsed in qt/bitcoin.cpp's main()\n-        ParseParameters(argc, argv);\n+        const std::vector<std::string> vUris = ParseParameters(argc, argv);\n         if (!boost::filesystem::is_directory(GetDataDir(false)))\n         {\n             fprintf(stderr, \"Error: Specified data directory \\\"%s\\\" does not exist.\\n\", mapArgs[\"-datadir\"].c_str());\n@@ -66,14 +67,18 @@ bool AppInit(int argc, char* argv[])\n         }\n \n         // Command-line RPC\n-        for (int i = 1; i < argc; i++)\n-            if (!IsSwitchChar(argv[i][0]) && !boost::algorithm::istarts_with(argv[i], \"bitcoin:\"))\n-                fCommandLine = true;\n-\n-        if (fCommandLine)\n+        if (vUris.empty())\n         {\n-            int ret = CommandLineRPC(argc, argv);\n-            exit(ret);\n+            bool fCommandLine = false;\n+            for (int i = 1; i < argc; i++)\n+                if (!IsSwitchChar(argv[i][0]))\n+                    fCommandLine = true;\n+\n+            if (fCommandLine)\n+            {\n+                int ret = CommandLineRPC(argc, argv);\n+                exit(ret);\n+            }\n         }\n #ifndef WIN32\n         fDaemon = GetBoolArg(\"-daemon\", false);"
+      },
+      {
+        "sha": "2c3e482b5fe308cf52e77cbe1078f8b9462008c6",
+        "filename": "src/qt/bitcoin.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 5,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4e5d555f05ccd25ddf0efb1c993b2d29de605e3e/src/qt/bitcoin.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4e5d555f05ccd25ddf0efb1c993b2d29de605e3e/src/qt/bitcoin.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoin.cpp?ref=4e5d555f05ccd25ddf0efb1c993b2d29de605e3e",
+        "patch": "@@ -173,7 +173,7 @@ int main(int argc, char *argv[])\n     fHaveGUI = true;\n \n     // Command-line options take precedence:\n-    ParseParameters(argc, argv);\n+    const std::vector<std::string> vUris = ParseParameters(argc, argv);\n     // ... then bitcoin.conf:\n     if (!boost::filesystem::is_directory(GetDataDir(false))) {\n         fMissingDatadir = true;\n@@ -213,8 +213,10 @@ int main(int argc, char *argv[])\n     // Do this early as we don't want to bother initializing if we are just calling IPC\n     // ... but do it after creating app and setting up translations, so errors are\n     // translated properly.\n-    if (PaymentServer::ipcSendCommandLine(argc, argv))\n-        exit(0);\n+    if (!vUris.empty()) {\n+        if (PaymentServer::ipcSendUris(vUris))\n+            exit(0);\n+    }\n \n     // Now that translations are initialized check for errors and allow a translatable error message\n     if (fMissingDatadir) {\n@@ -326,8 +328,8 @@ int main(int argc, char *argv[])\n                 // bitcoin: URIs or payment requests:\n                 QObject::connect(paymentServer, SIGNAL(receivedPaymentRequest(SendCoinsRecipient)),\n                                  &window, SLOT(handlePaymentRequest(SendCoinsRecipient)));\n-                QObject::connect(&walletModel, SIGNAL(coinsSent(CWallet*,SendCoinsRecipient,QByteArray)),\n-                                 paymentServer, SLOT(fetchPaymentACK(CWallet*,const SendCoinsRecipient&,QByteArray)));\n+                QObject::connect(&walletModel, SIGNAL(coinsSent(CWallet*, SendCoinsRecipient, QByteArray)),\n+                                 paymentServer, SLOT(fetchPaymentACK(CWallet*, const SendCoinsRecipient&, QByteArray)));\n                 QObject::connect(paymentServer, SIGNAL(receivedPaymentACK(QString)),\n                                  &window, SLOT(showPaymentACK(QString)));\n                 QObject::connect(paymentServer, SIGNAL(reportError(QString, QString, unsigned int)),"
+      },
+      {
+        "sha": "302a5cb444756de4b2690b6c6429f9c524aab32a",
+        "filename": "src/qt/paymentserver.cpp",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 14,
+        "changes": 30,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4e5d555f05ccd25ddf0efb1c993b2d29de605e3e/src/qt/paymentserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4e5d555f05ccd25ddf0efb1c993b2d29de605e3e/src/qt/paymentserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.cpp?ref=4e5d555f05ccd25ddf0efb1c993b2d29de605e3e",
+        "patch": "@@ -29,6 +29,7 @@\n #endif\n \n #include <cstdlib>\n+#include <vector>\n \n #include <openssl/x509.h>\n #include <openssl/x509_vfy.h>\n@@ -178,22 +179,20 @@ void PaymentServer::LoadRootCAs(X509_STORE* _store)\n // and the items in savedPaymentRequest will be handled\n // when uiReady() is called.\n //\n-bool PaymentServer::ipcSendCommandLine(int argc, char* argv[])\n+bool PaymentServer::ipcSendUris(const std::vector<std::string> &vUris)\n {\n     bool fResult = false;\n \n-    for (int i = 1; i < argc; i++)\n-    {\n-        QString arg(argv[i]);\n-        if (arg.startsWith(\"-\"))\n-            continue;\n+    for (std::vector<std::string>::const_iterator it = vUris.begin(); it != vUris.end(); it++) {\n+        QString strUri = QString::fromStdString(*it);\n \n-        if (arg.startsWith(BITCOIN_IPC_PREFIX, Qt::CaseInsensitive)) // bitcoin:\n+        // strUri should always contain a bitcoin: URI, but re-check to be sure\n+        if (strUri.startsWith(BITCOIN_IPC_PREFIX, Qt::CaseInsensitive))\n         {\n-            savedPaymentRequests.append(arg);\n+            savedPaymentRequests.append(strUri);\n \n             SendCoinsRecipient r;\n-            if (GUIUtil::parseBitcoinURI(arg, &r))\n+            if (GUIUtil::parseBitcoinURI(strUri, &r))\n             {\n                 CBitcoinAddress address(r.address.toStdString());\n \n@@ -204,12 +203,12 @@ bool PaymentServer::ipcSendCommandLine(int argc, char* argv[])\n                 }\n             }\n         }\n-        else if (QFile::exists(arg)) // Filename\n+        else if (QFile::exists(strUri)) // Filename\n         {\n-            savedPaymentRequests.append(arg);\n+            savedPaymentRequests.append(strUri);\n \n             PaymentRequestPlus request;\n-            if (readPaymentRequest(arg, request))\n+            if (readPaymentRequest(strUri, request))\n             {\n                 if (request.getDetails().network() == \"main\")\n                     SelectParams(CChainParams::MAIN);\n@@ -219,9 +218,9 @@ bool PaymentServer::ipcSendCommandLine(int argc, char* argv[])\n         }\n         else\n         {\n-            qDebug() << \"PaymentServer::ipcSendCommandLine : Payment request file does not exist: \" << argv[i];\n             // Printing to debug.log is about the best we can do here, the\n             // GUI hasn't started yet so we can't pop up a message box.\n+            qDebug() << \"PaymentServer::ipcSendCommandLine : Payment request file does not exist: \" << strUri;\n         }\n     }\n \n@@ -245,6 +244,7 @@ bool PaymentServer::ipcSendCommandLine(int argc, char* argv[])\n         delete socket;\n         fResult = true;\n     }\n+\n     return fResult;\n }\n \n@@ -254,9 +254,11 @@ PaymentServer::PaymentServer(QObject* parent, bool startLocalServer) : QObject(p\n     // compatible with the version of the headers we compiled against.\n     GOOGLE_PROTOBUF_VERIFY_VERSION;\n \n-    // Install global event filter to catch QFileOpenEvents on the mac (sent when you click bitcoin: links)\n+#ifdef Q_OS_MAC\n+    // Install global event filter to catch QFileOpenEvents on the Mac (sent when you click bitcoin: links)\n     if (parent)\n         parent->installEventFilter(this);\n+#endif\n \n     QString name = ipcServerName();\n "
+      },
+      {
+        "sha": "52e3559f2dcc6cfcc59d58a0ed75b60a1032a419",
+        "filename": "src/qt/paymentserver.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 5,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4e5d555f05ccd25ddf0efb1c993b2d29de605e3e/src/qt/paymentserver.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4e5d555f05ccd25ddf0efb1c993b2d29de605e3e/src/qt/paymentserver.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.h?ref=4e5d555f05ccd25ddf0efb1c993b2d29de605e3e",
+        "patch": "@@ -52,12 +52,11 @@ class PaymentServer : public QObject\n     Q_OBJECT\n \n public:\n-    // Returns true if there were URIs on the command line\n-    // which were successfully sent to an already-running\n-    // process.\n+    // Returns true if there were URIs which were successfully sent\n+    // to an already-running process.\n     // Note: if a payment request is given, SelectParams(MAIN/TESTNET)\n     // will be called so we startup in the right mode.\n-    static bool ipcSendCommandLine(int argc, char *argv[]);\n+    static bool ipcSendUris(const std::vector<std::string> &vUris);\n \n     // parent should be QApplication object\n     PaymentServer(QObject* parent, bool startLocalServer = true);\n@@ -77,7 +76,7 @@ class PaymentServer : public QObject\n     void initNetManager();\n \n     // Constructor registers this on the parent QApplication to\n-    // receive QEvent::FileOpen events\n+    // receive QEvent::FileOpen events (OSX-specific way)\n     bool eventFilter(QObject *object, QEvent *event);\n \n     // OptionsModel is used for getting proxy settings and display unit"
+      },
+      {
+        "sha": "40d4bc33d69fcb025168e6a6c3eb2009abc598b3",
+        "filename": "src/util.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 2,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4e5d555f05ccd25ddf0efb1c993b2d29de605e3e/src/util.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4e5d555f05ccd25ddf0efb1c993b2d29de605e3e/src/util.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/util.cpp?ref=4e5d555f05ccd25ddf0efb1c993b2d29de605e3e",
+        "patch": "@@ -78,7 +78,6 @@ bool fPrintToConsole = false;\n bool fPrintToDebugger = false;\n bool fDaemon = false;\n bool fServer = false;\n-bool fCommandLine = false;\n string strMiscWarning;\n bool fNoListen = false;\n bool fLogTimestamps = false;\n@@ -524,12 +523,18 @@ static void InterpretNegativeSetting(string name, map<string, string>& mapSettin\n     }\n }\n \n-void ParseParameters(int argc, const char* const argv[])\n+std::vector<std::string> ParseParameters(int argc, const char* const argv[])\n {\n+    std::vector<std::string> vUris;\n+\n     mapArgs.clear();\n     mapMultiArgs.clear();\n     for (int i = 1; i < argc; i++)\n     {\n+        // check for bitcoin: URIs and save them in a vector\n+        if (boost::algorithm::istarts_with(argv[i], \"bitcoin:\"))\n+            vUris.push_back(argv[i]);\n+\n         std::string str(argv[i]);\n         std::string strValue;\n         size_t is_index = str.find('=');\n@@ -567,6 +572,8 @@ void ParseParameters(int argc, const char* const argv[])\n         // interpret -nofoo as -foo=0 (and -nofoo=0 as -foo=1) as long as -foo not set\n         InterpretNegativeSetting(name, mapArgs);\n     }\n+\n+    return vUris;\n }\n \n std::string GetArg(const std::string& strArg, const std::string& strDefault)"
+      },
+      {
+        "sha": "4c85a758f012dfc7013e9888a788ba868807e407",
+        "filename": "src/util.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 2,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4e5d555f05ccd25ddf0efb1c993b2d29de605e3e/src/util.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4e5d555f05ccd25ddf0efb1c993b2d29de605e3e/src/util.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/util.h?ref=4e5d555f05ccd25ddf0efb1c993b2d29de605e3e",
+        "patch": "@@ -145,7 +145,6 @@ extern bool fPrintToConsole;\n extern bool fPrintToDebugger;\n extern bool fDaemon;\n extern bool fServer;\n-extern bool fCommandLine;\n extern std::string strMiscWarning;\n extern bool fNoListen;\n extern bool fLogTimestamps;\n@@ -194,7 +193,7 @@ std::vector<unsigned char> DecodeBase32(const char* p, bool* pfInvalid = NULL);\n std::string DecodeBase32(const std::string& str);\n std::string EncodeBase32(const unsigned char* pch, size_t len);\n std::string EncodeBase32(const std::string& str);\n-void ParseParameters(int argc, const char*const argv[]);\n+std::vector<std::string> ParseParameters(int argc, const char*const argv[]);\n bool WildcardMatch(const char* psz, const char* mask);\n bool WildcardMatch(const std::string& str, const std::string& mask);\n void FileCommit(FILE *fileout);"
+      }
+    ]
+  }
+]

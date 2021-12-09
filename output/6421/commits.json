@@ -1,0 +1,612 @@
+[
+  {
+    "sha": "44974a31c1ca945cf2ac49cab45da8948d7984a8",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0NDk3NGEzMWMxY2E5NDVjZjJhYzQ5Y2FiNDVkYTg5NDhkNzk4NGE4",
+    "commit": {
+      "author": {
+        "name": "Peter Todd",
+        "email": "pete@petertodd.org",
+        "date": "2015-07-17T10:42:43Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2015-07-18T22:28:44Z"
+      },
+      "message": "Add uint256 support to CRollingBloomFilter",
+      "tree": {
+        "sha": "b3ae8d0536369b863ffc6142ca461721e639b870",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/b3ae8d0536369b863ffc6142ca461721e639b870"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/44974a31c1ca945cf2ac49cab45da8948d7984a8",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/44974a31c1ca945cf2ac49cab45da8948d7984a8",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/44974a31c1ca945cf2ac49cab45da8948d7984a8",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/44974a31c1ca945cf2ac49cab45da8948d7984a8/comments",
+    "author": {
+      "login": "petertodd",
+      "id": 7042,
+      "node_id": "MDQ6VXNlcjcwNDI=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7042?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/petertodd",
+      "html_url": "https://github.com/petertodd",
+      "followers_url": "https://api.github.com/users/petertodd/followers",
+      "following_url": "https://api.github.com/users/petertodd/following{/other_user}",
+      "gists_url": "https://api.github.com/users/petertodd/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/petertodd/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/petertodd/subscriptions",
+      "organizations_url": "https://api.github.com/users/petertodd/orgs",
+      "repos_url": "https://api.github.com/users/petertodd/repos",
+      "events_url": "https://api.github.com/users/petertodd/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/petertodd/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "dcc495e011ff09e54f7c8ddebfc5b73f084de1ea",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/dcc495e011ff09e54f7c8ddebfc5b73f084de1ea",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/dcc495e011ff09e54f7c8ddebfc5b73f084de1ea"
+      }
+    ],
+    "stats": {
+      "total": 24,
+      "additions": 24,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "e15bc32f974ba98f07c332eb64397c0dd11c3ba7",
+        "filename": "src/bloom.cpp",
+        "status": "modified",
+        "additions": 22,
+        "deletions": 0,
+        "changes": 22,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/44974a31c1ca945cf2ac49cab45da8948d7984a8/src/bloom.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/44974a31c1ca945cf2ac49cab45da8948d7984a8/src/bloom.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bloom.cpp?ref=44974a31c1ca945cf2ac49cab45da8948d7984a8",
+        "patch": "@@ -234,6 +234,20 @@ void CRollingBloomFilter::insert(const std::vector<unsigned char>& vKey)\n     }\n }\n \n+void CRollingBloomFilter::insert(const uint256& hash)\n+{\n+    if (nInsertions == 0) {\n+        b1.clear();\n+    } else if (nInsertions == nBloomSize / 2) {\n+        b2.clear();\n+    }\n+    b1.insert(hash);\n+    b2.insert(hash);\n+    if (++nInsertions == nBloomSize) {\n+        nInsertions = 0;\n+    }\n+}\n+\n bool CRollingBloomFilter::contains(const std::vector<unsigned char>& vKey) const\n {\n     if (nInsertions < nBloomSize / 2) {\n@@ -242,6 +256,14 @@ bool CRollingBloomFilter::contains(const std::vector<unsigned char>& vKey) const\n     return b1.contains(vKey);\n }\n \n+bool CRollingBloomFilter::contains(const uint256& hash) const\n+{\n+    if (nInsertions < nBloomSize / 2) {\n+        return b2.contains(hash);\n+    }\n+    return b1.contains(hash);\n+}\n+\n void CRollingBloomFilter::clear()\n {\n     b1.clear();"
+      },
+      {
+        "sha": "0daa3728ed0e4183a0bb6e850a3fff14a428c6ec",
+        "filename": "src/bloom.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/44974a31c1ca945cf2ac49cab45da8948d7984a8/src/bloom.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/44974a31c1ca945cf2ac49cab45da8948d7984a8/src/bloom.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bloom.h?ref=44974a31c1ca945cf2ac49cab45da8948d7984a8",
+        "patch": "@@ -114,7 +114,9 @@ class CRollingBloomFilter\n     CRollingBloomFilter(unsigned int nElements, double nFPRate, unsigned int nTweak);\n \n     void insert(const std::vector<unsigned char>& vKey);\n+    void insert(const uint256& hash);\n     bool contains(const std::vector<unsigned char>& vKey) const;\n+    bool contains(const uint256& hash) const;\n \n     void clear();\n "
+      }
+    ]
+  },
+  {
+    "sha": "6c7dfed39b8e07591fa6fd98ed694b65b415a333",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2YzdkZmVkMzliOGUwNzU5MWZhNmZkOThlZDY5NGI2NWI0MTVhMzMz",
+    "commit": {
+      "author": {
+        "name": "Peter Todd",
+        "email": "pete@petertodd.org",
+        "date": "2015-07-17T10:46:48Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2015-07-18T22:28:44Z"
+      },
+      "message": "Keep track of recently rejected transactions\n\nNodes can have divergent policies on which transactions they will accept\nand relay.  This can cause you to repeatedly request and reject the same\ntx after its inved to you from various peers which have accepted it.\nHere we add rolling bloom filter to keep track of such rejections,\nclearing the filter every time the chain tip changes.\n\nCredit goes to Alex Morcos, who created the patch that this code is\nbased on.",
+      "tree": {
+        "sha": "f3ec3dc9b4a5a75e4e547d051302e9142c8598da",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f3ec3dc9b4a5a75e4e547d051302e9142c8598da"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/6c7dfed39b8e07591fa6fd98ed694b65b415a333",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6c7dfed39b8e07591fa6fd98ed694b65b415a333",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/6c7dfed39b8e07591fa6fd98ed694b65b415a333",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6c7dfed39b8e07591fa6fd98ed694b65b415a333/comments",
+    "author": {
+      "login": "petertodd",
+      "id": 7042,
+      "node_id": "MDQ6VXNlcjcwNDI=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7042?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/petertodd",
+      "html_url": "https://github.com/petertodd",
+      "followers_url": "https://api.github.com/users/petertodd/followers",
+      "following_url": "https://api.github.com/users/petertodd/following{/other_user}",
+      "gists_url": "https://api.github.com/users/petertodd/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/petertodd/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/petertodd/subscriptions",
+      "organizations_url": "https://api.github.com/users/petertodd/orgs",
+      "repos_url": "https://api.github.com/users/petertodd/repos",
+      "events_url": "https://api.github.com/users/petertodd/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/petertodd/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "44974a31c1ca945cf2ac49cab45da8948d7984a8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/44974a31c1ca945cf2ac49cab45da8948d7984a8",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/44974a31c1ca945cf2ac49cab45da8948d7984a8"
+      }
+    ],
+    "stats": {
+      "total": 60,
+      "additions": 51,
+      "deletions": 9
+    },
+    "files": [
+      {
+        "sha": "ee9ef9eebb637d86e974c1e0c4050389382abba1",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 51,
+        "deletions": 9,
+        "changes": 60,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6c7dfed39b8e07591fa6fd98ed694b65b415a333/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6c7dfed39b8e07591fa6fd98ed694b65b415a333/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=6c7dfed39b8e07591fa6fd98ed694b65b415a333",
+        "patch": "@@ -154,6 +154,29 @@ namespace {\n      */\n     map<uint256, NodeId> mapBlockSource;\n \n+    /**\n+     * Filter for transactions that were recently rejected by\n+     * AcceptToMemoryPool. These are not rerequested until the chain tip\n+     * changes, at which point the entire filter is cleared. Protected by\n+     * cs_main.\n+     *\n+     * Without this filter we'd be re-requesting txs from each of our peers,\n+     * increasing bandwidth consumption considerably. For instance, with 100\n+     * peers, half of which relay a tx we don't accept, that might be a 50x\n+     * bandwidth increase. A flooding attacker attempting to roll-over the\n+     * filter using minimum-sized, 60byte, transactions might manage to send\n+     * 1000/sec if we have fast peers, so we pick 120,000 to give our peers a\n+     * two minute window to send invs to us.\n+     *\n+     * Decreasing the false positive rate is fairly cheap, so we pick one in a\n+     * million to make it highly unlikely for users to have issues with this\n+     * filter.\n+     *\n+     * Memory used: 1.7MB\n+     */\n+    CRollingBloomFilter recentRejects(120000, 0.000001, insecure_rand());\n+    uint256 hashRecentRejectsChainTip;\n+\n     /** Blocks that are in flight, and that are in the queue to be downloaded. Protected by cs_main. */\n     struct QueuedBlock {\n         uint256 hash;\n@@ -3656,10 +3679,20 @@ bool static AlreadyHave(const CInv& inv)\n     {\n     case MSG_TX:\n         {\n-            bool txInMap = false;\n-            txInMap = mempool.exists(inv.hash);\n-            return txInMap || mapOrphanTransactions.count(inv.hash) ||\n-                pcoinsTip->HaveCoins(inv.hash);\n+            if (chainActive.Tip()->GetBlockHash() != hashRecentRejectsChainTip)\n+            {\n+                // If the chain tip has changed previously rejected transactions\n+                // might be now valid, e.g. due to a nLockTime'd tx becoming valid,\n+                // or a double-spend. Clear the rejects table and give those txs a\n+                // second chance.\n+                hashRecentRejectsChainTip = chainActive.Tip()->GetBlockHash();\n+                recentRejects.clear();\n+            }\n+\n+            return recentRejects.contains(inv.hash) ||\n+                   mempool.exists(inv.hash) ||\n+                   mapOrphanTransactions.count(inv.hash) ||\n+                   pcoinsTip->HaveCoins(inv.hash);\n         }\n     case MSG_BLOCK:\n         return mapBlockIndex.count(inv.hash);\n@@ -4259,6 +4292,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv,\n                         // Probably non-standard or insufficient fee/priority\n                         LogPrint(\"mempool\", \"   removed orphan tx %s\\n\", orphanHash.ToString());\n                         vEraseQueue.push_back(orphanHash);\n+                        recentRejects.insert(orphanHash);\n                     }\n                     mempool.check(pcoinsTip);\n                 }\n@@ -4276,11 +4310,19 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv,\n             unsigned int nEvicted = LimitOrphanTxSize(nMaxOrphanTx);\n             if (nEvicted > 0)\n                 LogPrint(\"mempool\", \"mapOrphan overflow, removed %u tx\\n\", nEvicted);\n-        } else if (pfrom->fWhitelisted) {\n-            // Always relay transactions received from whitelisted peers, even\n-            // if they are already in the mempool (allowing the node to function\n-            // as a gateway for nodes hidden behind it).\n-            RelayTransaction(tx);\n+        } else {\n+            // AcceptToMemoryPool() returned false, possibly because the tx is\n+            // already in the mempool; if the tx isn't in the mempool that\n+            // means it was rejected and we shouldn't ask for it again.\n+            if (!mempool.exists(tx.GetHash())) {\n+                recentRejects.insert(tx.GetHash());\n+            }\n+            else if (pfrom->fWhitelisted) {\n+                // Always relay transactions received from whitelisted peers, even\n+                // if they are already in the mempool (allowing the node to function\n+                // as a gateway for nodes hidden behind it).\n+                RelayTransaction(tx);\n+            }\n         }\n         int nDoS = 0;\n         if (state.IsInvalid(nDoS))"
+      }
+    ]
+  },
+  {
+    "sha": "b1ba550bcebaff88bd9c2554af0bb4caa5f09bac",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiMWJhNTUwYmNlYmFmZjg4YmQ5YzI1NTRhZjBiYjRjYWE1ZjA5YmFj",
+    "commit": {
+      "author": {
+        "name": "Ashley Holman",
+        "email": "dscvlt@gmail.com",
+        "date": "2015-06-24T08:32:20Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2015-07-18T22:29:42Z"
+      },
+      "message": "TxMemPool: Change mapTx to a boost::multi_index_container\n\nIndexes on:\n- Tx Hash\n- Fee Rate (fee-per-kb)",
+      "tree": {
+        "sha": "de31f8c3f2a28b326c9268685624da4e7f504561",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/de31f8c3f2a28b326c9268685624da4e7f504561"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/b1ba550bcebaff88bd9c2554af0bb4caa5f09bac",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b1ba550bcebaff88bd9c2554af0bb4caa5f09bac",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/b1ba550bcebaff88bd9c2554af0bb4caa5f09bac",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b1ba550bcebaff88bd9c2554af0bb4caa5f09bac/comments",
+    "author": {
+      "login": "ashleyholman",
+      "id": 549484,
+      "node_id": "MDQ6VXNlcjU0OTQ4NA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/549484?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ashleyholman",
+      "html_url": "https://github.com/ashleyholman",
+      "followers_url": "https://api.github.com/users/ashleyholman/followers",
+      "following_url": "https://api.github.com/users/ashleyholman/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ashleyholman/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ashleyholman/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ashleyholman/subscriptions",
+      "organizations_url": "https://api.github.com/users/ashleyholman/orgs",
+      "repos_url": "https://api.github.com/users/ashleyholman/repos",
+      "events_url": "https://api.github.com/users/ashleyholman/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ashleyholman/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "6c7dfed39b8e07591fa6fd98ed694b65b415a333",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6c7dfed39b8e07591fa6fd98ed694b65b415a333",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/6c7dfed39b8e07591fa6fd98ed694b65b415a333"
+      }
+    ],
+    "stats": {
+      "total": 160,
+      "additions": 128,
+      "deletions": 32
+    },
+    "files": [
+      {
+        "sha": "49100b9ddb1b3871ad743e470617e9943fe85286",
+        "filename": "src/miner.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 4,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b1ba550bcebaff88bd9c2554af0bb4caa5f09bac/src/miner.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b1ba550bcebaff88bd9c2554af0bb4caa5f09bac/src/miner.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/miner.cpp?ref=b1ba550bcebaff88bd9c2554af0bb4caa5f09bac",
+        "patch": "@@ -16,6 +16,7 @@\n #include \"pow.h\"\n #include \"primitives/transaction.h\"\n #include \"timedata.h\"\n+#include \"txmempool.h\"\n #include \"util.h\"\n #include \"utilmoneystr.h\"\n #include \"validationinterface.h\"\n@@ -148,10 +149,10 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)\n         // This vector will be sorted into a priority queue:\n         vector<TxPriority> vecPriority;\n         vecPriority.reserve(mempool.mapTx.size());\n-        for (map<uint256, CTxMemPoolEntry>::iterator mi = mempool.mapTx.begin();\n+        for (CTxMemPool::indexed_transaction_set::iterator mi = mempool.mapTx.begin();\n              mi != mempool.mapTx.end(); ++mi)\n         {\n-            const CTransaction& tx = mi->second.GetTx();\n+            const CTransaction& tx = mi->GetTx();\n             if (tx.IsCoinBase() || !IsFinalTx(tx, nHeight, pblock->nTime))\n                 continue;\n \n@@ -186,7 +187,7 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)\n                     }\n                     mapDependers[txin.prevout.hash].push_back(porphan);\n                     porphan->setDependsOn.insert(txin.prevout.hash);\n-                    nTotalIn += mempool.mapTx[txin.prevout.hash].GetTx().vout[txin.prevout.n].nValue;\n+                    nTotalIn += mempool.mapTx.find(txin.prevout.hash)->GetTx().vout[txin.prevout.n].nValue;\n                     continue;\n                 }\n                 const CCoins* coins = view.AccessCoins(txin.prevout.hash);\n@@ -216,7 +217,7 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)\n                 porphan->feeRate = feeRate;\n             }\n             else\n-                vecPriority.push_back(TxPriority(dPriority, feeRate, &mi->second.GetTx()));\n+                vecPriority.push_back(TxPriority(dPriority, feeRate, &(mi->GetTx())));\n         }\n \n         // Collect transactions into block"
+      },
+      {
+        "sha": "7e087a68d134434c8ecb261a622855c598ae87b9",
+        "filename": "src/rpcblockchain.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 3,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b1ba550bcebaff88bd9c2554af0bb4caa5f09bac/src/rpcblockchain.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b1ba550bcebaff88bd9c2554af0bb4caa5f09bac/src/rpcblockchain.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcblockchain.cpp?ref=b1ba550bcebaff88bd9c2554af0bb4caa5f09bac",
+        "patch": "@@ -211,10 +211,9 @@ UniValue getrawmempool(const UniValue& params, bool fHelp)\n     {\n         LOCK(mempool.cs);\n         UniValue o(UniValue::VOBJ);\n-        BOOST_FOREACH(const PAIRTYPE(uint256, CTxMemPoolEntry)& entry, mempool.mapTx)\n+        BOOST_FOREACH(const CTxMemPoolEntry& e, mempool.mapTx)\n         {\n-            const uint256& hash = entry.first;\n-            const CTxMemPoolEntry& e = entry.second;\n+            const uint256& hash = e.GetTx().GetHash();\n             UniValue info(UniValue::VOBJ);\n             info.push_back(Pair(\"size\", (int)e.GetTxSize()));\n             info.push_back(Pair(\"fee\", ValueFromAmount(e.GetFee())));"
+      },
+      {
+        "sha": "85971f018f393ef23d4dd17b07c16c29b44c266e",
+        "filename": "src/test/mempool_tests.cpp",
+        "status": "modified",
+        "additions": 52,
+        "deletions": 0,
+        "changes": 52,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b1ba550bcebaff88bd9c2554af0bb4caa5f09bac/src/test/mempool_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b1ba550bcebaff88bd9c2554af0bb4caa5f09bac/src/test/mempool_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/mempool_tests.cpp?ref=b1ba550bcebaff88bd9c2554af0bb4caa5f09bac",
+        "patch": "@@ -101,4 +101,56 @@ BOOST_AUTO_TEST_CASE(MempoolRemoveTest)\n     removed.clear();\n }\n \n+BOOST_AUTO_TEST_CASE(MempoolIndexingTest)\n+{\n+    CTxMemPool pool(CFeeRate(0));\n+\n+    /* 3rd highest fee */\n+    CMutableTransaction tx1 = CMutableTransaction();\n+    tx1.vout.resize(1);\n+    tx1.vout[0].scriptPubKey = CScript() << OP_11 << OP_EQUAL;\n+    tx1.vout[0].nValue = 10 * COIN;\n+    pool.addUnchecked(tx1.GetHash(), CTxMemPoolEntry(tx1, 10000LL, 0, 10.0, 1, true));\n+\n+    /* highest fee */\n+    CMutableTransaction tx2 = CMutableTransaction();\n+    tx2.vout.resize(1);\n+    tx2.vout[0].scriptPubKey = CScript() << OP_11 << OP_EQUAL;\n+    tx2.vout[0].nValue = 2 * COIN;\n+    pool.addUnchecked(tx2.GetHash(), CTxMemPoolEntry(tx2, 20000LL, 0, 9.0, 1, true));\n+\n+    /* lowest fee */\n+    CMutableTransaction tx3 = CMutableTransaction();\n+    tx3.vout.resize(1);\n+    tx3.vout[0].scriptPubKey = CScript() << OP_11 << OP_EQUAL;\n+    tx3.vout[0].nValue = 5 * COIN;\n+    pool.addUnchecked(tx3.GetHash(), CTxMemPoolEntry(tx3, 0LL, 0, 100.0, 1, true));\n+\n+    /* 2nd highest fee */\n+    CMutableTransaction tx4 = CMutableTransaction();\n+    tx4.vout.resize(1);\n+    tx4.vout[0].scriptPubKey = CScript() << OP_11 << OP_EQUAL;\n+    tx4.vout[0].nValue = 6 * COIN;\n+    pool.addUnchecked(tx4.GetHash(), CTxMemPoolEntry(tx4, 15000LL, 0, 1.0, 1, true));\n+\n+    /* equal fee rate to tx1, but newer */\n+    CMutableTransaction tx5 = CMutableTransaction();\n+    tx5.vout.resize(1);\n+    tx5.vout[0].scriptPubKey = CScript() << OP_11 << OP_EQUAL;\n+    tx5.vout[0].nValue = 11 * COIN;\n+    pool.addUnchecked(tx5.GetHash(), CTxMemPoolEntry(tx5, 10000LL, 1, 10.0, 1, true));\n+\n+    // there should be 4 transactions in the mempool\n+    BOOST_CHECK_EQUAL(pool.size(), 5);\n+\n+    // Check the fee-rate index is in order, should be tx2, tx4, tx1, tx5, tx3\n+    CTxMemPool::indexed_transaction_set::nth_index<1>::type::iterator it = pool.mapTx.get<1>().begin();\n+    BOOST_CHECK_EQUAL(it++->GetTx().GetHash().ToString(), tx2.GetHash().ToString());\n+    BOOST_CHECK_EQUAL(it++->GetTx().GetHash().ToString(), tx4.GetHash().ToString());\n+    BOOST_CHECK_EQUAL(it++->GetTx().GetHash().ToString(), tx1.GetHash().ToString());\n+    BOOST_CHECK_EQUAL(it++->GetTx().GetHash().ToString(), tx5.GetHash().ToString());\n+    BOOST_CHECK_EQUAL(it++->GetTx().GetHash().ToString(), tx3.GetHash().ToString());\n+    BOOST_CHECK(it == pool.mapTx.get<1>().end());\n+}\n+\n BOOST_AUTO_TEST_SUITE_END()"
+      },
+      {
+        "sha": "071f107287d1bec4e8be0843eec23e1cdbada922",
+        "filename": "src/txmempool.cpp",
+        "status": "modified",
+        "additions": 28,
+        "deletions": 24,
+        "changes": 52,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b1ba550bcebaff88bd9c2554af0bb4caa5f09bac/src/txmempool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b1ba550bcebaff88bd9c2554af0bb4caa5f09bac/src/txmempool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.cpp?ref=b1ba550bcebaff88bd9c2554af0bb4caa5f09bac",
+        "patch": "@@ -32,6 +32,7 @@ CTxMemPoolEntry::CTxMemPoolEntry(const CTransaction& _tx, const CAmount& _nFee,\n     nTxSize = ::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION);\n     nModSize = tx.CalculateModifiedSize(nTxSize);\n     nUsageSize = tx.DynamicMemoryUsage();\n+    feeRate = CFeeRate(nFee, nTxSize);\n }\n \n CTxMemPoolEntry::CTxMemPoolEntry(const CTxMemPoolEntry& other)\n@@ -96,8 +97,8 @@ bool CTxMemPool::addUnchecked(const uint256& hash, const CTxMemPoolEntry &entry,\n     // Used by main.cpp AcceptToMemoryPool(), which DOES do\n     // all the appropriate checks.\n     LOCK(cs);\n-    mapTx[hash] = entry;\n-    const CTransaction& tx = mapTx[hash].GetTx();\n+    mapTx.insert(entry);\n+    const CTransaction& tx = mapTx.find(hash)->GetTx();\n     for (unsigned int i = 0; i < tx.vin.size(); i++)\n         mapNextTx[tx.vin[i].prevout] = CInPoint(&tx, i);\n     nTransactionsUpdated++;\n@@ -134,7 +135,7 @@ void CTxMemPool::remove(const CTransaction &origTx, std::list<CTransaction>& rem\n             txToRemove.pop_front();\n             if (!mapTx.count(hash))\n                 continue;\n-            const CTransaction& tx = mapTx[hash].GetTx();\n+            const CTransaction& tx = mapTx.find(hash)->GetTx();\n             if (fRecursive) {\n                 for (unsigned int i = 0; i < tx.vout.size(); i++) {\n                     std::map<COutPoint, CInPoint>::iterator it = mapNextTx.find(COutPoint(hash, i));\n@@ -147,8 +148,8 @@ void CTxMemPool::remove(const CTransaction &origTx, std::list<CTransaction>& rem\n                 mapNextTx.erase(txin.prevout);\n \n             removed.push_back(tx);\n-            totalTxSize -= mapTx[hash].GetTxSize();\n-            cachedInnerUsage -= mapTx[hash].DynamicMemoryUsage();\n+            totalTxSize -= mapTx.find(hash)->GetTxSize();\n+            cachedInnerUsage -= mapTx.find(hash)->DynamicMemoryUsage();\n             mapTx.erase(hash);\n             nTransactionsUpdated++;\n             minerPolicyEstimator->removeTx(hash);\n@@ -161,10 +162,10 @@ void CTxMemPool::removeCoinbaseSpends(const CCoinsViewCache *pcoins, unsigned in\n     // Remove transactions spending a coinbase which are now immature\n     LOCK(cs);\n     list<CTransaction> transactionsToRemove;\n-    for (std::map<uint256, CTxMemPoolEntry>::const_iterator it = mapTx.begin(); it != mapTx.end(); it++) {\n-        const CTransaction& tx = it->second.GetTx();\n+    for (indexed_transaction_set::const_iterator it = mapTx.begin(); it != mapTx.end(); it++) {\n+        const CTransaction& tx = it->GetTx();\n         BOOST_FOREACH(const CTxIn& txin, tx.vin) {\n-            std::map<uint256, CTxMemPoolEntry>::const_iterator it2 = mapTx.find(txin.prevout.hash);\n+            indexed_transaction_set::const_iterator it2 = mapTx.find(txin.prevout.hash);\n             if (it2 != mapTx.end())\n                 continue;\n             const CCoins *coins = pcoins->AccessCoins(txin.prevout.hash);\n@@ -209,8 +210,10 @@ void CTxMemPool::removeForBlock(const std::vector<CTransaction>& vtx, unsigned i\n     BOOST_FOREACH(const CTransaction& tx, vtx)\n     {\n         uint256 hash = tx.GetHash();\n-        if (mapTx.count(hash))\n-            entries.push_back(mapTx[hash]);\n+\n+        indexed_transaction_set::iterator i = mapTx.find(hash);\n+        if (i != mapTx.end())\n+            entries.push_back(*i);\n     }\n     BOOST_FOREACH(const CTransaction& tx, vtx)\n     {\n@@ -247,17 +250,17 @@ void CTxMemPool::check(const CCoinsViewCache *pcoins) const\n \n     LOCK(cs);\n     list<const CTxMemPoolEntry*> waitingOnDependants;\n-    for (std::map<uint256, CTxMemPoolEntry>::const_iterator it = mapTx.begin(); it != mapTx.end(); it++) {\n+    for (indexed_transaction_set::const_iterator it = mapTx.begin(); it != mapTx.end(); it++) {\n         unsigned int i = 0;\n-        checkTotal += it->second.GetTxSize();\n-        innerUsage += it->second.DynamicMemoryUsage();\n-        const CTransaction& tx = it->second.GetTx();\n+        checkTotal += it->GetTxSize();\n+        innerUsage += it->DynamicMemoryUsage();\n+        const CTransaction& tx = it->GetTx();\n         bool fDependsWait = false;\n         BOOST_FOREACH(const CTxIn &txin, tx.vin) {\n             // Check that every mempool transaction's inputs refer to available coins, or other mempool tx's.\n-            std::map<uint256, CTxMemPoolEntry>::const_iterator it2 = mapTx.find(txin.prevout.hash);\n+            indexed_transaction_set::const_iterator it2 = mapTx.find(txin.prevout.hash);\n             if (it2 != mapTx.end()) {\n-                const CTransaction& tx2 = it2->second.GetTx();\n+                const CTransaction& tx2 = it2->GetTx();\n                 assert(tx2.vout.size() > txin.prevout.n && !tx2.vout[txin.prevout.n].IsNull());\n                 fDependsWait = true;\n             } else {\n@@ -272,7 +275,7 @@ void CTxMemPool::check(const CCoinsViewCache *pcoins) const\n             i++;\n         }\n         if (fDependsWait)\n-            waitingOnDependants.push_back(&it->second);\n+            waitingOnDependants.push_back(&(*it));\n         else {\n             CValidationState state;\n             assert(CheckInputs(tx, state, mempoolDuplicate, false, 0, false, NULL));\n@@ -296,8 +299,8 @@ void CTxMemPool::check(const CCoinsViewCache *pcoins) const\n     }\n     for (std::map<COutPoint, CInPoint>::const_iterator it = mapNextTx.begin(); it != mapNextTx.end(); it++) {\n         uint256 hash = it->second.ptx->GetHash();\n-        map<uint256, CTxMemPoolEntry>::const_iterator it2 = mapTx.find(hash);\n-        const CTransaction& tx = it2->second.GetTx();\n+        indexed_transaction_set::const_iterator it2 = mapTx.find(hash);\n+        const CTransaction& tx = it2->GetTx();\n         assert(it2 != mapTx.end());\n         assert(&tx == it->second.ptx);\n         assert(tx.vin.size() > it->second.n);\n@@ -314,16 +317,16 @@ void CTxMemPool::queryHashes(vector<uint256>& vtxid)\n \n     LOCK(cs);\n     vtxid.reserve(mapTx.size());\n-    for (map<uint256, CTxMemPoolEntry>::iterator mi = mapTx.begin(); mi != mapTx.end(); ++mi)\n-        vtxid.push_back((*mi).first);\n+    for (indexed_transaction_set::iterator mi = mapTx.begin(); mi != mapTx.end(); ++mi)\n+        vtxid.push_back(mi->GetTx().GetHash());\n }\n \n bool CTxMemPool::lookup(uint256 hash, CTransaction& result) const\n {\n     LOCK(cs);\n-    map<uint256, CTxMemPoolEntry>::const_iterator i = mapTx.find(hash);\n+    indexed_transaction_set::const_iterator i = mapTx.find(hash);\n     if (i == mapTx.end()) return false;\n-    result = i->second.GetTx();\n+    result = i->GetTx();\n     return true;\n }\n \n@@ -429,5 +432,6 @@ bool CCoinsViewMemPool::HaveCoins(const uint256 &txid) const {\n \n size_t CTxMemPool::DynamicMemoryUsage() const {\n     LOCK(cs);\n-    return memusage::DynamicUsage(mapTx) + memusage::DynamicUsage(mapNextTx) + memusage::DynamicUsage(mapDeltas) + cachedInnerUsage;\n+    // Estimate the overhead of mapTx to be 6 pointers + an allocation, as no exact formula for boost::multi_index_contained is implemented.\n+    return memusage::MallocUsage(sizeof(CTxMemPoolEntry) + 6 * sizeof(void*)) * mapTx.size() + memusage::DynamicUsage(mapNextTx) + memusage::DynamicUsage(mapDeltas) + cachedInnerUsage;\n }"
+      },
+      {
+        "sha": "6b6b05454a4eee3fd1dda5bc13993c5f3a2578bc",
+        "filename": "src/txmempool.h",
+        "status": "modified",
+        "additions": 41,
+        "deletions": 1,
+        "changes": 42,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b1ba550bcebaff88bd9c2554af0bb4caa5f09bac/src/txmempool.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b1ba550bcebaff88bd9c2554af0bb4caa5f09bac/src/txmempool.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.h?ref=b1ba550bcebaff88bd9c2554af0bb4caa5f09bac",
+        "patch": "@@ -13,6 +13,10 @@\n #include \"primitives/transaction.h\"\n #include \"sync.h\"\n \n+#undef foreach\n+#include \"boost/multi_index_container.hpp\"\n+#include \"boost/multi_index/ordered_index.hpp\"\n+\n class CAutoFile;\n \n inline double AllowFreeThreshold()\n@@ -41,6 +45,7 @@ class CTxMemPoolEntry\n     size_t nTxSize; //! ... and avoid recomputing tx size\n     size_t nModSize; //! ... and modified size for priority\n     size_t nUsageSize; //! ... and total memory usage\n+    CFeeRate feeRate; //! ... and fee per kB\n     int64_t nTime; //! Local time when entering the mempool\n     double dPriority; //! Priority when entering the mempool\n     unsigned int nHeight; //! Chain height when entering the mempool\n@@ -55,13 +60,35 @@ class CTxMemPoolEntry\n     const CTransaction& GetTx() const { return this->tx; }\n     double GetPriority(unsigned int currentHeight) const;\n     CAmount GetFee() const { return nFee; }\n+    CFeeRate GetFeeRate() const { return feeRate; }\n     size_t GetTxSize() const { return nTxSize; }\n     int64_t GetTime() const { return nTime; }\n     unsigned int GetHeight() const { return nHeight; }\n     bool WasClearAtEntry() const { return hadNoDependencies; }\n     size_t DynamicMemoryUsage() const { return nUsageSize; }\n };\n \n+// extracts a TxMemPoolEntry's transaction hash\n+struct mempoolentry_txid\n+{\n+    typedef uint256 result_type;\n+    result_type operator() (const CTxMemPoolEntry &entry) const\n+    {\n+        return entry.GetTx().GetHash();\n+    }\n+};\n+\n+class CompareTxMemPoolEntryByFee\n+{\n+public:\n+    bool operator()(const CTxMemPoolEntry& a, const CTxMemPoolEntry& b)\n+    {\n+        if (a.GetFeeRate() == b.GetFeeRate())\n+            return a.GetTime() < b.GetTime();\n+        return a.GetFeeRate() > b.GetFeeRate();\n+    }\n+};\n+\n class CBlockPolicyEstimator;\n \n /** An inpoint - a combination of a transaction and an index n into its vin */\n@@ -99,8 +126,21 @@ class CTxMemPool\n     uint64_t cachedInnerUsage; //! sum of dynamic memory usage of all the map elements (NOT the maps themselves)\n \n public:\n+    typedef boost::multi_index_container<\n+        CTxMemPoolEntry,\n+        boost::multi_index::indexed_by<\n+            // sorted by txid\n+            boost::multi_index::ordered_unique<mempoolentry_txid>,\n+            // sorted by fee rate\n+            boost::multi_index::ordered_non_unique<\n+                boost::multi_index::identity<CTxMemPoolEntry>,\n+                CompareTxMemPoolEntryByFee\n+            >\n+        >\n+    > indexed_transaction_set;\n+\n     mutable CCriticalSection cs;\n-    std::map<uint256, CTxMemPoolEntry> mapTx;\n+    indexed_transaction_set mapTx;\n     std::map<COutPoint, CInPoint> mapNextTx;\n     std::map<uint256, std::pair<double, CAmount> > mapDeltas;\n "
+      }
+    ]
+  },
+  {
+    "sha": "550ae8a13dd0fb99167dba621da6e1e83177f267",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1NTBhZThhMTNkZDBmYjk5MTY3ZGJhNjIxZGE2ZTFlODMxNzdmMjY3",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "sipa@ulyssis.org",
+        "date": "2015-07-11T14:49:11Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2015-07-18T22:29:56Z"
+      },
+      "message": "Move orphan tx handling to a separate log class",
+      "tree": {
+        "sha": "39796861762af5433e457c73ebb16d7320555403",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/39796861762af5433e457c73ebb16d7320555403"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/550ae8a13dd0fb99167dba621da6e1e83177f267",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/550ae8a13dd0fb99167dba621da6e1e83177f267",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/550ae8a13dd0fb99167dba621da6e1e83177f267",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/550ae8a13dd0fb99167dba621da6e1e83177f267/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "b1ba550bcebaff88bd9c2554af0bb4caa5f09bac",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b1ba550bcebaff88bd9c2554af0bb4caa5f09bac",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b1ba550bcebaff88bd9c2554af0bb4caa5f09bac"
+      }
+    ],
+    "stats": {
+      "total": 14,
+      "additions": 7,
+      "deletions": 7
+    },
+    "files": [
+      {
+        "sha": "31999a6ebe58a523fddb559e22396bb46cb6a96c",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 7,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/550ae8a13dd0fb99167dba621da6e1e83177f267/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/550ae8a13dd0fb99167dba621da6e1e83177f267/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=550ae8a13dd0fb99167dba621da6e1e83177f267",
+        "patch": "@@ -566,7 +566,7 @@ bool AddOrphanTx(const CTransaction& tx, NodeId peer)\n     unsigned int sz = tx.GetSerializeSize(SER_NETWORK, CTransaction::CURRENT_VERSION);\n     if (sz > 5000)\n     {\n-        LogPrint(\"mempool\", \"ignoring large orphan tx (size: %u, hash: %s)\\n\", sz, hash.ToString());\n+        LogPrint(\"orphan\", \"ignoring large orphan tx (size: %u, hash: %s)\\n\", sz, hash.ToString());\n         return false;\n     }\n \n@@ -575,7 +575,7 @@ bool AddOrphanTx(const CTransaction& tx, NodeId peer)\n     BOOST_FOREACH(const CTxIn& txin, tx.vin)\n         mapOrphanTransactionsByPrev[txin.prevout.hash].insert(hash);\n \n-    LogPrint(\"mempool\", \"stored orphan tx %s (mapsz %u prevsz %u)\\n\", hash.ToString(),\n+    LogPrint(\"orphan\", \"stored orphan tx %s (mapsz %u prevsz %u)\\n\", hash.ToString(),\n              mapOrphanTransactions.size(), mapOrphanTransactionsByPrev.size());\n     return true;\n }\n@@ -610,7 +610,7 @@ void EraseOrphansFor(NodeId peer)\n             ++nErased;\n         }\n     }\n-    if (nErased > 0) LogPrint(\"mempool\", \"Erased %d orphan tx from peer %d\\n\", nErased, peer);\n+    if (nErased > 0) LogPrint(\"orphan\", \"Erased %d orphan tx from peer %d\\n\", nErased, peer);\n }\n \n \n@@ -4273,7 +4273,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv,\n                         continue;\n                     if (AcceptToMemoryPool(mempool, stateDummy, orphanTx, true, &fMissingInputs2))\n                     {\n-                        LogPrint(\"mempool\", \"   accepted orphan tx %s\\n\", orphanHash.ToString());\n+                        LogPrint(\"orphan\", \"   accepted orphan tx %s\\n\", orphanHash.ToString());\n                         RelayTransaction(orphanTx);\n                         vWorkQueue.push_back(orphanHash);\n                         vEraseQueue.push_back(orphanHash);\n@@ -4286,11 +4286,11 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv,\n                             // Punish peer that gave us an invalid orphan tx\n                             Misbehaving(fromPeer, nDos);\n                             setMisbehaving.insert(fromPeer);\n-                            LogPrint(\"mempool\", \"   invalid orphan tx %s\\n\", orphanHash.ToString());\n+                            LogPrint(\"orphan\", \"   invalid orphan tx %s\\n\", orphanHash.ToString());\n                         }\n                         // Has inputs but not accepted to mempool\n                         // Probably non-standard or insufficient fee/priority\n-                        LogPrint(\"mempool\", \"   removed orphan tx %s\\n\", orphanHash.ToString());\n+                        LogPrint(\"orphan\", \"   removed orphan tx %s\\n\", orphanHash.ToString());\n                         vEraseQueue.push_back(orphanHash);\n                         recentRejects.insert(orphanHash);\n                     }\n@@ -4309,7 +4309,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv,\n             unsigned int nMaxOrphanTx = (unsigned int)std::max((int64_t)0, GetArg(\"-maxorphantx\", DEFAULT_MAX_ORPHAN_TRANSACTIONS));\n             unsigned int nEvicted = LimitOrphanTxSize(nMaxOrphanTx);\n             if (nEvicted > 0)\n-                LogPrint(\"mempool\", \"mapOrphan overflow, removed %u tx\\n\", nEvicted);\n+                LogPrint(\"orphan\", \"mapOrphan overflow, removed %u tx\\n\", nEvicted);\n         } else {\n             // AcceptToMemoryPool() returned false, possibly because the tx is\n             // already in the mempool; if the tx isn't in the mempool that"
+      }
+    ]
+  },
+  {
+    "sha": "26d123a0287ecad86c324a37a7247ff3611a89ce",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyNmQxMjNhMDI4N2VjYWQ4NmMzMjRhMzdhNzI0N2ZmMzYxMWE4OWNl",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2015-07-10T21:52:53Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2015-07-18T22:29:56Z"
+      },
+      "message": "Implement on-the-fly mempool size limitation.",
+      "tree": {
+        "sha": "12aa809e549dd844d19334a66eef7f42e863b3ca",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/12aa809e549dd844d19334a66eef7f42e863b3ca"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/26d123a0287ecad86c324a37a7247ff3611a89ce",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/26d123a0287ecad86c324a37a7247ff3611a89ce",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/26d123a0287ecad86c324a37a7247ff3611a89ce",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/26d123a0287ecad86c324a37a7247ff3611a89ce/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "550ae8a13dd0fb99167dba621da6e1e83177f267",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/550ae8a13dd0fb99167dba621da6e1e83177f267",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/550ae8a13dd0fb99167dba621da6e1e83177f267"
+      }
+    ],
+    "stats": {
+      "total": 193,
+      "additions": 171,
+      "deletions": 22
+    },
+    "files": [
+      {
+        "sha": "e41a282c8e852f4ac1857951111c25709bcd37d6",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/26d123a0287ecad86c324a37a7247ff3611a89ce/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/26d123a0287ecad86c324a37a7247ff3611a89ce/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=26d123a0287ecad86c324a37a7247ff3611a89ce",
+        "patch": "@@ -283,6 +283,7 @@ std::string HelpMessage(HelpMessageMode mode)\n     strUsage += HelpMessageOpt(\"-dbcache=<n>\", strprintf(_(\"Set database cache size in megabytes (%d to %d, default: %d)\"), nMinDbCache, nMaxDbCache, nDefaultDbCache));\n     strUsage += HelpMessageOpt(\"-loadblock=<file>\", _(\"Imports blocks from external blk000??.dat file\") + \" \" + _(\"on startup\"));\n     strUsage += HelpMessageOpt(\"-maxorphantx=<n>\", strprintf(_(\"Keep at most <n> unconnectable transactions in memory (default: %u)\"), DEFAULT_MAX_ORPHAN_TRANSACTIONS));\n+    strUsage += HelpMessageOpt(\"-maxmempool=<n>\", strprintf(_(\"Keep the transaction memory pool below <n> megabytes (default: %u)\"), DEFAULT_MAX_MEMPOOL_SIZE));\n     strUsage += HelpMessageOpt(\"-par=<n>\", strprintf(_(\"Set the number of script verification threads (%u to %d, 0 = auto, <0 = leave that many cores free, default: %d)\"),\n         -GetNumCores(), MAX_SCRIPTCHECK_THREADS, DEFAULT_SCRIPTCHECK_THREADS));\n #ifndef WIN32"
+      },
+      {
+        "sha": "90e8ba811e903bca88495ab577197638eca63f13",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 17,
+        "deletions": 4,
+        "changes": 21,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/26d123a0287ecad86c324a37a7247ff3611a89ce/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/26d123a0287ecad86c324a37a7247ff3611a89ce/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=26d123a0287ecad86c324a37a7247ff3611a89ce",
+        "patch": "@@ -882,22 +882,29 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa\n         CTxMemPoolEntry entry(tx, nFees, GetTime(), dPriority, chainActive.Height(), mempool.HasNoInputsOf(tx));\n         unsigned int nSize = entry.GetTxSize();\n \n+        // Try to make space in mempool\n+        std::set<uint256> stagedelete;\n+        CAmount nFeesDeleted = 0;\n+        if (!mempool.StageTrimToSize(GetArg(\"-maxmempool\", DEFAULT_MAX_MEMPOOL_SIZE) * 1000000, entry, stagedelete, nFeesDeleted)) {\n+            return state.DoS(0, false, REJECT_INSUFFICIENTFEE, \"mempool full\");\n+        }\n+\n         // Don't accept it if it can't get into a block\n         CAmount txMinFee = GetMinRelayFee(tx, nSize, true);\n-        if (fLimitFree && nFees < txMinFee)\n+        if (fLimitFree && nFees < txMinFee + nFeesDeleted)\n             return state.DoS(0, error(\"AcceptToMemoryPool: not enough fees %s, %d < %d\",\n-                                      hash.ToString(), nFees, txMinFee),\n+                                      hash.ToString(), nFees, txMinFee + nFeesDeleted),\n                              REJECT_INSUFFICIENTFEE, \"insufficient fee\");\n \n         // Require that free transactions have sufficient priority to be mined in the next block.\n-        if (GetBoolArg(\"-relaypriority\", true) && nFees < ::minRelayTxFee.GetFee(nSize) && !AllowFree(view.GetPriority(tx, chainActive.Height() + 1))) {\n+        if (GetBoolArg(\"-relaypriority\", true) && nFees - nFeesDeleted < ::minRelayTxFee.GetFee(nSize) && !AllowFree(view.GetPriority(tx, chainActive.Height() + 1))) {\n             return state.DoS(0, false, REJECT_INSUFFICIENTFEE, \"insufficient priority\");\n         }\n \n         // Continuously rate-limit free (really, very-low-fee) transactions\n         // This mitigates 'penny-flooding' -- sending thousands of free transactions just to\n         // be annoying or make others' transactions take longer to confirm.\n-        if (fLimitFree && nFees < ::minRelayTxFee.GetFee(nSize))\n+        if (fLimitFree && nFees - nFeesDeleted < ::minRelayTxFee.GetFee(nSize))\n         {\n             static CCriticalSection csFreeLimiter;\n             static double dFreeCount;\n@@ -944,6 +951,12 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa\n             return error(\"AcceptToMemoryPool: BUG! PLEASE REPORT THIS! ConnectInputs failed against MANDATORY but not STANDARD flags %s\", hash.ToString());\n         }\n \n+        // Make actually space\n+        if (!stagedelete.empty()) {\n+            LogPrint(\"mempool\", \"Removing %u transactions (%d fees) from the mempool to make space for %s\\n\", stagedelete.size(), nFeesDeleted, tx.GetHash().ToString());\n+            pool.RemoveStaged(stagedelete);\n+        }\n+\n         // Store transaction in memory\n         pool.addUnchecked(hash, entry, !IsInitialBlockDownload());\n     }"
+      },
+      {
+        "sha": "58fc495e756eb6c39c6b7cf42b42d090d4d0a8f3",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/26d123a0287ecad86c324a37a7247ff3611a89ce/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/26d123a0287ecad86c324a37a7247ff3611a89ce/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=26d123a0287ecad86c324a37a7247ff3611a89ce",
+        "patch": "@@ -50,6 +50,8 @@ struct CNodeStateStats;\n static const bool DEFAULT_ALERTS = true;\n /** Default for -maxorphantx, maximum number of orphan transactions kept in memory */\n static const unsigned int DEFAULT_MAX_ORPHAN_TRANSACTIONS = 100;\n+/** Default for -maxmempool, maximum megabytes of mempool memory usage */\n+static const unsigned int DEFAULT_MAX_MEMPOOL_SIZE = 300;\n /** The maximum size of a blk?????.dat file (since 0.8) */\n static const unsigned int MAX_BLOCKFILE_SIZE = 0x8000000; // 128 MiB\n /** The pre-allocation chunk size for blk?????.dat files (since 0.8) */"
+      },
+      {
+        "sha": "cd54e06b33823b189bfb81b3380af1c59f8e9e3e",
+        "filename": "src/memusage.h",
+        "status": "modified",
+        "additions": 12,
+        "deletions": 0,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/26d123a0287ecad86c324a37a7247ff3611a89ce/src/memusage.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/26d123a0287ecad86c324a37a7247ff3611a89ce/src/memusage.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/memusage.h?ref=26d123a0287ecad86c324a37a7247ff3611a89ce",
+        "patch": "@@ -104,6 +104,12 @@ static inline size_t DynamicUsage(const std::set<X>& s)\n     return MallocUsage(sizeof(stl_tree_node<X>)) * s.size();\n }\n \n+template<typename X>\n+static inline size_t IncrementalDynamicUsage(const std::set<X>& s)\n+{\n+    return MallocUsage(sizeof(stl_tree_node<X>));\n+}\n+\n template<typename X>\n static inline size_t RecursiveDynamicUsage(const std::set<X>& v)\n {\n@@ -120,6 +126,12 @@ static inline size_t DynamicUsage(const std::map<X, Y>& m)\n     return MallocUsage(sizeof(stl_tree_node<std::pair<const X, Y> >)) * m.size();\n }\n \n+template<typename X, typename Y>\n+static inline size_t IncrementalDynamicUsage(const std::map<X, Y>& m)\n+{\n+    return MallocUsage(sizeof(stl_tree_node<std::pair<const X, Y> >));\n+}\n+\n template<typename X, typename Y>\n static inline size_t RecursiveDynamicUsage(const std::map<X, Y>& v)\n {"
+      },
+      {
+        "sha": "36e8d2f8afe7025c210283a6624092afd8294132",
+        "filename": "src/txmempool.cpp",
+        "status": "modified",
+        "additions": 118,
+        "deletions": 11,
+        "changes": 129,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/26d123a0287ecad86c324a37a7247ff3611a89ce/src/txmempool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/26d123a0287ecad86c324a37a7247ff3611a89ce/src/txmempool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.cpp?ref=26d123a0287ecad86c324a37a7247ff3611a89ce",
+        "patch": "@@ -32,7 +32,6 @@ CTxMemPoolEntry::CTxMemPoolEntry(const CTransaction& _tx, const CAmount& _nFee,\n     nTxSize = ::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION);\n     nModSize = tx.CalculateModifiedSize(nTxSize);\n     nUsageSize = tx.DynamicMemoryUsage();\n-    feeRate = CFeeRate(nFee, nTxSize);\n }\n \n CTxMemPoolEntry::CTxMemPoolEntry(const CTxMemPoolEntry& other)\n@@ -49,9 +48,10 @@ CTxMemPoolEntry::GetPriority(unsigned int currentHeight) const\n     return dResult;\n }\n \n-CTxMemPool::CTxMemPool(const CFeeRate& _minRelayFee) :\n-    nTransactionsUpdated(0)\n+CTxMemPool::CTxMemPool(const CFeeRate& _minRelayFee)\n {\n+    clear();\n+\n     // Sanity checks off by default for performance, because otherwise\n     // accepting transactions becomes O(N^2) where N is the number\n     // of transactions in the pool\n@@ -109,6 +109,19 @@ bool CTxMemPool::addUnchecked(const uint256& hash, const CTxMemPoolEntry &entry,\n     return true;\n }\n \n+void CTxMemPool::removeUnchecked(const uint256& hash)\n+{\n+    indexed_transaction_set::iterator it = mapTx.find(hash);\n+\n+    BOOST_FOREACH(const CTxIn& txin, it->GetTx().vin)\n+        mapNextTx.erase(txin.prevout);\n+\n+    totalTxSize -= it->GetTxSize();\n+    cachedInnerUsage -= it->DynamicMemoryUsage();\n+    mapTx.erase(it);\n+    nTransactionsUpdated++;\n+    minerPolicyEstimator->removeTx(hash);\n+}\n \n void CTxMemPool::remove(const CTransaction &origTx, std::list<CTransaction>& removed, bool fRecursive)\n {\n@@ -144,15 +157,8 @@ void CTxMemPool::remove(const CTransaction &origTx, std::list<CTransaction>& rem\n                     txToRemove.push_back(it->second.ptx->GetHash());\n                 }\n             }\n-            BOOST_FOREACH(const CTxIn& txin, tx.vin)\n-                mapNextTx.erase(txin.prevout);\n-\n             removed.push_back(tx);\n-            totalTxSize -= mapTx.find(hash)->GetTxSize();\n-            cachedInnerUsage -= mapTx.find(hash)->DynamicMemoryUsage();\n-            mapTx.erase(hash);\n-            nTransactionsUpdated++;\n-            minerPolicyEstimator->removeTx(hash);\n+            removeUnchecked(hash);\n         }\n     }\n }\n@@ -435,3 +441,104 @@ size_t CTxMemPool::DynamicMemoryUsage() const {\n     // Estimate the overhead of mapTx to be 6 pointers + an allocation, as no exact formula for boost::multi_index_contained is implemented.\n     return memusage::MallocUsage(sizeof(CTxMemPoolEntry) + 6 * sizeof(void*)) * mapTx.size() + memusage::DynamicUsage(mapNextTx) + memusage::DynamicUsage(mapDeltas) + cachedInnerUsage;\n }\n+\n+size_t CTxMemPool::GuessDynamicMemoryUsage(const CTxMemPoolEntry& entry) const {\n+    return memusage::MallocUsage(sizeof(CTxMemPoolEntry) + 5 * sizeof(void*)) + entry.DynamicMemoryUsage() + memusage::IncrementalDynamicUsage(mapNextTx) * entry.GetTx().vin.size();\n+}\n+\n+bool CTxMemPool::StageTrimToSize(size_t sizelimit, const CTxMemPoolEntry& toadd, std::set<uint256>& stage, CAmount& nFeesRemoved) {\n+    size_t nSizeRemoved = 0;\n+    std::set<uint256> protect;\n+    BOOST_FOREACH(const CTxIn& in, toadd.GetTx().vin) {\n+        protect.insert(in.prevout.hash);\n+    }\n+\n+    size_t expsize = DynamicMemoryUsage() + GuessDynamicMemoryUsage(toadd); // Track the expected resulting memory usage of the mempool.\n+    indexed_transaction_set::nth_index<1>::type::reverse_iterator it = mapTx.get<1>().rbegin();\n+    int fails = 0; // Number of mempool transactions iterated over that were not included in the stage.\n+    // Iterate from lowest feerate to highest feerate in the mempool:\n+    while (expsize > sizelimit && it != mapTx.get<1>().rend()) {\n+        const uint256& hash = it->GetTx().GetHash();\n+        if (stage.count(hash)) {\n+            // If the transaction is already staged for deletion, we know its descendants are already processed, so skip it.\n+            it++;\n+            continue;\n+        }\n+        if (GetRand(10)) {\n+            // Only try 1/10 of the transactions, in order to have some chance to avoid very big chains.\n+            it++;\n+            continue;\n+        }\n+        if (CompareTxMemPoolEntryByFeeRate()(*it, toadd)) {\n+            // If the transaction's feerate is worse than what we're looking for, we have processed everything in the mempool\n+            // that could improve the staged set. If we don't have an acceptable solution by now, bail out.\n+            return false;\n+        }\n+        std::deque<uint256> todo; // List of hashes that we still need to process (descendants of 'hash').\n+        std::set<uint256> now; // Set of hashes that will need to be added to stage if 'hash' is included.\n+        CAmount nowfee = 0; // Sum of the fees in 'now'.\n+        size_t nowsize = 0; // Sum of the tx sizes in 'now'.\n+        size_t nowusage = 0; // Sum of the memory usages of transactions in 'now'.\n+        int iternow = 0; // Transactions we've inspected so far while determining whether 'hash' is acceptable.\n+        todo.push_back(it->GetTx().GetHash()); // Add 'hash' to the todo list, to initiate processing its children.\n+        bool good = true; // Whether including 'hash' (and all its descendants) is a good idea.\n+        // Iterate breadth-first over all descendants of transaction with hash 'hash'.\n+        while (!todo.empty()) {\n+            uint256 hashnow = todo.front();\n+            if (protect.count(hashnow)) {\n+                // If this transaction is in the protected set, we're done with 'hash'.\n+                good = false;\n+                break;\n+            }\n+            iternow++; // We only count transactions we actually had to go find in the mempool.\n+            if (iternow + fails > 20) {\n+                return false;\n+            }\n+            const CTxMemPoolEntry* origTx = &*mapTx.find(hashnow);\n+            nowfee += origTx->GetFee();\n+            if (nFeesRemoved + nowfee > toadd.GetFee()) {\n+                // If this pushes up to the total fees deleted too high, we're done with 'hash'.\n+                good = false;\n+                break;\n+            }\n+            todo.pop_front();\n+            // Add 'hashnow' to the 'now' set, and update its statistics.\n+            now.insert(hashnow);\n+            nowusage += GuessDynamicMemoryUsage(*origTx);\n+            nowsize += origTx->GetTxSize();\n+            // Find dependencies of 'hashnow' and them to todo.\n+            std::map<COutPoint, CInPoint>::iterator iter = mapNextTx.lower_bound(COutPoint(hashnow, 0));\n+            while (iter != mapNextTx.end() && iter->first.hash == hashnow) {\n+                const uint256& nexthash = iter->second.ptx->GetHash();\n+                if (!(stage.count(nexthash) || now.count(nexthash))) {\n+                    todo.push_back(nexthash);\n+                }\n+                iter++;\n+            }\n+        }\n+        if (good && (double)nowfee * toadd.GetTxSize() > (double)toadd.GetFee() * nowsize) {\n+            // The new transaction's feerate is below that of the set we're removing.\n+            good = false;\n+        }\n+        if (good) {\n+            stage.insert(now.begin(), now.end());\n+            nFeesRemoved += nowfee;\n+            nSizeRemoved += nowsize;\n+            expsize -= nowusage;\n+        } else {\n+            fails += iternow;\n+            if (fails > 10) {\n+                // Bail out after traversing 32 transactions that are not acceptable.\n+                return false;\n+            }\n+        }\n+        it++;\n+    }\n+    return true;\n+}\n+\n+void CTxMemPool::RemoveStaged(std::set<uint256>& stage) {\n+    BOOST_FOREACH(const uint256& hash, stage) {\n+        removeUnchecked(hash);\n+    }\n+}"
+      },
+      {
+        "sha": "191b3794674ab32c4de8b90b88bd8de3fa844b03",
+        "filename": "src/txmempool.h",
+        "status": "modified",
+        "additions": 21,
+        "deletions": 7,
+        "changes": 28,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/26d123a0287ecad86c324a37a7247ff3611a89ce/src/txmempool.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/26d123a0287ecad86c324a37a7247ff3611a89ce/src/txmempool.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.h?ref=26d123a0287ecad86c324a37a7247ff3611a89ce",
+        "patch": "@@ -45,7 +45,6 @@ class CTxMemPoolEntry\n     size_t nTxSize; //! ... and avoid recomputing tx size\n     size_t nModSize; //! ... and modified size for priority\n     size_t nUsageSize; //! ... and total memory usage\n-    CFeeRate feeRate; //! ... and fee per kB\n     int64_t nTime; //! Local time when entering the mempool\n     double dPriority; //! Priority when entering the mempool\n     unsigned int nHeight; //! Chain height when entering the mempool\n@@ -59,8 +58,7 @@ class CTxMemPoolEntry\n \n     const CTransaction& GetTx() const { return this->tx; }\n     double GetPriority(unsigned int currentHeight) const;\n-    CAmount GetFee() const { return nFee; }\n-    CFeeRate GetFeeRate() const { return feeRate; }\n+    const CAmount& GetFee() const { return nFee; }\n     size_t GetTxSize() const { return nTxSize; }\n     int64_t GetTime() const { return nTime; }\n     unsigned int GetHeight() const { return nHeight; }\n@@ -78,14 +76,18 @@ struct mempoolentry_txid\n     }\n };\n \n-class CompareTxMemPoolEntryByFee\n+class CompareTxMemPoolEntryByFeeRate\n {\n public:\n     bool operator()(const CTxMemPoolEntry& a, const CTxMemPoolEntry& b)\n     {\n-        if (a.GetFeeRate() == b.GetFeeRate())\n+        // Avoid a division by rewriting (a/b > c/d) as (a*d > c*b).\n+        double f1 = (double)a.GetFee() * b.GetTxSize();\n+        double f2 = (double)b.GetFee() * a.GetTxSize();\n+        if (f1 == f2) {\n             return a.GetTime() < b.GetTime();\n-        return a.GetFeeRate() > b.GetFeeRate();\n+        }\n+        return f1 > f2;\n     }\n };\n \n@@ -134,7 +136,7 @@ class CTxMemPool\n             // sorted by fee rate\n             boost::multi_index::ordered_non_unique<\n                 boost::multi_index::identity<CTxMemPoolEntry>,\n-                CompareTxMemPoolEntryByFee\n+                CompareTxMemPoolEntryByFeeRate\n             >\n         >\n     > indexed_transaction_set;\n@@ -157,6 +159,7 @@ class CTxMemPool\n     void setSanityCheck(bool _fSanityCheck) { fSanityCheck = _fSanityCheck; }\n \n     bool addUnchecked(const uint256& hash, const CTxMemPoolEntry &entry, bool fCurrentEstimate = true);\n+    void removeUnchecked(const uint256& hash);\n     void remove(const CTransaction &tx, std::list<CTransaction>& removed, bool fRecursive = false);\n     void removeCoinbaseSpends(const CCoinsViewCache *pcoins, unsigned int nMemPoolHeight);\n     void removeConflicts(const CTransaction &tx, std::list<CTransaction>& removed);\n@@ -178,6 +181,16 @@ class CTxMemPool\n     void ApplyDeltas(const uint256 hash, double &dPriorityDelta, CAmount &nFeeDelta);\n     void ClearPrioritisation(const uint256 hash);\n \n+    /** Build a list of transaction (hashes) to remove such that:\n+     *  - The list is consistent (if a parent is included, all its dependencies are included as well).\n+     *  - No dependencies of toadd are removed.\n+     *  - The total fees removed are not more than the fees added by toadd.\n+     *  - The feerate of what is removed is not better than the feerate of toadd.\n+     *  - Removing said list will reduce the DynamicMemoryUsage after adding toadd, below sizelimit.\n+     */\n+    bool StageTrimToSize(size_t sizelimit, const CTxMemPoolEntry& toadd, std::set<uint256>& stage, CAmount& nFeeRemoved);\n+    void RemoveStaged(std::set<uint256>& stage);\n+\n     unsigned long size()\n     {\n         LOCK(cs);\n@@ -209,6 +222,7 @@ class CTxMemPool\n     bool ReadFeeEstimates(CAutoFile& filein);\n \n     size_t DynamicMemoryUsage() const;\n+    size_t GuessDynamicMemoryUsage(const CTxMemPoolEntry& entry) const;\n };\n \n /** "
+      }
+    ]
+  }
+]

@@ -1,0 +1,380 @@
+[
+  {
+    "sha": "268400d3188200c9e3dcd3482c4853354388a721",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyNjg0MDBkMzE4ODIwMGM5ZTNkY2QzNDgyYzQ4NTMzNTQzODhhNzIx",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2018-06-24T17:44:02Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2018-06-24T17:51:07Z"
+      },
+      "message": "[Refactor] CPU feature detection logic for SHA256",
+      "tree": {
+        "sha": "15a0a7cd1a433573aaf130fc7d8e53827a176da1",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/15a0a7cd1a433573aaf130fc7d8e53827a176da1"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/268400d3188200c9e3dcd3482c4853354388a721",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/268400d3188200c9e3dcd3482c4853354388a721",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/268400d3188200c9e3dcd3482c4853354388a721",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/268400d3188200c9e3dcd3482c4853354388a721/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "b1dc39df6ec878d06fc7217a3d7bf07397edf3ea",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b1dc39df6ec878d06fc7217a3d7bf07397edf3ea",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b1dc39df6ec878d06fc7217a3d7bf07397edf3ea"
+      }
+    ],
+    "stats": {
+      "total": 50,
+      "additions": 34,
+      "deletions": 16
+    },
+    "files": [
+      {
+        "sha": "e788390d4b72aa68249b215335384c0d4f4e89f9",
+        "filename": "src/crypto/sha256.cpp",
+        "status": "modified",
+        "additions": 34,
+        "deletions": 16,
+        "changes": 50,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/268400d3188200c9e3dcd3482c4853354388a721/src/crypto/sha256.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/268400d3188200c9e3dcd3482c4853354388a721/src/crypto/sha256.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/crypto/sha256.cpp?ref=268400d3188200c9e3dcd3482c4853354388a721",
+        "patch": "@@ -552,32 +552,50 @@ std::string SHA256AutoDetect()\n {\n     std::string ret = \"standard\";\n #if defined(USE_ASM) && (defined(__x86_64__) || defined(__amd64__) || defined(__i386__))\n-    (void)AVXEnabled; // Silence unused warning (in case ENABLE_AVX2 is not defined)\n+    bool have_sse4 = false;\n+    bool have_xsave = false;\n+    bool have_avx = false;\n+    bool have_avx2 = false;\n+    bool enabled_avx = false;\n+\n+    (void)AVXEnabled;\n+    (void)have_sse4;\n+    (void)have_avx;\n+    (void)have_xsave;\n+    (void)have_avx2;\n+    (void)enabled_avx;\n+\n     uint32_t eax, ebx, ecx, edx;\n     cpuid(1, 0, eax, ebx, ecx, edx);\n-    if ((ecx >> 19) & 1) {\n+    have_sse4 = (ecx >> 19) & 1;\n+    have_xsave = (ecx >> 27) & 1;\n+    have_avx = (ecx >> 28) & 1;\n+    if (have_xsave && have_avx) {\n+        enabled_avx = AVXEnabled();\n+    }\n+    if (have_sse4) {\n+        cpuid(7, 0, eax, ebx, ecx, edx);\n+        have_avx2 = (ebx >> 5) & 1;\n+    }\n+\n+    if (have_sse4) {\n #if defined(__x86_64__) || defined(__amd64__)\n         Transform = sha256_sse4::Transform;\n         TransformD64 = TransformD64Wrapper<sha256_sse4::Transform>;\n+        ret = \"sse4(1way)\";\n #endif\n #if defined(ENABLE_SSE41) && !defined(BUILD_BITCOIN_INTERNAL)\n         TransformD64_4way = sha256d64_sse41::Transform_4way;\n-        ret = \"sse4(1way+4way)\";\n-#if defined(ENABLE_AVX2) && !defined(BUILD_BITCOIN_INTERNAL)\n-        if (((ecx >> 27) & 1) && ((ecx >> 28) & 1)) { // XSAVE and AVX\n-            cpuid(7, 0, eax, ebx, ecx, edx);\n-            if ((ebx >> 5) & 1) { // AVX2 flag\n-                if (AVXEnabled()) { // OS has enabled AVX registers\n-                    TransformD64_8way = sha256d64_avx2::Transform_8way;\n-                    ret += \",avx2(8way)\";\n-                }\n-            }\n-        }\n-#endif\n-#else\n-        ret = \"sse4\";\n+        ret += \",sse41(4way)\";\n #endif\n     }\n+\n+#if defined(ENABLE_AVX2) && !defined(BUILD_BITCOIN_INTERNAL)\n+    if (have_avx2 && have_avx && enabled_avx) {\n+        TransformD64_8way = sha256d64_avx2::Transform_8way;\n+        ret += \",avx2(8way)\";\n+    }\n+#endif\n #endif\n \n     assert(SelfTest());"
+      }
+    ]
+  },
+  {
+    "sha": "4c935e2eee456ff66cdfb908b0edffdd1e8a6c04",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0YzkzNWUyZWVlNDU2ZmY2NmNkZmI5MDhiMGVkZmZkZDFlOGE2YzA0",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2018-06-24T17:50:40Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2018-06-26T17:11:08Z"
+      },
+      "message": "Add SHA256 implementation using using Intel SHA intrinsics",
+      "tree": {
+        "sha": "958f389f6a39309e98ddcbe8ebe4cc04d04853fb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/958f389f6a39309e98ddcbe8ebe4cc04d04853fb"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/4c935e2eee456ff66cdfb908b0edffdd1e8a6c04",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4c935e2eee456ff66cdfb908b0edffdd1e8a6c04",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/4c935e2eee456ff66cdfb908b0edffdd1e8a6c04",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4c935e2eee456ff66cdfb908b0edffdd1e8a6c04/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "268400d3188200c9e3dcd3482c4853354388a721",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/268400d3188200c9e3dcd3482c4853354388a721",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/268400d3188200c9e3dcd3482c4853354388a721"
+      }
+    ],
+    "stats": {
+      "total": 438,
+      "additions": 438,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "2826f29ed8bf3675fe67ad0fc670df6227c46054",
+        "filename": "configure.ac",
+        "status": "modified",
+        "additions": 24,
+        "deletions": 0,
+        "changes": 24,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4c935e2eee456ff66cdfb908b0edffdd1e8a6c04/configure.ac",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4c935e2eee456ff66cdfb908b0edffdd1e8a6c04/configure.ac",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/configure.ac?ref=4c935e2eee456ff66cdfb908b0edffdd1e8a6c04",
+        "patch": "@@ -319,6 +319,7 @@ fi\n AX_CHECK_COMPILE_FLAG([-msse4.2],[[SSE42_CXXFLAGS=\"-msse4.2\"]],,[[$CXXFLAG_WERROR]])\n AX_CHECK_COMPILE_FLAG([-msse4.1],[[SSE41_CXXFLAGS=\"-msse4.1\"]],,[[$CXXFLAG_WERROR]])\n AX_CHECK_COMPILE_FLAG([-mavx -mavx2],[[AVX2_CXXFLAGS=\"-mavx -mavx2\"]],,[[$CXXFLAG_WERROR]])\n+AX_CHECK_COMPILE_FLAG([-msse4 -msha],[[SHANI_CXXFLAGS=\"-msse4 -msha\"]],,[[$CXXFLAG_WERROR]])\n \n TEMP_CXXFLAGS=\"$CXXFLAGS\"\n CXXFLAGS=\"$CXXFLAGS $SSE42_CXXFLAGS\"\n@@ -380,6 +381,27 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[\n )\n CXXFLAGS=\"$TEMP_CXXFLAGS\"\n \n+TEMP_CXXFLAGS=\"$CXXFLAGS\"\n+CXXFLAGS=\"$CXXFLAGS $SHANI_CXXFLAGS\"\n+AC_MSG_CHECKING(for SHA-NI intrinsics)\n+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[\n+    #include <stdint.h>\n+    #if defined(_MSC_VER)\n+    #include <immintrin.h>\n+    #elif defined(__GNUC__)\n+    #include <x86intrin.h>\n+    #endif\n+  ]],[[\n+    __m128i i = _mm_set1_epi32(0);\n+    __m128i j = _mm_set1_epi32(1);\n+    __m128i k = _mm_set1_epi32(2);\n+    return _mm_extract_epi32(_mm_sha256rnds2_epu32(i, i, k), 0);\n+  ]])],\n+ [ AC_MSG_RESULT(yes); enable_shani=yes; AC_DEFINE(ENABLE_SHANI, 1, [Define this symbol to build code that uses SHA-NI intrinsics]) ],\n+ [ AC_MSG_RESULT(no)]\n+)\n+CXXFLAGS=\"$TEMP_CXXFLAGS\"\n+\n CPPFLAGS=\"$CPPFLAGS -DHAVE_BUILD_INFO -D__STDC_FORMAT_MACROS\"\n \n AC_ARG_WITH([utils],\n@@ -1300,6 +1322,7 @@ AM_CONDITIONAL([HARDEN],[test x$use_hardening = xyes])\n AM_CONDITIONAL([ENABLE_HWCRC32],[test x$enable_hwcrc32 = xyes])\n AM_CONDITIONAL([ENABLE_SSE41],[test x$enable_sse41 = xyes])\n AM_CONDITIONAL([ENABLE_AVX2],[test x$enable_avx2 = xyes])\n+AM_CONDITIONAL([ENABLE_SHANI],[test x$enable_shani = xyes])\n AM_CONDITIONAL([USE_ASM],[test x$use_asm = xyes])\n \n AC_DEFINE(CLIENT_VERSION_MAJOR, _CLIENT_VERSION_MAJOR, [Major version])\n@@ -1344,6 +1367,7 @@ AC_SUBST(SANITIZER_LDFLAGS)\n AC_SUBST(SSE42_CXXFLAGS)\n AC_SUBST(SSE41_CXXFLAGS)\n AC_SUBST(AVX2_CXXFLAGS)\n+AC_SUBST(SHANI_CXXFLAGS)\n AC_SUBST(LIBTOOL_APP_LDFLAGS)\n AC_SUBST(USE_UPNP)\n AC_SUBST(USE_QRCODE)"
+      },
+      {
+        "sha": "8f155e13163f930e789d9de4f80f431ad9e4e71b",
+        "filename": "src/Makefile.am",
+        "status": "modified",
+        "additions": 10,
+        "deletions": 0,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4c935e2eee456ff66cdfb908b0edffdd1e8a6c04/src/Makefile.am",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4c935e2eee456ff66cdfb908b0edffdd1e8a6c04/src/Makefile.am",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/Makefile.am?ref=4c935e2eee456ff66cdfb908b0edffdd1e8a6c04",
+        "patch": "@@ -52,6 +52,10 @@ if ENABLE_AVX2\n LIBBITCOIN_CRYPTO_AVX2 = crypto/libbitcoin_crypto_avx2.a\n LIBBITCOIN_CRYPTO += $(LIBBITCOIN_CRYPTO_AVX2)\n endif\n+if ENABLE_SHANI\n+LIBBITCOIN_CRYPTO_SHANI = crypto/libbitcoin_crypto_shani.a\n+LIBBITCOIN_CRYPTO += $(LIBBITCOIN_CRYPTO_SHANI)\n+endif\n \n $(LIBSECP256K1): $(wildcard secp256k1/src/*) $(wildcard secp256k1/include/*)\n \t$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)\n@@ -314,6 +318,12 @@ crypto_libbitcoin_crypto_avx2_a_CXXFLAGS += $(AVX2_CXXFLAGS)\n crypto_libbitcoin_crypto_avx2_a_CPPFLAGS += -DENABLE_AVX2\n crypto_libbitcoin_crypto_avx2_a_SOURCES = crypto/sha256_avx2.cpp\n \n+crypto_libbitcoin_crypto_shani_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)\n+crypto_libbitcoin_crypto_shani_a_CPPFLAGS = $(AM_CPPFLAGS)\n+crypto_libbitcoin_crypto_shani_a_CXXFLAGS += $(SHANI_CXXFLAGS)\n+crypto_libbitcoin_crypto_shani_a_CPPFLAGS += -DENABLE_SHANI\n+crypto_libbitcoin_crypto_shani_a_SOURCES = crypto/sha256_shani.cpp\n+\n # consensus: shared between all executables that validate any consensus rules.\n libbitcoin_consensus_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)\n libbitcoin_consensus_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)"
+      },
+      {
+        "sha": "0c1516f4d553738a770984655f31c327474476d2",
+        "filename": "src/Makefile.test.include",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4c935e2eee456ff66cdfb908b0edffdd1e8a6c04/src/Makefile.test.include",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4c935e2eee456ff66cdfb908b0edffdd1e8a6c04/src/Makefile.test.include",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/Makefile.test.include?ref=4c935e2eee456ff66cdfb908b0edffdd1e8a6c04",
+        "patch": "@@ -137,6 +137,7 @@ test_test_bitcoin_fuzzy_LDADD = \\\n   $(LIBBITCOIN_CRYPTO) \\\n   $(LIBBITCOIN_CRYPTO_SSE41) \\\n   $(LIBBITCOIN_CRYPTO_AVX2) \\\n+  $(LIBBITCOIN_CRYPTO_SHANI) \\\n   $(LIBSECP256K1)\n \n test_test_bitcoin_fuzzy_LDADD += $(BOOST_LIBS) $(CRYPTO_LIBS)"
+      },
+      {
+        "sha": "1b4d5d653199696fc10ecc8f3d15bcef94b2d500",
+        "filename": "src/crypto/sha256.cpp",
+        "status": "modified",
+        "additions": 40,
+        "deletions": 0,
+        "changes": 40,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4c935e2eee456ff66cdfb908b0edffdd1e8a6c04/src/crypto/sha256.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4c935e2eee456ff66cdfb908b0edffdd1e8a6c04/src/crypto/sha256.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/crypto/sha256.cpp?ref=4c935e2eee456ff66cdfb908b0edffdd1e8a6c04",
+        "patch": "@@ -29,6 +29,16 @@ namespace sha256d64_avx2\n void Transform_8way(unsigned char* out, const unsigned char* in);\n }\n \n+namespace sha256d64_shani\n+{\n+void Transform_2way(unsigned char* out, const unsigned char* in);\n+}\n+\n+namespace sha256_shani\n+{\n+void Transform(uint32_t* s, const unsigned char* chunk, size_t blocks);\n+}\n+\n // Internal implementation code.\n namespace\n {\n@@ -448,6 +458,7 @@ void TransformD64Wrapper(unsigned char* out, const unsigned char* in)\n \n TransformType Transform = sha256::Transform;\n TransformD64Type TransformD64 = sha256::TransformD64;\n+TransformD64Type TransformD64_2way = nullptr;\n TransformD64Type TransformD64_4way = nullptr;\n TransformD64Type TransformD64_8way = nullptr;\n \n@@ -512,6 +523,13 @@ bool SelfTest() {\n     TransformD64(out, data + 1);\n     if (!std::equal(out, out + 32, result_d64)) return false;\n \n+    // Test TransformD64_2way, if available.\n+    if (TransformD64_2way) {\n+        unsigned char out[64];\n+        TransformD64_2way(out, data + 1);\n+        if (!std::equal(out, out + 64, result_d64)) return false;\n+    }\n+\n     // Test TransformD64_4way, if available.\n     if (TransformD64_4way) {\n         unsigned char out[128];\n@@ -556,13 +574,15 @@ std::string SHA256AutoDetect()\n     bool have_xsave = false;\n     bool have_avx = false;\n     bool have_avx2 = false;\n+    bool have_shani = false;\n     bool enabled_avx = false;\n \n     (void)AVXEnabled;\n     (void)have_sse4;\n     (void)have_avx;\n     (void)have_xsave;\n     (void)have_avx2;\n+    (void)have_shani;\n     (void)enabled_avx;\n \n     uint32_t eax, ebx, ecx, edx;\n@@ -576,8 +596,20 @@ std::string SHA256AutoDetect()\n     if (have_sse4) {\n         cpuid(7, 0, eax, ebx, ecx, edx);\n         have_avx2 = (ebx >> 5) & 1;\n+        have_shani = (ebx >> 29) & 1;\n     }\n \n+#if defined(ENABLE_SHANI) && !defined(BUILD_BITCOIN_INTERNAL)\n+    if (have_shani) {\n+        Transform = sha256_shani::Transform;\n+        TransformD64 = TransformD64Wrapper<sha256_shani::Transform>;\n+        TransformD64_2way = sha256d64_shani::Transform_2way;\n+        ret = \"shani(1way,2way)\";\n+        have_sse4 = false; // Disable SSE4/AVX2;\n+        have_avx2 = false;\n+    }\n+#endif\n+\n     if (have_sse4) {\n #if defined(__x86_64__) || defined(__amd64__)\n         Transform = sha256_sse4::Transform;\n@@ -677,6 +709,14 @@ void SHA256D64(unsigned char* out, const unsigned char* in, size_t blocks)\n             blocks -= 4;\n         }\n     }\n+    if (TransformD64_2way) {\n+        while (blocks >= 2) {\n+            TransformD64_2way(out, in);\n+            out += 64;\n+            in += 128;\n+            blocks -= 2;\n+        }\n+    }\n     while (blocks) {\n         TransformD64(out, in);\n         out += 32;"
+      },
+      {
+        "sha": "924135848a37436195f4fc771845838a98a2d3a2",
+        "filename": "src/crypto/sha256_shani.cpp",
+        "status": "added",
+        "additions": 363,
+        "deletions": 0,
+        "changes": 363,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4c935e2eee456ff66cdfb908b0edffdd1e8a6c04/src/crypto/sha256_shani.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4c935e2eee456ff66cdfb908b0edffdd1e8a6c04/src/crypto/sha256_shani.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/crypto/sha256_shani.cpp?ref=4c935e2eee456ff66cdfb908b0edffdd1e8a6c04",
+        "patch": "@@ -0,0 +1,363 @@\n+// Copyright (c) 2018 The Bitcoin Core developers\n+// Distributed under the MIT software license, see the accompanying\n+// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+//\n+// Based on https://github.com/noloader/SHA-Intrinsics/blob/master/sha256-x86.c,\n+// Written and placed in public domain by Jeffrey Walton.\n+// Based on code from Intel, and by Sean Gulley for the miTLS project.\n+\n+#ifdef ENABLE_SHANI\n+\n+#include <stdint.h>\n+#if defined(_MSC_VER)\n+#include <immintrin.h>\n+#elif defined(__GNUC__)\n+#include <x86intrin.h>\n+#endif\n+\n+#include <crypto/common.h>\n+\n+\n+namespace {\n+\n+const __m128i MASK = _mm_set_epi64x(0x0c0d0e0f08090a0bULL, 0x0405060700010203ULL);\n+const __m128i INIT0 = _mm_set_epi64x(0x6a09e667bb67ae85ull, 0x510e527f9b05688cull);\n+const __m128i INIT1 = _mm_set_epi64x(0x3c6ef372a54ff53aull, 0x1f83d9ab5be0cd19ull);\n+\n+void inline  __attribute__((always_inline)) QuadRound(__m128i& state0, __m128i& state1, uint64_t k1, uint64_t k0)\n+{\n+    const __m128i msg = _mm_set_epi64x(k1, k0);\n+    state1 = _mm_sha256rnds2_epu32(state1, state0, msg);\n+    state0 = _mm_sha256rnds2_epu32(state0, state1, _mm_shuffle_epi32(msg, 0x0e));\n+}\n+\n+void inline  __attribute__((always_inline)) QuadRound(__m128i& state0, __m128i& state1, __m128i m, uint64_t k1, uint64_t k0)\n+{\n+    const __m128i msg = _mm_add_epi32(m, _mm_set_epi64x(k1, k0));\n+    state1 = _mm_sha256rnds2_epu32(state1, state0, msg);\n+    state0 = _mm_sha256rnds2_epu32(state0, state1, _mm_shuffle_epi32(msg, 0x0e));\n+}\n+\n+void inline  __attribute__((always_inline)) ShiftMessageA(__m128i& m0, __m128i m1)\n+{\n+    m0 = _mm_sha256msg1_epu32(m0, m1);\n+}\n+\n+void inline  __attribute__((always_inline)) ShiftMessageC(__m128i& m0, __m128i m1, __m128i& m2)\n+{\n+    m2 = _mm_sha256msg2_epu32(_mm_add_epi32(m2, _mm_alignr_epi8(m1, m0, 4)), m1);\n+}\n+\n+void inline __attribute__((always_inline)) ShiftMessageB(__m128i& m0, __m128i m1, __m128i& m2)\n+{\n+    ShiftMessageC(m0, m1, m2);\n+    ShiftMessageA(m0, m1);\n+}\n+\n+void inline __attribute__((always_inline)) Shuffle(__m128i& s0, __m128i& s1)\n+{\n+    const __m128i t1 = _mm_shuffle_epi32(s0, 0xB1);\n+    const __m128i t2 = _mm_shuffle_epi32(s1, 0x1B);\n+    s0 = _mm_alignr_epi8(t1, t2, 0x08);\n+    s1 = _mm_blend_epi16(t2, t1, 0xF0);\n+}\n+\n+void inline __attribute__((always_inline)) Unshuffle(__m128i& s0, __m128i& s1)\n+{\n+    const __m128i t1 = _mm_shuffle_epi32(s0, 0x1B);\n+    const __m128i t2 = _mm_shuffle_epi32(s1, 0xB1);\n+    s0 = _mm_blend_epi16(t1, t2, 0xF0);\n+    s1 = _mm_alignr_epi8(t2, t1, 0x08);\n+}\n+\n+__m128i inline  __attribute__((always_inline)) Load(const unsigned char* in)\n+{\n+    return _mm_shuffle_epi8(_mm_loadu_si128((const __m128i*)in), MASK);\n+}\n+\n+void inline  __attribute__((always_inline)) Save(unsigned char* out, __m128i s)\n+{\n+    _mm_storeu_si128((__m128i*)out, _mm_shuffle_epi8(s, MASK));\n+}\n+}\n+\n+namespace sha256_shani {\n+void Transform(uint32_t* s, const unsigned char* chunk, size_t blocks)\n+{\n+    __m128i m0, m1, m2, m3, s0, s1, so0, so1;\n+\n+    /* Load state */\n+    s0 = _mm_loadu_si128((const __m128i*)s);\n+    s1 = _mm_loadu_si128((const __m128i*)(s + 4));\n+    Shuffle(s0, s1);\n+\n+    while (blocks--) {\n+        /* Remember old state */\n+        so0 = s0;\n+        so1 = s1;\n+\n+        /* Load data and transform */\n+        m0 = Load(chunk);\n+        QuadRound(s0, s1, m0, 0xe9b5dba5b5c0fbcfull, 0x71374491428a2f98ull);\n+        m1 = Load(chunk + 16);\n+        QuadRound(s0, s1, m1, 0xab1c5ed5923f82a4ull, 0x59f111f13956c25bull);\n+        ShiftMessageA(m0, m1);\n+        m2 = Load(chunk + 32);\n+        QuadRound(s0, s1, m2, 0x550c7dc3243185beull, 0x12835b01d807aa98ull);\n+        ShiftMessageA(m1, m2);\n+        m3 = Load(chunk + 48);\n+        QuadRound(s0, s1, m3, 0xc19bf1749bdc06a7ull, 0x80deb1fe72be5d74ull);\n+        ShiftMessageB(m2, m3, m0);\n+        QuadRound(s0, s1, m0, 0x240ca1cc0fc19dc6ull, 0xefbe4786E49b69c1ull);\n+        ShiftMessageB(m3, m0, m1);\n+        QuadRound(s0, s1, m1, 0x76f988da5cb0a9dcull, 0x4a7484aa2de92c6full);\n+        ShiftMessageB(m0, m1, m2);\n+        QuadRound(s0, s1, m2, 0xbf597fc7b00327c8ull, 0xa831c66d983e5152ull);\n+        ShiftMessageB(m1, m2, m3);\n+        QuadRound(s0, s1, m3, 0x1429296706ca6351ull, 0xd5a79147c6e00bf3ull);\n+        ShiftMessageB(m2, m3, m0);\n+        QuadRound(s0, s1, m0, 0x53380d134d2c6dfcull, 0x2e1b213827b70a85ull);\n+        ShiftMessageB(m3, m0, m1);\n+        QuadRound(s0, s1, m1, 0x92722c8581c2c92eull, 0x766a0abb650a7354ull);\n+        ShiftMessageB(m0, m1, m2);\n+        QuadRound(s0, s1, m2, 0xc76c51A3c24b8b70ull, 0xa81a664ba2bfe8a1ull);\n+        ShiftMessageB(m1, m2, m3);\n+        QuadRound(s0, s1, m3, 0x106aa070f40e3585ull, 0xd6990624d192e819ull);\n+        ShiftMessageB(m2, m3, m0);\n+        QuadRound(s0, s1, m0, 0x34b0bcb52748774cull, 0x1e376c0819a4c116ull);\n+        ShiftMessageB(m3, m0, m1);\n+        QuadRound(s0, s1, m1, 0x682e6ff35b9cca4full, 0x4ed8aa4a391c0cb3ull);\n+        ShiftMessageC(m0, m1, m2);\n+        QuadRound(s0, s1, m2, 0x8cc7020884c87814ull, 0x78a5636f748f82eeull);\n+        ShiftMessageC(m1, m2, m3);\n+        QuadRound(s0, s1, m3, 0xc67178f2bef9A3f7ull, 0xa4506ceb90befffaull);\n+\n+        /* Combine with old state */\n+        s0 = _mm_add_epi32(s0, so0);\n+        s1 = _mm_add_epi32(s1, so1);\n+\n+        /* Advance */\n+        chunk += 64;\n+    }\n+\n+    Unshuffle(s0, s1);\n+    _mm_storeu_si128((__m128i*)s, s0);\n+    _mm_storeu_si128((__m128i*)(s + 4), s1);\n+}\n+}\n+\n+namespace sha256d64_shani {\n+\n+void Transform_2way(unsigned char* out, const unsigned char* in)\n+{\n+    __m128i am0, am1, am2, am3, as0, as1, aso0, aso1;\n+    __m128i bm0, bm1, bm2, bm3, bs0, bs1, bso0, bso1;\n+\n+    /* Transform 1 */\n+    bs0 = as0 = INIT0;\n+    bs1 = as1 = INIT1;\n+    am0 = Load(in);\n+    bm0 = Load(in + 64);\n+    QuadRound(as0, as1, am0, 0xe9b5dba5b5c0fbcfull, 0x71374491428a2f98ull);\n+    QuadRound(bs0, bs1, bm0, 0xe9b5dba5b5c0fbcfull, 0x71374491428a2f98ull);\n+    am1 = Load(in + 16);\n+    bm1 = Load(in + 80);\n+    QuadRound(as0, as1, am1, 0xab1c5ed5923f82a4ull, 0x59f111f13956c25bull);\n+    QuadRound(bs0, bs1, bm1, 0xab1c5ed5923f82a4ull, 0x59f111f13956c25bull);\n+    ShiftMessageA(am0, am1);\n+    ShiftMessageA(bm0, bm1);\n+    am2 = Load(in + 32);\n+    bm2 = Load(in + 96);\n+    QuadRound(as0, as1, am2, 0x550c7dc3243185beull, 0x12835b01d807aa98ull);\n+    QuadRound(bs0, bs1, bm2, 0x550c7dc3243185beull, 0x12835b01d807aa98ull);\n+    ShiftMessageA(am1, am2);\n+    ShiftMessageA(bm1, bm2);\n+    am3 = Load(in + 48);\n+    bm3 = Load(in + 112);\n+    QuadRound(as0, as1, am3, 0xc19bf1749bdc06a7ull, 0x80deb1fe72be5d74ull);\n+    QuadRound(bs0, bs1, bm3, 0xc19bf1749bdc06a7ull, 0x80deb1fe72be5d74ull);\n+    ShiftMessageB(am2, am3, am0);\n+    ShiftMessageB(bm2, bm3, bm0);\n+    QuadRound(as0, as1, am0, 0x240ca1cc0fc19dc6ull, 0xefbe4786E49b69c1ull);\n+    QuadRound(bs0, bs1, bm0, 0x240ca1cc0fc19dc6ull, 0xefbe4786E49b69c1ull);\n+    ShiftMessageB(am3, am0, am1);\n+    ShiftMessageB(bm3, bm0, bm1);\n+    QuadRound(as0, as1, am1, 0x76f988da5cb0a9dcull, 0x4a7484aa2de92c6full);\n+    QuadRound(bs0, bs1, bm1, 0x76f988da5cb0a9dcull, 0x4a7484aa2de92c6full);\n+    ShiftMessageB(am0, am1, am2);\n+    ShiftMessageB(bm0, bm1, bm2);\n+    QuadRound(as0, as1, am2, 0xbf597fc7b00327c8ull, 0xa831c66d983e5152ull);\n+    QuadRound(bs0, bs1, bm2, 0xbf597fc7b00327c8ull, 0xa831c66d983e5152ull);\n+    ShiftMessageB(am1, am2, am3);\n+    ShiftMessageB(bm1, bm2, bm3);\n+    QuadRound(as0, as1, am3, 0x1429296706ca6351ull, 0xd5a79147c6e00bf3ull);\n+    QuadRound(bs0, bs1, bm3, 0x1429296706ca6351ull, 0xd5a79147c6e00bf3ull);\n+    ShiftMessageB(am2, am3, am0);\n+    ShiftMessageB(bm2, bm3, bm0);\n+    QuadRound(as0, as1, am0, 0x53380d134d2c6dfcull, 0x2e1b213827b70a85ull);\n+    QuadRound(bs0, bs1, bm0, 0x53380d134d2c6dfcull, 0x2e1b213827b70a85ull);\n+    ShiftMessageB(am3, am0, am1);\n+    ShiftMessageB(bm3, bm0, bm1);\n+    QuadRound(as0, as1, am1, 0x92722c8581c2c92eull, 0x766a0abb650a7354ull);\n+    QuadRound(bs0, bs1, bm1, 0x92722c8581c2c92eull, 0x766a0abb650a7354ull);\n+    ShiftMessageB(am0, am1, am2);\n+    ShiftMessageB(bm0, bm1, bm2);\n+    QuadRound(as0, as1, am2, 0xc76c51A3c24b8b70ull, 0xa81a664ba2bfe8a1ull);\n+    QuadRound(bs0, bs1, bm2, 0xc76c51A3c24b8b70ull, 0xa81a664ba2bfe8a1ull);\n+    ShiftMessageB(am1, am2, am3);\n+    ShiftMessageB(bm1, bm2, bm3);\n+    QuadRound(as0, as1, am3, 0x106aa070f40e3585ull, 0xd6990624d192e819ull);\n+    QuadRound(bs0, bs1, bm3, 0x106aa070f40e3585ull, 0xd6990624d192e819ull);\n+    ShiftMessageB(am2, am3, am0);\n+    ShiftMessageB(bm2, bm3, bm0);\n+    QuadRound(as0, as1, am0, 0x34b0bcb52748774cull, 0x1e376c0819a4c116ull);\n+    QuadRound(bs0, bs1, bm0, 0x34b0bcb52748774cull, 0x1e376c0819a4c116ull);\n+    ShiftMessageB(am3, am0, am1);\n+    ShiftMessageB(bm3, bm0, bm1);\n+    QuadRound(as0, as1, am1, 0x682e6ff35b9cca4full, 0x4ed8aa4a391c0cb3ull);\n+    QuadRound(bs0, bs1, bm1, 0x682e6ff35b9cca4full, 0x4ed8aa4a391c0cb3ull);\n+    ShiftMessageC(am0, am1, am2);\n+    ShiftMessageC(bm0, bm1, bm2);\n+    QuadRound(as0, as1, am2, 0x8cc7020884c87814ull, 0x78a5636f748f82eeull);\n+    QuadRound(bs0, bs1, bm2, 0x8cc7020884c87814ull, 0x78a5636f748f82eeull);\n+    ShiftMessageC(am1, am2, am3);\n+    ShiftMessageC(bm1, bm2, bm3);\n+    QuadRound(as0, as1, am3, 0xc67178f2bef9A3f7ull, 0xa4506ceb90befffaull);\n+    QuadRound(bs0, bs1, bm3, 0xc67178f2bef9A3f7ull, 0xa4506ceb90befffaull);\n+    as0 = _mm_add_epi32(as0, INIT0);\n+    bs0 = _mm_add_epi32(bs0, INIT0);\n+    as1 = _mm_add_epi32(as1, INIT1);\n+    bs1 = _mm_add_epi32(bs1, INIT1);\n+\n+    /* Transform 2 */\n+    aso0 = as0;\n+    bso0 = bs0;\n+    aso1 = as1;\n+    bso1 = bs1;\n+    QuadRound(as0, as1, 0xe9b5dba5b5c0fbcfull, 0x71374491c28a2f98ull);\n+    QuadRound(bs0, bs1, 0xe9b5dba5b5c0fbcfull, 0x71374491c28a2f98ull);\n+    QuadRound(as0, as1, 0xab1c5ed5923f82a4ull, 0x59f111f13956c25bull);\n+    QuadRound(bs0, bs1, 0xab1c5ed5923f82a4ull, 0x59f111f13956c25bull);\n+    QuadRound(as0, as1, 0x550c7dc3243185beull, 0x12835b01d807aa98ull);\n+    QuadRound(bs0, bs1, 0x550c7dc3243185beull, 0x12835b01d807aa98ull);\n+    QuadRound(as0, as1, 0xc19bf3749bdc06a7ull, 0x80deb1fe72be5d74ull);\n+    QuadRound(bs0, bs1, 0xc19bf3749bdc06a7ull, 0x80deb1fe72be5d74ull);\n+    QuadRound(as0, as1, 0x240cf2540fe1edc6ull, 0xf0fe4786649b69c1ull);\n+    QuadRound(bs0, bs1, 0x240cf2540fe1edc6ull, 0xf0fe4786649b69c1ull);\n+    QuadRound(as0, as1, 0x16f988fa61b9411eull, 0x6cc984be4fe9346full);\n+    QuadRound(bs0, bs1, 0x16f988fa61b9411eull, 0x6cc984be4fe9346full);\n+    QuadRound(as0, as1, 0xb9d99ec7b019fc65ull, 0xa88e5a6df2c65152ull);\n+    QuadRound(bs0, bs1, 0xb9d99ec7b019fc65ull, 0xa88e5a6df2c65152ull);\n+    QuadRound(as0, as1, 0xc7353eb0fdb1232bull, 0xe70eeaa09a1231c3ull);\n+    QuadRound(bs0, bs1, 0xc7353eb0fdb1232bull, 0xe70eeaa09a1231c3ull);\n+    QuadRound(as0, as1, 0xdc1eeefd5a0f118full, 0xcb976d5f3069bad5ull);\n+    QuadRound(bs0, bs1, 0xdc1eeefd5a0f118full, 0xcb976d5f3069bad5ull);\n+    QuadRound(as0, as1, 0xe15d5b1658f4ca9dull, 0xde0b7a040a35b689ull);\n+    QuadRound(bs0, bs1, 0xe15d5b1658f4ca9dull, 0xde0b7a040a35b689ull);\n+    QuadRound(as0, as1, 0x6fab9537a507ea32ull, 0x37088980007f3e86ull);\n+    QuadRound(bs0, bs1, 0x6fab9537a507ea32ull, 0x37088980007f3e86ull);\n+    QuadRound(as0, as1, 0xc0bbbe37cdaa3b6dull, 0x0d8cd6f117406110ull);\n+    QuadRound(bs0, bs1, 0xc0bbbe37cdaa3b6dull, 0x0d8cd6f117406110ull);\n+    QuadRound(as0, as1, 0x6fd15ca70b02e931ull, 0xdb48a36383613bdaull);\n+    QuadRound(bs0, bs1, 0x6fd15ca70b02e931ull, 0xdb48a36383613bdaull);\n+    QuadRound(as0, as1, 0x6d4378906ed41a95ull, 0x31338431521afacaull);\n+    QuadRound(bs0, bs1, 0x6d4378906ed41a95ull, 0x31338431521afacaull);\n+    QuadRound(as0, as1, 0x532fb63cb5c9a0e6ull, 0x9eccabbdc39c91f2ull);\n+    QuadRound(bs0, bs1, 0x532fb63cb5c9a0e6ull, 0x9eccabbdc39c91f2ull);\n+    QuadRound(as0, as1, 0x4c191d76a4954b68ull, 0x07237ea3d2c741c6ull);\n+    QuadRound(bs0, bs1, 0x4c191d76a4954b68ull, 0x07237ea3d2c741c6ull);\n+    as0 = _mm_add_epi32(as0, aso0);\n+    bs0 = _mm_add_epi32(bs0, bso0);\n+    as1 = _mm_add_epi32(as1, aso1);\n+    bs1 = _mm_add_epi32(bs1, bso1);\n+\n+    /* Extract hash */\n+    Unshuffle(as0, as1);\n+    Unshuffle(bs0, bs1);\n+    am0 = as0;\n+    bm0 = bs0;\n+    am1 = as1;\n+    bm1 = bs1;\n+\n+    /* Transform 3 */\n+    bs0 = as0 = INIT0;\n+    bs1 = as1 = INIT1;\n+    QuadRound(as0, as1, am0, 0xe9b5dba5B5c0fbcfull, 0x71374491428a2f98ull);\n+    QuadRound(bs0, bs1, bm0, 0xe9b5dba5B5c0fbcfull, 0x71374491428a2f98ull);\n+    QuadRound(as0, as1, am1, 0xab1c5ed5923f82a4ull, 0x59f111f13956c25bull);\n+    QuadRound(bs0, bs1, bm1, 0xab1c5ed5923f82a4ull, 0x59f111f13956c25bull);\n+    ShiftMessageA(am0, am1);\n+    ShiftMessageA(bm0, bm1);\n+    bm2 = am2 = _mm_set_epi64x(0x0ull, 0x80000000ull);\n+    QuadRound(as0, as1, 0x550c7dc3243185beull, 0x12835b015807aa98ull);\n+    QuadRound(bs0, bs1, 0x550c7dc3243185beull, 0x12835b015807aa98ull);\n+    ShiftMessageA(am1, am2);\n+    ShiftMessageA(bm1, bm2);\n+    bm3 = am3 = _mm_set_epi64x(0x10000000000ull, 0x0ull);\n+    QuadRound(as0, as1, 0xc19bf2749bdc06a7ull, 0x80deb1fe72be5d74ull);\n+    QuadRound(bs0, bs1, 0xc19bf2749bdc06a7ull, 0x80deb1fe72be5d74ull);\n+    ShiftMessageB(am2, am3, am0);\n+    ShiftMessageB(bm2, bm3, bm0);\n+    QuadRound(as0, as1, am0, 0x240ca1cc0fc19dc6ull, 0xefbe4786e49b69c1ull);\n+    QuadRound(bs0, bs1, bm0, 0x240ca1cc0fc19dc6ull, 0xefbe4786e49b69c1ull);\n+    ShiftMessageB(am3, am0, am1);\n+    ShiftMessageB(bm3, bm0, bm1);\n+    QuadRound(as0, as1, am1, 0x76f988da5cb0a9dcull, 0x4a7484aa2de92c6full);\n+    QuadRound(bs0, bs1, bm1, 0x76f988da5cb0a9dcull, 0x4a7484aa2de92c6full);\n+    ShiftMessageB(am0, am1, am2);\n+    ShiftMessageB(bm0, bm1, bm2);\n+    QuadRound(as0, as1, am2, 0xbf597fc7b00327c8ull, 0xa831c66d983e5152ull);\n+    QuadRound(bs0, bs1, bm2, 0xbf597fc7b00327c8ull, 0xa831c66d983e5152ull);\n+    ShiftMessageB(am1, am2, am3);\n+    ShiftMessageB(bm1, bm2, bm3);\n+    QuadRound(as0, as1, am3, 0x1429296706ca6351ull, 0xd5a79147c6e00bf3ull);\n+    QuadRound(bs0, bs1, bm3, 0x1429296706ca6351ull, 0xd5a79147c6e00bf3ull);\n+    ShiftMessageB(am2, am3, am0);\n+    ShiftMessageB(bm2, bm3, bm0);\n+    QuadRound(as0, as1, am0, 0x53380d134d2c6dfcull, 0x2e1b213827b70a85ull);\n+    QuadRound(bs0, bs1, bm0, 0x53380d134d2c6dfcull, 0x2e1b213827b70a85ull);\n+    ShiftMessageB(am3, am0, am1);\n+    ShiftMessageB(bm3, bm0, bm1);\n+    QuadRound(as0, as1, am1, 0x92722c8581c2c92eull, 0x766a0abb650a7354ull);\n+    QuadRound(bs0, bs1, bm1, 0x92722c8581c2c92eull, 0x766a0abb650a7354ull);\n+    ShiftMessageB(am0, am1, am2);\n+    ShiftMessageB(bm0, bm1, bm2);\n+    QuadRound(as0, as1, am2, 0xc76c51a3c24b8b70ull, 0xa81a664ba2bfe8A1ull);\n+    QuadRound(bs0, bs1, bm2, 0xc76c51a3c24b8b70ull, 0xa81a664ba2bfe8A1ull);\n+    ShiftMessageB(am1, am2, am3);\n+    ShiftMessageB(bm1, bm2, bm3);\n+    QuadRound(as0, as1, am3, 0x106aa070f40e3585ull, 0xd6990624d192e819ull);\n+    QuadRound(bs0, bs1, bm3, 0x106aa070f40e3585ull, 0xd6990624d192e819ull);\n+    ShiftMessageB(am2, am3, am0);\n+    ShiftMessageB(bm2, bm3, bm0);\n+    QuadRound(as0, as1, am0, 0x34b0bcb52748774cull, 0x1e376c0819a4c116ull);\n+    QuadRound(bs0, bs1, bm0, 0x34b0bcb52748774cull, 0x1e376c0819a4c116ull);\n+    ShiftMessageB(am3, am0, am1);\n+    ShiftMessageB(bm3, bm0, bm1);\n+    QuadRound(as0, as1, am1, 0x682e6ff35b9cca4full, 0x4ed8aa4a391c0cb3ull);\n+    QuadRound(bs0, bs1, bm1, 0x682e6ff35b9cca4full, 0x4ed8aa4a391c0cb3ull);\n+    ShiftMessageC(am0, am1, am2);\n+    ShiftMessageC(bm0, bm1, bm2);\n+    QuadRound(as0, as1, am2, 0x8cc7020884c87814ull, 0x78a5636f748f82eeull);\n+    QuadRound(bs0, bs1, bm2, 0x8cc7020884c87814ull, 0x78a5636f748f82eeull);\n+    ShiftMessageC(am1, am2, am3);\n+    ShiftMessageC(bm1, bm2, bm3);\n+    QuadRound(as0, as1, am3, 0xc67178f2bef9a3f7ull, 0xa4506ceb90befffaull);\n+    QuadRound(bs0, bs1, bm3, 0xc67178f2bef9a3f7ull, 0xa4506ceb90befffaull);\n+    as0 = _mm_add_epi32(as0, INIT0);\n+    bs0 = _mm_add_epi32(bs0, INIT0);\n+    as1 = _mm_add_epi32(as1, INIT1);\n+    bs1 = _mm_add_epi32(bs1, INIT1);\n+\n+    /* Extract hash into out */\n+    Unshuffle(as0, as1);\n+    Unshuffle(bs0, bs1);\n+    Save(out, as0);\n+    Save(out + 16, as1);\n+    Save(out + 32, bs0);\n+    Save(out + 48, bs1);\n+}\n+\n+}\n+\n+#endif"
+      }
+    ]
+  },
+  {
+    "sha": "66b2cf1ccfad545a8ec3f2a854e23f647322bf30",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2NmIyY2YxY2NmYWQ1NDVhOGVjM2YyYTg1NGUyM2Y2NDczMjJiZjMw",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2018-06-11T16:59:20Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2018-06-26T17:11:08Z"
+      },
+      "message": "Use immintrin.h everywhere for intrinsics",
+      "tree": {
+        "sha": "42d9bf2ea25002af6a18bcd02fa4458340a44092",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/42d9bf2ea25002af6a18bcd02fa4458340a44092"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/66b2cf1ccfad545a8ec3f2a854e23f647322bf30",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/66b2cf1ccfad545a8ec3f2a854e23f647322bf30",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/66b2cf1ccfad545a8ec3f2a854e23f647322bf30",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/66b2cf1ccfad545a8ec3f2a854e23f647322bf30/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "4c935e2eee456ff66cdfb908b0edffdd1e8a6c04",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4c935e2eee456ff66cdfb908b0edffdd1e8a6c04",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/4c935e2eee456ff66cdfb908b0edffdd1e8a6c04"
+      }
+    ],
+    "stats": {
+      "total": 24,
+      "additions": 0,
+      "deletions": 24
+    },
+    "files": [
+      {
+        "sha": "9e635994efb6aa43c3b4023cb76429070328f30f",
+        "filename": "configure.ac",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 12,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/66b2cf1ccfad545a8ec3f2a854e23f647322bf30/configure.ac",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/66b2cf1ccfad545a8ec3f2a854e23f647322bf30/configure.ac",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/configure.ac?ref=66b2cf1ccfad545a8ec3f2a854e23f647322bf30",
+        "patch": "@@ -348,11 +348,7 @@ CXXFLAGS=\"$CXXFLAGS $SSE41_CXXFLAGS\"\n AC_MSG_CHECKING(for SSE4.1 intrinsics)\n AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[\n     #include <stdint.h>\n-    #if defined(_MSC_VER)\n     #include <immintrin.h>\n-    #elif defined(__GNUC__)\n-    #include <x86intrin.h>\n-    #endif\n   ]],[[\n     __m128i l = _mm_set1_epi32(0);\n     return _mm_extract_epi32(l, 3);\n@@ -367,11 +363,7 @@ CXXFLAGS=\"$CXXFLAGS $AVX2_CXXFLAGS\"\n AC_MSG_CHECKING(for AVX2 intrinsics)\n AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[\n     #include <stdint.h>\n-    #if defined(_MSC_VER)\n     #include <immintrin.h>\n-    #elif defined(__GNUC__) && defined(__AVX2__)\n-    #include <x86intrin.h>\n-    #endif\n   ]],[[\n     __m256i l = _mm256_set1_epi32(0);\n     return _mm256_extract_epi32(l, 7);\n@@ -386,11 +378,7 @@ CXXFLAGS=\"$CXXFLAGS $SHANI_CXXFLAGS\"\n AC_MSG_CHECKING(for SHA-NI intrinsics)\n AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[\n     #include <stdint.h>\n-    #if defined(_MSC_VER)\n     #include <immintrin.h>\n-    #elif defined(__GNUC__)\n-    #include <x86intrin.h>\n-    #endif\n   ]],[[\n     __m128i i = _mm_set1_epi32(0);\n     __m128i j = _mm_set1_epi32(1);"
+      },
+      {
+        "sha": "068e0e5ff6d4eda701ebcc14e125f30aacb38b8a",
+        "filename": "src/crypto/sha256_avx2.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 4,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/66b2cf1ccfad545a8ec3f2a854e23f647322bf30/src/crypto/sha256_avx2.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/66b2cf1ccfad545a8ec3f2a854e23f647322bf30/src/crypto/sha256_avx2.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/crypto/sha256_avx2.cpp?ref=66b2cf1ccfad545a8ec3f2a854e23f647322bf30",
+        "patch": "@@ -1,11 +1,7 @@\n #ifdef ENABLE_AVX2\n \n #include <stdint.h>\n-#if defined(_MSC_VER)\n #include <immintrin.h>\n-#elif defined(__GNUC__)\n-#include <x86intrin.h>\n-#endif\n \n #include <crypto/sha256.h>\n #include <crypto/common.h>"
+      },
+      {
+        "sha": "e561da42c50acdbe834fafa42776d57e9e9ad321",
+        "filename": "src/crypto/sha256_shani.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 4,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/66b2cf1ccfad545a8ec3f2a854e23f647322bf30/src/crypto/sha256_shani.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/66b2cf1ccfad545a8ec3f2a854e23f647322bf30/src/crypto/sha256_shani.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/crypto/sha256_shani.cpp?ref=66b2cf1ccfad545a8ec3f2a854e23f647322bf30",
+        "patch": "@@ -9,11 +9,7 @@\n #ifdef ENABLE_SHANI\n \n #include <stdint.h>\n-#if defined(_MSC_VER)\n #include <immintrin.h>\n-#elif defined(__GNUC__)\n-#include <x86intrin.h>\n-#endif\n \n #include <crypto/common.h>\n "
+      },
+      {
+        "sha": "adca870e2d56944f01a264a28080abdcb63a51db",
+        "filename": "src/crypto/sha256_sse41.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 4,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/66b2cf1ccfad545a8ec3f2a854e23f647322bf30/src/crypto/sha256_sse41.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/66b2cf1ccfad545a8ec3f2a854e23f647322bf30/src/crypto/sha256_sse41.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/crypto/sha256_sse41.cpp?ref=66b2cf1ccfad545a8ec3f2a854e23f647322bf30",
+        "patch": "@@ -1,11 +1,7 @@\n #ifdef ENABLE_SSE41\n \n #include <stdint.h>\n-#if defined(_MSC_VER)\n #include <immintrin.h>\n-#elif defined(__GNUC__)\n-#include <x86intrin.h>\n-#endif\n \n #include <crypto/sha256.h>\n #include <crypto/common.h>"
+      }
+    ]
+  }
+]

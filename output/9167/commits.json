@@ -1,0 +1,626 @@
+[
+  {
+    "sha": "025faaeea08ab6af7101bdbe5268c5a6c1e550c1",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowMjVmYWFlZWEwOGFiNmFmNzEwMWJkYmU1MjY4YzVhNmMxZTU1MGMx",
+    "commit": {
+      "author": {
+        "name": "Alex Morcos",
+        "email": "morcos@chaincode.com",
+        "date": "2016-11-15T04:01:00Z"
+      },
+      "committer": {
+        "name": "Alex Morcos",
+        "email": "morcos@chaincode.com",
+        "date": "2017-02-14T18:09:45Z"
+      },
+      "message": "[wallet] Add wtx caching of IsAllFromMe",
+      "tree": {
+        "sha": "6d11e923bf584903ccad42e2e397ed4136690e8c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/6d11e923bf584903ccad42e2e397ed4136690e8c"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/025faaeea08ab6af7101bdbe5268c5a6c1e550c1",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/025faaeea08ab6af7101bdbe5268c5a6c1e550c1",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/025faaeea08ab6af7101bdbe5268c5a6c1e550c1",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/025faaeea08ab6af7101bdbe5268c5a6c1e550c1/comments",
+    "author": {
+      "login": "morcos",
+      "id": 4360349,
+      "node_id": "MDQ6VXNlcjQzNjAzNDk=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4360349?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/morcos",
+      "html_url": "https://github.com/morcos",
+      "followers_url": "https://api.github.com/users/morcos/followers",
+      "following_url": "https://api.github.com/users/morcos/following{/other_user}",
+      "gists_url": "https://api.github.com/users/morcos/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/morcos/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/morcos/subscriptions",
+      "organizations_url": "https://api.github.com/users/morcos/orgs",
+      "repos_url": "https://api.github.com/users/morcos/repos",
+      "events_url": "https://api.github.com/users/morcos/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/morcos/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "morcos",
+      "id": 4360349,
+      "node_id": "MDQ6VXNlcjQzNjAzNDk=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4360349?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/morcos",
+      "html_url": "https://github.com/morcos",
+      "followers_url": "https://api.github.com/users/morcos/followers",
+      "following_url": "https://api.github.com/users/morcos/following{/other_user}",
+      "gists_url": "https://api.github.com/users/morcos/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/morcos/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/morcos/subscriptions",
+      "organizations_url": "https://api.github.com/users/morcos/orgs",
+      "repos_url": "https://api.github.com/users/morcos/repos",
+      "events_url": "https://api.github.com/users/morcos/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/morcos/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "a441db01b527431a3d7ba169f1afd9c3bc04748f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a441db01b527431a3d7ba169f1afd9c3bc04748f",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/a441db01b527431a3d7ba169f1afd9c3bc04748f"
+      }
+    ],
+    "stats": {
+      "total": 42,
+      "additions": 42,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "146b21236844ee617c1d1fcdb0cee12e02e79bdd",
+        "filename": "src/wallet/wallet.cpp",
+        "status": "modified",
+        "additions": 31,
+        "deletions": 0,
+        "changes": 31,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/025faaeea08ab6af7101bdbe5268c5a6c1e550c1/src/wallet/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/025faaeea08ab6af7101bdbe5268c5a6c1e550c1/src/wallet/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.cpp?ref=025faaeea08ab6af7101bdbe5268c5a6c1e550c1",
+        "patch": "@@ -1670,6 +1670,37 @@ CAmount CWalletTx::GetDebit(const isminefilter& filter) const\n     return debit;\n }\n \n+bool CWalletTx::IsAllFromMe(const isminefilter& filter) const\n+{\n+    bool allFromMe = false;\n+    if (filter == ISMINE_ALL)\n+    {\n+        if (fAllDebitsMineCached)\n+            allFromMe = allDebitsMineCached;\n+        else\n+        {\n+            allDebitsMineCached = pwallet->IsAllFromMe(*this, ISMINE_ALL);\n+            fAllDebitsMineCached = true;\n+            allFromMe = allDebitsMineCached;\n+        }\n+    }\n+    else if (filter == ISMINE_SPENDABLE)\n+    {\n+        if (fAllDebitsSpendableCached)\n+            allFromMe = allDebitsSpendableCached;\n+        else\n+        {\n+            allDebitsSpendableCached = pwallet->IsAllFromMe(*this, ISMINE_SPENDABLE);\n+            fAllDebitsSpendableCached = true;\n+            allFromMe = allDebitsSpendableCached;\n+        }\n+    }\n+    else {\n+        allFromMe = pwallet->IsAllFromMe(*this, filter);\n+    }\n+    return allFromMe;\n+}\n+\n CAmount CWalletTx::GetCredit(const isminefilter& filter) const\n {\n     // Must wait until coinbase is safely deep enough in the chain before valuing it"
+      },
+      {
+        "sha": "607a29d9f56d22e1ba8428dc2494d76291bb144d",
+        "filename": "src/wallet/wallet.h",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 0,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/025faaeea08ab6af7101bdbe5268c5a6c1e550c1/src/wallet/wallet.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/025faaeea08ab6af7101bdbe5268c5a6c1e550c1/src/wallet/wallet.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.h?ref=025faaeea08ab6af7101bdbe5268c5a6c1e550c1",
+        "patch": "@@ -280,6 +280,8 @@ class CWalletTx : public CMerkleTx\n     mutable bool fImmatureWatchCreditCached;\n     mutable bool fAvailableWatchCreditCached;\n     mutable bool fChangeCached;\n+    mutable bool fAllDebitsMineCached;\n+    mutable bool fAllDebitsSpendableCached;\n     mutable CAmount nDebitCached;\n     mutable CAmount nCreditCached;\n     mutable CAmount nImmatureCreditCached;\n@@ -289,6 +291,8 @@ class CWalletTx : public CMerkleTx\n     mutable CAmount nImmatureWatchCreditCached;\n     mutable CAmount nAvailableWatchCreditCached;\n     mutable CAmount nChangeCached;\n+    mutable bool allDebitsMineCached;\n+    mutable bool allDebitsSpendableCached;\n \n     CWalletTx()\n     {\n@@ -319,6 +323,8 @@ class CWalletTx : public CMerkleTx\n         fImmatureWatchCreditCached = false;\n         fAvailableWatchCreditCached = false;\n         fChangeCached = false;\n+        fAllDebitsMineCached = false;\n+        fAllDebitsSpendableCached = false;\n         nDebitCached = 0;\n         nCreditCached = 0;\n         nImmatureCreditCached = 0;\n@@ -328,6 +334,8 @@ class CWalletTx : public CMerkleTx\n         nAvailableWatchCreditCached = 0;\n         nImmatureWatchCreditCached = 0;\n         nChangeCached = 0;\n+        allDebitsMineCached = false;\n+        allDebitsSpendableCached = false;\n         nOrderPos = -1;\n     }\n \n@@ -387,6 +395,8 @@ class CWalletTx : public CMerkleTx\n         fImmatureWatchCreditCached = false;\n         fDebitCached = false;\n         fChangeCached = false;\n+        fAllDebitsMineCached = false;\n+        fAllDebitsSpendableCached = false;\n     }\n \n     void BindWallet(CWallet *pwalletIn)\n@@ -397,6 +407,7 @@ class CWalletTx : public CMerkleTx\n \n     //! filter decides which addresses will count towards the debit\n     CAmount GetDebit(const isminefilter& filter) const;\n+    bool IsAllFromMe(const isminefilter& filter) const;\n     CAmount GetCredit(const isminefilter& filter) const;\n     CAmount GetImmatureCredit(bool fUseCache=true) const;\n     CAmount GetAvailableCredit(bool fUseCache=true) const;"
+      }
+    ]
+  },
+  {
+    "sha": "10832d4f975a20c22e8d3a4d73183ab2a0ff18d4",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxMDgzMmQ0Zjk3NWEyMGMyMmU4ZDNhNGQ3MzE4M2FiMmEwZmYxOGQ0",
+    "commit": {
+      "author": {
+        "name": "Alex Morcos",
+        "email": "morcos@chaincode.com",
+        "date": "2016-11-15T17:04:35Z"
+      },
+      "committer": {
+        "name": "Alex Morcos",
+        "email": "morcos@chaincode.com",
+        "date": "2017-02-14T18:09:45Z"
+      },
+      "message": "[wallet] Replace calculation in IsTrusted to use new IsAllFromMe.\n\nThere is no change in behavior.",
+      "tree": {
+        "sha": "c7097e7a210be2fd0daf00e27e36cc403fe5e839",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/c7097e7a210be2fd0daf00e27e36cc403fe5e839"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/10832d4f975a20c22e8d3a4d73183ab2a0ff18d4",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/10832d4f975a20c22e8d3a4d73183ab2a0ff18d4",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/10832d4f975a20c22e8d3a4d73183ab2a0ff18d4",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/10832d4f975a20c22e8d3a4d73183ab2a0ff18d4/comments",
+    "author": {
+      "login": "morcos",
+      "id": 4360349,
+      "node_id": "MDQ6VXNlcjQzNjAzNDk=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4360349?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/morcos",
+      "html_url": "https://github.com/morcos",
+      "followers_url": "https://api.github.com/users/morcos/followers",
+      "following_url": "https://api.github.com/users/morcos/following{/other_user}",
+      "gists_url": "https://api.github.com/users/morcos/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/morcos/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/morcos/subscriptions",
+      "organizations_url": "https://api.github.com/users/morcos/orgs",
+      "repos_url": "https://api.github.com/users/morcos/repos",
+      "events_url": "https://api.github.com/users/morcos/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/morcos/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "morcos",
+      "id": 4360349,
+      "node_id": "MDQ6VXNlcjQzNjAzNDk=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4360349?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/morcos",
+      "html_url": "https://github.com/morcos",
+      "followers_url": "https://api.github.com/users/morcos/followers",
+      "following_url": "https://api.github.com/users/morcos/following{/other_user}",
+      "gists_url": "https://api.github.com/users/morcos/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/morcos/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/morcos/subscriptions",
+      "organizations_url": "https://api.github.com/users/morcos/orgs",
+      "repos_url": "https://api.github.com/users/morcos/repos",
+      "events_url": "https://api.github.com/users/morcos/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/morcos/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "025faaeea08ab6af7101bdbe5268c5a6c1e550c1",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/025faaeea08ab6af7101bdbe5268c5a6c1e550c1",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/025faaeea08ab6af7101bdbe5268c5a6c1e550c1"
+      }
+    ],
+    "stats": {
+      "total": 14,
+      "additions": 2,
+      "deletions": 12
+    },
+    "files": [
+      {
+        "sha": "17b1a32e7c3ddb4c866b7f6c7bc8c9706fd1c7ce",
+        "filename": "src/wallet/wallet.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 12,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/10832d4f975a20c22e8d3a4d73183ab2a0ff18d4/src/wallet/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/10832d4f975a20c22e8d3a4d73183ab2a0ff18d4/src/wallet/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.cpp?ref=10832d4f975a20c22e8d3a4d73183ab2a0ff18d4",
+        "patch": "@@ -1849,24 +1849,14 @@ bool CWalletTx::IsTrusted() const\n         return true;\n     if (nDepth < 0)\n         return false;\n-    if (!bSpendZeroConfChange || !IsFromMe(ISMINE_ALL)) // using wtx's cached debit\n+    // Trusted if all inputs are spendable by us\n+    if (!bSpendZeroConfChange || !IsAllFromMe(ISMINE_SPENDABLE))\n         return false;\n \n     // Don't trust unconfirmed transactions from us unless they are in the mempool.\n     if (!InMempool())\n         return false;\n \n-    // Trusted if all inputs are from us and are in the mempool:\n-    BOOST_FOREACH(const CTxIn& txin, tx->vin)\n-    {\n-        // Transactions not sent by us: not trusted\n-        const CWalletTx* parent = pwallet->GetWalletTx(txin.prevout.hash);\n-        if (parent == NULL)\n-            return false;\n-        const CTxOut& parentOut = parent->tx->vout[txin.prevout.n];\n-        if (pwallet->IsMine(parentOut) != ISMINE_SPENDABLE)\n-            return false;\n-    }\n     return true;\n }\n "
+      }
+    ]
+  },
+  {
+    "sha": "de772f7b5aafe67cea2469997bbf86fa37f135e0",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkZTc3MmY3YjVhYWZlNjdjZWEyNDY5OTk3YmJmODZmYTM3ZjEzNWUw",
+    "commit": {
+      "author": {
+        "name": "Alex Morcos",
+        "email": "morcos@chaincode.com",
+        "date": "2016-11-15T17:22:49Z"
+      },
+      "committer": {
+        "name": "Alex Morcos",
+        "email": "morcos@chaincode.com",
+        "date": "2017-02-14T18:09:45Z"
+      },
+      "message": "[wallet] Only consider coins as mine for spending if all inputs are mine\n\nChange coin selection in SelectCoinsMinConf to only consider coins mine for spending at the fewer required confirmations if all inputs being spent are mine instead of requiring at least one.",
+      "tree": {
+        "sha": "a2902168b1611cf5a3e520fd9d0140851c6e82bb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/a2902168b1611cf5a3e520fd9d0140851c6e82bb"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/de772f7b5aafe67cea2469997bbf86fa37f135e0",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/de772f7b5aafe67cea2469997bbf86fa37f135e0",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/de772f7b5aafe67cea2469997bbf86fa37f135e0",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/de772f7b5aafe67cea2469997bbf86fa37f135e0/comments",
+    "author": {
+      "login": "morcos",
+      "id": 4360349,
+      "node_id": "MDQ6VXNlcjQzNjAzNDk=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4360349?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/morcos",
+      "html_url": "https://github.com/morcos",
+      "followers_url": "https://api.github.com/users/morcos/followers",
+      "following_url": "https://api.github.com/users/morcos/following{/other_user}",
+      "gists_url": "https://api.github.com/users/morcos/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/morcos/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/morcos/subscriptions",
+      "organizations_url": "https://api.github.com/users/morcos/orgs",
+      "repos_url": "https://api.github.com/users/morcos/repos",
+      "events_url": "https://api.github.com/users/morcos/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/morcos/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "morcos",
+      "id": 4360349,
+      "node_id": "MDQ6VXNlcjQzNjAzNDk=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4360349?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/morcos",
+      "html_url": "https://github.com/morcos",
+      "followers_url": "https://api.github.com/users/morcos/followers",
+      "following_url": "https://api.github.com/users/morcos/following{/other_user}",
+      "gists_url": "https://api.github.com/users/morcos/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/morcos/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/morcos/subscriptions",
+      "organizations_url": "https://api.github.com/users/morcos/orgs",
+      "repos_url": "https://api.github.com/users/morcos/repos",
+      "events_url": "https://api.github.com/users/morcos/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/morcos/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "10832d4f975a20c22e8d3a4d73183ab2a0ff18d4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/10832d4f975a20c22e8d3a4d73183ab2a0ff18d4",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/10832d4f975a20c22e8d3a4d73183ab2a0ff18d4"
+      }
+    ],
+    "stats": {
+      "total": 13,
+      "additions": 4,
+      "deletions": 9
+    },
+    "files": [
+      {
+        "sha": "a3fec1f919211790ca5f69d2b589e6341596db55",
+        "filename": "src/wallet/test/wallet_tests.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 8,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/de772f7b5aafe67cea2469997bbf86fa37f135e0/src/wallet/test/wallet_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/de772f7b5aafe67cea2469997bbf86fa37f135e0/src/wallet/test/wallet_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/test/wallet_tests.cpp?ref=de772f7b5aafe67cea2469997bbf86fa37f135e0",
+        "patch": "@@ -39,17 +39,12 @@ static void add_coin(const CAmount& nValue, int nAge = 6*24, bool fIsFromMe = fa\n     tx.nLockTime = nextLockTime++;        // so all transactions get different hashes\n     tx.vout.resize(nInput+1);\n     tx.vout[nInput].nValue = nValue;\n-    if (fIsFromMe) {\n-        // IsFromMe() returns (GetDebit() > 0), and GetDebit() is 0 if vin.empty(),\n-        // so stop vin being empty, and cache a non-zero Debit to fake out IsFromMe()\n+    if (!fIsFromMe) {\n+        // IsAllFromMe() returns true if vin.empty()\n+        // so stop vin being empty if we don't want these coins to be from us\n         tx.vin.resize(1);\n     }\n     std::unique_ptr<CWalletTx> wtx(new CWalletTx(&wallet, MakeTransactionRef(std::move(tx))));\n-    if (fIsFromMe)\n-    {\n-        wtx->fDebitCached = true;\n-        wtx->nDebitCached = 1;\n-    }\n     COutput output(wtx.get(), nInput, nAge, true, true);\n     vCoins.push_back(output);\n     wtxn.emplace_back(std::move(wtx));"
+      },
+      {
+        "sha": "594f50779a5510f94b4d3d8ee8c97c5c3fa5cde4",
+        "filename": "src/wallet/wallet.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/de772f7b5aafe67cea2469997bbf86fa37f135e0/src/wallet/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/de772f7b5aafe67cea2469997bbf86fa37f135e0/src/wallet/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.cpp?ref=de772f7b5aafe67cea2469997bbf86fa37f135e0",
+        "patch": "@@ -2159,7 +2159,7 @@ bool CWallet::SelectCoinsMinConf(const CAmount& nTargetValue, const int nConfMin\n \n         const CWalletTx *pcoin = output.tx;\n \n-        if (output.nDepth < (pcoin->IsFromMe(ISMINE_ALL) ? nConfMine : nConfTheirs))\n+        if (output.nDepth < (pcoin->IsAllFromMe(ISMINE_ALL) ? nConfMine : nConfTheirs))\n             continue;\n \n         if (!mempool.TransactionWithinChainLimit(pcoin->GetHash(), nMaxAncestors))"
+      }
+    ]
+  },
+  {
+    "sha": "473da632927d70bf9476dc58f8ead1d3e6147f6b",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0NzNkYTYzMjkyN2Q3MGJmOTQ3NmRjNThmOGVhZDFkM2U2MTQ3ZjZi",
+    "commit": {
+      "author": {
+        "name": "Alex Morcos",
+        "email": "morcos@chaincode.com",
+        "date": "2016-11-15T17:23:26Z"
+      },
+      "committer": {
+        "name": "Alex Morcos",
+        "email": "morcos@chaincode.com",
+        "date": "2017-02-14T18:09:45Z"
+      },
+      "message": "[wallet] Remove redundant check for IsFromMe from GetAddressBalances.\n\nNo change in behavior.  IsTrusted was already a stricter check.",
+      "tree": {
+        "sha": "68ff819169823b1eda0236c38d268632803a63ec",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/68ff819169823b1eda0236c38d268632803a63ec"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/473da632927d70bf9476dc58f8ead1d3e6147f6b",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/473da632927d70bf9476dc58f8ead1d3e6147f6b",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/473da632927d70bf9476dc58f8ead1d3e6147f6b",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/473da632927d70bf9476dc58f8ead1d3e6147f6b/comments",
+    "author": {
+      "login": "morcos",
+      "id": 4360349,
+      "node_id": "MDQ6VXNlcjQzNjAzNDk=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4360349?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/morcos",
+      "html_url": "https://github.com/morcos",
+      "followers_url": "https://api.github.com/users/morcos/followers",
+      "following_url": "https://api.github.com/users/morcos/following{/other_user}",
+      "gists_url": "https://api.github.com/users/morcos/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/morcos/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/morcos/subscriptions",
+      "organizations_url": "https://api.github.com/users/morcos/orgs",
+      "repos_url": "https://api.github.com/users/morcos/repos",
+      "events_url": "https://api.github.com/users/morcos/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/morcos/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "morcos",
+      "id": 4360349,
+      "node_id": "MDQ6VXNlcjQzNjAzNDk=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4360349?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/morcos",
+      "html_url": "https://github.com/morcos",
+      "followers_url": "https://api.github.com/users/morcos/followers",
+      "following_url": "https://api.github.com/users/morcos/following{/other_user}",
+      "gists_url": "https://api.github.com/users/morcos/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/morcos/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/morcos/subscriptions",
+      "organizations_url": "https://api.github.com/users/morcos/orgs",
+      "repos_url": "https://api.github.com/users/morcos/repos",
+      "events_url": "https://api.github.com/users/morcos/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/morcos/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "de772f7b5aafe67cea2469997bbf86fa37f135e0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/de772f7b5aafe67cea2469997bbf86fa37f135e0",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/de772f7b5aafe67cea2469997bbf86fa37f135e0"
+      }
+    ],
+    "stats": {
+      "total": 4,
+      "additions": 0,
+      "deletions": 4
+    },
+    "files": [
+      {
+        "sha": "3737e0406a84dd709f0df183ce72ddcfea43108d",
+        "filename": "src/wallet/wallet.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 4,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/473da632927d70bf9476dc58f8ead1d3e6147f6b/src/wallet/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/473da632927d70bf9476dc58f8ead1d3e6147f6b/src/wallet/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.cpp?ref=473da632927d70bf9476dc58f8ead1d3e6147f6b",
+        "patch": "@@ -3130,10 +3130,6 @@ std::map<CTxDestination, CAmount> CWallet::GetAddressBalances()\n             if (pcoin->IsCoinBase() && pcoin->GetBlocksToMaturity() > 0)\n                 continue;\n \n-            int nDepth = pcoin->GetDepthInMainChain();\n-            if (nDepth < (pcoin->IsFromMe(ISMINE_ALL) ? 0 : 1))\n-                continue;\n-\n             for (unsigned int i = 0; i < pcoin->tx->vout.size(); i++)\n             {\n                 CTxDestination addr;"
+      }
+    ]
+  },
+  {
+    "sha": "faa1ec5f5a9f12b90b9d2c902e86e37c9815c54a",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmYWExZWM1ZjVhOWYxMmI5MGI5ZDJjOTAyZTg2ZTM3Yzk4MTVjNTRh",
+    "commit": {
+      "author": {
+        "name": "Alex Morcos",
+        "email": "morcos@chaincode.com",
+        "date": "2016-11-15T17:44:03Z"
+      },
+      "committer": {
+        "name": "Alex Morcos",
+        "email": "morcos@chaincode.com",
+        "date": "2017-02-14T18:09:45Z"
+      },
+      "message": "[rpc] Only calculate fee in gettransaction if we are sure we can.\n\nFee is now only displayed if all inputs meet the required filter, so if displayed the fee will always be correct.  Unusual fees may still be displayed in details.",
+      "tree": {
+        "sha": "b4f9d6ae6cd2aee512b712eb372ac1bbcca1f982",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/b4f9d6ae6cd2aee512b712eb372ac1bbcca1f982"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/faa1ec5f5a9f12b90b9d2c902e86e37c9815c54a",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/faa1ec5f5a9f12b90b9d2c902e86e37c9815c54a",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/faa1ec5f5a9f12b90b9d2c902e86e37c9815c54a",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/faa1ec5f5a9f12b90b9d2c902e86e37c9815c54a/comments",
+    "author": {
+      "login": "morcos",
+      "id": 4360349,
+      "node_id": "MDQ6VXNlcjQzNjAzNDk=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4360349?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/morcos",
+      "html_url": "https://github.com/morcos",
+      "followers_url": "https://api.github.com/users/morcos/followers",
+      "following_url": "https://api.github.com/users/morcos/following{/other_user}",
+      "gists_url": "https://api.github.com/users/morcos/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/morcos/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/morcos/subscriptions",
+      "organizations_url": "https://api.github.com/users/morcos/orgs",
+      "repos_url": "https://api.github.com/users/morcos/repos",
+      "events_url": "https://api.github.com/users/morcos/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/morcos/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "morcos",
+      "id": 4360349,
+      "node_id": "MDQ6VXNlcjQzNjAzNDk=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4360349?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/morcos",
+      "html_url": "https://github.com/morcos",
+      "followers_url": "https://api.github.com/users/morcos/followers",
+      "following_url": "https://api.github.com/users/morcos/following{/other_user}",
+      "gists_url": "https://api.github.com/users/morcos/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/morcos/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/morcos/subscriptions",
+      "organizations_url": "https://api.github.com/users/morcos/orgs",
+      "repos_url": "https://api.github.com/users/morcos/repos",
+      "events_url": "https://api.github.com/users/morcos/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/morcos/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "473da632927d70bf9476dc58f8ead1d3e6147f6b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/473da632927d70bf9476dc58f8ead1d3e6147f6b",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/473da632927d70bf9476dc58f8ead1d3e6147f6b"
+      }
+    ],
+    "stats": {
+      "total": 4,
+      "additions": 2,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "ae3cfe7853ed7821c8ea88c21b67a32fbe2b0632",
+        "filename": "src/wallet/rpcwallet.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/faa1ec5f5a9f12b90b9d2c902e86e37c9815c54a/src/wallet/rpcwallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/faa1ec5f5a9f12b90b9d2c902e86e37c9815c54a/src/wallet/rpcwallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/rpcwallet.cpp?ref=faa1ec5f5a9f12b90b9d2c902e86e37c9815c54a",
+        "patch": "@@ -1821,10 +1821,10 @@ UniValue gettransaction(const JSONRPCRequest& request)\n     CAmount nCredit = wtx.GetCredit(filter);\n     CAmount nDebit = wtx.GetDebit(filter);\n     CAmount nNet = nCredit - nDebit;\n-    CAmount nFee = (wtx.IsFromMe(filter) ? wtx.tx->GetValueOut() - nDebit : 0);\n+    CAmount nFee = (wtx.IsAllFromMe(filter) ? wtx.tx->GetValueOut() - nDebit : 0);\n \n     entry.push_back(Pair(\"amount\", ValueFromAmount(nNet - nFee)));\n-    if (wtx.IsFromMe(filter))\n+    if (wtx.IsAllFromMe(filter))\n         entry.push_back(Pair(\"fee\", ValueFromAmount(nFee)));\n \n     WalletTxToJSON(wtx, entry);"
+      }
+    ]
+  },
+  {
+    "sha": "acbbc052ce87ac15f54a4c343324a8547be89465",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphY2JiYzA1MmNlODdhYzE1ZjU0YTRjMzQzMzI0YTg1NDdiZTg5NDY1",
+    "commit": {
+      "author": {
+        "name": "Alex Morcos",
+        "email": "morcos@chaincode.com",
+        "date": "2016-11-15T17:55:38Z"
+      },
+      "committer": {
+        "name": "Alex Morcos",
+        "email": "morcos@chaincode.com",
+        "date": "2017-02-14T18:09:45Z"
+      },
+      "message": "[refactor] Inline last case of wtx.IsFromMe and remove function\n\nNo change in behavior.",
+      "tree": {
+        "sha": "b072dcd4800136320176ce9fdfa8bc3892a85ad3",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/b072dcd4800136320176ce9fdfa8bc3892a85ad3"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/acbbc052ce87ac15f54a4c343324a8547be89465",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/acbbc052ce87ac15f54a4c343324a8547be89465",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/acbbc052ce87ac15f54a4c343324a8547be89465",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/acbbc052ce87ac15f54a4c343324a8547be89465/comments",
+    "author": {
+      "login": "morcos",
+      "id": 4360349,
+      "node_id": "MDQ6VXNlcjQzNjAzNDk=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4360349?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/morcos",
+      "html_url": "https://github.com/morcos",
+      "followers_url": "https://api.github.com/users/morcos/followers",
+      "following_url": "https://api.github.com/users/morcos/following{/other_user}",
+      "gists_url": "https://api.github.com/users/morcos/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/morcos/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/morcos/subscriptions",
+      "organizations_url": "https://api.github.com/users/morcos/orgs",
+      "repos_url": "https://api.github.com/users/morcos/repos",
+      "events_url": "https://api.github.com/users/morcos/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/morcos/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "morcos",
+      "id": 4360349,
+      "node_id": "MDQ6VXNlcjQzNjAzNDk=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/4360349?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/morcos",
+      "html_url": "https://github.com/morcos",
+      "followers_url": "https://api.github.com/users/morcos/followers",
+      "following_url": "https://api.github.com/users/morcos/following{/other_user}",
+      "gists_url": "https://api.github.com/users/morcos/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/morcos/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/morcos/subscriptions",
+      "organizations_url": "https://api.github.com/users/morcos/orgs",
+      "repos_url": "https://api.github.com/users/morcos/repos",
+      "events_url": "https://api.github.com/users/morcos/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/morcos/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "faa1ec5f5a9f12b90b9d2c902e86e37c9815c54a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/faa1ec5f5a9f12b90b9d2c902e86e37c9815c54a",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/faa1ec5f5a9f12b90b9d2c902e86e37c9815c54a"
+      }
+    ],
+    "stats": {
+      "total": 7,
+      "additions": 1,
+      "deletions": 6
+    },
+    "files": [
+      {
+        "sha": "9d8298a86dbe33500994c97c8ef083ed2099c873",
+        "filename": "src/wallet/rpcwallet.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/acbbc052ce87ac15f54a4c343324a8547be89465/src/wallet/rpcwallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/acbbc052ce87ac15f54a4c343324a8547be89465/src/wallet/rpcwallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/rpcwallet.cpp?ref=acbbc052ce87ac15f54a4c343324a8547be89465",
+        "patch": "@@ -1358,7 +1358,7 @@ void ListTransactions(const CWalletTx& wtx, const string& strAccount, int nMinDe\n     wtx.GetAmounts(listReceived, listSent, nFee, strSentAccount, filter);\n \n     bool fAllAccounts = (strAccount == string(\"*\"));\n-    bool involvesWatchonly = wtx.IsFromMe(ISMINE_WATCH_ONLY);\n+    bool involvesWatchonly = (wtx.GetDebit(ISMINE_WATCH_ONLY) > 0);\n \n     // Sent\n     if ((!listSent.empty() || nFee != 0) && (fAllAccounts || strAccount == strSentAccount))"
+      },
+      {
+        "sha": "4abc7e83e7effd0f339d883e4083cd0db15f9210",
+        "filename": "src/wallet/wallet.h",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 5,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/acbbc052ce87ac15f54a4c343324a8547be89465/src/wallet/wallet.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/acbbc052ce87ac15f54a4c343324a8547be89465/src/wallet/wallet.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.h?ref=acbbc052ce87ac15f54a4c343324a8547be89465",
+        "patch": "@@ -421,11 +421,6 @@ class CWalletTx : public CMerkleTx\n     void GetAccountAmounts(const std::string& strAccount, CAmount& nReceived,\n                            CAmount& nSent, CAmount& nFee, const isminefilter& filter) const;\n \n-    bool IsFromMe(const isminefilter& filter) const\n-    {\n-        return (GetDebit(filter) > 0);\n-    }\n-\n     // True if only scriptSigs are different\n     bool IsEquivalentTo(const CWalletTx& tx) const;\n "
+      }
+    ]
+  }
+]

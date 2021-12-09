@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "fa3ff12c443c36855752bbcc61635a69abdfd0a5",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmYTNmZjEyYzQ0M2MzNjg1NTc1MmJiY2M2MTYzNWE2OWFiZGZkMGE1",
+    "commit": {
+      "author": {
+        "name": "Evan Duffield",
+        "email": "evan@darkcoin.io",
+        "date": "2015-01-23T21:28:29Z"
+      },
+      "committer": {
+        "name": "Evan Duffield",
+        "email": "evan@darkcoin.io",
+        "date": "2015-01-23T21:28:29Z"
+      },
+      "message": "Check pindexBestForkBase/phashBlock both for null\n\nBoth pindexBestForkBase and phashBlock must be checked separately,\notherwise a segfault will occur when there is a network fork. Currently\nthere is no fix in 0.9 and it's partially fixed in 0.10.\n\nMore info: https://github.com/bitcoin/bitcoin/issues/5698",
+      "tree": {
+        "sha": "7b8926a056e74ea54d730e0a7b92926a7cd055f2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/7b8926a056e74ea54d730e0a7b92926a7cd055f2"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/fa3ff12c443c36855752bbcc61635a69abdfd0a5",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fa3ff12c443c36855752bbcc61635a69abdfd0a5",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/fa3ff12c443c36855752bbcc61635a69abdfd0a5",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fa3ff12c443c36855752bbcc61635a69abdfd0a5/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "41f94edf221019a6c4b8f78c2b17c389442f546e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/41f94edf221019a6c4b8f78c2b17c389442f546e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/41f94edf221019a6c4b8f78c2b17c389442f546e"
+      }
+    ],
+    "stats": {
+      "total": 28,
+      "additions": 16,
+      "deletions": 12
+    },
+    "files": [
+      {
+        "sha": "54d1b78e3d2992d6a24719c7653539e98b306c7c",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 12,
+        "changes": 28,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fa3ff12c443c36855752bbcc61635a69abdfd0a5/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fa3ff12c443c36855752bbcc61635a69abdfd0a5/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=fa3ff12c443c36855752bbcc61635a69abdfd0a5",
+        "patch": "@@ -1367,18 +1367,22 @@ void CheckForkWarningConditions()\n \n     if (pindexBestForkTip || (pindexBestInvalid && pindexBestInvalid->nChainWork > chainActive.Tip()->nChainWork + (chainActive.Tip()->GetBlockWork() * 6).getuint256()))\n     {\n-        if (!fLargeWorkForkFound)\n+        if (!fLargeWorkForkFound && pindexBestForkBase)\n         {\n-            std::string warning = std::string(\"'Warning: Large-work fork detected, forking after block \") +\n-                pindexBestForkBase->phashBlock->ToString() + std::string(\"'\");\n-            CAlert::Notify(warning, true);\n+            if(pindexBestForkBase->phashBlock){\n+                std::string warning = std::string(\"'Warning: Large-work fork detected, forking after block \") +\n+                    pindexBestForkBase->phashBlock->ToString() + std::string(\"'\");\n+                CAlert::Notify(warning, true);\n+            }\n         }\n-        if (pindexBestForkTip)\n+        if (pindexBestForkTip && pindexBestForkBase)\n         {\n-            LogPrintf(\"CheckForkWarningConditions: Warning: Large valid fork found\\n  forking the chain at height %d (%s)\\n  lasting to height %d (%s).\\nChain state database corruption likely.\\n\",\n-                   pindexBestForkBase->nHeight, pindexBestForkBase->phashBlock->ToString(),\n-                   pindexBestForkTip->nHeight, pindexBestForkTip->phashBlock->ToString());\n-            fLargeWorkForkFound = true;\n+            if(pindexBestForkBase->phashBlock){\n+                LogPrintf(\"CheckForkWarningConditions: Warning: Large valid fork found\\n  forking the chain at height %d (%s)\\n  lasting to height %d (%s).\\nChain state database corruption likely.\\n\",\n+                       pindexBestForkBase->nHeight, pindexBestForkBase->phashBlock->ToString(),\n+                       pindexBestForkTip->nHeight, pindexBestForkTip->phashBlock->ToString());\n+                fLargeWorkForkFound = true;\n+            }\n         }\n         else\n         {\n@@ -1988,7 +1992,7 @@ bool static DisconnectTip(CValidationState &state) {\n     BOOST_FOREACH(const CTransaction &tx, block.vtx) {\n         // ignore validation errors in resurrected transactions\n         list<CTransaction> removed;\n-        CValidationState stateDummy; \n+        CValidationState stateDummy;\n         if (!tx.IsCoinBase())\n             if (!AcceptToMemoryPool(mempool, stateDummy, tx, false, NULL))\n                 mempool.remove(tx, removed, true);\n@@ -4377,8 +4381,8 @@ bool SendMessages(CNode* pto, bool fSendTrickle)\n         // in flight for over two minutes, since we first had a chance to\n         // process an incoming block.\n         int64_t nNow = GetTimeMicros();\n-        if (!pto->fDisconnect && state.nBlocksInFlight && \n-            state.nLastBlockReceive < state.nLastBlockProcess - BLOCK_DOWNLOAD_TIMEOUT*1000000 && \n+        if (!pto->fDisconnect && state.nBlocksInFlight &&\n+            state.nLastBlockReceive < state.nLastBlockProcess - BLOCK_DOWNLOAD_TIMEOUT*1000000 &&\n             state.vBlocksInFlight.front().nTime < state.nLastBlockProcess - 2*BLOCK_DOWNLOAD_TIMEOUT*1000000) {\n             LogPrintf(\"Peer %s is stalling block download, disconnecting\\n\", state.name.c_str());\n             pto->fDisconnect = true;"
+      }
+    ]
+  }
+]

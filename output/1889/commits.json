@@ -1,0 +1,86 @@
+[
+  {
+    "sha": "674cb304b376358fdcb17b4a0b16ae7b00cdbedc",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2NzRjYjMwNGIzNzYzNThmZGNiMTdiNGEwYjE2YWU3YjAwY2RiZWRj",
+    "commit": {
+      "author": {
+        "name": "Nils Schneider",
+        "email": "nils.schneider@gmail.com",
+        "date": "2012-06-02T23:19:07Z"
+      },
+      "committer": {
+        "name": "Nils Schneider",
+        "email": "nils@nilsschneider.net",
+        "date": "2013-07-04T15:19:36Z"
+      },
+      "message": "let user select wallet file with -wallet=foo.dat\n\nuse std::string instead of psz for WalletFile\n\nonly allow wallets within $DATADIR\n\nUse strWalletFile in salvage/recover\n\nfix: remove unused variable pszWalletFile\n\nmove strWalletFile to init.h/init.cpp\n\navoid conversion of strWalletfile to c-string",
+      "tree": {
+        "sha": "19b8d2f5da361b38fc0eedc59d32d1090071d4da",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/19b8d2f5da361b38fc0eedc59d32d1090071d4da"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/674cb304b376358fdcb17b4a0b16ae7b00cdbedc",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/674cb304b376358fdcb17b4a0b16ae7b00cdbedc",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/674cb304b376358fdcb17b4a0b16ae7b00cdbedc",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/674cb304b376358fdcb17b4a0b16ae7b00cdbedc/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "a4f43075d633cfd60cb1f99fc44d7599109eafef",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a4f43075d633cfd60cb1f99fc44d7599109eafef",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/a4f43075d633cfd60cb1f99fc44d7599109eafef"
+      }
+    ],
+    "stats": {
+      "total": 21,
+      "additions": 15,
+      "deletions": 6
+    },
+    "files": [
+      {
+        "sha": "535f22490289b1011d89f4387d078ae600de2f41",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 5,
+        "changes": 18,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/674cb304b376358fdcb17b4a0b16ae7b00cdbedc/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/674cb304b376358fdcb17b4a0b16ae7b00cdbedc/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=674cb304b376358fdcb17b4a0b16ae7b00cdbedc",
+        "patch": "@@ -29,6 +29,7 @@\n using namespace std;\n using namespace boost;\n \n+std::string strWalletFile;\n CWallet* pwalletMain;\n CClientUIInterface uiInterface;\n \n@@ -169,6 +170,7 @@ std::string HelpMessage()\n     strUsage += \"  -pid=<file>            \" + _(\"Specify pid file (default: bitcoind.pid)\") + \"\\n\";\n     strUsage += \"  -gen                   \" + _(\"Generate coins (default: 0)\") + \"\\n\";\n     strUsage += \"  -datadir=<dir>         \" + _(\"Specify data directory\") + \"\\n\";\n+    strUsage += \"  -wallet=<file>         \" + _(\"Specify wallet file (within data directory)\") + \"\\n\";\n     strUsage += \"  -dbcache=<n>           \" + _(\"Set database cache size in megabytes (default: 25)\") + \"\\n\";\n     strUsage += \"  -timeout=<n>           \" + _(\"Specify connection timeout in milliseconds (default: 5000)\") + \"\\n\";\n     strUsage += \"  -proxy=<ip:port>       \" + _(\"Connect through socks proxy\") + \"\\n\";\n@@ -493,10 +495,16 @@ bool AppInit2(boost::thread_group& threadGroup)\n             InitWarning(_(\"Warning: -paytxfee is set very high! This is the transaction fee you will pay if you send a transaction.\"));\n     }\n \n+    strWalletFile = GetArg(\"-wallet\", \"wallet.dat\");\n+\n     // ********************************************************* Step 4: application initialization: dir lock, daemonize, pidfile, debug log\n \n     std::string strDataDir = GetDataDir().string();\n \n+    // Wallet file must be a plain filename without a directory\n+    if (strWalletFile != boost::filesystem::basename(strWalletFile) + boost::filesystem::extension(strWalletFile))\n+        return InitError(strprintf(_(\"Wallet %s resides outside data directory %s\\n\"), strWalletFile.c_str(), strDataDir.c_str()));\n+\n     // Make sure only a single Bitcoin process is using the data directory.\n     boost::filesystem::path pathLockFile = GetDataDir() / \".lock\";\n     FILE* file = fopen(pathLockFile.string().c_str(), \"a\"); // empty lock file; created if it doesn't exist.\n@@ -555,13 +563,13 @@ bool AppInit2(boost::thread_group& threadGroup)\n     if (GetBoolArg(\"-salvagewallet\", false))\n     {\n         // Recover readable keypairs:\n-        if (!CWalletDB::Recover(bitdb, \"wallet.dat\", true))\n+        if (!CWalletDB::Recover(bitdb, strWalletFile, true))\n             return false;\n     }\n \n-    if (filesystem::exists(GetDataDir() / \"wallet.dat\"))\n+    if (filesystem::exists(GetDataDir() / strWalletFile))\n     {\n-        CDBEnv::VerifyResult r = bitdb.Verify(\"wallet.dat\", CWalletDB::Recover);\n+        CDBEnv::VerifyResult r = bitdb.Verify(strWalletFile, CWalletDB::Recover);\n         if (r == CDBEnv::RECOVER_OK)\n         {\n             string msg = strprintf(_(\"Warning: wallet.dat corrupt, data salvaged!\"\n@@ -838,7 +846,7 @@ bool AppInit2(boost::thread_group& threadGroup)\n \n     nStart = GetTimeMillis();\n     bool fFirstRun = true;\n-    pwalletMain = new CWallet(\"wallet.dat\");\n+    pwalletMain = new CWallet(strWalletFile);\n     DBErrors nLoadWalletRet = pwalletMain->LoadWallet(fFirstRun);\n     if (nLoadWalletRet != DB_LOAD_OK)\n     {\n@@ -903,7 +911,7 @@ bool AppInit2(boost::thread_group& threadGroup)\n         pindexRescan = pindexGenesisBlock;\n     else\n     {\n-        CWalletDB walletdb(\"wallet.dat\");\n+        CWalletDB walletdb(strWalletFile);\n         CBlockLocator locator;\n         if (walletdb.ReadBestBlock(locator))\n             pindexRescan = locator.GetBlockIndex();"
+      },
+      {
+        "sha": "a4d5a672524fac7689266fb4db4a0e6b0f1750dd",
+        "filename": "src/init.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/674cb304b376358fdcb17b4a0b16ae7b00cdbedc/src/init.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/674cb304b376358fdcb17b4a0b16ae7b00cdbedc/src/init.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.h?ref=674cb304b376358fdcb17b4a0b16ae7b00cdbedc",
+        "patch": "@@ -7,6 +7,7 @@\n \n #include \"wallet.h\"\n \n+extern std::string strWalletFile;\n extern CWallet* pwalletMain;\n \n void StartShutdown();"
+      },
+      {
+        "sha": "7ebe5b4755b2b1712a185b239d739bf3a93c3bd2",
+        "filename": "src/qt/optionsmodel.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/674cb304b376358fdcb17b4a0b16ae7b00cdbedc/src/qt/optionsmodel.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/674cb304b376358fdcb17b4a0b16ae7b00cdbedc/src/qt/optionsmodel.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/optionsmodel.cpp?ref=674cb304b376358fdcb17b4a0b16ae7b00cdbedc",
+        "patch": "@@ -89,7 +89,7 @@ bool OptionsModel::Upgrade()\n     settings.setValue(\"bImportFinished\", true);\n \n     // Move settings from old wallet.dat (if any):\n-    CWalletDB walletdb(\"wallet.dat\");\n+    CWalletDB walletdb(strWalletFile);\n \n     QList<QString> intOptions;\n     intOptions << \"nDisplayUnit\" << \"nTransactionFee\";"
+      }
+    ]
+  }
+]

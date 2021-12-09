@@ -1,0 +1,100 @@
+[
+  {
+    "sha": "87049e832d97d4f2808c0b479b21fc7b16c86934",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4NzA0OWU4MzJkOTdkNGYyODA4YzBiNDc5YjIxZmM3YjE2Yzg2OTM0",
+    "commit": {
+      "author": {
+        "name": "mrbandrews",
+        "email": "bandrewsny@gmail.com",
+        "date": "2016-04-18T16:10:47Z"
+      },
+      "committer": {
+        "name": "mrbandrews",
+        "email": "bandrewsny@gmail.com",
+        "date": "2016-04-18T16:10:47Z"
+      },
+      "message": "Speed up getchaintips.",
+      "tree": {
+        "sha": "d1528ef2e4db364e3c080fbd69785cc04f576f2d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/d1528ef2e4db364e3c080fbd69785cc04f576f2d"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/87049e832d97d4f2808c0b479b21fc7b16c86934",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/87049e832d97d4f2808c0b479b21fc7b16c86934",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/87049e832d97d4f2808c0b479b21fc7b16c86934",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/87049e832d97d4f2808c0b479b21fc7b16c86934/comments",
+    "author": {
+      "login": "mrbandrews",
+      "id": 7504522,
+      "node_id": "MDQ6VXNlcjc1MDQ1MjI=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7504522?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/mrbandrews",
+      "html_url": "https://github.com/mrbandrews",
+      "followers_url": "https://api.github.com/users/mrbandrews/followers",
+      "following_url": "https://api.github.com/users/mrbandrews/following{/other_user}",
+      "gists_url": "https://api.github.com/users/mrbandrews/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/mrbandrews/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/mrbandrews/subscriptions",
+      "organizations_url": "https://api.github.com/users/mrbandrews/orgs",
+      "repos_url": "https://api.github.com/users/mrbandrews/repos",
+      "events_url": "https://api.github.com/users/mrbandrews/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/mrbandrews/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "mrbandrews",
+      "id": 7504522,
+      "node_id": "MDQ6VXNlcjc1MDQ1MjI=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7504522?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/mrbandrews",
+      "html_url": "https://github.com/mrbandrews",
+      "followers_url": "https://api.github.com/users/mrbandrews/followers",
+      "following_url": "https://api.github.com/users/mrbandrews/following{/other_user}",
+      "gists_url": "https://api.github.com/users/mrbandrews/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/mrbandrews/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/mrbandrews/subscriptions",
+      "organizations_url": "https://api.github.com/users/mrbandrews/orgs",
+      "repos_url": "https://api.github.com/users/mrbandrews/repos",
+      "events_url": "https://api.github.com/users/mrbandrews/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/mrbandrews/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "1b2460bd5824170ab85757e35f81197199cce9d6",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1b2460bd5824170ab85757e35f81197199cce9d6",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/1b2460bd5824170ab85757e35f81197199cce9d6"
+      }
+    ],
+    "stats": {
+      "total": 29,
+      "additions": 21,
+      "deletions": 8
+    },
+    "files": [
+      {
+        "sha": "3db827d9ae3723804227d4a7d39975b6431cb798",
+        "filename": "src/rpc/blockchain.cpp",
+        "status": "modified",
+        "additions": 21,
+        "deletions": 8,
+        "changes": 29,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/87049e832d97d4f2808c0b479b21fc7b16c86934/src/rpc/blockchain.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/87049e832d97d4f2808c0b479b21fc7b16c86934/src/rpc/blockchain.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/blockchain.cpp?ref=87049e832d97d4f2808c0b479b21fc7b16c86934",
+        "patch": "@@ -760,17 +760,30 @@ UniValue getchaintips(const UniValue& params, bool fHelp)\n \n     LOCK(cs_main);\n \n-    /* Build up a list of chain tips.  We start with the list of all\n-       known blocks, and successively remove blocks that appear as pprev\n-       of another block.  */\n+    /*\n+     * Idea:  the set of chain tips is chainActive.tip, plus orphan blocks which do not have another orphan building off of them. \n+     * Algorithm:\n+     *  - Make one pass through mapBlockIndex, picking out the orphan blocks, and also storing a set of the orphan block's pprev pointers.\n+     *  - Iterate through the orphan blocks. If the block isn't pointed to by another orphan, it is a chain tip.\n+     *  - add chainActive.Tip()\n+     */\n     std::set<const CBlockIndex*, CompareBlocksByHeight> setTips;\n-    BOOST_FOREACH(const PAIRTYPE(const uint256, CBlockIndex*)& item, mapBlockIndex)\n-        setTips.insert(item.second);\n+    std::set<const CBlockIndex*> setOrphans;\n+    std::set<const CBlockIndex*> setPrevs;\n+\n     BOOST_FOREACH(const PAIRTYPE(const uint256, CBlockIndex*)& item, mapBlockIndex)\n     {\n-        const CBlockIndex* pprev = item.second->pprev;\n-        if (pprev)\n-            setTips.erase(pprev);\n+        if (!chainActive.Contains(item.second)) {\n+            setOrphans.insert(item.second);\n+            setPrevs.insert(item.second->pprev);\n+        }\n+    }\n+\n+    for (std::set<const CBlockIndex*>::iterator it = setOrphans.begin(); it != setOrphans.end(); ++it)\n+    {\n+        if (setPrevs.erase(*it) == 0) {\n+            setTips.insert(*it);\n+        }\n     }\n \n     // Always report the currently active tip."
+      }
+    ]
+  }
+]

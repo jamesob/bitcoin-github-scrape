@@ -1,0 +1,98 @@
+[
+  {
+    "sha": "b3ad34cdf61b5e82f1ab145d89938c8405bd7f62",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiM2FkMzRjZGY2MWI1ZTgyZjFhYjE0NWQ4OTkzOGM4NDA1YmQ3ZjYy",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2015-04-23T13:03:19Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2015-06-23T15:23:05Z"
+      },
+      "message": "remove nameproxy and replace with default proxy\n\n- simplifies the code, as the nameproxy was just the same as the default\n  IPv4 proxy anyway\n- also simplifies code flow in ConnectSocketByName() as suggested by\n  @laanwj",
+      "tree": {
+        "sha": "c434251a2e28cb160e796ab38eb9073c6dfd29bb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/c434251a2e28cb160e796ab38eb9073c6dfd29bb"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/b3ad34cdf61b5e82f1ab145d89938c8405bd7f62",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b3ad34cdf61b5e82f1ab145d89938c8405bd7f62",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/b3ad34cdf61b5e82f1ab145d89938c8405bd7f62",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b3ad34cdf61b5e82f1ab145d89938c8405bd7f62/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "91389e51c78ae3565b037e31dd5382b52bd75136",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/91389e51c78ae3565b037e31dd5382b52bd75136",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/91389e51c78ae3565b037e31dd5382b52bd75136"
+      }
+    ],
+    "stats": {
+      "total": 43,
+      "additions": 14,
+      "deletions": 29
+    },
+    "files": [
+      {
+        "sha": "697d235dd8cab2df4a637a55ffa001ad09344bdc",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 1,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b3ad34cdf61b5e82f1ab145d89938c8405bd7f62/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b3ad34cdf61b5e82f1ab145d89938c8405bd7f62/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=b3ad34cdf61b5e82f1ab145d89938c8405bd7f62",
+        "patch": "@@ -999,7 +999,6 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)\n         SetProxy(NET_IPV4, addrProxy);\n         SetProxy(NET_IPV6, addrProxy);\n         SetProxy(NET_TOR, addrProxy);\n-        SetNameProxy(addrProxy);\n         SetReachable(NET_TOR); // by default, -proxy sets onion as reachable, unless -noonion later\n     }\n "
+      },
+      {
+        "sha": "d81306d426796f3b6baae62e1c7ca9b457f2b9c7",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b3ad34cdf61b5e82f1ab145d89938c8405bd7f62/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b3ad34cdf61b5e82f1ab145d89938c8405bd7f62/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=b3ad34cdf61b5e82f1ab145d89938c8405bd7f62",
+        "patch": "@@ -1167,7 +1167,7 @@ void ThreadDNSAddressSeed()\n     LogPrintf(\"Loading addresses from DNS seeds (could take a while)\\n\");\n \n     BOOST_FOREACH(const CDNSSeedData &seed, vSeeds) {\n-        if (HaveNameProxy()) {\n+        if (HaveProxy(NET_DEFAULT)) {\n             AddOneShot(seed.host);\n         } else {\n             vector<CNetAddr> vIPs;\n@@ -1336,7 +1336,7 @@ void ThreadOpenAddedConnections()\n         vAddedNodes = mapMultiArgs[\"-addnode\"];\n     }\n \n-    if (HaveNameProxy()) {\n+    if (HaveProxy(NET_DEFAULT)) {\n         while(true) {\n             list<string> lAddresses(0);\n             {"
+      },
+      {
+        "sha": "5c8bf7f47dec59cbeb2119daaedda166d8bbee12",
+        "filename": "src/netbase.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 24,
+        "changes": 32,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b3ad34cdf61b5e82f1ab145d89938c8405bd7f62/src/netbase.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b3ad34cdf61b5e82f1ab145d89938c8405bd7f62/src/netbase.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/netbase.cpp?ref=b3ad34cdf61b5e82f1ab145d89938c8405bd7f62",
+        "patch": "@@ -37,7 +37,6 @@\n \n // Settings\n static proxyType proxyInfo[NET_MAX];\n-static proxyType nameProxy;\n static CCriticalSection cs_proxyInfos;\n int nConnectTimeout = DEFAULT_CONNECT_TIMEOUT;\n bool fNameLookup = false;\n@@ -526,25 +525,9 @@ bool GetProxy(enum Network net, proxyType &proxyInfoOut) {\n     return true;\n }\n \n-bool SetNameProxy(const proxyType &addrProxy) {\n-    if (!addrProxy.IsValid())\n-        return false;\n-    LOCK(cs_proxyInfos);\n-    nameProxy = addrProxy;\n-    return true;\n-}\n-\n-bool GetNameProxy(proxyType &nameProxyOut) {\n+bool HaveProxy(enum Network net) {\n     LOCK(cs_proxyInfos);\n-    if(!nameProxy.IsValid())\n-        return false;\n-    nameProxyOut = nameProxy;\n-    return true;\n-}\n-\n-bool HaveNameProxy() {\n-    LOCK(cs_proxyInfos);\n-    return nameProxy.IsValid();\n+    return proxyInfo[net].IsValid();\n }\n \n bool IsProxy(const CNetAddr &addr) {\n@@ -603,20 +586,21 @@ bool ConnectSocketByName(CService &addr, SOCKET& hSocketRet, const char *pszDest\n \n     SplitHostPort(std::string(pszDest), port, strDest);\n \n-    proxyType nameProxy;\n-    GetNameProxy(nameProxy);\n+    proxyType proxy;\n+    // Try to get proxy to be used for name resolution\n+    GetProxy(NET_DEFAULT, proxy);\n \n-    CService addrResolved(CNetAddr(strDest, fNameLookup && !HaveNameProxy()), port);\n+    CService addrResolved(CNetAddr(strDest, fNameLookup && !HaveProxy(NET_DEFAULT)), port);\n     if (addrResolved.IsValid()) {\n         addr = addrResolved;\n         return ConnectSocket(addr, hSocketRet, nTimeout);\n     }\n \n     addr = CService(\"0.0.0.0:0\");\n \n-    if (!HaveNameProxy())\n+    if (!HaveProxy(NET_DEFAULT))\n         return false;\n-    return ConnectThroughProxy(nameProxy, strDest, port, hSocketRet, nTimeout, outProxyConnectionFailed);\n+    return ConnectThroughProxy(proxy, strDest, port, hSocketRet, nTimeout, outProxyConnectionFailed);\n }\n \n void CNetAddr::Init()"
+      },
+      {
+        "sha": "c4797dfbe1c0ef3b1c2b67174f68b8827ebb7b0e",
+        "filename": "src/netbase.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 2,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b3ad34cdf61b5e82f1ab145d89938c8405bd7f62/src/netbase.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b3ad34cdf61b5e82f1ab145d89938c8405bd7f62/src/netbase.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/netbase.h?ref=b3ad34cdf61b5e82f1ab145d89938c8405bd7f62",
+        "patch": "@@ -37,6 +37,9 @@ enum Network\n     NET_MAX,\n };\n \n+// To be used for names for which the network is undetermined\n+#define NET_DEFAULT NET_IPV4\n+\n /** IP address (IPv6, or IPv4 using mapped IPv6 range (::FFFF:0:0/96)) */\n class CNetAddr\n {\n@@ -188,9 +191,8 @@ std::string GetNetworkName(enum Network net);\n void SplitHostPort(std::string in, int &portOut, std::string &hostOut);\n bool SetProxy(enum Network net, const proxyType &addrProxy);\n bool GetProxy(enum Network net, proxyType &proxyInfoOut);\n+bool HaveProxy(enum Network net);\n bool IsProxy(const CNetAddr &addr);\n-bool SetNameProxy(const proxyType &addrProxy);\n-bool HaveNameProxy();\n bool LookupHost(const char *pszName, std::vector<CNetAddr>& vIP, unsigned int nMaxSolutions = 0, bool fAllowLookup = true);\n bool Lookup(const char *pszName, CService& addr, int portDefault = 0, bool fAllowLookup = true);\n bool Lookup(const char *pszName, std::vector<CService>& vAddr, int portDefault = 0, bool fAllowLookup = true, unsigned int nMaxSolutions = 0);"
+      }
+    ]
+  }
+]

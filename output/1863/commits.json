@@ -1,0 +1,158 @@
+[
+  {
+    "sha": "3869fb89b60091281b43a35921057ba3f43c18f0",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozODY5ZmI4OWI2MDA5MTI4MWI0M2EzNTkyMTA1N2JhM2Y0M2MxOGYw",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2013-06-10T13:36:29Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2013-06-10T13:36:29Z"
+      },
+      "message": "Wallet: store key creation time. Calculate whole-wallet birthday.\n\nThis also encapsulate wallet-read state information into CWalletScanState.",
+      "tree": {
+        "sha": "3510aec7ccc74db41f25393f929db896f087cfea",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/3510aec7ccc74db41f25393f929db896f087cfea"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/3869fb89b60091281b43a35921057ba3f43c18f0",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3869fb89b60091281b43a35921057ba3f43c18f0",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/3869fb89b60091281b43a35921057ba3f43c18f0",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3869fb89b60091281b43a35921057ba3f43c18f0/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "f59530ce6eb5a889e6eb750024ddb20e7b0df9d7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f59530ce6eb5a889e6eb750024ddb20e7b0df9d7",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/f59530ce6eb5a889e6eb750024ddb20e7b0df9d7"
+      }
+    ],
+    "stats": {
+      "total": 173,
+      "additions": 135,
+      "deletions": 38
+    },
+    "files": [
+      {
+        "sha": "aa1371111066df90d59be79f9a264b6e7056d6b3",
+        "filename": "src/wallet.cpp",
+        "status": "modified",
+        "additions": 22,
+        "deletions": 5,
+        "changes": 27,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3869fb89b60091281b43a35921057ba3f43c18f0/src/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3869fb89b60091281b43a35921057ba3f43c18f0/src/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.cpp?ref=3869fb89b60091281b43a35921057ba3f43c18f0",
+        "patch": "@@ -45,30 +45,47 @@ CPubKey CWallet::GenerateNewKey()\n     return pubkey;\n }\n \n-bool CWallet::AddKeyPubKey(const CKey& secret, const CPubKey &pubkey)\n+bool CWallet::AddKeyPubKey(const CKey& secret, const CPubKey &pubkey,\n+                           int64 nCreateTime)\n {\n+    if (!nCreateTime)\n+        nCreateTime = GetTime();\n+    if (!nTimeFirstKey || (nCreateTime < nTimeFirstKey))\n+        nTimeFirstKey = nCreateTime;\n     if (!CCryptoKeyStore::AddKeyPubKey(secret, pubkey))\n         return false;\n     if (!fFileBacked)\n         return true;\n     if (!IsCrypted()) {\n-        return CWalletDB(strWalletFile).WriteKey(pubkey, secret.GetPrivKey());\n+        return CWalletDB(strWalletFile).WriteKey(pubkey,\n+                                                 secret.GetPrivKey(),\n+                                                 nCreateTime);\n     }\n     return true;\n }\n \n-bool CWallet::AddCryptedKey(const CPubKey &vchPubKey, const vector<unsigned char> &vchCryptedSecret)\n+bool CWallet::AddCryptedKey(const CPubKey &vchPubKey,\n+                            const vector<unsigned char> &vchCryptedSecret,\n+                            int64 nCreateTime)\n {\n+    if (!nCreateTime)\n+        nCreateTime = GetTime();\n+    if (!nTimeFirstKey || (nCreateTime < nTimeFirstKey))\n+        nTimeFirstKey = nCreateTime;\n     if (!CCryptoKeyStore::AddCryptedKey(vchPubKey, vchCryptedSecret))\n         return false;\n     if (!fFileBacked)\n         return true;\n     {\n         LOCK(cs_wallet);\n         if (pwalletdbEncryption)\n-            return pwalletdbEncryption->WriteCryptedKey(vchPubKey, vchCryptedSecret);\n+            return pwalletdbEncryption->WriteCryptedKey(vchPubKey,\n+                                                        vchCryptedSecret,\n+                                                        nCreateTime);\n         else\n-            return CWalletDB(strWalletFile).WriteCryptedKey(vchPubKey, vchCryptedSecret);\n+            return CWalletDB(strWalletFile).WriteCryptedKey(vchPubKey,\n+                                                            vchCryptedSecret,\n+                                                            nCreateTime);\n     }\n     return false;\n }"
+      },
+      {
+        "sha": "a0688b8a02c0c11001061863b1e0ab9a7c994d81",
+        "filename": "src/wallet.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 2,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3869fb89b60091281b43a35921057ba3f43c18f0/src/wallet.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3869fb89b60091281b43a35921057ba3f43c18f0/src/wallet.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.h?ref=3869fb89b60091281b43a35921057ba3f43c18f0",
+        "patch": "@@ -123,6 +123,8 @@ class CWallet : public CCryptoKeyStore\n \n     std::set<COutPoint> setLockedCoins;\n \n+    int64 nTimeFirstKey;\n+\n     // check whether we are allowed to upgrade (or already support) to the named feature\n     bool CanSupportFeature(enum WalletFeature wf) { return nWalletMaxVersion >= wf; }\n \n@@ -138,14 +140,14 @@ class CWallet : public CCryptoKeyStore\n     // Generate a new key\n     CPubKey GenerateNewKey();\n     // Adds a key to the store, and saves it to disk.\n-    bool AddKeyPubKey(const CKey& key, const CPubKey &pubkey);\n+    bool AddKeyPubKey(const CKey& key, const CPubKey &pubkey, int64 nCreateTime = 0);\n     // Adds a key to the store, without saving it to disk (used by LoadWallet)\n     bool LoadKey(const CKey& key, const CPubKey &pubkey) { return CCryptoKeyStore::AddKeyPubKey(key, pubkey); }\n \n     bool LoadMinVersion(int nVersion) { nWalletVersion = nVersion; nWalletMaxVersion = std::max(nWalletMaxVersion, nVersion); return true; }\n \n     // Adds an encrypted key to the store, and saves it to disk.\n-    bool AddCryptedKey(const CPubKey &vchPubKey, const std::vector<unsigned char> &vchCryptedSecret);\n+    bool AddCryptedKey(const CPubKey &vchPubKey, const std::vector<unsigned char> &vchCryptedSecret, int64 nCreateTime = 0);\n     // Adds an encrypted key to the store, without saving it to disk (used by LoadWallet)\n     bool LoadCryptedKey(const CPubKey &vchPubKey, const std::vector<unsigned char> &vchCryptedSecret);\n     bool AddCScript(const CScript& redeemScript);"
+      },
+      {
+        "sha": "96fd4a5fc1d9199da2081f9ee568c19ba831f733",
+        "filename": "src/walletdb.cpp",
+        "status": "modified",
+        "additions": 60,
+        "deletions": 29,
+        "changes": 89,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3869fb89b60091281b43a35921057ba3f43c18f0/src/walletdb.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3869fb89b60091281b43a35921057ba3f43c18f0/src/walletdb.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/walletdb.cpp?ref=3869fb89b60091281b43a35921057ba3f43c18f0",
+        "patch": "@@ -180,11 +180,27 @@ CWalletDB::ReorderTransactions(CWallet* pwallet)\n     return DB_LOAD_OK;\n }\n \n+class CWalletScanState {\n+public:\n+    unsigned int nKeys;\n+    unsigned int nCKeys;\n+    unsigned int nKeyMeta;\n+    bool fIsEncrypted;\n+    bool fAnyUnordered;\n+    int nFileVersion;\n+    vector<uint256> vWalletUpgrade;\n+\n+    CWalletScanState() {\n+        nKeys = nCKeys = nKeyMeta = 0;\n+        fIsEncrypted = false;\n+        fAnyUnordered = false;\n+        nFileVersion = 0;\n+    }\n+};\n \n bool\n ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,\n-             int& nFileVersion, vector<uint256>& vWalletUpgrade,\n-             bool& fIsEncrypted,  bool& fAnyUnordered, string& strType, string& strErr)\n+             CWalletScanState &wss, string& strType, string& strErr)\n {\n     try {\n         // Unserialize\n@@ -229,11 +245,11 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,\n                     strErr = strprintf(\"LoadWallet() repairing tx ver=%d %s\", wtx.fTimeReceivedIsTxTime, hash.ToString().c_str());\n                     wtx.fTimeReceivedIsTxTime = 0;\n                 }\n-                vWalletUpgrade.push_back(hash);\n+                wss.vWalletUpgrade.push_back(hash);\n             }\n \n             if (wtx.nOrderPos == -1)\n-                fAnyUnordered = true;\n+                wss.fAnyUnordered = true;\n \n             //// debug print\n             //printf(\"LoadWallet  %s\\n\", wtx.GetHash().ToString().c_str());\n@@ -252,12 +268,12 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,\n             if (nNumber > nAccountingEntryNumber)\n                 nAccountingEntryNumber = nNumber;\n \n-            if (!fAnyUnordered)\n+            if (!wss.fAnyUnordered)\n             {\n                 CAccountingEntry acentry;\n                 ssValue >> acentry;\n                 if (acentry.nOrderPos == -1)\n-                    fAnyUnordered = true;\n+                    wss.fAnyUnordered = true;\n             }\n         }\n         else if (strType == \"key\" || strType == \"wkey\")\n@@ -272,8 +288,10 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,\n             CKey key;\n             CPrivKey pkey;\n             if (strType == \"key\")\n+            {\n+                wss.nKeys++;\n                 ssValue >> pkey;\n-            else {\n+            } else {\n                 CWalletKey wkey;\n                 ssValue >> wkey;\n                 pkey = wkey.vchPrivKey;\n@@ -315,12 +333,27 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,\n             ssKey >> vchPubKey;\n             vector<unsigned char> vchPrivKey;\n             ssValue >> vchPrivKey;\n+            wss.nCKeys++;\n+\n             if (!pwallet->LoadCryptedKey(vchPubKey, vchPrivKey))\n             {\n                 strErr = \"Error reading wallet database: LoadCryptedKey failed\";\n                 return false;\n             }\n-            fIsEncrypted = true;\n+            wss.fIsEncrypted = true;\n+        }\n+        else if (strType == \"keymeta\")\n+        {\n+            vector<unsigned char> vchPubKey;\n+            ssKey >> vchPubKey;\n+            CKeyMetadata keyMeta;\n+            ssValue >> keyMeta;\n+            wss.nKeyMeta++;\n+\n+            // find earliest key creation time, as wallet birthday\n+            if (!pwallet->nTimeFirstKey ||\n+                (keyMeta.nCreateTime < pwallet->nTimeFirstKey))\n+                pwallet->nTimeFirstKey = keyMeta.nCreateTime;\n         }\n         else if (strType == \"defaultkey\")\n         {\n@@ -334,9 +367,9 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,\n         }\n         else if (strType == \"version\")\n         {\n-            ssValue >> nFileVersion;\n-            if (nFileVersion == 10300)\n-                nFileVersion = 300;\n+            ssValue >> wss.nFileVersion;\n+            if (wss.nFileVersion == 10300)\n+                wss.nFileVersion = 300;\n         }\n         else if (strType == \"cscript\")\n         {\n@@ -370,10 +403,7 @@ static bool IsKeyType(string strType)\n DBErrors CWalletDB::LoadWallet(CWallet* pwallet)\n {\n     pwallet->vchDefaultKey = CPubKey();\n-    int nFileVersion = 0;\n-    vector<uint256> vWalletUpgrade;\n-    bool fIsEncrypted = false;\n-    bool fAnyUnordered = false;\n+    CWalletScanState wss;\n     bool fNoncriticalErrors = false;\n     DBErrors result = DB_LOAD_OK;\n \n@@ -411,8 +441,7 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)\n \n             // Try to be tolerant of single corrupt records:\n             string strType, strErr;\n-            if (!ReadKeyValue(pwallet, ssKey, ssValue, nFileVersion,\n-                              vWalletUpgrade, fIsEncrypted, fAnyUnordered, strType, strErr))\n+            if (!ReadKeyValue(pwallet, ssKey, ssValue, wss, strType, strErr))\n             {\n                 // losing keys is considered a catastrophic error, anything else\n                 // we assume the user can live with:\n@@ -447,19 +476,26 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)\n     if (result != DB_LOAD_OK)\n         return result;\n \n-    printf(\"nFileVersion = %d\\n\", nFileVersion);\n+    printf(\"nFileVersion = %d\\n\", wss.nFileVersion);\n \n-    BOOST_FOREACH(uint256 hash, vWalletUpgrade)\n+    printf(\"Keys: %u plaintext, %u encrypted, %u w/ metadata, %u total\\n\",\n+           wss.nKeys, wss.nCKeys, wss.nKeyMeta, wss.nKeys + wss.nCKeys);\n+\n+    // nTimeFirstKey is only reliable if all keys have metadata\n+    if ((wss.nKeys + wss.nCKeys) != wss.nKeyMeta)\n+        pwallet->nTimeFirstKey = 0;\n+\n+    BOOST_FOREACH(uint256 hash, wss.vWalletUpgrade)\n         WriteTx(hash, pwallet->mapWallet[hash]);\n \n     // Rewrite encrypted wallets of versions 0.4.0 and 0.5.0rc:\n-    if (fIsEncrypted && (nFileVersion == 40000 || nFileVersion == 50000))\n+    if (wss.fIsEncrypted && (wss.nFileVersion == 40000 || wss.nFileVersion == 50000))\n         return DB_NEED_REWRITE;\n \n-    if (nFileVersion < CLIENT_VERSION) // Update\n+    if (wss.nFileVersion < CLIENT_VERSION) // Update\n         WriteVersion(CLIENT_VERSION);\n \n-    if (fAnyUnordered)\n+    if (wss.fAnyUnordered)\n         result = ReorderTransactions(pwallet);\n \n     return result;\n@@ -615,10 +651,7 @@ bool CWalletDB::Recover(CDBEnv& dbenv, std::string filename, bool fOnlyKeys)\n         return false;\n     }\n     CWallet dummyWallet;\n-    int nFileVersion = 0;\n-    vector<uint256> vWalletUpgrade;\n-    bool fIsEncrypted = false;\n-    bool fAnyUnordered = false;\n+    CWalletScanState wss;\n \n     DbTxn* ptxn = dbenv.TxnBegin();\n     BOOST_FOREACH(CDBEnv::KeyValPair& row, salvagedData)\n@@ -629,9 +662,7 @@ bool CWalletDB::Recover(CDBEnv& dbenv, std::string filename, bool fOnlyKeys)\n             CDataStream ssValue(row.second, SER_DISK, CLIENT_VERSION);\n             string strType, strErr;\n             bool fReadOK = ReadKeyValue(&dummyWallet, ssKey, ssValue,\n-                                        nFileVersion, vWalletUpgrade,\n-                                        fIsEncrypted, fAnyUnordered,\n-                                        strType, strErr);\n+                                        wss, strType, strErr);\n             if (!IsKeyType(strType))\n                 continue;\n             if (!fReadOK)"
+      },
+      {
+        "sha": "287361b33d4d10a71447ac4452cde3e41afa7671",
+        "filename": "src/walletdb.h",
+        "status": "modified",
+        "additions": 49,
+        "deletions": 2,
+        "changes": 51,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3869fb89b60091281b43a35921057ba3f43c18f0/src/walletdb.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3869fb89b60091281b43a35921057ba3f43c18f0/src/walletdb.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/walletdb.h?ref=3869fb89b60091281b43a35921057ba3f43c18f0",
+        "patch": "@@ -25,6 +25,37 @@ enum DBErrors\n     DB_NEED_REWRITE\n };\n \n+class CKeyMetadata\n+{\n+public:\n+    static const int CURRENT_VERSION=1;\n+    int nVersion;\n+    int64 nCreateTime;\n+\n+    CKeyMetadata()\n+    {\n+        SetNull();\n+    }\n+    CKeyMetadata(int64 nCreateTime_)\n+    {\n+        nVersion = CKeyMetadata::CURRENT_VERSION;\n+        nCreateTime = nCreateTime_;\n+    }\n+\n+    IMPLEMENT_SERIALIZE\n+    (\n+        READWRITE(this->nVersion);\n+        nVersion = this->nVersion;\n+        READWRITE(nCreateTime);\n+    )\n+\n+    void SetNull()\n+    {\n+        nVersion = CKeyMetadata::CURRENT_VERSION;\n+        nCreateTime = GetTime();\n+    }\n+};\n+\n /** Access to the wallet database (wallet.dat) */\n class CWalletDB : public CDB\n {\n@@ -52,15 +83,31 @@ class CWalletDB : public CDB\n         return Erase(std::make_pair(std::string(\"tx\"), hash));\n     }\n \n-    bool WriteKey(const CPubKey& vchPubKey, const CPrivKey& vchPrivKey)\n+    bool WriteKey(const CPubKey& vchPubKey, const CPrivKey& vchPrivKey,\n+                  int64 nCreateTime)\n     {\n         nWalletDBUpdated++;\n+\n+        CKeyMetadata keyMeta(nCreateTime);\n+        if (!Write(std::make_pair(std::string(\"keymeta\"), vchPubKey),\n+                   keyMeta, false))\n+            return false;\n+\n         return Write(std::make_pair(std::string(\"key\"), vchPubKey), vchPrivKey, false);\n     }\n \n-    bool WriteCryptedKey(const CPubKey& vchPubKey, const std::vector<unsigned char>& vchCryptedSecret, bool fEraseUnencryptedKey = true)\n+    bool WriteCryptedKey(const CPubKey& vchPubKey,\n+                         const std::vector<unsigned char>& vchCryptedSecret,\n+                         int64 nCreateTime)\n     {\n+        const bool fEraseUnencryptedKey = true;\n         nWalletDBUpdated++;\n+\n+        CKeyMetadata keyMeta(nCreateTime);\n+        if (!Write(std::make_pair(std::string(\"keymeta\"), vchPubKey),\n+                   keyMeta, false))\n+            return false;\n+\n         if (!Write(std::make_pair(std::string(\"ckey\"), vchPubKey), vchCryptedSecret, false))\n             return false;\n         if (fEraseUnencryptedKey)"
+      }
+    ]
+  },
+  {
+    "sha": "8da9dd0725ea90b1fd085d9551177fe62d7a9ba2",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4ZGE5ZGQwNzI1ZWE5MGIxZmQwODVkOTU1MTE3N2ZlNjJkN2E5YmEy",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2013-06-10T13:38:13Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2013-06-10T13:38:13Z"
+      },
+      "message": "Wallet: optimize rescan to skip blocks prior to birthday",
+      "tree": {
+        "sha": "fc00abe9a78626ea741a715b9d4b36bdb6dc5c7c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/fc00abe9a78626ea741a715b9d4b36bdb6dc5c7c"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/8da9dd0725ea90b1fd085d9551177fe62d7a9ba2",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8da9dd0725ea90b1fd085d9551177fe62d7a9ba2",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/8da9dd0725ea90b1fd085d9551177fe62d7a9ba2",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8da9dd0725ea90b1fd085d9551177fe62d7a9ba2/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "3869fb89b60091281b43a35921057ba3f43c18f0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3869fb89b60091281b43a35921057ba3f43c18f0",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/3869fb89b60091281b43a35921057ba3f43c18f0"
+      }
+    ],
+    "stats": {
+      "total": 7,
+      "additions": 7,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "9a4a92cd5f6cce1c7cdfcfea14626e477cf81ee4",
+        "filename": "src/wallet.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 0,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8da9dd0725ea90b1fd085d9551177fe62d7a9ba2/src/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8da9dd0725ea90b1fd085d9551177fe62d7a9ba2/src/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.cpp?ref=8da9dd0725ea90b1fd085d9551177fe62d7a9ba2",
+        "patch": "@@ -790,6 +790,13 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)\n         LOCK(cs_wallet);\n         while (pindex)\n         {\n+            // no need to read and scan block, if block was created before\n+            // our wallet birthday (as adjusted for block time variability)\n+            if (nTimeFirstKey && (pindex->nTime < (nTimeFirstKey - 7200))) {\n+                pindex = pindex->GetNextInMainChain();\n+                continue;\n+            }\n+\n             CBlock block;\n             block.ReadFromDisk(pindex);\n             BOOST_FOREACH(CTransaction& tx, block.vtx)"
+      }
+    ]
+  }
+]

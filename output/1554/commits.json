@@ -1,0 +1,134 @@
+[
+  {
+    "sha": "96929a5515bb0ffee67aab7283b5ae9fcc1641d5",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5NjkyOWE1NTE1YmIwZmZlZTY3YWFiNzI4M2I1YWU5ZmNjMTY0MWQ1",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-07-04T04:04:57Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-07-04T04:04:57Z"
+      },
+      "message": "Remove duplicate GetHash() in ConnectBlock",
+      "tree": {
+        "sha": "66215f6328fd1a9fc6cc6c5d0a8b847b6b4653ce",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/66215f6328fd1a9fc6cc6c5d0a8b847b6b4653ce"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/96929a5515bb0ffee67aab7283b5ae9fcc1641d5",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/96929a5515bb0ffee67aab7283b5ae9fcc1641d5",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/96929a5515bb0ffee67aab7283b5ae9fcc1641d5",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/96929a5515bb0ffee67aab7283b5ae9fcc1641d5/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "c729dbb6d2b63d9c0b32e3937be0ebf528d4c753",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c729dbb6d2b63d9c0b32e3937be0ebf528d4c753",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c729dbb6d2b63d9c0b32e3937be0ebf528d4c753"
+      }
+    ],
+    "stats": {
+      "total": 28,
+      "additions": 14,
+      "deletions": 14
+    },
+    "files": [
+      {
+        "sha": "c1ca96bfd2f2a82b53aea015aa6f74bfbcc76f75",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 14,
+        "deletions": 14,
+        "changes": 28,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/96929a5515bb0ffee67aab7283b5ae9fcc1641d5/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/96929a5515bb0ffee67aab7283b5ae9fcc1641d5/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=96929a5515bb0ffee67aab7283b5ae9fcc1641d5",
+        "patch": "@@ -1325,19 +1325,8 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex)\n     // This logic is not necessary for memory pool transactions, as AcceptToMemoryPool\n     // already refuses previously-known transaction id's entirely.\n     // This rule applies to all blocks whose timestamp is after March 15, 2012, 0:00 UTC.\n-    if (pindex->nTime > 1331769600)\n-    {\n-        BOOST_FOREACH(CTransaction& tx, vtx)\n-        {\n-            CTxIndex txindexOld;\n-            if (txdb.ReadTxIndex(tx.GetHash(), txindexOld))\n-            {\n-                BOOST_FOREACH(CDiskTxPos &pos, txindexOld.vSpent)\n-                    if (pos.IsNull())\n-                        return false;\n-            }\n-        }\n-    }\n+    int64 nBIP30SwitchTime = 1331769600;\n+    bool fEnforceBIP30 = (pindex->nTime > nBIP30SwitchTime);\n \n     // BIP16 didn't become active until Apr 1 2012\n     int64 nBIP16SwitchTime = 1333238400;\n@@ -1351,6 +1340,17 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex)\n     unsigned int nSigOps = 0;\n     BOOST_FOREACH(CTransaction& tx, vtx)\n     {\n+        uint256 hashTx = tx.GetHash();\n+\n+        if (fEnforceBIP30) {\n+            CTxIndex txindexOld;\n+            if (txdb.ReadTxIndex(hashTx, txindexOld)) {\n+                BOOST_FOREACH(CDiskTxPos &pos, txindexOld.vSpent)\n+                    if (pos.IsNull())\n+                        return false;\n+            }\n+        }\n+\n         nSigOps += tx.GetLegacySigOpCount();\n         if (nSigOps > MAX_BLOCK_SIGOPS)\n             return DoS(100, error(\"ConnectBlock() : too many sigops\"));\n@@ -1381,7 +1381,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex)\n                 return false;\n         }\n \n-        mapQueuedChanges[tx.GetHash()] = CTxIndex(posThisTx, tx.vout.size());\n+        mapQueuedChanges[hashTx] = CTxIndex(posThisTx, tx.vout.size());\n     }\n \n     // Write queued txindex changes"
+      }
+    ]
+  },
+  {
+    "sha": "f77654a0e9424f13cad04f82c014abd78fbb5e38",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmNzc2NTRhMGU5NDI0ZjEzY2FkMDRmODJjMDE0YWJkNzhmYmI1ZTM4",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-07-04T05:12:44Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-07-04T05:12:44Z"
+      },
+      "message": "CTxMemPool: eliminate redundant lock, GetHash() call\n\n::addUnchecked()'s only caller already takes the necessary lock,\nand has already calculated the TX's hash.",
+      "tree": {
+        "sha": "29b9dd80f03edde949c5a7abdf3a5913cd91e889",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/29b9dd80f03edde949c5a7abdf3a5913cd91e889"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/f77654a0e9424f13cad04f82c014abd78fbb5e38",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f77654a0e9424f13cad04f82c014abd78fbb5e38",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/f77654a0e9424f13cad04f82c014abd78fbb5e38",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f77654a0e9424f13cad04f82c014abd78fbb5e38/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "96929a5515bb0ffee67aab7283b5ae9fcc1641d5",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/96929a5515bb0ffee67aab7283b5ae9fcc1641d5",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/96929a5515bb0ffee67aab7283b5ae9fcc1641d5"
+      }
+    ],
+    "stats": {
+      "total": 8,
+      "additions": 3,
+      "deletions": 5
+    },
+    "files": [
+      {
+        "sha": "8e1deac4bbfbc0270459e1b17a2eece0557635a4",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 4,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f77654a0e9424f13cad04f82c014abd78fbb5e38/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f77654a0e9424f13cad04f82c014abd78fbb5e38/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=f77654a0e9424f13cad04f82c014abd78fbb5e38",
+        "patch": "@@ -600,7 +600,7 @@ bool CTxMemPool::accept(CTxDB& txdb, CTransaction &tx, bool fCheckInputs,\n             printf(\"CTxMemPool::accept() : replacing tx %s with new version\\n\", ptxOld->GetHash().ToString().c_str());\n             remove(*ptxOld);\n         }\n-        addUnchecked(tx);\n+        addUnchecked(hash, tx);\n     }\n \n     ///// are we sure this is ok when loading transactions or restoring block txes\n@@ -619,13 +619,11 @@ bool CTransaction::AcceptToMemoryPool(CTxDB& txdb, bool fCheckInputs, bool* pfMi\n     return mempool.accept(txdb, *this, fCheckInputs, pfMissingInputs);\n }\n \n-bool CTxMemPool::addUnchecked(CTransaction &tx)\n+bool CTxMemPool::addUnchecked(const uint256& hash, CTransaction &tx)\n {\n     // Add to memory pool without checking anything.  Don't call this directly,\n     // call CTxMemPool::accept to properly check the transaction first.\n     {\n-        LOCK(cs);\n-        uint256 hash = tx.GetHash();\n         mapTx[hash] = tx;\n         for (unsigned int i = 0; i < tx.vin.size(); i++)\n             mapNextTx[tx.vin[i].prevout] = CInPoint(&mapTx[hash], i);"
+      },
+      {
+        "sha": "c841fdaf18aa136b8532be10b19b2842c9e6010a",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f77654a0e9424f13cad04f82c014abd78fbb5e38/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f77654a0e9424f13cad04f82c014abd78fbb5e38/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=f77654a0e9424f13cad04f82c014abd78fbb5e38",
+        "patch": "@@ -1602,7 +1602,7 @@ class CTxMemPool\n \n     bool accept(CTxDB& txdb, CTransaction &tx,\n                 bool fCheckInputs, bool* pfMissingInputs);\n-    bool addUnchecked(CTransaction &tx);\n+    bool addUnchecked(const uint256& hash, CTransaction &tx);\n     bool remove(CTransaction &tx);\n     void queryHashes(std::vector<uint256>& vtxid);\n "
+      }
+    ]
+  }
+]

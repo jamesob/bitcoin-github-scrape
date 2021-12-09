@@ -1,0 +1,381 @@
+[
+  {
+    "sha": "e01bf59ccd310c4b89526694f77dd8fc40bcfbb4",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplMDFiZjU5Y2NkMzEwYzRiODk1MjY2OTRmNzdkZDhmYzQwYmNmYmI0",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-03-03T16:55:56Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-03-03T16:55:56Z"
+      },
+      "message": "Apply Gavin's portoption patch.",
+      "tree": {
+        "sha": "502e9005b2482ca3320a1a2bcd0d674e370ba67d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/502e9005b2482ca3320a1a2bcd0d674e370ba67d"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/e01bf59ccd310c4b89526694f77dd8fc40bcfbb4",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e01bf59ccd310c4b89526694f77dd8fc40bcfbb4",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/e01bf59ccd310c4b89526694f77dd8fc40bcfbb4",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e01bf59ccd310c4b89526694f77dd8fc40bcfbb4/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "411493b1f70d1493b1203bce847baa9f41e79f91",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/411493b1f70d1493b1203bce847baa9f41e79f91",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/411493b1f70d1493b1203bce847baa9f41e79f91"
+      }
+    ],
+    "stats": {
+      "total": 15,
+      "additions": 9,
+      "deletions": 6
+    },
+    "files": [
+      {
+        "sha": "99f3e34290abb483c154fa8876da750b53565c63",
+        "filename": "init.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e01bf59ccd310c4b89526694f77dd8fc40bcfbb4/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e01bf59ccd310c4b89526694f77dd8fc40bcfbb4/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/init.cpp?ref=e01bf59ccd310c4b89526694f77dd8fc40bcfbb4",
+        "patch": "@@ -9,7 +9,6 @@\n \n \n \n-\n //////////////////////////////////////////////////////////////////////////////\n //\n // Shutdown\n@@ -172,6 +171,7 @@ bool AppInit2(int argc, char* argv[])\n             \"  -gen=0           \\t\\t  \" + _(\"Don't generate coins\\n\") +\n             \"  -min             \\t\\t  \" + _(\"Start minimized\\n\") +\n             \"  -datadir=<dir>   \\t\\t  \" + _(\"Specify data directory\\n\") +\n+            \"  -port=<port>     \\t\\t  \" + _(\"Listen for connections on <port> (instead of 8333)\\n\") +\n             \"  -proxy=<ip:port> \\t  \"   + _(\"Connect through socks4 proxy\\n\") +\n             \"  -addnode=<ip>    \\t  \"   + _(\"Add a node to connect to\\n\") +\n             \"  -connect=<ip>    \\t\\t  \" + _(\"Connect only to the specified node\\n\") +"
+      },
+      {
+        "sha": "5acf3a036c9aaa5ff46f11a7ff2e755b51d6301d",
+        "filename": "net.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 5,
+        "changes": 13,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e01bf59ccd310c4b89526694f77dd8fc40bcfbb4/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e01bf59ccd310c4b89526694f77dd8fc40bcfbb4/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/net.cpp?ref=e01bf59ccd310c4b89526694f77dd8fc40bcfbb4",
+        "patch": "@@ -1219,14 +1219,17 @@ void ThreadMessageHandler2(void* parg)\n \n \n \n-\n+unsigned short GetListenPort()\n+{\n+    return (mapArgs.count(\"-port\") ? htons(atoi(mapArgs[\"-port\"])) : GetDefaultPort());\n+}\n \n \n bool BindListenPort(string& strError)\n {\n     strError = \"\";\n     int nOne = 1;\n-    addrLocalHost.port = GetDefaultPort();\n+    addrLocalHost.port = GetListenPort();\n \n #ifdef __WXMSW__\n     // Initialize Windows Sockets\n@@ -1278,7 +1281,7 @@ bool BindListenPort(string& strError)\n     memset(&sockaddr, 0, sizeof(sockaddr));\n     sockaddr.sin_family = AF_INET;\n     sockaddr.sin_addr.s_addr = INADDR_ANY; // bind to all IPs on this computer\n-    sockaddr.sin_port = GetDefaultPort();\n+    sockaddr.sin_port = GetListenPort();\n     if (::bind(hListenSocket, (struct sockaddr*)&sockaddr, sizeof(sockaddr)) == SOCKET_ERROR)\n     {\n         int nErr = WSAGetLastError();\n@@ -1320,7 +1323,7 @@ void StartNode(void* parg)\n                 printf(\"host ip %d: %s\\n\", i, CAddress(*(unsigned int*)phostent->h_addr_list[i]).ToStringIP().c_str());\n             for (int i = 0; phostent->h_addr_list[i] != NULL; i++)\n             {\n-                CAddress addr(*(unsigned int*)phostent->h_addr_list[i], GetDefaultPort(), nLocalServices);\n+                CAddress addr(*(unsigned int*)phostent->h_addr_list[i], GetListenPort(), nLocalServices);\n                 if (addr.IsValid() && addr.GetByte(3) != 127)\n                 {\n                     addrLocalHost = addr;\n@@ -1348,7 +1351,7 @@ void StartNode(void* parg)\n                     printf(\"ipv4 %s: %s\\n\", ifa->ifa_name, pszIP);\n \n                 // Take the first IP that isn't loopback 127.x.x.x\n-                CAddress addr(*(unsigned int*)&s4->sin_addr, GetDefaultPort(), nLocalServices);\n+                CAddress addr(*(unsigned int*)&s4->sin_addr, GetListenPort(), nLocalServices);\n                 if (addr.IsValid() && addr.GetByte(3) != 127)\n                 {\n                     addrLocalHost = addr;"
+      }
+    ]
+  },
+  {
+    "sha": "8de3ea552ad82d996ff9d04e0b6124207d1997a4",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4ZGUzZWE1NTJhZDgyZDk5NmZmOWQwNGUwYjYxMjQyMDdkMTk5N2E0",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-03-03T16:56:54Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-03-03T16:56:54Z"
+      },
+      "message": "Remove the 2h penalty for clients which don't use the default port.  This is unnecessary as outgoing connections are already limited to one IP per /16.",
+      "tree": {
+        "sha": "e39fd46897463992255bfa012645a32d5f396b70",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/e39fd46897463992255bfa012645a32d5f396b70"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/8de3ea552ad82d996ff9d04e0b6124207d1997a4",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8de3ea552ad82d996ff9d04e0b6124207d1997a4",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/8de3ea552ad82d996ff9d04e0b6124207d1997a4",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8de3ea552ad82d996ff9d04e0b6124207d1997a4/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "e01bf59ccd310c4b89526694f77dd8fc40bcfbb4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e01bf59ccd310c4b89526694f77dd8fc40bcfbb4",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/e01bf59ccd310c4b89526694f77dd8fc40bcfbb4"
+      }
+    ],
+    "stats": {
+      "total": 4,
+      "additions": 1,
+      "deletions": 3
+    },
+    "files": [
+      {
+        "sha": "d686274e57f9d5c2c6e3ffe782b0358a252b002a",
+        "filename": "net.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 3,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/8de3ea552ad82d996ff9d04e0b6124207d1997a4/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/8de3ea552ad82d996ff9d04e0b6124207d1997a4/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/net.cpp?ref=8de3ea552ad82d996ff9d04e0b6124207d1997a4",
+        "patch": "@@ -1064,10 +1064,8 @@ void ThreadOpenConnections2(void* parg)\n                 int64 nSinceLastSeen = GetAdjustedTime() - addr.nTime;\n                 int64 nSinceLastTry = GetAdjustedTime() - addr.nLastTry;\n \n-                // Randomize the order in a deterministic way, putting the standard port first\n+                // Randomize the order in a deterministic way\n                 int64 nRandomizer = (uint64)(nStart * 4951 + addr.nLastTry * 9567851 + addr.ip * 7789) % (2 * 60 * 60);\n-                if (addr.port != GetDefaultPort())\n-                    nRandomizer += 2 * 60 * 60;\n \n                 // Last seen  Base retry frequency\n                 //   <1 hour   10 min"
+      }
+    ]
+  },
+  {
+    "sha": "f36b494aebcfe4cc6a45003520ee7d15eeaba8df",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmMzZiNDk0YWViY2ZlNGNjNmE0NTAwMzUyMGVlN2QxNWVlYWJhOGRm",
+    "commit": {
+      "author": {
+        "name": "Gavin Andresen",
+        "email": "gavinandresen@gmail.com",
+        "date": "2011-03-03T21:25:05Z"
+      },
+      "committer": {
+        "name": "Gavin Andresen",
+        "email": "gavinandresen@gmail.com",
+        "date": "2011-03-03T21:25:05Z"
+      },
+      "message": "Make send/receive limits bigger (10MB each)",
+      "tree": {
+        "sha": "eacb94e4de5d8d607c243f2d448621e26dd65a6e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/eacb94e4de5d8d607c243f2d448621e26dd65a6e"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/f36b494aebcfe4cc6a45003520ee7d15eeaba8df",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f36b494aebcfe4cc6a45003520ee7d15eeaba8df",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/f36b494aebcfe4cc6a45003520ee7d15eeaba8df",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f36b494aebcfe4cc6a45003520ee7d15eeaba8df/comments",
+    "author": {
+      "login": "gavinandresen",
+      "id": 331997,
+      "node_id": "MDQ6VXNlcjMzMTk5Nw==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/331997?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/gavinandresen",
+      "html_url": "https://github.com/gavinandresen",
+      "followers_url": "https://api.github.com/users/gavinandresen/followers",
+      "following_url": "https://api.github.com/users/gavinandresen/following{/other_user}",
+      "gists_url": "https://api.github.com/users/gavinandresen/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/gavinandresen/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/gavinandresen/subscriptions",
+      "organizations_url": "https://api.github.com/users/gavinandresen/orgs",
+      "repos_url": "https://api.github.com/users/gavinandresen/repos",
+      "events_url": "https://api.github.com/users/gavinandresen/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/gavinandresen/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "gavinandresen",
+      "id": 331997,
+      "node_id": "MDQ6VXNlcjMzMTk5Nw==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/331997?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/gavinandresen",
+      "html_url": "https://github.com/gavinandresen",
+      "followers_url": "https://api.github.com/users/gavinandresen/followers",
+      "following_url": "https://api.github.com/users/gavinandresen/following{/other_user}",
+      "gists_url": "https://api.github.com/users/gavinandresen/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/gavinandresen/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/gavinandresen/subscriptions",
+      "organizations_url": "https://api.github.com/users/gavinandresen/orgs",
+      "repos_url": "https://api.github.com/users/gavinandresen/repos",
+      "events_url": "https://api.github.com/users/gavinandresen/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/gavinandresen/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "411493b1f70d1493b1203bce847baa9f41e79f91",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/411493b1f70d1493b1203bce847baa9f41e79f91",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/411493b1f70d1493b1203bce847baa9f41e79f91"
+      }
+    ],
+    "stats": {
+      "total": 4,
+      "additions": 2,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "d18b63eb5feed08ffbc3f1977c1b1ba2145aedc8",
+        "filename": "net.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f36b494aebcfe4cc6a45003520ee7d15eeaba8df/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f36b494aebcfe4cc6a45003520ee7d15eeaba8df/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/net.cpp?ref=f36b494aebcfe4cc6a45003520ee7d15eeaba8df",
+        "patch": "@@ -741,7 +741,7 @@ void ThreadSocketHandler2(void* parg)\n                     CDataStream& vRecv = pnode->vRecv;\n                     unsigned int nPos = vRecv.size();\n \n-                    if (nPos > 1000*GetArg(\"-maxreceivebuffer\", 2*1000)) {\n+                    if (nPos > 1000*GetArg(\"-maxreceivebuffer\", 10*1000)) {\n                         if (!pnode->fDisconnect)\n                             printf(\"socket recv flood control disconnect (%d bytes)\\n\", vRecv.size());\n                         pnode->CloseSocketDisconnect();\n@@ -806,7 +806,7 @@ void ThreadSocketHandler2(void* parg)\n                                 pnode->CloseSocketDisconnect();\n                             }\n                         }\n-                        if (vSend.size() > 1000*GetArg(\"-maxsendbuffer\", 256)) {\n+                        if (vSend.size() > 1000*GetArg(\"-maxsendbuffer\", 10*1000)) {\n                             if (!pnode->fDisconnect)\n                                 printf(\"socket send flood control disconnect (%d bytes)\\n\", vSend.size());\n                             pnode->CloseSocketDisconnect();"
+      }
+    ]
+  },
+  {
+    "sha": "1f6e8d251aac5beb6083f2648d312ab5322da9a8",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxZjZlOGQyNTFhYWM1YmViNjA4M2YyNjQ4ZDMxMmFiNTMyMmRhOWE4",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-03-04T16:46:26Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-03-04T16:46:26Z"
+      },
+      "message": "Merge branch 'master' of github.com:TheBlueMatt/bitcoin",
+      "tree": {
+        "sha": "42bf0c6e5851c06e68fe09764b424ae85bac79ef",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/42bf0c6e5851c06e68fe09764b424ae85bac79ef"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/1f6e8d251aac5beb6083f2648d312ab5322da9a8",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1f6e8d251aac5beb6083f2648d312ab5322da9a8",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/1f6e8d251aac5beb6083f2648d312ab5322da9a8",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1f6e8d251aac5beb6083f2648d312ab5322da9a8/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "f36b494aebcfe4cc6a45003520ee7d15eeaba8df",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f36b494aebcfe4cc6a45003520ee7d15eeaba8df",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/f36b494aebcfe4cc6a45003520ee7d15eeaba8df"
+      },
+      {
+        "sha": "8de3ea552ad82d996ff9d04e0b6124207d1997a4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8de3ea552ad82d996ff9d04e0b6124207d1997a4",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/8de3ea552ad82d996ff9d04e0b6124207d1997a4"
+      }
+    ],
+    "stats": {
+      "total": 19,
+      "additions": 10,
+      "deletions": 9
+    },
+    "files": [
+      {
+        "sha": "99f3e34290abb483c154fa8876da750b53565c63",
+        "filename": "init.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1f6e8d251aac5beb6083f2648d312ab5322da9a8/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1f6e8d251aac5beb6083f2648d312ab5322da9a8/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/init.cpp?ref=1f6e8d251aac5beb6083f2648d312ab5322da9a8",
+        "patch": "@@ -9,7 +9,6 @@\n \n \n \n-\n //////////////////////////////////////////////////////////////////////////////\n //\n // Shutdown\n@@ -172,6 +171,7 @@ bool AppInit2(int argc, char* argv[])\n             \"  -gen=0           \\t\\t  \" + _(\"Don't generate coins\\n\") +\n             \"  -min             \\t\\t  \" + _(\"Start minimized\\n\") +\n             \"  -datadir=<dir>   \\t\\t  \" + _(\"Specify data directory\\n\") +\n+            \"  -port=<port>     \\t\\t  \" + _(\"Listen for connections on <port> (instead of 8333)\\n\") +\n             \"  -proxy=<ip:port> \\t  \"   + _(\"Connect through socks4 proxy\\n\") +\n             \"  -addnode=<ip>    \\t  \"   + _(\"Add a node to connect to\\n\") +\n             \"  -connect=<ip>    \\t\\t  \" + _(\"Connect only to the specified node\\n\") +"
+      },
+      {
+        "sha": "42916b7bf80d443c454dabce0be071c2dc886095",
+        "filename": "net.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 8,
+        "changes": 17,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1f6e8d251aac5beb6083f2648d312ab5322da9a8/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1f6e8d251aac5beb6083f2648d312ab5322da9a8/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/net.cpp?ref=1f6e8d251aac5beb6083f2648d312ab5322da9a8",
+        "patch": "@@ -1064,10 +1064,8 @@ void ThreadOpenConnections2(void* parg)\n                 int64 nSinceLastSeen = GetAdjustedTime() - addr.nTime;\n                 int64 nSinceLastTry = GetAdjustedTime() - addr.nLastTry;\n \n-                // Randomize the order in a deterministic way, putting the standard port first\n+                // Randomize the order in a deterministic way\n                 int64 nRandomizer = (uint64)(nStart * 4951 + addr.nLastTry * 9567851 + addr.ip * 7789) % (2 * 60 * 60);\n-                if (addr.port != GetDefaultPort())\n-                    nRandomizer += 2 * 60 * 60;\n \n                 // Last seen  Base retry frequency\n                 //   <1 hour   10 min\n@@ -1219,14 +1217,17 @@ void ThreadMessageHandler2(void* parg)\n \n \n \n-\n+unsigned short GetListenPort()\n+{\n+    return (mapArgs.count(\"-port\") ? htons(atoi(mapArgs[\"-port\"])) : GetDefaultPort());\n+}\n \n \n bool BindListenPort(string& strError)\n {\n     strError = \"\";\n     int nOne = 1;\n-    addrLocalHost.port = GetDefaultPort();\n+    addrLocalHost.port = GetListenPort();\n \n #ifdef __WXMSW__\n     // Initialize Windows Sockets\n@@ -1278,7 +1279,7 @@ bool BindListenPort(string& strError)\n     memset(&sockaddr, 0, sizeof(sockaddr));\n     sockaddr.sin_family = AF_INET;\n     sockaddr.sin_addr.s_addr = INADDR_ANY; // bind to all IPs on this computer\n-    sockaddr.sin_port = GetDefaultPort();\n+    sockaddr.sin_port = GetListenPort();\n     if (::bind(hListenSocket, (struct sockaddr*)&sockaddr, sizeof(sockaddr)) == SOCKET_ERROR)\n     {\n         int nErr = WSAGetLastError();\n@@ -1320,7 +1321,7 @@ void StartNode(void* parg)\n                 printf(\"host ip %d: %s\\n\", i, CAddress(*(unsigned int*)phostent->h_addr_list[i]).ToStringIP().c_str());\n             for (int i = 0; phostent->h_addr_list[i] != NULL; i++)\n             {\n-                CAddress addr(*(unsigned int*)phostent->h_addr_list[i], GetDefaultPort(), nLocalServices);\n+                CAddress addr(*(unsigned int*)phostent->h_addr_list[i], GetListenPort(), nLocalServices);\n                 if (addr.IsValid() && addr.GetByte(3) != 127)\n                 {\n                     addrLocalHost = addr;\n@@ -1348,7 +1349,7 @@ void StartNode(void* parg)\n                     printf(\"ipv4 %s: %s\\n\", ifa->ifa_name, pszIP);\n \n                 // Take the first IP that isn't loopback 127.x.x.x\n-                CAddress addr(*(unsigned int*)&s4->sin_addr, GetDefaultPort(), nLocalServices);\n+                CAddress addr(*(unsigned int*)&s4->sin_addr, GetListenPort(), nLocalServices);\n                 if (addr.IsValid() && addr.GetByte(3) != 127)\n                 {\n                     addrLocalHost = addr;"
+      }
+    ]
+  },
+  {
+    "sha": "f0048c07c8937f0f8ccec146e7a3a72b7c56998d",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmMDA0OGMwN2M4OTM3ZjBmOGNjZWMxNDZlN2EzYTcyYjdjNTY5OThk",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-03-04T16:47:40Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-03-04T16:47:40Z"
+      },
+      "message": "Revert \"Apply Gavin's portoption patch.\"\n\nThis reverts commit e01bf59ccd310c4b89526694f77dd8fc40bcfbb4.",
+      "tree": {
+        "sha": "eacb94e4de5d8d607c243f2d448621e26dd65a6e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/eacb94e4de5d8d607c243f2d448621e26dd65a6e"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/f0048c07c8937f0f8ccec146e7a3a72b7c56998d",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f0048c07c8937f0f8ccec146e7a3a72b7c56998d",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/f0048c07c8937f0f8ccec146e7a3a72b7c56998d",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f0048c07c8937f0f8ccec146e7a3a72b7c56998d/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "1f6e8d251aac5beb6083f2648d312ab5322da9a8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1f6e8d251aac5beb6083f2648d312ab5322da9a8",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/1f6e8d251aac5beb6083f2648d312ab5322da9a8"
+      }
+    ],
+    "stats": {
+      "total": 19,
+      "additions": 9,
+      "deletions": 10
+    },
+    "files": [
+      {
+        "sha": "9c84dca166a3e64d49cc0be3f2a023e2200c229b",
+        "filename": "init.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f0048c07c8937f0f8ccec146e7a3a72b7c56998d/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f0048c07c8937f0f8ccec146e7a3a72b7c56998d/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/init.cpp?ref=f0048c07c8937f0f8ccec146e7a3a72b7c56998d",
+        "patch": "@@ -9,6 +9,7 @@\n \n \n \n+\n //////////////////////////////////////////////////////////////////////////////\n //\n // Shutdown\n@@ -171,7 +172,6 @@ bool AppInit2(int argc, char* argv[])\n             \"  -gen=0           \\t\\t  \" + _(\"Don't generate coins\\n\") +\n             \"  -min             \\t\\t  \" + _(\"Start minimized\\n\") +\n             \"  -datadir=<dir>   \\t\\t  \" + _(\"Specify data directory\\n\") +\n-            \"  -port=<port>     \\t\\t  \" + _(\"Listen for connections on <port> (instead of 8333)\\n\") +\n             \"  -proxy=<ip:port> \\t  \"   + _(\"Connect through socks4 proxy\\n\") +\n             \"  -addnode=<ip>    \\t  \"   + _(\"Add a node to connect to\\n\") +\n             \"  -connect=<ip>    \\t\\t  \" + _(\"Connect only to the specified node\\n\") +"
+      },
+      {
+        "sha": "d18b63eb5feed08ffbc3f1977c1b1ba2145aedc8",
+        "filename": "net.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 9,
+        "changes": 17,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f0048c07c8937f0f8ccec146e7a3a72b7c56998d/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f0048c07c8937f0f8ccec146e7a3a72b7c56998d/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/net.cpp?ref=f0048c07c8937f0f8ccec146e7a3a72b7c56998d",
+        "patch": "@@ -1064,8 +1064,10 @@ void ThreadOpenConnections2(void* parg)\n                 int64 nSinceLastSeen = GetAdjustedTime() - addr.nTime;\n                 int64 nSinceLastTry = GetAdjustedTime() - addr.nLastTry;\n \n-                // Randomize the order in a deterministic way\n+                // Randomize the order in a deterministic way, putting the standard port first\n                 int64 nRandomizer = (uint64)(nStart * 4951 + addr.nLastTry * 9567851 + addr.ip * 7789) % (2 * 60 * 60);\n+                if (addr.port != GetDefaultPort())\n+                    nRandomizer += 2 * 60 * 60;\n \n                 // Last seen  Base retry frequency\n                 //   <1 hour   10 min\n@@ -1217,17 +1219,14 @@ void ThreadMessageHandler2(void* parg)\n \n \n \n-unsigned short GetListenPort()\n-{\n-    return (mapArgs.count(\"-port\") ? htons(atoi(mapArgs[\"-port\"])) : GetDefaultPort());\n-}\n+\n \n \n bool BindListenPort(string& strError)\n {\n     strError = \"\";\n     int nOne = 1;\n-    addrLocalHost.port = GetListenPort();\n+    addrLocalHost.port = GetDefaultPort();\n \n #ifdef __WXMSW__\n     // Initialize Windows Sockets\n@@ -1279,7 +1278,7 @@ bool BindListenPort(string& strError)\n     memset(&sockaddr, 0, sizeof(sockaddr));\n     sockaddr.sin_family = AF_INET;\n     sockaddr.sin_addr.s_addr = INADDR_ANY; // bind to all IPs on this computer\n-    sockaddr.sin_port = GetListenPort();\n+    sockaddr.sin_port = GetDefaultPort();\n     if (::bind(hListenSocket, (struct sockaddr*)&sockaddr, sizeof(sockaddr)) == SOCKET_ERROR)\n     {\n         int nErr = WSAGetLastError();\n@@ -1321,7 +1320,7 @@ void StartNode(void* parg)\n                 printf(\"host ip %d: %s\\n\", i, CAddress(*(unsigned int*)phostent->h_addr_list[i]).ToStringIP().c_str());\n             for (int i = 0; phostent->h_addr_list[i] != NULL; i++)\n             {\n-                CAddress addr(*(unsigned int*)phostent->h_addr_list[i], GetListenPort(), nLocalServices);\n+                CAddress addr(*(unsigned int*)phostent->h_addr_list[i], GetDefaultPort(), nLocalServices);\n                 if (addr.IsValid() && addr.GetByte(3) != 127)\n                 {\n                     addrLocalHost = addr;\n@@ -1349,7 +1348,7 @@ void StartNode(void* parg)\n                     printf(\"ipv4 %s: %s\\n\", ifa->ifa_name, pszIP);\n \n                 // Take the first IP that isn't loopback 127.x.x.x\n-                CAddress addr(*(unsigned int*)&s4->sin_addr, GetListenPort(), nLocalServices);\n+                CAddress addr(*(unsigned int*)&s4->sin_addr, GetDefaultPort(), nLocalServices);\n                 if (addr.IsValid() && addr.GetByte(3) != 127)\n                 {\n                     addrLocalHost = addr;"
+      }
+    ]
+  }
+]

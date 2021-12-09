@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "7eae56b5acf80f19c464cbec24285f4942ff8afe",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3ZWFlNTZiNWFjZjgwZjE5YzQ2NGNiZWMyNDI4NWY0OTQyZmY4YWZl",
+    "commit": {
+      "author": {
+        "name": "4D617278",
+        "email": "4D617278@protonmail.com",
+        "date": "2021-01-26T08:46:21Z"
+      },
+      "committer": {
+        "name": "4D617278",
+        "email": "4D617278@protonmail.com",
+        "date": "2021-06-25T20:22:31Z"
+      },
+      "message": "Print warning if the script fails and print warning for each line of a nonportable command which is present in the script when the script fails\n\nFix previous sed command that sometimes fails when using BSD sed, error \"expected EOF...\"",
+      "tree": {
+        "sha": "23dcf08f629510a741076286a92869dffa6f614a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/23dcf08f629510a741076286a92869dffa6f614a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/7eae56b5acf80f19c464cbec24285f4942ff8afe",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7eae56b5acf80f19c464cbec24285f4942ff8afe",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/7eae56b5acf80f19c464cbec24285f4942ff8afe",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7eae56b5acf80f19c464cbec24285f4942ff8afe/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "246daf1f537d4b7a39774b22db86ed1931b7819b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/246daf1f537d4b7a39774b22db86ed1931b7819b",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/246daf1f537d4b7a39774b22db86ed1931b7819b"
+      }
+    ],
+    "stats": {
+      "total": 21,
+      "additions": 18,
+      "deletions": 3
+    },
+    "files": [
+      {
+        "sha": "358363a0817105156a63ca49268295285bf363b3",
+        "filename": "test/lint/commit-script-check.sh",
+        "status": "modified",
+        "additions": 18,
+        "deletions": 3,
+        "changes": 21,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7eae56b5acf80f19c464cbec24285f4942ff8afe/test/lint/commit-script-check.sh",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7eae56b5acf80f19c464cbec24285f4942ff8afe/test/lint/commit-script-check.sh",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/lint/commit-script-check.sh?ref=7eae56b5acf80f19c464cbec24285f4942ff8afe",
+        "patch": "@@ -18,21 +18,36 @@ if test -z $1; then\n fi\n \n RET=0\n+BAD_CMDS=\"sed -i\" # Extend with regular expressions e.g. \"sed -i|...\"\n PREV_BRANCH=$(git name-rev --name-only HEAD)\n PREV_HEAD=$(git rev-parse HEAD)\n for commit in $(git rev-list --reverse $1); do\n     if git rev-list -n 1 --pretty=\"%s\" $commit | grep -q \"^scripted-diff:\"; then\n         git checkout --quiet $commit^ || exit\n-        SCRIPT=\"$(git rev-list --format=%b -n1 $commit | sed '/^-BEGIN VERIFY SCRIPT-$/,/^-END VERIFY SCRIPT-$/{//!b};d')\"\n+        SCRIPT=\"$(git rev-list --format=%b -n1 $commit | sed -n '/^-BEGIN VERIFY SCRIPT-$/,/^-END VERIFY SCRIPT-$/{//!p;}')\"\n         if test -z \"$SCRIPT\"; then\n             echo \"Error: missing script for: $commit\"\n             echo \"Failed\"\n             RET=1\n         else\n             echo \"Running script for: $commit\"\n             echo \"$SCRIPT\"\n-            (eval \"$SCRIPT\")\n-            git --no-pager diff --exit-code $commit && echo \"OK\" || (echo \"Failed\"; false) || RET=1\n+\n+            if ! (eval \"$SCRIPT\"); then\n+\t    \techo \"Warning: script failed (non-zero exit code)\"\n+\t    fi\n+\n+            if git --no-pager diff --exit-code $commit; then\n+\t    \techo \"OK\"\n+\t    else\n+\t\techo \"Failed. Please ensure that commands are portable.\"\n+\t\techo \"$SCRIPT\" | grep \"$BAD_CMDS\" | # Extend with grep -E\n+\t\twhile IFS= read -r line;\n+\t\tdo\n+\t\t    echo \"$line may not portable.\"\n+\t\tdone\n+\t\tRET=1\n+\t    fi\n         fi\n         git reset --quiet --hard HEAD\n      else"
+      }
+    ]
+  }
+]

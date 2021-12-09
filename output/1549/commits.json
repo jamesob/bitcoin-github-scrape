@@ -1,0 +1,495 @@
+[
+  {
+    "sha": "74088e862e29821562652986c6bd7c14c3783327",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3NDA4OGU4NjJlMjk4MjE1NjI2NTI5ODZjNmJkN2MxNGMzNzgzMzI3",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-07-02T17:55:16Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2013-01-27T08:03:04Z"
+      },
+      "message": "Use a copy in place of mapMultiArgs[\"-addnode\"].\n\nAlso moves the DNS lookup of -addnode nodes into the repeated\nloop, allowing -addnode to follow DNS changes.",
+      "tree": {
+        "sha": "f3766f9d754a2664b404561deb30c4732a6b05ac",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/f3766f9d754a2664b404561deb30c4732a6b05ac"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/74088e862e29821562652986c6bd7c14c3783327",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/74088e862e29821562652986c6bd7c14c3783327",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/74088e862e29821562652986c6bd7c14c3783327",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/74088e862e29821562652986c6bd7c14c3783327/comments",
+    "author": null,
+    "committer": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "d3ab598fd5261a89002c0b12913c4f3e22e82f33",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d3ab598fd5261a89002c0b12913c4f3e22e82f33",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/d3ab598fd5261a89002c0b12913c4f3e22e82f33"
+      }
+    ],
+    "stats": {
+      "total": 56,
+      "additions": 38,
+      "deletions": 18
+    },
+    "files": [
+      {
+        "sha": "46700bd15432cb64057e7b92054ff47388ac9019",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 35,
+        "deletions": 18,
+        "changes": 53,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/74088e862e29821562652986c6bd7c14c3783327/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/74088e862e29821562652986c6bd7c14c3783327/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=74088e862e29821562652986c6bd7c14c3783327",
+        "patch": "@@ -72,6 +72,9 @@ CCriticalSection cs_vOneShots;\n set<CNetAddr> setservAddNodeAddresses;\n CCriticalSection cs_setservAddNodeAddresses;\n \n+vector<std::string> vAddedNodes;\n+CCriticalSection cs_vAddedNodes;\n+\n static CSemaphore *semOutbound = NULL;\n \n void AddOneShot(string strDest)\n@@ -1523,12 +1526,20 @@ void ThreadOpenAddedConnections2(void* parg)\n {\n     printf(\"ThreadOpenAddedConnections started\\n\");\n \n-    if (mapArgs.count(\"-addnode\") == 0)\n-        return;\n+    {\n+        LOCK(cs_vAddedNodes);\n+        vAddedNodes = mapMultiArgs[\"-addnode\"];\n+    }\n \n     if (HaveNameProxy()) {\n         while(!fShutdown) {\n-            BOOST_FOREACH(string& strAddNode, mapMultiArgs[\"-addnode\"]) {\n+            list<string> lAddresses(0);\n+            {\n+                LOCK(cs_vAddedNodes);\n+                BOOST_FOREACH(string& strAddNode, vAddedNodes)\n+                    lAddresses.push_back(strAddNode);\n+            }\n+            BOOST_FOREACH(string& strAddNode, lAddresses) {\n                 CAddress addr;\n                 CSemaphoreGrant grant(*semOutbound);\n                 OpenNetworkConnection(addr, &grant, strAddNode.c_str());\n@@ -1541,38 +1552,44 @@ void ThreadOpenAddedConnections2(void* parg)\n         return;\n     }\n \n-    vector<vector<CService> > vservAddressesToAdd(0);\n-    BOOST_FOREACH(string& strAddNode, mapMultiArgs[\"-addnode\"])\n+    loop\n     {\n-        vector<CService> vservNode(0);\n-        if(Lookup(strAddNode.c_str(), vservNode, GetDefaultPort(), fNameLookup, 0))\n+        list<string> lAddresses(0);\n+        {\n+            LOCK(cs_vAddedNodes);\n+            BOOST_FOREACH(string& strAddNode, vAddedNodes)\n+                lAddresses.push_back(strAddNode);\n+        }\n+\n+        list<vector<CService> > lservAddressesToAdd(0);\n+        BOOST_FOREACH(string& strAddNode, lAddresses)\n         {\n-            vservAddressesToAdd.push_back(vservNode);\n+            vector<CService> vservNode(0);\n+            if(Lookup(strAddNode.c_str(), vservNode, GetDefaultPort(), fNameLookup, 0))\n             {\n-                LOCK(cs_setservAddNodeAddresses);\n-                BOOST_FOREACH(CService& serv, vservNode)\n-                    setservAddNodeAddresses.insert(serv);\n+                lservAddressesToAdd.push_back(vservNode);\n+                {\n+                    LOCK(cs_setservAddNodeAddresses);\n+                    BOOST_FOREACH(CService& serv, vservNode)\n+                        setservAddNodeAddresses.insert(serv);\n+                }\n             }\n         }\n-    }\n-    loop\n-    {\n-        vector<vector<CService> > vservConnectAddresses = vservAddressesToAdd;\n         // Attempt to connect to each IP for each addnode entry until at least one is successful per addnode entry\n         // (keeping in mind that addnode entries can have many IPs if fNameLookup)\n         {\n             LOCK(cs_vNodes);\n             BOOST_FOREACH(CNode* pnode, vNodes)\n-                for (vector<vector<CService> >::iterator it = vservConnectAddresses.begin(); it != vservConnectAddresses.end(); it++)\n+                for (list<vector<CService> >::iterator it = lservAddressesToAdd.begin(); it != lservAddressesToAdd.end(); it++)\n                     BOOST_FOREACH(CService& addrNode, *(it))\n                         if (pnode->addr == addrNode)\n                         {\n-                            it = vservConnectAddresses.erase(it);\n+                            it = lservAddressesToAdd.erase(it);\n                             it--;\n                             break;\n                         }\n         }\n-        BOOST_FOREACH(vector<CService>& vserv, vservConnectAddresses)\n+        BOOST_FOREACH(vector<CService>& vserv, lservAddressesToAdd)\n         {\n             CSemaphoreGrant grant(*semOutbound);\n             OpenNetworkConnection(CAddress(*(vserv.begin())), &grant);"
+      },
+      {
+        "sha": "14e12aa102f255d0fee1467ec8c7b9339022513f",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/74088e862e29821562652986c6bd7c14c3783327/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/74088e862e29821562652986c6bd7c14c3783327/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=74088e862e29821562652986c6bd7c14c3783327",
+        "patch": "@@ -102,6 +102,9 @@ extern std::deque<std::pair<int64, CInv> > vRelayExpiration;\n extern CCriticalSection cs_mapRelay;\n extern std::map<CInv, int64> mapAlreadyAskedFor;\n \n+extern std::vector<std::string> vAddedNodes;\n+extern CCriticalSection cs_vAddedNodes;\n+\n \n \n "
+      }
+    ]
+  },
+  {
+    "sha": "f339e9e3391465de4921aea3194f3021016f07d1",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmMzM5ZTllMzM5MTQ2NWRlNDkyMWFlYTMxOTRmMzAyMTAxNmYwN2Qx",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-07-02T18:14:02Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2013-01-27T08:03:04Z"
+      },
+      "message": "Make ThreadOpenAddedConnections2 exit quicker if(GetNameProxy()).",
+      "tree": {
+        "sha": "1b66477cf9da12a178c095ed402ab137dc0ec2ac",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/1b66477cf9da12a178c095ed402ab137dc0ec2ac"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/f339e9e3391465de4921aea3194f3021016f07d1",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f339e9e3391465de4921aea3194f3021016f07d1",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/f339e9e3391465de4921aea3194f3021016f07d1",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f339e9e3391465de4921aea3194f3021016f07d1/comments",
+    "author": null,
+    "committer": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "74088e862e29821562652986c6bd7c14c3783327",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/74088e862e29821562652986c6bd7c14c3783327",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/74088e862e29821562652986c6bd7c14c3783327"
+      }
+    ],
+    "stats": {
+      "total": 2,
+      "additions": 2,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "4a32859dc6ff94ece8015008301f8657db932ca0",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f339e9e3391465de4921aea3194f3021016f07d1/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f339e9e3391465de4921aea3194f3021016f07d1/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=f339e9e3391465de4921aea3194f3021016f07d1",
+        "patch": "@@ -1544,6 +1544,8 @@ void ThreadOpenAddedConnections2(void* parg)\n                 CSemaphoreGrant grant(*semOutbound);\n                 OpenNetworkConnection(addr, &grant, strAddNode.c_str());\n                 Sleep(500);\n+                if (fShutdown)\n+                    return;\n             }\n             vnThreadsRunning[THREAD_ADDEDCONNECTIONS]--;\n             Sleep(120000); // Retry every 2 minutes"
+      }
+    ]
+  },
+  {
+    "sha": "72a348fd9a7015aa039f9cbdc9166f388f4725e0",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3MmEzNDhmZDlhNzAxNWFhMDM5ZjljYmRjOTE2NmYzODhmNDcyNWUw",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2013-01-23T16:45:00Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2013-01-27T08:03:04Z"
+      },
+      "message": "Add addnode RPC command.",
+      "tree": {
+        "sha": "ac3b1167ed8737ec0709600834a6379571abbcf2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/ac3b1167ed8737ec0709600834a6379571abbcf2"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/72a348fd9a7015aa039f9cbdc9166f388f4725e0",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/72a348fd9a7015aa039f9cbdc9166f388f4725e0",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/72a348fd9a7015aa039f9cbdc9166f388f4725e0",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/72a348fd9a7015aa039f9cbdc9166f388f4725e0/comments",
+    "author": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "f339e9e3391465de4921aea3194f3021016f07d1",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f339e9e3391465de4921aea3194f3021016f07d1",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/f339e9e3391465de4921aea3194f3021016f07d1"
+      }
+    ],
+    "stats": {
+      "total": 44,
+      "additions": 44,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "910d52a9fea66fe1549064f18f2ca5046f6ba77c",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/72a348fd9a7015aa039f9cbdc9166f388f4725e0/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/72a348fd9a7015aa039f9cbdc9166f388f4725e0/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=72a348fd9a7015aa039f9cbdc9166f388f4725e0",
+        "patch": "@@ -201,6 +201,7 @@ static const CRPCCommand vRPCCommands[] =\n     { \"getblockcount\",          &getblockcount,          true,   false },\n     { \"getconnectioncount\",     &getconnectioncount,     true,   false },\n     { \"getpeerinfo\",            &getpeerinfo,            true,   false },\n+    { \"addnode\",                &addnode,                true,   true },\n     { \"getdifficulty\",          &getdifficulty,          true,   false },\n     { \"getgenerate\",            &getgenerate,            true,   false },\n     { \"setgenerate\",            &setgenerate,            true,   false },"
+      },
+      {
+        "sha": "4e4ac4ff81a46ca1f24cdf0e861e1d8cf0e65f15",
+        "filename": "src/bitcoinrpc.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/72a348fd9a7015aa039f9cbdc9166f388f4725e0/src/bitcoinrpc.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/72a348fd9a7015aa039f9cbdc9166f388f4725e0/src/bitcoinrpc.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.h?ref=72a348fd9a7015aa039f9cbdc9166f388f4725e0",
+        "patch": "@@ -132,6 +132,7 @@ extern void EnsureWalletIsUnlocked();\n \n extern json_spirit::Value getconnectioncount(const json_spirit::Array& params, bool fHelp); // in rpcnet.cpp\n extern json_spirit::Value getpeerinfo(const json_spirit::Array& params, bool fHelp);\n+extern json_spirit::Value addnode(const json_spirit::Array& params, bool fHelp);\n extern json_spirit::Value dumpprivkey(const json_spirit::Array& params, bool fHelp); // in rpcdump.cpp\n extern json_spirit::Value importprivkey(const json_spirit::Array& params, bool fHelp);\n "
+      },
+      {
+        "sha": "f3b41e5be736588cd298c366ace321b8e860b8f8",
+        "filename": "src/rpcnet.cpp",
+        "status": "modified",
+        "additions": 42,
+        "deletions": 0,
+        "changes": 42,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/72a348fd9a7015aa039f9cbdc9166f388f4725e0/src/rpcnet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/72a348fd9a7015aa039f9cbdc9166f388f4725e0/src/rpcnet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcnet.cpp?ref=72a348fd9a7015aa039f9cbdc9166f388f4725e0",
+        "patch": "@@ -65,3 +65,45 @@ Value getpeerinfo(const Array& params, bool fHelp)\n     return ret;\n }\n \n+Value addnode(const Array& params, bool fHelp)\n+{\n+    string strCommand;\n+    if (params.size() == 2)\n+        strCommand = params[1].get_str();\n+    if (fHelp || params.size() != 2 ||\n+        (strCommand != \"onetry\" && strCommand != \"add\" && strCommand != \"remove\"))\n+        throw runtime_error(\n+            \"addnode <node> <add|remove|onetry>\\n\"\n+            \"Attempts add or remove <node> from the addnode list or try a connection to <node> once.\");\n+\n+    string strNode = params[0].get_str();\n+\n+    if (strCommand == \"onetry\")\n+    {\n+        CAddress addr;\n+        ConnectNode(addr, strNode.c_str());\n+        return Value::null;\n+    }\n+\n+    LOCK(cs_vAddedNodes);\n+    vector<string>::iterator it = vAddedNodes.begin();\n+    for(; it != vAddedNodes.end(); it++)\n+        if (strNode == *it)\n+            break;\n+\n+    if (strCommand == \"add\")\n+    {\n+        if (it != vAddedNodes.end())\n+            throw JSONRPCError(-23, \"Error: Node already added\");\n+        vAddedNodes.push_back(strNode);\n+    }\n+    else if(strCommand == \"remove\")\n+    {\n+        if (it == vAddedNodes.end())\n+            throw JSONRPCError(-24, \"Error: Node has not been added.\");\n+        vAddedNodes.erase(it);\n+    }\n+\n+    return Value::null;\n+}\n+"
+      }
+    ]
+  },
+  {
+    "sha": "67a11bd6c5c28edc5f24574595380c1ddf8becf4",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2N2ExMWJkNmM1YzI4ZWRjNWYyNDU3NDU5NTM4MGMxZGRmOGJlY2Y0",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2013-01-23T16:48:17Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2013-01-27T08:03:04Z"
+      },
+      "message": "Add a getaddednodeinfo RPC.",
+      "tree": {
+        "sha": "44777d928da64a7dad453c3abba87372a7be017a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/44777d928da64a7dad453c3abba87372a7be017a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/67a11bd6c5c28edc5f24574595380c1ddf8becf4",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/67a11bd6c5c28edc5f24574595380c1ddf8becf4",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/67a11bd6c5c28edc5f24574595380c1ddf8becf4",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/67a11bd6c5c28edc5f24574595380c1ddf8becf4/comments",
+    "author": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "72a348fd9a7015aa039f9cbdc9166f388f4725e0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/72a348fd9a7015aa039f9cbdc9166f388f4725e0",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/72a348fd9a7015aa039f9cbdc9166f388f4725e0"
+      }
+    ],
+    "stats": {
+      "total": 95,
+      "additions": 95,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "7751e4c8b6f0004e5824fc3475468759020102e5",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/67a11bd6c5c28edc5f24574595380c1ddf8becf4/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/67a11bd6c5c28edc5f24574595380c1ddf8becf4/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=67a11bd6c5c28edc5f24574595380c1ddf8becf4",
+        "patch": "@@ -202,6 +202,7 @@ static const CRPCCommand vRPCCommands[] =\n     { \"getconnectioncount\",     &getconnectioncount,     true,   false },\n     { \"getpeerinfo\",            &getpeerinfo,            true,   false },\n     { \"addnode\",                &addnode,                true,   true },\n+    { \"getaddednodeinfo\",       &getaddednodeinfo,       true,   true },\n     { \"getdifficulty\",          &getdifficulty,          true,   false },\n     { \"getgenerate\",            &getgenerate,            true,   false },\n     { \"setgenerate\",            &setgenerate,            true,   false },\n@@ -1180,6 +1181,7 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri\n     // Special case non-string parameter types\n     //\n     if (strMethod == \"stop\"                   && n > 0) ConvertTo<bool>(params[0]);\n+    if (strMethod == \"getaddednodeinfo\"       && n > 0) ConvertTo<bool>(params[0]);\n     if (strMethod == \"setgenerate\"            && n > 0) ConvertTo<bool>(params[0]);\n     if (strMethod == \"setgenerate\"            && n > 1) ConvertTo<boost::int64_t>(params[1]);\n     if (strMethod == \"sendtoaddress\"          && n > 1) ConvertTo<double>(params[1]);"
+      },
+      {
+        "sha": "36bfbe3eef7884e1663468b110300497df7d5fb2",
+        "filename": "src/bitcoinrpc.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/67a11bd6c5c28edc5f24574595380c1ddf8becf4/src/bitcoinrpc.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/67a11bd6c5c28edc5f24574595380c1ddf8becf4/src/bitcoinrpc.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.h?ref=67a11bd6c5c28edc5f24574595380c1ddf8becf4",
+        "patch": "@@ -133,6 +133,7 @@ extern void EnsureWalletIsUnlocked();\n extern json_spirit::Value getconnectioncount(const json_spirit::Array& params, bool fHelp); // in rpcnet.cpp\n extern json_spirit::Value getpeerinfo(const json_spirit::Array& params, bool fHelp);\n extern json_spirit::Value addnode(const json_spirit::Array& params, bool fHelp);\n+extern json_spirit::Value getaddednodeinfo(const json_spirit::Array& params, bool fHelp);\n extern json_spirit::Value dumpprivkey(const json_spirit::Array& params, bool fHelp); // in rpcdump.cpp\n extern json_spirit::Value importprivkey(const json_spirit::Array& params, bool fHelp);\n "
+      },
+      {
+        "sha": "4db3be9319a948fdfa4b60924e0ba880b714437c",
+        "filename": "src/rpcnet.cpp",
+        "status": "modified",
+        "additions": 92,
+        "deletions": 0,
+        "changes": 92,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/67a11bd6c5c28edc5f24574595380c1ddf8becf4/src/rpcnet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/67a11bd6c5c28edc5f24574595380c1ddf8becf4/src/rpcnet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcnet.cpp?ref=67a11bd6c5c28edc5f24574595380c1ddf8becf4",
+        "patch": "@@ -107,3 +107,95 @@ Value addnode(const Array& params, bool fHelp)\n     return Value::null;\n }\n \n+Value getaddednodeinfo(const Array& params, bool fHelp)\n+{\n+    if (fHelp || params.size() < 1 || params.size() > 2)\n+        throw runtime_error(\n+            \"getaddednodeinfo <dns> [node]\\n\"\n+            \"Returns information about the given added node, or all added nodes\\n\"\n+            \"(note that onetry addnodes are not listed here)\\n\"\n+            \"If dns is false, only a list of added nodes will be provided,\\n\"\n+            \"otherwise connected information will also be available.\");\n+\n+    bool fDns = params[0].get_bool();\n+\n+    list<string> laddedNodes(0);\n+    if (params.size() == 1)\n+    {\n+        LOCK(cs_vAddedNodes);\n+        BOOST_FOREACH(string& strAddNode, vAddedNodes)\n+            laddedNodes.push_back(strAddNode);\n+    }\n+    else\n+    {\n+        string strNode = params[1].get_str();\n+        LOCK(cs_vAddedNodes);\n+        BOOST_FOREACH(string& strAddNode, vAddedNodes)\n+            if (strAddNode == strNode)\n+            {\n+                laddedNodes.push_back(strAddNode);\n+                break;\n+            }\n+        if (laddedNodes.size() == 0)\n+            throw JSONRPCError(-24, \"Error: Node has not been added.\");\n+    }\n+\n+    if (!fDns)\n+    {\n+        Object ret;\n+        BOOST_FOREACH(string& strAddNode, laddedNodes)\n+            ret.push_back(Pair(\"addednode\", strAddNode));\n+        return ret;\n+    }\n+\n+    Array ret;\n+\n+    list<pair<string, vector<CService> > > laddedAddreses(0);\n+    BOOST_FOREACH(string& strAddNode, laddedNodes)\n+    {\n+        vector<CService> vservNode(0);\n+        if(Lookup(strAddNode.c_str(), vservNode, GetDefaultPort(), fNameLookup, 0))\n+            laddedAddreses.push_back(make_pair(strAddNode, vservNode));\n+        else\n+        {\n+            Object obj;\n+            obj.push_back(Pair(\"addednode\", strAddNode));\n+            obj.push_back(Pair(\"connected\", false));\n+            Array addresses;\n+            obj.push_back(Pair(\"addresses\", addresses));\n+        }\n+    }\n+\n+    LOCK(cs_vNodes);\n+    for (list<pair<string, vector<CService> > >::iterator it = laddedAddreses.begin(); it != laddedAddreses.end(); it++)\n+    {\n+        Object obj;\n+        obj.push_back(Pair(\"addednode\", it->first));\n+\n+        Array addresses;\n+        bool fConnected = false;\n+        BOOST_FOREACH(CService& addrNode, it->second)\n+        {\n+            bool fFound = false;\n+            Object node;\n+            node.push_back(Pair(\"address\", addrNode.ToString()));\n+            BOOST_FOREACH(CNode* pnode, vNodes)\n+                if (pnode->addr == addrNode)\n+                {\n+                    fFound = true;\n+                    fConnected = true;\n+                    node.push_back(Pair(\"connected\", pnode->fInbound ? \"inbound\" : \"outbound\"));\n+                    break;\n+                }\n+            if (!fFound)\n+                node.push_back(Pair(\"connected\", \"false\"));\n+            addresses.push_back(node);\n+        }\n+        obj.push_back(Pair(\"connected\", fConnected));\n+        obj.push_back(Pair(\"addresses\", addresses));\n+        ret.push_back(obj);\n+    }\n+\n+    return ret;\n+}\n+"
+      }
+    ]
+  },
+  {
+    "sha": "f2bd6c28e6bddd75d56d580c28f45d2a8be065ab",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmMmJkNmMyOGU2YmRkZDc1ZDU2ZDU4MGMyOGY0NWQyYThiZTA2NWFi",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-07-02T19:11:57Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "git@bluematt.me",
+        "date": "2013-01-27T08:03:04Z"
+      },
+      "message": "Try more than the first address for a DNS -addnode.",
+      "tree": {
+        "sha": "a08bdae9be5e7dceba103d38e016132d073ac278",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/a08bdae9be5e7dceba103d38e016132d073ac278"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/f2bd6c28e6bddd75d56d580c28f45d2a8be065ab",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f2bd6c28e6bddd75d56d580c28f45d2a8be065ab",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/f2bd6c28e6bddd75d56d580c28f45d2a8be065ab",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f2bd6c28e6bddd75d56d580c28f45d2a8be065ab/comments",
+    "author": null,
+    "committer": {
+      "login": "TheBlueMatt",
+      "id": 649246,
+      "node_id": "MDQ6VXNlcjY0OTI0Ng==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/649246?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/TheBlueMatt",
+      "html_url": "https://github.com/TheBlueMatt",
+      "followers_url": "https://api.github.com/users/TheBlueMatt/followers",
+      "following_url": "https://api.github.com/users/TheBlueMatt/following{/other_user}",
+      "gists_url": "https://api.github.com/users/TheBlueMatt/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/TheBlueMatt/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/TheBlueMatt/subscriptions",
+      "organizations_url": "https://api.github.com/users/TheBlueMatt/orgs",
+      "repos_url": "https://api.github.com/users/TheBlueMatt/repos",
+      "events_url": "https://api.github.com/users/TheBlueMatt/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/TheBlueMatt/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "67a11bd6c5c28edc5f24574595380c1ddf8becf4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/67a11bd6c5c28edc5f24574595380c1ddf8becf4",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/67a11bd6c5c28edc5f24574595380c1ddf8becf4"
+      }
+    ],
+    "stats": {
+      "total": 4,
+      "additions": 2,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "f89d2899fed3437d853b3fe34d7ea720ba6aed48",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f2bd6c28e6bddd75d56d580c28f45d2a8be065ab/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f2bd6c28e6bddd75d56d580c28f45d2a8be065ab/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=f2bd6c28e6bddd75d56d580c28f45d2a8be065ab",
+        "patch": "@@ -1554,7 +1554,7 @@ void ThreadOpenAddedConnections2(void* parg)\n         return;\n     }\n \n-    loop\n+    for (unsigned int i = 0; true; i++)\n     {\n         list<string> lAddresses(0);\n         {\n@@ -1594,7 +1594,7 @@ void ThreadOpenAddedConnections2(void* parg)\n         BOOST_FOREACH(vector<CService>& vserv, lservAddressesToAdd)\n         {\n             CSemaphoreGrant grant(*semOutbound);\n-            OpenNetworkConnection(CAddress(*(vserv.begin())), &grant);\n+            OpenNetworkConnection(CAddress(vserv[i % vserv.size()]), &grant);\n             Sleep(500);\n             if (fShutdown)\n                 return;"
+      }
+    ]
+  }
+]

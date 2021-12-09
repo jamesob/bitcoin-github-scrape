@@ -1,0 +1,516 @@
+[
+  {
+    "sha": "f3027d164590968c2cb2c303b101f7b3ed460bb3",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmMzAyN2QxNjQ1OTA5NjhjMmNiMmMzMDNiMTAxZjdiM2VkNDYwYmIz",
+    "commit": {
+      "author": {
+        "name": "ezegom",
+        "email": "ezegom@bu.edu",
+        "date": "2019-07-29T21:43:43Z"
+      },
+      "committer": {
+        "name": "ezegom",
+        "email": "ezegom@bu.edu",
+        "date": "2019-08-02T13:22:53Z"
+      },
+      "message": "rpc: bumpfee move feeRate estimation logic into sepparate method",
+      "tree": {
+        "sha": "8f7514a481790d0d99463c1c2732c75c870b72f1",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/8f7514a481790d0d99463c1c2732c75c870b72f1"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/f3027d164590968c2cb2c303b101f7b3ed460bb3",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f3027d164590968c2cb2c303b101f7b3ed460bb3",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/f3027d164590968c2cb2c303b101f7b3ed460bb3",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f3027d164590968c2cb2c303b101f7b3ed460bb3/comments",
+    "author": {
+      "login": "ezegom",
+      "id": 17113384,
+      "node_id": "MDQ6VXNlcjE3MTEzMzg0",
+      "avatar_url": "https://avatars.githubusercontent.com/u/17113384?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ezegom",
+      "html_url": "https://github.com/ezegom",
+      "followers_url": "https://api.github.com/users/ezegom/followers",
+      "following_url": "https://api.github.com/users/ezegom/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ezegom/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ezegom/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ezegom/subscriptions",
+      "organizations_url": "https://api.github.com/users/ezegom/orgs",
+      "repos_url": "https://api.github.com/users/ezegom/repos",
+      "events_url": "https://api.github.com/users/ezegom/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ezegom/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "ezegom",
+      "id": 17113384,
+      "node_id": "MDQ6VXNlcjE3MTEzMzg0",
+      "avatar_url": "https://avatars.githubusercontent.com/u/17113384?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ezegom",
+      "html_url": "https://github.com/ezegom",
+      "followers_url": "https://api.github.com/users/ezegom/followers",
+      "following_url": "https://api.github.com/users/ezegom/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ezegom/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ezegom/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ezegom/subscriptions",
+      "organizations_url": "https://api.github.com/users/ezegom/orgs",
+      "repos_url": "https://api.github.com/users/ezegom/repos",
+      "events_url": "https://api.github.com/users/ezegom/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ezegom/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "be0e8b4bff88b421128239e7140fc6bfdb654806",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/be0e8b4bff88b421128239e7140fc6bfdb654806",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/be0e8b4bff88b421128239e7140fc6bfdb654806"
+      }
+    ],
+    "stats": {
+      "total": 54,
+      "additions": 29,
+      "deletions": 25
+    },
+    "files": [
+      {
+        "sha": "ea1fefe86aba06d29f2a9a3df655c4feb11733fa",
+        "filename": "src/wallet/feebumper.cpp",
+        "status": "modified",
+        "additions": 29,
+        "deletions": 25,
+        "changes": 54,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f3027d164590968c2cb2c303b101f7b3ed460bb3/src/wallet/feebumper.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f3027d164590968c2cb2c303b101f7b3ed460bb3/src/wallet/feebumper.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/feebumper.cpp?ref=f3027d164590968c2cb2c303b101f7b3ed460bb3",
+        "patch": "@@ -57,6 +57,34 @@ static feebumper::Result PreconditionChecks(interfaces::Chain::Lock& locked_chai\n     return feebumper::Result::OK;\n }\n \n+static CFeeRate EstimateFeeRate(CWallet* wallet, const CWalletTx& wtx, CCoinControl& coin_control, CAmount& old_fee) \n+{\n+    // Get the fee rate of the original transaction. This is calculated from\n+    // the tx fee/vsize, so it may have been rounded down. Add 1 satoshi to the\n+    // result.\n+    old_fee = wtx.GetDebit(ISMINE_SPENDABLE) - wtx.tx->GetValueOut();\n+    int64_t txSize = GetVirtualTransactionSize(*(wtx.tx));\n+    CFeeRate feerate(old_fee, txSize);\n+    feerate += CFeeRate(1);\n+\n+    // The node has a configurable incremental relay fee. Increment the fee by\n+    // the minimum of that and the wallet's conservative\n+    // WALLET_INCREMENTAL_RELAY_FEE value to future proof against changes to\n+    // network wide policy for incremental relay fee that our node may not be\n+    // aware of. This ensures we're over the over the required relay fee rate\n+    // (BIP 125 rule 4).  The replacement tx will be at least as large as the\n+    // original tx, so the total fee will be greater (BIP 125 rule 3)\n+    CFeeRate node_incremental_relay_fee = wallet->chain().relayIncrementalFee();\n+    CFeeRate wallet_incremental_relay_fee = CFeeRate(WALLET_INCREMENTAL_RELAY_FEE);\n+    feerate += std::max(node_incremental_relay_fee, wallet_incremental_relay_fee);\n+\n+    // Fee rate must also be at least the wallet's GetMinimumFeeRate\n+    CFeeRate min_feerate(GetMinimumFeeRate(*wallet, coin_control, /* feeCalc */ nullptr));\n+\n+    // Set the required fee rate for the replacement transaction in coin control.\n+    return std::max(feerate, min_feerate);    \n+}\n+\n namespace feebumper {\n \n bool TransactionCanBeBumped(const CWallet* wallet, const uint256& txid)\n@@ -230,31 +258,7 @@ Result CreateRateBumpTransaction(CWallet* wallet, const uint256& txid, const CCo\n         }\n     }\n \n-    // Get the fee rate of the original transaction. This is calculated from\n-    // the tx fee/vsize, so it may have been rounded down. Add 1 satoshi to the\n-    // result.\n-    old_fee = wtx.GetDebit(ISMINE_SPENDABLE) - wtx.tx->GetValueOut();\n-    int64_t txSize = GetVirtualTransactionSize(*(wtx.tx));\n-    // Feerate of thing we are bumping\n-    CFeeRate feerate(old_fee, txSize);\n-    feerate += CFeeRate(1);\n-\n-    // The node has a configurable incremental relay fee. Increment the fee by\n-    // the minimum of that and the wallet's conservative\n-    // WALLET_INCREMENTAL_RELAY_FEE value to future proof against changes to\n-    // network wide policy for incremental relay fee that our node may not be\n-    // aware of. This ensures we're over the over the required relay fee rate\n-    // (BIP 125 rule 4).  The replacement tx will be at least as large as the\n-    // original tx, so the total fee will be greater (BIP 125 rule 3)\n-    CFeeRate node_incremental_relay_fee = wallet->chain().relayIncrementalFee();\n-    CFeeRate wallet_incremental_relay_fee = CFeeRate(WALLET_INCREMENTAL_RELAY_FEE);\n-    feerate += std::max(node_incremental_relay_fee, wallet_incremental_relay_fee);\n-\n-    // Fee rate must also be at least the wallet's GetMinimumFeeRate\n-    CFeeRate min_feerate(GetMinimumFeeRate(*wallet, new_coin_control, /* feeCalc */ nullptr));\n-\n-    // Set the required fee rate for the replacement transaction in coin control.\n-    new_coin_control.m_feerate = std::max(feerate, min_feerate);\n+    new_coin_control.m_feerate = EstimateFeeRate(wallet, wtx, new_coin_control, old_fee); \n \n     // Fill in required inputs we are double-spending(all of them)\n     // N.B.: bip125 doesn't require all the inputs in the replaced transaction to be"
+      }
+    ]
+  },
+  {
+    "sha": "c30fe97196c2548bf6db8ca2d9c12de08c02a11b",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjMzBmZTk3MTk2YzI1NDhiZjZkYjhjYTJkOWMxMmRlMDhjMDJhMTFi",
+    "commit": {
+      "author": {
+        "name": "ezegom",
+        "email": "ezegom@bu.edu",
+        "date": "2019-07-29T22:02:02Z"
+      },
+      "committer": {
+        "name": "ezegom",
+        "email": "ezegom@bu.edu",
+        "date": "2019-08-02T22:01:50Z"
+      },
+      "message": "rpc: Add feeRate argument to bumpFee method",
+      "tree": {
+        "sha": "e0dcf6ed9b3a5abac5689dc543b6a9ad881f7c86",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/e0dcf6ed9b3a5abac5689dc543b6a9ad881f7c86"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/c30fe97196c2548bf6db8ca2d9c12de08c02a11b",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c30fe97196c2548bf6db8ca2d9c12de08c02a11b",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/c30fe97196c2548bf6db8ca2d9c12de08c02a11b",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c30fe97196c2548bf6db8ca2d9c12de08c02a11b/comments",
+    "author": {
+      "login": "ezegom",
+      "id": 17113384,
+      "node_id": "MDQ6VXNlcjE3MTEzMzg0",
+      "avatar_url": "https://avatars.githubusercontent.com/u/17113384?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ezegom",
+      "html_url": "https://github.com/ezegom",
+      "followers_url": "https://api.github.com/users/ezegom/followers",
+      "following_url": "https://api.github.com/users/ezegom/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ezegom/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ezegom/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ezegom/subscriptions",
+      "organizations_url": "https://api.github.com/users/ezegom/orgs",
+      "repos_url": "https://api.github.com/users/ezegom/repos",
+      "events_url": "https://api.github.com/users/ezegom/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ezegom/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "ezegom",
+      "id": 17113384,
+      "node_id": "MDQ6VXNlcjE3MTEzMzg0",
+      "avatar_url": "https://avatars.githubusercontent.com/u/17113384?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ezegom",
+      "html_url": "https://github.com/ezegom",
+      "followers_url": "https://api.github.com/users/ezegom/followers",
+      "following_url": "https://api.github.com/users/ezegom/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ezegom/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ezegom/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ezegom/subscriptions",
+      "organizations_url": "https://api.github.com/users/ezegom/orgs",
+      "repos_url": "https://api.github.com/users/ezegom/repos",
+      "events_url": "https://api.github.com/users/ezegom/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ezegom/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "f3027d164590968c2cb2c303b101f7b3ed460bb3",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f3027d164590968c2cb2c303b101f7b3ed460bb3",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/f3027d164590968c2cb2c303b101f7b3ed460bb3"
+      }
+    ],
+    "stats": {
+      "total": 27,
+      "additions": 22,
+      "deletions": 5
+    },
+    "files": [
+      {
+        "sha": "9a5bf0f0616912394c017db8c1639a2b167a55fe",
+        "filename": "src/wallet/feebumper.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 1,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c30fe97196c2548bf6db8ca2d9c12de08c02a11b/src/wallet/feebumper.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c30fe97196c2548bf6db8ca2d9c12de08c02a11b/src/wallet/feebumper.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/feebumper.cpp?ref=c30fe97196c2548bf6db8ca2d9c12de08c02a11b",
+        "patch": "@@ -258,7 +258,12 @@ Result CreateRateBumpTransaction(CWallet* wallet, const uint256& txid, const CCo\n         }\n     }\n \n-    new_coin_control.m_feerate = EstimateFeeRate(wallet, wtx, new_coin_control, old_fee); \n+    if (coin_control.m_feerate) {\n+        // The user provided a feeRate argument. \n+    } else {\n+        // The user did not provide a feeRate argument\n+        new_coin_control.m_feerate = EstimateFeeRate(wallet, wtx, new_coin_control, old_fee); \n+    }\n \n     // Fill in required inputs we are double-spending(all of them)\n     // N.B.: bip125 doesn't require all the inputs in the replaced transaction to be"
+      },
+      {
+        "sha": "823764e1202b73fda010020d50efa4f84342e1fa",
+        "filename": "src/wallet/rpcwallet.cpp",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 4,
+        "changes": 20,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c30fe97196c2548bf6db8ca2d9c12de08c02a11b/src/wallet/rpcwallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c30fe97196c2548bf6db8ca2d9c12de08c02a11b/src/wallet/rpcwallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/rpcwallet.cpp?ref=c30fe97196c2548bf6db8ca2d9c12de08c02a11b",
+        "patch": "@@ -3279,7 +3279,7 @@ static UniValue bumpfee(const JSONRPCRequest& request)\n                 \"The command will fail if the wallet or mempool contains a transaction that spends one of T's outputs.\\n\"\n                 \"By default, the new fee will be calculated automatically using estimatesmartfee.\\n\"\n                 \"The user can specify a confirmation target for estimatesmartfee.\\n\"\n-                \"Alternatively, the user can specify totalFee (DEPRECATED), or use RPC settxfee to set a higher fee rate.\\n\"\n+                \"Alternatively, the user can specify totalFee (DEPRECATED), or feeRate (in satoshis per K) for the new transaction .\\n\"\n                 \"At a minimum, the new fee rate must be high enough to pay an additional new relay fee (incrementalfee\\n\"\n                 \"returned by getnetworkinfo) to enter the node's mempool.\\n\",\n                 {\n@@ -3291,6 +3291,9 @@ static UniValue bumpfee(const JSONRPCRequest& request)\n             \"                         In rare cases, the actual fee paid might be slightly higher than the specified\\n\"\n             \"                         totalFee if the tx change output has to be removed because it is too close to\\n\"\n             \"                         the dust threshold.\"},\n+                            {\"feeRate\", RPCArg::Type::AMOUNT, /* default */ \"fallback to 'confTarget'\", \"FeeRate (NOT total fee) to pay, per KB of transaction\\n\"\n+            \"                         The feeRate argument allows the users to use their own fee estimator. The resulting bump transaction will \"\n+            \"                         calculate the total fee based on the feeRate amount. The feeRate passed in must be greater than 0.\\n\"},\n                             {\"replaceable\", RPCArg::Type::BOOL, /* default */ \"true\", \"Whether the new transaction should still be\\n\"\n             \"                         marked bip-125 replaceable. If true, the sequence numbers in the transaction will\\n\"\n             \"                         be left unchanged from the original. If false, any input sequence numbers in the\\n\"\n@@ -3332,13 +3335,15 @@ static UniValue bumpfee(const JSONRPCRequest& request)\n             {\n                 {\"confTarget\", UniValueType(UniValue::VNUM)},\n                 {\"totalFee\", UniValueType(UniValue::VNUM)},\n+                {\"feeRate\", UniValueType(UniValue::VSTR)},\n                 {\"replaceable\", UniValueType(UniValue::VBOOL)},\n                 {\"estimate_mode\", UniValueType(UniValue::VSTR)},\n             },\n             true, true);\n-\n-        if (options.exists(\"confTarget\") && options.exists(\"totalFee\")) {\n-            throw JSONRPCError(RPC_INVALID_PARAMETER, \"confTarget and totalFee options should not both be set. Please provide either a confirmation target for fee estimation or an explicit total fee for the transaction.\");\n+        if (options.exists(\"confTarget\") && (options.exists(\"totalFee\") || options.exists(\"feeRate\"))) {\n+            throw JSONRPCError(RPC_INVALID_PARAMETER, \"confTarget can't be set with totalFee or feeRate. Please provide either a conftarget for fee estimation, or an explicit total fee or fee rate for the transaction.\");\n+        } else if (options.exists(\"feeRate\") && options.exists(\"totalFee\")) {\n+            throw JSONRPCError(RPC_INVALID_PARAMETER, \"feeRate can't be set along with totalFee. Please provide either a total fee or a fee rate (in satoshis per K) for the transaction.\");\n         } else if (options.exists(\"confTarget\")) { // TODO: alias this to conf_target\n             coin_control.m_confirm_target = ParseConfirmTarget(options[\"confTarget\"], pwallet->chain().estimateMaxBlocks());\n         } else if (options.exists(\"totalFee\")) {\n@@ -3349,6 +3354,13 @@ static UniValue bumpfee(const JSONRPCRequest& request)\n             if (totalFee <= 0) {\n                 throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf(\"Invalid totalFee %s (must be greater than 0)\", FormatMoney(totalFee)));\n             }\n+        } else if (options.exists(\"feeRate\")) {\n+            CAmount amountRequested = AmountFromValue(options[\"feeRate\"].get_str());\n+            CFeeRate fee_rate(amountRequested, 1000);\n+            if (fee_rate <= 0) {\n+                throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf(\"Invalid feeRate %s (must be greater than 0)\", fee_rate.ToString()));\n+            }\n+            coin_control.m_feerate = fee_rate;\n         }\n \n         if (options.exists(\"replaceable\")) {"
+      }
+    ]
+  },
+  {
+    "sha": "be1997e07326e5aaf753e9ac83e8d86af75d284a",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiZTE5OTdlMDczMjZlNWFhZjc1M2U5YWM4M2U4ZDg2YWY3NWQyODRh",
+    "commit": {
+      "author": {
+        "name": "ezegom",
+        "email": "ezegom@bu.edu",
+        "date": "2019-07-29T23:01:42Z"
+      },
+      "committer": {
+        "name": "ezegom",
+        "email": "ezegom@bu.edu",
+        "date": "2019-08-02T22:01:56Z"
+      },
+      "message": "rpc: bumpfee check feeRate argument",
+      "tree": {
+        "sha": "4ceed7a419f5b923342453e10e85dd492eab8d74",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/4ceed7a419f5b923342453e10e85dd492eab8d74"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/be1997e07326e5aaf753e9ac83e8d86af75d284a",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/be1997e07326e5aaf753e9ac83e8d86af75d284a",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/be1997e07326e5aaf753e9ac83e8d86af75d284a",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/be1997e07326e5aaf753e9ac83e8d86af75d284a/comments",
+    "author": {
+      "login": "ezegom",
+      "id": 17113384,
+      "node_id": "MDQ6VXNlcjE3MTEzMzg0",
+      "avatar_url": "https://avatars.githubusercontent.com/u/17113384?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ezegom",
+      "html_url": "https://github.com/ezegom",
+      "followers_url": "https://api.github.com/users/ezegom/followers",
+      "following_url": "https://api.github.com/users/ezegom/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ezegom/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ezegom/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ezegom/subscriptions",
+      "organizations_url": "https://api.github.com/users/ezegom/orgs",
+      "repos_url": "https://api.github.com/users/ezegom/repos",
+      "events_url": "https://api.github.com/users/ezegom/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ezegom/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "ezegom",
+      "id": 17113384,
+      "node_id": "MDQ6VXNlcjE3MTEzMzg0",
+      "avatar_url": "https://avatars.githubusercontent.com/u/17113384?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ezegom",
+      "html_url": "https://github.com/ezegom",
+      "followers_url": "https://api.github.com/users/ezegom/followers",
+      "following_url": "https://api.github.com/users/ezegom/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ezegom/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ezegom/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ezegom/subscriptions",
+      "organizations_url": "https://api.github.com/users/ezegom/orgs",
+      "repos_url": "https://api.github.com/users/ezegom/repos",
+      "events_url": "https://api.github.com/users/ezegom/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ezegom/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "c30fe97196c2548bf6db8ca2d9c12de08c02a11b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c30fe97196c2548bf6db8ca2d9c12de08c02a11b",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c30fe97196c2548bf6db8ca2d9c12de08c02a11b"
+      }
+    ],
+    "stats": {
+      "total": 71,
+      "additions": 65,
+      "deletions": 6
+    },
+    "files": [
+      {
+        "sha": "dfd9adfa8e3261b93e2acbf2d7533f0f2be1b0b3",
+        "filename": "src/wallet/feebumper.cpp",
+        "status": "modified",
+        "additions": 65,
+        "deletions": 6,
+        "changes": 71,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/be1997e07326e5aaf753e9ac83e8d86af75d284a/src/wallet/feebumper.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/be1997e07326e5aaf753e9ac83e8d86af75d284a/src/wallet/feebumper.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/feebumper.cpp?ref=be1997e07326e5aaf753e9ac83e8d86af75d284a",
+        "patch": "@@ -15,6 +15,7 @@\n #include <util/system.h>\n #include <util/validation.h>\n \n+\n //! Check whether transaction has descendant in wallet or mempool, or has been\n //! mined, or conflicts with a mined transaction. Return a feebumper::Result.\n static feebumper::Result PreconditionChecks(interfaces::Chain::Lock& locked_chain, const CWallet* wallet, const CWalletTx& wtx, std::vector<std::string>& errors) EXCLUSIVE_LOCKS_REQUIRED(wallet->cs_wallet)\n@@ -57,7 +58,60 @@ static feebumper::Result PreconditionChecks(interfaces::Chain::Lock& locked_chai\n     return feebumper::Result::OK;\n }\n \n-static CFeeRate EstimateFeeRate(CWallet* wallet, const CWalletTx& wtx, CCoinControl& coin_control, CAmount& old_fee) \n+//! Check if the user provided a valid feeRate\n+static feebumper::Result CheckFeeRate(const CWallet* wallet, const CWalletTx& wtx, const CFeeRate& newFeerate, const int64_t maxTxSize, std::vector<std::string>& errors)\n+{\n+    // check that fee rate is higher than mempool's minimum fee\n+    // (no point in bumping fee if we know that the new tx won't be accepted to the mempool)\n+    // This may occur if the user set FeeRate, TotalFee or paytxfee too low, if fallbackfee is too low, or, perhaps,\n+    // in a rare situation where the mempool minimum fee increased significantly since the fee estimation just a\n+    // moment earlier. In this case, we report an error to the user, who may adjust the fee.\n+    CFeeRate minMempoolFeeRate = wallet->chain().mempoolMinFee();\n+\n+    if (newFeerate.GetFeePerK() < minMempoolFeeRate.GetFeePerK()) {\n+        errors.push_back(strprintf(\n+            \"New fee rate (%s) is lower than the minimum fee rate (%s) to get into the mempool -- \",\n+            FormatMoney(newFeerate.GetFeePerK()),\n+            FormatMoney(minMempoolFeeRate.GetFeePerK())));\n+        return feebumper::Result::WALLET_ERROR;\n+    }\n+\n+    CAmount new_total_fee = newFeerate.GetFee(maxTxSize);\n+\n+    CFeeRate incrementalRelayFee = std::max(wallet->chain().relayIncrementalFee(), CFeeRate(WALLET_INCREMENTAL_RELAY_FEE));\n+\n+    // Given old total fee and transaction size, calculate the old feeRate\n+    CAmount old_fee = wtx.GetDebit(ISMINE_SPENDABLE) - wtx.tx->GetValueOut();\n+    const int64_t txSize = GetVirtualTransactionSize(*(wtx.tx));\n+    CFeeRate nOldFeeRate(old_fee, txSize);\n+    // Min total fee is old fee + relay fee\n+    CAmount minTotalFee = nOldFeeRate.GetFee(maxTxSize) + incrementalRelayFee.GetFee(maxTxSize);\n+\n+    if (new_total_fee < minTotalFee) {\n+        errors.push_back(strprintf(\"feeRate %s results in a total fee of %s which is too low. The total fee must be at least %s (oldFee %s + incrementalFee %s)\",\n+          newFeerate.ToString(), FormatMoney(new_total_fee), FormatMoney(minTotalFee), FormatMoney(nOldFeeRate.GetFee(maxTxSize)), FormatMoney(incrementalRelayFee.GetFee(maxTxSize))));\n+        return feebumper::Result::INVALID_PARAMETER;\n+    }\n+\n+    CAmount requiredFee = GetRequiredFee(*wallet, maxTxSize);\n+    if (new_total_fee < requiredFee) {\n+        errors.push_back(strprintf(\"feeRate %s results in a total fee of %s which is too low. The totalFee (cannot be less than required fee %s)\",\n+            newFeerate.ToString(), FormatMoney(new_total_fee), FormatMoney(requiredFee)));\n+        return feebumper::Result::INVALID_PARAMETER;\n+    }\n+\n+    // Check that in all cases the new fee doesn't violate maxTxFee\n+    const CAmount max_tx_fee = wallet->m_default_max_tx_fee;\n+    if (new_total_fee > max_tx_fee) {\n+        errors.push_back(strprintf(\"feeRate %s results in a total fee of %s which is too high. The total fee (cannot be higher than -maxtxfee %s)\",\n+            newFeerate.ToString(), FormatMoney(new_total_fee), FormatMoney(max_tx_fee)));\n+        return feebumper::Result::WALLET_ERROR;\n+    }\n+\n+    return feebumper::Result::OK;\n+}\n+\n+static CFeeRate EstimateFeeRate(CWallet* wallet, const CWalletTx& wtx, CCoinControl& coin_control, CAmount& old_fee)\n {\n     // Get the fee rate of the original transaction. This is calculated from\n     // the tx fee/vsize, so it may have been rounded down. Add 1 satoshi to the\n@@ -82,7 +136,7 @@ static CFeeRate EstimateFeeRate(CWallet* wallet, const CWalletTx& wtx, CCoinCont\n     CFeeRate min_feerate(GetMinimumFeeRate(*wallet, coin_control, /* feeCalc */ nullptr));\n \n     // Set the required fee rate for the replacement transaction in coin control.\n-    return std::max(feerate, min_feerate);    \n+    return std::max(feerate, min_feerate);\n }\n \n namespace feebumper {\n@@ -224,8 +278,7 @@ Result CreateTotalBumpTransaction(const CWallet* wallet, const uint256& txid, co\n }\n \n \n-Result CreateRateBumpTransaction(CWallet* wallet, const uint256& txid, const CCoinControl& coin_control, std::vector<std::string>& errors,\n-                                 CAmount& old_fee, CAmount& new_fee, CMutableTransaction& mtx)\n+Result CreateRateBumpTransaction(CWallet* wallet, const uint256& txid, const CCoinControl& coin_control, std::vector<std::string>& errors, CAmount& old_fee, CAmount& new_fee, CMutableTransaction& mtx)\n {\n     // We are going to modify coin control later, copy to re-use\n     CCoinControl new_coin_control(coin_control);\n@@ -259,10 +312,16 @@ Result CreateRateBumpTransaction(CWallet* wallet, const uint256& txid, const CCo\n     }\n \n     if (coin_control.m_feerate) {\n-        // The user provided a feeRate argument. \n+        // The user provided a feeRate argument.\n+        // We calculate this here to avoid compiler warning on the cs_wallet lock\n+        const int64_t maxTxSize = CalculateMaximumSignedTxSize(*wtx.tx, wallet);\n+        Result res = CheckFeeRate(wallet, wtx, *(new_coin_control.m_feerate), maxTxSize, errors);\n+        if (res != Result::OK) {\n+            return res;\n+        }\n     } else {\n         // The user did not provide a feeRate argument\n-        new_coin_control.m_feerate = EstimateFeeRate(wallet, wtx, new_coin_control, old_fee); \n+        new_coin_control.m_feerate = EstimateFeeRate(wallet, wtx, new_coin_control, old_fee);\n     }\n \n     // Fill in required inputs we are double-spending(all of them)"
+      }
+    ]
+  },
+  {
+    "sha": "f9e6d1b3a4d9168b7b828121842d0b8963066dcc",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmOWU2ZDFiM2E0ZDkxNjhiN2I4MjgxMjE4NDJkMGI4OTYzMDY2ZGNj",
+    "commit": {
+      "author": {
+        "name": "ezegom",
+        "email": "ezegom@bu.edu",
+        "date": "2019-07-29T23:59:23Z"
+      },
+      "committer": {
+        "name": "ezegom",
+        "email": "ezegom@bu.edu",
+        "date": "2019-08-02T22:01:56Z"
+      },
+      "message": "rpc: test bumpfee feeRate argument",
+      "tree": {
+        "sha": "8980f65a5c17f8a6ec0f9a8bc3e6537728a164b3",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/8980f65a5c17f8a6ec0f9a8bc3e6537728a164b3"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/f9e6d1b3a4d9168b7b828121842d0b8963066dcc",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f9e6d1b3a4d9168b7b828121842d0b8963066dcc",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/f9e6d1b3a4d9168b7b828121842d0b8963066dcc",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f9e6d1b3a4d9168b7b828121842d0b8963066dcc/comments",
+    "author": {
+      "login": "ezegom",
+      "id": 17113384,
+      "node_id": "MDQ6VXNlcjE3MTEzMzg0",
+      "avatar_url": "https://avatars.githubusercontent.com/u/17113384?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ezegom",
+      "html_url": "https://github.com/ezegom",
+      "followers_url": "https://api.github.com/users/ezegom/followers",
+      "following_url": "https://api.github.com/users/ezegom/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ezegom/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ezegom/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ezegom/subscriptions",
+      "organizations_url": "https://api.github.com/users/ezegom/orgs",
+      "repos_url": "https://api.github.com/users/ezegom/repos",
+      "events_url": "https://api.github.com/users/ezegom/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ezegom/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "ezegom",
+      "id": 17113384,
+      "node_id": "MDQ6VXNlcjE3MTEzMzg0",
+      "avatar_url": "https://avatars.githubusercontent.com/u/17113384?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ezegom",
+      "html_url": "https://github.com/ezegom",
+      "followers_url": "https://api.github.com/users/ezegom/followers",
+      "following_url": "https://api.github.com/users/ezegom/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ezegom/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ezegom/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ezegom/subscriptions",
+      "organizations_url": "https://api.github.com/users/ezegom/orgs",
+      "repos_url": "https://api.github.com/users/ezegom/repos",
+      "events_url": "https://api.github.com/users/ezegom/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ezegom/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "be1997e07326e5aaf753e9ac83e8d86af75d284a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/be1997e07326e5aaf753e9ac83e8d86af75d284a",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/be1997e07326e5aaf753e9ac83e8d86af75d284a"
+      }
+    ],
+    "stats": {
+      "total": 14,
+      "additions": 13,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "2bc6f5dd5a75ec2fc7b91fdf5dac4a1fc2c4d2d6",
+        "filename": "test/functional/wallet_bumpfee.py",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 1,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f9e6d1b3a4d9168b7b828121842d0b8963066dcc/test/functional/wallet_bumpfee.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f9e6d1b3a4d9168b7b828121842d0b8963066dcc/test/functional/wallet_bumpfee.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/wallet_bumpfee.py?ref=f9e6d1b3a4d9168b7b828121842d0b8963066dcc",
+        "patch": "@@ -68,6 +68,7 @@ def run_test(self):\n         self.log.info(\"Running tests\")\n         dest_address = peer_node.getnewaddress()\n         test_simple_bumpfee_succeeds(self, rbf_node, peer_node, dest_address)\n+        test_bumpfee_feerate(self, rbf_node, peer_node, dest_address)\n         test_segwit_bumpfee_succeeds(rbf_node, dest_address)\n         test_nonrbf_bumpfee_fails(peer_node, dest_address)\n         test_notmine_bumpfee_fails(rbf_node, peer_node, dest_address)\n@@ -87,7 +88,6 @@ def run_test(self):\n         test_no_more_inputs_fails(rbf_node, dest_address)\n         self.log.info(\"Success\")\n \n-\n def test_simple_bumpfee_succeeds(self, rbf_node, peer_node, dest_address):\n     rbfid = spend_one_input(rbf_node, dest_address)\n     rbftx = rbf_node.gettransaction(rbfid)\n@@ -109,6 +109,18 @@ def test_simple_bumpfee_succeeds(self, rbf_node, peer_node, dest_address):\n     assert_equal(oldwtx[\"replaced_by_txid\"], bumped_tx[\"txid\"])\n     assert_equal(bumpedwtx[\"replaces_txid\"], rbfid)\n \n+def test_bumpfee_feerate(self, rbf_node, peer_node, dest_address):\n+    rbfid = spend_one_input(rbf_node, dest_address)\n+    self.sync_mempools((rbf_node, peer_node))\n+    requested_feerate = Decimal(\"0.00015\") # 15000 satoshis per KB (0.00015 BTC per KB)\n+    bumped_tx = rbf_node.bumpfee(rbfid, {\"feeRate\": requested_feerate})\n+    # check that bumped_tx propagates, original tx was evicted and has a wallet conflict\n+    self.sync_mempools((rbf_node, peer_node))\n+    assert bumped_tx[\"txid\"] in rbf_node.getrawmempool() and bumped_tx[\"txid\"] in peer_node.getrawmempool()\n+    assert rbfid not in rbf_node.getrawmempool() and rbfid not in peer_node.getrawmempool()\n+    actual_feerate = bumped_tx[\"fee\"] * 1000 / rbf_node.getrawtransaction(bumped_tx[\"txid\"], True)[\"vsize\"]\n+    # Make sure the difference between the actual feeRate and the requested feeRate is small.\n+    assert_greater_than(Decimal(\"0.00001000\"), abs(requested_feerate - actual_feerate))\n \n def test_segwit_bumpfee_succeeds(rbf_node, dest_address):\n     # Create a transaction with segwit output, then create an RBF transaction"
+      }
+    ]
+  },
+  {
+    "sha": "3e7d71b6af01b8d1e20cbb561911dac2c97e2b11",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozZTdkNzFiNmFmMDFiOGQxZTIwY2JiNTYxOTExZGFjMmM5N2UyYjEx",
+    "commit": {
+      "author": {
+        "name": "ezegom",
+        "email": "ezegom@bu.edu",
+        "date": "2019-08-02T13:33:53Z"
+      },
+      "committer": {
+        "name": "ezegom",
+        "email": "ezegom@bu.edu",
+        "date": "2019-08-02T23:21:16Z"
+      },
+      "message": "doc: Update release-notes",
+      "tree": {
+        "sha": "0286ff22fa7ce9f9467d5643ad0b17f378422cd2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/0286ff22fa7ce9f9467d5643ad0b17f378422cd2"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/3e7d71b6af01b8d1e20cbb561911dac2c97e2b11",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3e7d71b6af01b8d1e20cbb561911dac2c97e2b11",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/3e7d71b6af01b8d1e20cbb561911dac2c97e2b11",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3e7d71b6af01b8d1e20cbb561911dac2c97e2b11/comments",
+    "author": {
+      "login": "ezegom",
+      "id": 17113384,
+      "node_id": "MDQ6VXNlcjE3MTEzMzg0",
+      "avatar_url": "https://avatars.githubusercontent.com/u/17113384?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ezegom",
+      "html_url": "https://github.com/ezegom",
+      "followers_url": "https://api.github.com/users/ezegom/followers",
+      "following_url": "https://api.github.com/users/ezegom/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ezegom/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ezegom/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ezegom/subscriptions",
+      "organizations_url": "https://api.github.com/users/ezegom/orgs",
+      "repos_url": "https://api.github.com/users/ezegom/repos",
+      "events_url": "https://api.github.com/users/ezegom/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ezegom/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "ezegom",
+      "id": 17113384,
+      "node_id": "MDQ6VXNlcjE3MTEzMzg0",
+      "avatar_url": "https://avatars.githubusercontent.com/u/17113384?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ezegom",
+      "html_url": "https://github.com/ezegom",
+      "followers_url": "https://api.github.com/users/ezegom/followers",
+      "following_url": "https://api.github.com/users/ezegom/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ezegom/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ezegom/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ezegom/subscriptions",
+      "organizations_url": "https://api.github.com/users/ezegom/orgs",
+      "repos_url": "https://api.github.com/users/ezegom/repos",
+      "events_url": "https://api.github.com/users/ezegom/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ezegom/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "f9e6d1b3a4d9168b7b828121842d0b8963066dcc",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f9e6d1b3a4d9168b7b828121842d0b8963066dcc",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/f9e6d1b3a4d9168b7b828121842d0b8963066dcc"
+      }
+    ],
+    "stats": {
+      "total": 5,
+      "additions": 4,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "4a1f7671b9f5914c1846ad33c5fe9f3abeca12d7",
+        "filename": "doc/release-notes.md",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 1,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3e7d71b6af01b8d1e20cbb561911dac2c97e2b11/doc/release-notes.md",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3e7d71b6af01b8d1e20cbb561911dac2c97e2b11/doc/release-notes.md",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/doc/release-notes.md?ref=3e7d71b6af01b8d1e20cbb561911dac2c97e2b11",
+        "patch": "@@ -92,7 +92,9 @@ Deprecated or removed RPCs\n --------------------------\n \n - The `totalFee` option of the `bumpfee` RPC has been deprecated and will be\n-  removed in 0.20.  To continue using this option start with\n+  removed in 0.20. The `feeRate` option is now the preferred way to specify\n+  the fee for the new transaction.\n+  To continue using the `totalFee` option start with\n   `-deprecatedrpc=totalFee`.  See the `bumpfee` RPC help text for more details.\n \n Low-level changes"
+      },
+      {
+        "sha": "6af3b41b18434810d48d4c6e20491a34a204f94f",
+        "filename": "src/wallet/feebumper.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3e7d71b6af01b8d1e20cbb561911dac2c97e2b11/src/wallet/feebumper.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3e7d71b6af01b8d1e20cbb561911dac2c97e2b11/src/wallet/feebumper.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/feebumper.cpp?ref=3e7d71b6af01b8d1e20cbb561911dac2c97e2b11",
+        "patch": "@@ -58,6 +58,7 @@ static feebumper::Result PreconditionChecks(interfaces::Chain::Lock& locked_chai\n     return feebumper::Result::OK;\n }\n \n+// TODO: Call this in CreateTotalBumpTransaction to avoid code duplication\n //! Check if the user provided a valid feeRate\n static feebumper::Result CheckFeeRate(const CWallet* wallet, const CWalletTx& wtx, const CFeeRate& newFeerate, const int64_t maxTxSize, std::vector<std::string>& errors)\n {"
+      }
+    ]
+  }
+]

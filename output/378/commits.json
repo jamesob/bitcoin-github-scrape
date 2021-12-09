@@ -1,0 +1,98 @@
+[
+  {
+    "sha": "b67a60eb6821629ca58081a9afac45f7f8e8d144",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiNjdhNjBlYjY4MjE2MjljYTU4MDgxYTlhZmFjNDVmN2Y4ZThkMTQ0",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-07-04T12:18:51Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-07-05T16:37:11Z"
+      },
+      "message": "Fail to load wallet if it contains unknown keys.\n\nThe motivation here is that if a wallet is encrypted, old versions\nshould simply fail to load the wallet.  Additionally, if a wallet\ngets corrupted, the client should always fail to load the wallet\nto give the user a chance for manual recovery.",
+      "tree": {
+        "sha": "a10a052d9ab7faa9be71bdc35fcae604a21bdb97",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/a10a052d9ab7faa9be71bdc35fcae604a21bdb97"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/b67a60eb6821629ca58081a9afac45f7f8e8d144",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b67a60eb6821629ca58081a9afac45f7f8e8d144",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/b67a60eb6821629ca58081a9afac45f7f8e8d144",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b67a60eb6821629ca58081a9afac45f7f8e8d144/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "9390431ce49893cbdf23846edb4bdf72b3d4e830",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9390431ce49893cbdf23846edb4bdf72b3d4e830",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/9390431ce49893cbdf23846edb4bdf72b3d4e830"
+      }
+    ],
+    "stats": {
+      "total": 38,
+      "additions": 29,
+      "deletions": 9
+    },
+    "files": [
+      {
+        "sha": "319d0ca3df2de38b7b34ee9f380011f45ac9acdb",
+        "filename": "src/db.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 4,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b67a60eb6821629ca58081a9afac45f7f8e8d144/src/db.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b67a60eb6821629ca58081a9afac45f7f8e8d144/src/db.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.cpp?ref=b67a60eb6821629ca58081a9afac45f7f8e8d144",
+        "patch": "@@ -670,7 +670,7 @@ void CWalletDB::ListAccountCreditDebit(const string& strAccount, list<CAccountin\n }\n \n \n-bool CWalletDB::LoadWallet(CWallet* pwallet)\n+int CWalletDB::LoadWallet(CWallet* pwallet)\n {\n     pwallet->vchDefaultKey.clear();\n     int nFileVersion = 0;\n@@ -690,7 +690,7 @@ bool CWalletDB::LoadWallet(CWallet* pwallet)\n         // Get cursor\n         Dbc* pcursor = GetCursor();\n         if (!pcursor)\n-            return false;\n+            return DB_CORRUPT;\n \n         loop\n         {\n@@ -701,7 +701,7 @@ bool CWalletDB::LoadWallet(CWallet* pwallet)\n             if (ret == DB_NOTFOUND)\n                 break;\n             else if (ret != 0)\n-                return false;\n+                return DB_CORRUPT;\n \n             // Unserialize\n             // Taking advantage of the fact that pair serialization\n@@ -809,6 +809,10 @@ bool CWalletDB::LoadWallet(CWallet* pwallet)\n                 if (strKey == \"addrProxy\")          ssValue >> addrProxy;\n                 if (fHaveUPnP && strKey == \"fUseUPnP\")           ssValue >> fUseUPnP;\n             }\n+            else\n+            {\n+                return DB_UNSUPPORTED;\n+            }\n         }\n         pcursor->close();\n     }\n@@ -839,7 +843,7 @@ bool CWalletDB::LoadWallet(CWallet* pwallet)\n     }\n \n \n-    return true;\n+    return DB_LOAD_OK;\n }\n \n void ThreadFlushWalletDB(void* parg)"
+      },
+      {
+        "sha": "96838412d624c032b1633cf87ac275356fbb4c4e",
+        "filename": "src/db.h",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 1,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b67a60eb6821629ca58081a9afac45f7f8e8d144/src/db.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b67a60eb6821629ca58081a9afac45f7f8e8d144/src/db.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.h?ref=b67a60eb6821629ca58081a9afac45f7f8e8d144",
+        "patch": "@@ -342,6 +342,13 @@ class CKeyPool\n \n \n \n+enum DBErrors\n+{\n+    DB_LOAD_OK,\n+    DB_CORRUPT,\n+    DB_UNSUPPORTED\n+};\n+\n class CWalletDB : public CDB\n {\n public:\n@@ -450,7 +457,7 @@ class CWalletDB : public CDB\n     int64 GetAccountCreditDebit(const std::string& strAccount);\n     void ListAccountCreditDebit(const std::string& strAccount, std::list<CAccountingEntry>& acentries);\n \n-    bool LoadWallet(CWallet* pwallet);\n+    int LoadWallet(CWallet* pwallet);\n };\n \n #endif"
+      },
+      {
+        "sha": "71574eab76445842244b4a8f5ed2ca2f5f998778",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 10,
+        "deletions": 2,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b67a60eb6821629ca58081a9afac45f7f8e8d144/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b67a60eb6821629ca58081a9afac45f7f8e8d144/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=b67a60eb6821629ca58081a9afac45f7f8e8d144",
+        "patch": "@@ -387,8 +387,16 @@ bool AppInit2(int argc, char* argv[])\n     nStart = GetTimeMillis();\n     bool fFirstRun;\n     pwalletMain = new CWallet(\"wallet.dat\");\n-    if (!pwalletMain->LoadWallet(fFirstRun))\n-        strErrors += _(\"Error loading wallet.dat      \\n\");\n+    int nLoadWalletRet = pwalletMain->LoadWallet(fFirstRun);\n+    if (nLoadWalletRet != DB_LOAD_OK)\n+    {\n+        if (nLoadWalletRet == DB_CORRUPT)\n+            strErrors += _(\"Error loading wallet.dat: Wallet corrupted      \\n\");\n+        else if (nLoadWalletRet == DB_UNSUPPORTED)\n+            strErrors += _(\"Error loading wallet.dat: Wallet requires newer version of Bitcoin      \\n\");\n+        else\n+            strErrors += _(\"Error loading wallet.dat      \\n\");\n+    }\n     printf(\" wallet      %15\"PRI64d\"ms\\n\", GetTimeMillis() - nStart);\n \n     RegisterWallet(pwalletMain);"
+      },
+      {
+        "sha": "ba9221f1834b3be88d7c42389612cc4b099c9e30",
+        "filename": "src/wallet.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 2,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b67a60eb6821629ca58081a9afac45f7f8e8d144/src/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b67a60eb6821629ca58081a9afac45f7f8e8d144/src/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.cpp?ref=b67a60eb6821629ca58081a9afac45f7f8e8d144",
+        "patch": "@@ -958,8 +958,9 @@ bool CWallet::LoadWallet(bool& fFirstRunRet)\n     if (!fFileBacked)\n         return false;\n     fFirstRunRet = false;\n-    if (!CWalletDB(strWalletFile,\"cr+\").LoadWallet(this))\n-        return false;\n+    int nLoadWalletRet = CWalletDB(strWalletFile,\"cr+\").LoadWallet(this);\n+    if (nLoadWalletRet != DB_LOAD_OK)\n+        return nLoadWalletRet;\n     fFirstRunRet = vchDefaultKey.empty();\n \n     if (!mapKeys.count(vchDefaultKey))"
+      }
+    ]
+  }
+]

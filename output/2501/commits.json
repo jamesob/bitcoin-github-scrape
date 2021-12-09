@@ -1,0 +1,86 @@
+[
+  {
+    "sha": "4881353efef81acc6ddbaaecd4ba89f012b3e87e",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0ODgxMzUzZWZlZjgxYWNjNmRkYmFhZWNkNGJhODlmMDEyYjNlODdl",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-04-10T13:45:49Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-04-10T13:53:40Z"
+      },
+      "message": "rework ClientModel::getBlockSource() + BitcoinGUI::setNumBlocks()\n\n- updates ClientModel::getBlockSource() to return all available states and\n  sorts enum BlockSource in order of usage cases (none default, then reindex,\n  import and network)\n- updates BitcoinGUI::setNumBlocks() to better use getBlockSource() and\n  also adds a message, when we have NO block source available",
+      "tree": {
+        "sha": "d9b58f483d4eda76c889bf9f72c81f0a564b27cc",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/d9b58f483d4eda76c889bf9f72c81f0a564b27cc"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/4881353efef81acc6ddbaaecd4ba89f012b3e87e",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4881353efef81acc6ddbaaecd4ba89f012b3e87e",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/4881353efef81acc6ddbaaecd4ba89f012b3e87e",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/4881353efef81acc6ddbaaecd4ba89f012b3e87e/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "1258dde48d255f18af928b7c59c4e78394f76de6",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1258dde48d255f18af928b7c59c4e78394f76de6",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/1258dde48d255f18af928b7c59c4e78394f76de6"
+      }
+    ],
+    "stats": {
+      "total": 49,
+      "additions": 23,
+      "deletions": 26
+    },
+    "files": [
+      {
+        "sha": "542000993e6e73ded9af52e210199e25cdb2e2ee",
+        "filename": "src/qt/bitcoingui.cpp",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 22,
+        "changes": 38,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4881353efef81acc6ddbaaecd4ba89f012b3e87e/src/qt/bitcoingui.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4881353efef81acc6ddbaaecd4ba89f012b3e87e/src/qt/bitcoingui.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoingui.cpp?ref=4881353efef81acc6ddbaaecd4ba89f012b3e87e",
+        "patch": "@@ -514,31 +514,26 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)\n     // Prevent orphan statusbar messages (e.g. hover Quit in main menu, wait until chain-sync starts -> garbelled text)\n     statusBar()->clearMessage();\n \n-    // don't show / hide progress bar and its label if we have no connection to the network\n-    enum BlockSource blockSource = clientModel ? clientModel->getBlockSource() : BLOCK_SOURCE_NONE;\n-    if (blockSource == BLOCK_SOURCE_NONE || (blockSource == BLOCK_SOURCE_NETWORK && clientModel->getNumConnections() == 0))\n-    {\n-        progressBarLabel->setVisible(false);\n-        progressBar->setVisible(false);\n-\n-        return;\n+    // Acquire current block source\n+    enum BlockSource blockSource = clientModel->getBlockSource();\n+    switch (blockSource) {\n+        case BLOCK_SOURCE_NETWORK:\n+            progressBarLabel->setText(tr(\"Synchronizing with network...\"));\n+            break;\n+        case BLOCK_SOURCE_DISK:\n+            progressBarLabel->setText(tr(\"Importing blocks from disk...\"));\n+            break;\n+        case BLOCK_SOURCE_REINDEX:\n+            progressBarLabel->setText(tr(\"Reindexing blocks on disk...\"));\n+            break;\n+        case BLOCK_SOURCE_NONE:\n+            // Case: not Importing, not Reindexing and no network connection\n+            progressBarLabel->setText(tr(\"No block source available...\"));\n+            break;\n     }\n \n     QString tooltip;\n \n-    QString importText;\n-    switch (blockSource) {\n-    case BLOCK_SOURCE_NONE:\n-    case BLOCK_SOURCE_NETWORK:\n-        importText = tr(\"Synchronizing with network...\");\n-        break;\n-    case BLOCK_SOURCE_DISK:\n-        importText = tr(\"Importing blocks from disk...\");\n-        break;\n-    case BLOCK_SOURCE_REINDEX:\n-        importText = tr(\"Reindexing blocks on disk...\");\n-    }\n-\n     QDateTime lastBlockDate = clientModel->getLastBlockDate();\n     QDateTime currentDate = QDateTime::currentDateTime();\n     int secs = lastBlockDate.secsTo(currentDate);\n@@ -580,7 +575,6 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks)\n             timeBehindText = tr(\"%n week(s)\",\"\",secs/(7*24*60*60));\n         }\n \n-        progressBarLabel->setText(importText);\n         progressBarLabel->setVisible(true);\n         progressBar->setFormat(tr(\"%1 behind\").arg(timeBehindText));\n         progressBar->setMaximum(1000000000);"
+      },
+      {
+        "sha": "e8d99a8d4545f936442e4a5cb0aad3e4c64c6e04",
+        "filename": "src/qt/clientmodel.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 2,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4881353efef81acc6ddbaaecd4ba89f012b3e87e/src/qt/clientmodel.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4881353efef81acc6ddbaaecd4ba89f012b3e87e/src/qt/clientmodel.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/clientmodel.cpp?ref=4881353efef81acc6ddbaaecd4ba89f012b3e87e",
+        "patch": "@@ -122,9 +122,12 @@ enum BlockSource ClientModel::getBlockSource() const\n {\n     if (fReindex)\n         return BLOCK_SOURCE_REINDEX;\n-    if (fImporting)\n+    else if (fImporting)\n         return BLOCK_SOURCE_DISK;\n-    return BLOCK_SOURCE_NETWORK;\n+    else if (getNumConnections() > 0)\n+        return BLOCK_SOURCE_NETWORK;\n+\n+    return BLOCK_SOURCE_NONE;\n }\n \n int ClientModel::getNumBlocksOfPeers() const"
+      },
+      {
+        "sha": "f9d491aa50573474a021f50d24dac4b8bbc5fcb5",
+        "filename": "src/qt/clientmodel.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/4881353efef81acc6ddbaaecd4ba89f012b3e87e/src/qt/clientmodel.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/4881353efef81acc6ddbaaecd4ba89f012b3e87e/src/qt/clientmodel.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/clientmodel.h?ref=4881353efef81acc6ddbaaecd4ba89f012b3e87e",
+        "patch": "@@ -15,9 +15,9 @@ QT_END_NAMESPACE\n \n enum BlockSource {\n     BLOCK_SOURCE_NONE,\n-    BLOCK_SOURCE_NETWORK,\n+    BLOCK_SOURCE_REINDEX,\n     BLOCK_SOURCE_DISK,\n-    BLOCK_SOURCE_REINDEX\n+    BLOCK_SOURCE_NETWORK\n };\n \n /** Model for Bitcoin network client. */"
+      }
+    ]
+  }
+]

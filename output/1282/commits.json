@@ -1,0 +1,547 @@
+[
+  {
+    "sha": "0fb78eae34b870b9e5b942095d340f2aae49cd60",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowZmI3OGVhZTM0Yjg3MGI5ZTViOTQyMDk1ZDM0MGYyYWFlNDljZDYw",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-05-14T05:11:11Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-05-14T05:11:11Z"
+      },
+      "message": "Always check return values of TxnBegin() and TxnCommit()",
+      "tree": {
+        "sha": "e572b79b017afe24d74fdbb89b0ee3f5fe635833",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/e572b79b017afe24d74fdbb89b0ee3f5fe635833"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/0fb78eae34b870b9e5b942095d340f2aae49cd60",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0fb78eae34b870b9e5b942095d340f2aae49cd60",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/0fb78eae34b870b9e5b942095d340f2aae49cd60",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0fb78eae34b870b9e5b942095d340f2aae49cd60/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "09b4e26a446c302f0cce176bf572da956bb2515e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/09b4e26a446c302f0cce176bf572da956bb2515e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/09b4e26a446c302f0cce176bf572da956bb2515e"
+      }
+    ],
+    "stats": {
+      "total": 21,
+      "additions": 15,
+      "deletions": 6
+    },
+    "files": [
+      {
+        "sha": "8e4361c92a0d20b84f70bac104f03d91e55b56b5",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 2,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0fb78eae34b870b9e5b942095d340f2aae49cd60/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0fb78eae34b870b9e5b942095d340f2aae49cd60/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=0fb78eae34b870b9e5b942095d340f2aae49cd60",
+        "patch": "@@ -1037,7 +1037,8 @@ Value movecmd(const Array& params, bool fHelp)\n         strComment = params[4].get_str();\n \n     CWalletDB walletdb(pwalletMain->strWalletFile);\n-    walletdb.TxnBegin();\n+    if (!walletdb.TxnBegin())\n+        throw JSONRPCError(-20, \"database error\");\n \n     int64 nNow = GetAdjustedTime();\n \n@@ -1059,7 +1060,8 @@ Value movecmd(const Array& params, bool fHelp)\n     credit.strComment = strComment;\n     walletdb.WriteAccountingEntry(credit);\n \n-    walletdb.TxnCommit();\n+    if (!walletdb.TxnCommit())\n+        throw JSONRPCError(-20, \"database error\");\n \n     return true;\n }"
+      },
+      {
+        "sha": "870a8ef6166151a1bde8e807e871e814055325d0",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 3,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0fb78eae34b870b9e5b942095d340f2aae49cd60/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0fb78eae34b870b9e5b942095d340f2aae49cd60/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=0fb78eae34b870b9e5b942095d340f2aae49cd60",
+        "patch": "@@ -1514,7 +1514,9 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)\n {\n     uint256 hash = GetHash();\n \n-    txdb.TxnBegin();\n+    if (!txdb.TxnBegin())\n+        return error(\"SetBestChain() : TxnBegin failed\");\n+\n     if (pindexGenesisBlock == NULL && hash == hashGenesisBlock)\n     {\n         txdb.WriteHashBestChain(hash);\n@@ -1563,7 +1565,10 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)\n                 printf(\"SetBestChain() : ReadFromDisk failed\\n\");\n                 break;\n             }\n-            txdb.TxnBegin();\n+            if (!txdb.TxnBegin()) {\n+                printf(\"SetBestChain() : TxnBegin 2 failed\\n\");\n+                break;\n+            }\n             // errors now are not fatal, we still did a reorganisation to a new chain in a valid way\n             if (!block.SetBestChainInner(txdb, pindex))\n                 break;\n@@ -1621,7 +1626,8 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos)\n     pindexNew->bnChainWork = (pindexNew->pprev ? pindexNew->pprev->bnChainWork : 0) + pindexNew->GetBlockWork();\n \n     CTxDB txdb;\n-    txdb.TxnBegin();\n+    if (!txdb.TxnBegin())\n+        return false;\n     txdb.WriteBlockIndex(CDiskBlockIndex(pindexNew));\n     if (!txdb.TxnCommit())\n         return false;"
+      },
+      {
+        "sha": "96dc986edf9bbd409219428b26ff122a73936540",
+        "filename": "src/wallet.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 1,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0fb78eae34b870b9e5b942095d340f2aae49cd60/src/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0fb78eae34b870b9e5b942095d340f2aae49cd60/src/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.cpp?ref=0fb78eae34b870b9e5b942095d340f2aae49cd60",
+        "patch": "@@ -242,7 +242,8 @@ bool CWallet::EncryptWallet(const SecureString& strWalletPassphrase)\n         if (fFileBacked)\n         {\n             pwalletdbEncryption = new CWalletDB(strWalletFile);\n-            pwalletdbEncryption->TxnBegin();\n+            if (!pwalletdbEncryption->TxnBegin())\n+                return false;\n             pwalletdbEncryption->WriteMasterKey(nMasterKeyMaxID, kMasterKey);\n         }\n "
+      }
+    ]
+  },
+  {
+    "sha": "060921932f2b0d38de6831463b7bed333963dc8e",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowNjA5MjE5MzJmMmIwZDM4ZGU2ODMxNDYzYjdiZWQzMzM5NjNkYzhl",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-05-14T16:21:03Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-05-14T16:21:03Z"
+      },
+      "message": "Reorganize(): remove spurious TxnAbort()\n\nIf Reorganize() fails, then its caller, CBlock::SetBestChain(),\nwill call TxnAbort().\n\nRedundant TxnAbort() calls are harmless.  The second will return an\nerror return value, with no other side effects.  TxnAbort() return\nvalues are generally never checked.  The impact is nil.",
+      "tree": {
+        "sha": "cbe53fa14166ebed4c3c27e02624c406ddb97793",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/cbe53fa14166ebed4c3c27e02624c406ddb97793"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/060921932f2b0d38de6831463b7bed333963dc8e",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/060921932f2b0d38de6831463b7bed333963dc8e",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/060921932f2b0d38de6831463b7bed333963dc8e",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/060921932f2b0d38de6831463b7bed333963dc8e/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "09b4e26a446c302f0cce176bf572da956bb2515e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/09b4e26a446c302f0cce176bf572da956bb2515e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/09b4e26a446c302f0cce176bf572da956bb2515e"
+      }
+    ],
+    "stats": {
+      "total": 1,
+      "additions": 0,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "dd197273e8a0b3be2ce3dd13cc9a38d37775ed7d",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 1,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/060921932f2b0d38de6831463b7bed333963dc8e/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/060921932f2b0d38de6831463b7bed333963dc8e/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=060921932f2b0d38de6831463b7bed333963dc8e",
+        "patch": "@@ -1438,7 +1438,6 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)\n         if (!block.ConnectBlock(txdb, pindex))\n         {\n             // Invalid block\n-            txdb.TxnAbort();\n             return error(\"Reorganize() : ConnectBlock %s failed\", pindex->GetBlockHash().ToString().substr(0,20).c_str());\n         }\n "
+      }
+    ]
+  },
+  {
+    "sha": "e19963d5ba167d8be571d516d3af162006c755b0",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplMTk5NjNkNWJhMTY3ZDhiZTU3MWQ1MTZkM2FmMTYyMDA2Yzc1NWIw",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jeff@garzik.org",
+        "date": "2012-05-14T16:28:00Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-05-14T16:28:00Z"
+      },
+      "message": "Merge branch 'extra-abort' into dbenv",
+      "tree": {
+        "sha": "3849d328d35d006f515e42da8e79de58ef12e2f0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/3849d328d35d006f515e42da8e79de58ef12e2f0"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/e19963d5ba167d8be571d516d3af162006c755b0",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e19963d5ba167d8be571d516d3af162006c755b0",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/e19963d5ba167d8be571d516d3af162006c755b0",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e19963d5ba167d8be571d516d3af162006c755b0/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "0fb78eae34b870b9e5b942095d340f2aae49cd60",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0fb78eae34b870b9e5b942095d340f2aae49cd60",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/0fb78eae34b870b9e5b942095d340f2aae49cd60"
+      },
+      {
+        "sha": "060921932f2b0d38de6831463b7bed333963dc8e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/060921932f2b0d38de6831463b7bed333963dc8e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/060921932f2b0d38de6831463b7bed333963dc8e"
+      }
+    ],
+    "stats": {
+      "total": 1,
+      "additions": 0,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "f118fae3f90b2cb06807a6f4f363cfbe40e36977",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 1,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e19963d5ba167d8be571d516d3af162006c755b0/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e19963d5ba167d8be571d516d3af162006c755b0/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=e19963d5ba167d8be571d516d3af162006c755b0",
+        "patch": "@@ -1438,7 +1438,6 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)\n         if (!block.ConnectBlock(txdb, pindex))\n         {\n             // Invalid block\n-            txdb.TxnAbort();\n             return error(\"Reorganize() : ConnectBlock %s failed\", pindex->GetBlockHash().ToString().substr(0,20).c_str());\n         }\n "
+      }
+    ]
+  },
+  {
+    "sha": "1e3624093d77f2b050bf33c9fa67616e798847d6",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxZTM2MjQwOTNkNzdmMmIwNTBiZjMzYzlmYTY3NjE2ZTc5ODg0N2Q2",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-05-14T01:37:39Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-05-14T16:28:35Z"
+      },
+      "message": "Encapsulate BDB environment inside new CDBEnv class\n\nCleans up and organizes several scattered functions and variables related to\nthe BDB env.  Class CDBInit() existed to provide a\nguaranteed-via-C++-destructor cleanup of the db environment.\n\nA formal CDBEnv class provides all of this inside a single wrapper.",
+      "tree": {
+        "sha": "026db81e0fcc614bfef2452fca1b62b74af48ce2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/026db81e0fcc614bfef2452fca1b62b74af48ce2"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/1e3624093d77f2b050bf33c9fa67616e798847d6",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1e3624093d77f2b050bf33c9fa67616e798847d6",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/1e3624093d77f2b050bf33c9fa67616e798847d6",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1e3624093d77f2b050bf33c9fa67616e798847d6/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "e19963d5ba167d8be571d516d3af162006c755b0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e19963d5ba167d8be571d516d3af162006c755b0",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/e19963d5ba167d8be571d516d3af162006c755b0"
+      }
+    ],
+    "stats": {
+      "total": 186,
+      "additions": 109,
+      "deletions": 77
+    },
+    "files": [
+      {
+        "sha": "703e12c471926b736e735ddf74bcee8101f94c21",
+        "filename": "src/db.cpp",
+        "status": "modified",
+        "additions": 76,
+        "deletions": 63,
+        "changes": 139,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1e3624093d77f2b050bf33c9fa67616e798847d6/src/db.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1e3624093d77f2b050bf33c9fa67616e798847d6/src/db.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.cpp?ref=1e3624093d77f2b050bf33c9fa67616e798847d6",
+        "patch": "@@ -26,14 +26,11 @@ unsigned int nWalletDBUpdated;\n // CDB\n //\n \n-CCriticalSection cs_db;\n-static bool fDbEnvInit = false;\n-bool fDetachDB = false;\n-DbEnv dbenv(0);\n+CDBEnv bitdb;\n map<string, int> mapFileUseCount;\n static map<string, Db*> mapDb;\n \n-static void EnvShutdown()\n+void CDBEnv::EnvShutdown()\n {\n     if (!fDbEnvInit)\n         return;\n@@ -50,18 +47,66 @@ static void EnvShutdown()\n     DbEnv(0).remove(GetDataDir().string().c_str(), 0);\n }\n \n-class CDBInit\n+CDBEnv::CDBEnv() : dbenv(0)\n {\n-public:\n-    CDBInit()\n-    {\n-    }\n-    ~CDBInit()\n-    {\n-        EnvShutdown();\n-    }\n }\n-instance_of_cdbinit;\n+\n+CDBEnv::~CDBEnv()\n+{\n+    EnvShutdown();\n+}\n+\n+void CDBEnv::Close()\n+{\n+    EnvShutdown();\n+}\n+\n+bool CDBEnv::Open(boost::filesystem::path pathEnv_)\n+{\n+    if (fDbEnvInit)\n+        return true;\n+\n+    if (fShutdown)\n+        return false;\n+\n+    pathEnv = pathEnv_;\n+    filesystem::path pathDataDir = pathEnv;\n+    filesystem::path pathLogDir = pathDataDir / \"database\";\n+    filesystem::create_directory(pathLogDir);\n+    filesystem::path pathErrorFile = pathDataDir / \"db.log\";\n+    printf(\"dbenv.open LogDir=%s ErrorFile=%s\\n\", pathLogDir.string().c_str(), pathErrorFile.string().c_str());\n+\n+    int nDbCache = GetArg(\"-dbcache\", 25);\n+    dbenv.set_lg_dir(pathLogDir.string().c_str());\n+    dbenv.set_cachesize(nDbCache / 1024, (nDbCache % 1024)*1048576, 1);\n+    dbenv.set_lg_bsize(1048576);\n+    dbenv.set_lg_max(10485760);\n+    dbenv.set_lk_max_locks(10000);\n+    dbenv.set_lk_max_objects(10000);\n+    dbenv.set_errfile(fopen(pathErrorFile.string().c_str(), \"a\")); /// debug\n+    dbenv.set_flags(DB_AUTO_COMMIT, 1);\n+    dbenv.log_set_config(DB_LOG_AUTO_REMOVE, 1);\n+    int ret = dbenv.open(pathDataDir.string().c_str(),\n+                     DB_CREATE     |\n+                     DB_INIT_LOCK  |\n+                     DB_INIT_LOG   |\n+                     DB_INIT_MPOOL |\n+                     DB_INIT_TXN   |\n+                     DB_THREAD     |\n+                     DB_RECOVER,\n+                     S_IRUSR | S_IWUSR);\n+    if (ret > 0)\n+        return error(\"CDB() : error %d opening database environment\", ret);\n+\n+    fDbEnvInit = true;\n+    return true;\n+}\n+\n+void CDBEnv::CheckpointLSN(std::string strFile)\n+{\n+    dbenv.txn_checkpoint(0, 0, 0);\n+    dbenv.lsn_reset(strFile.c_str(), 0);\n+}\n \n \n CDB::CDB(const char *pszFile, const char* pszMode) : pdb(NULL)\n@@ -77,47 +122,16 @@ CDB::CDB(const char *pszFile, const char* pszMode) : pdb(NULL)\n         nFlags |= DB_CREATE;\n \n     {\n-        LOCK(cs_db);\n-        if (!fDbEnvInit)\n-        {\n-            if (fShutdown)\n-                return;\n-            filesystem::path pathDataDir = GetDataDir();\n-            filesystem::path pathLogDir = pathDataDir / \"database\";\n-            filesystem::create_directory(pathLogDir);\n-            filesystem::path pathErrorFile = pathDataDir / \"db.log\";\n-            printf(\"dbenv.open LogDir=%s ErrorFile=%s\\n\", pathLogDir.string().c_str(), pathErrorFile.string().c_str());\n-\n-            int nDbCache = GetArg(\"-dbcache\", 25);\n-            dbenv.set_lg_dir(pathLogDir.string().c_str());\n-            dbenv.set_cachesize(nDbCache / 1024, (nDbCache % 1024)*1048576, 1);\n-            dbenv.set_lg_bsize(1048576);\n-            dbenv.set_lg_max(10485760);\n-            dbenv.set_lk_max_locks(10000);\n-            dbenv.set_lk_max_objects(10000);\n-            dbenv.set_errfile(fopen(pathErrorFile.string().c_str(), \"a\")); /// debug\n-            dbenv.set_flags(DB_AUTO_COMMIT, 1);\n-            dbenv.log_set_config(DB_LOG_AUTO_REMOVE, 1);\n-            ret = dbenv.open(pathDataDir.string().c_str(),\n-                             DB_CREATE     |\n-                             DB_INIT_LOCK  |\n-                             DB_INIT_LOG   |\n-                             DB_INIT_MPOOL |\n-                             DB_INIT_TXN   |\n-                             DB_THREAD     |\n-                             DB_RECOVER,\n-                             S_IRUSR | S_IWUSR);\n-            if (ret > 0)\n-                throw runtime_error(strprintf(\"CDB() : error %d opening database environment\", ret));\n-            fDbEnvInit = true;\n-        }\n+        LOCK(bitdb.cs_db);\n+        if (!bitdb.Open(GetDataDir()))\n+            throw runtime_error(\"env open failed\");\n \n         strFile = pszFile;\n         ++mapFileUseCount[strFile];\n         pdb = mapDb[strFile];\n         if (pdb == NULL)\n         {\n-            pdb = new Db(&dbenv, 0);\n+            pdb = new Db(&bitdb.dbenv, 0);\n \n             ret = pdb->open(NULL,      // Txn pointer\n                             pszFile,   // Filename\n@@ -131,7 +145,7 @@ CDB::CDB(const char *pszFile, const char* pszMode) : pdb(NULL)\n                 delete pdb;\n                 pdb = NULL;\n                 {\n-                     LOCK(cs_db);\n+                     LOCK(bitdb.cs_db);\n                     --mapFileUseCount[strFile];\n                 }\n                 strFile = \"\";\n@@ -171,18 +185,18 @@ void CDB::Close()\n     if (strFile == \"blkindex.dat\" && IsInitialBlockDownload())\n         nMinutes = 5;\n \n-    dbenv.txn_checkpoint(nMinutes ? GetArg(\"-dblogsize\", 100)*1024 : 0, nMinutes, 0);\n+    bitdb.dbenv.txn_checkpoint(nMinutes ? GetArg(\"-dblogsize\", 100)*1024 : 0, nMinutes, 0);\n \n     {\n-        LOCK(cs_db);\n+        LOCK(bitdb.cs_db);\n         --mapFileUseCount[strFile];\n     }\n }\n \n void CloseDb(const string& strFile)\n {\n     {\n-        LOCK(cs_db);\n+        LOCK(bitdb.cs_db);\n         if (mapDb[strFile] != NULL)\n         {\n             // Close the database handle\n@@ -199,21 +213,20 @@ bool CDB::Rewrite(const string& strFile, const char* pszSkip)\n     while (!fShutdown)\n     {\n         {\n-            LOCK(cs_db);\n+            LOCK(bitdb.cs_db);\n             if (!mapFileUseCount.count(strFile) || mapFileUseCount[strFile] == 0)\n             {\n                 // Flush log data to the dat file\n                 CloseDb(strFile);\n-                dbenv.txn_checkpoint(0, 0, 0);\n-                dbenv.lsn_reset(strFile.c_str(), 0);\n+                bitdb.CheckpointLSN(strFile);\n                 mapFileUseCount.erase(strFile);\n \n                 bool fSuccess = true;\n                 printf(\"Rewriting %s...\\n\", strFile.c_str());\n                 string strFileRes = strFile + \".rewrite\";\n                 { // surround usage of db with extra {}\n                     CDB db(strFile.c_str(), \"r\");\n-                    Db* pdbCopy = new Db(&dbenv, 0);\n+                    Db* pdbCopy = new Db(&bitdb.dbenv, 0);\n     \n                     int ret = pdbCopy->open(NULL,                 // Txn pointer\n                                             strFileRes.c_str(),   // Filename\n@@ -271,10 +284,10 @@ bool CDB::Rewrite(const string& strFile, const char* pszSkip)\n                 }\n                 if (fSuccess)\n                 {\n-                    Db dbA(&dbenv, 0);\n+                    Db dbA(&bitdb.dbenv, 0);\n                     if (dbA.remove(strFile.c_str(), NULL, 0))\n                         fSuccess = false;\n-                    Db dbB(&dbenv, 0);\n+                    Db dbB(&bitdb.dbenv, 0);\n                     if (dbB.rename(strFileRes.c_str(), NULL, strFile.c_str(), 0))\n                         fSuccess = false;\n                 }\n@@ -289,11 +302,11 @@ bool CDB::Rewrite(const string& strFile, const char* pszSkip)\n }\n \n \n-void DBFlush(bool fShutdown)\n+void CDBEnv::Flush(bool fShutdown)\n {\n     // Flush log data to the actual data file\n     //  on all files that are not in use\n-    printf(\"DBFlush(%s)%s\\n\", fShutdown ? \"true\" : \"false\", fDbEnvInit ? \"\" : \" db not started\");\n+    printf(\"Flush(%s)%s\\n\", fShutdown ? \"true\" : \"false\", fDbEnvInit ? \"\" : \" db not started\");\n     if (!fDbEnvInit)\n         return;\n     {\n@@ -326,7 +339,7 @@ void DBFlush(bool fShutdown)\n             if (mapFileUseCount.empty())\n             {\n                 dbenv.log_archive(&listp, DB_ARCH_REMOVE);\n-                EnvShutdown();\n+                Close();\n             }\n         }\n     }"
+      },
+      {
+        "sha": "ca1fbc058d90d19435b25c4ceeb54852cab4f61d",
+        "filename": "src/db.h",
+        "status": "modified",
+        "additions": 26,
+        "deletions": 4,
+        "changes": 30,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1e3624093d77f2b050bf33c9fa67616e798847d6/src/db.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1e3624093d77f2b050bf33c9fa67616e798847d6/src/db.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.h?ref=1e3624093d77f2b050bf33c9fa67616e798847d6",
+        "patch": "@@ -25,14 +25,36 @@ class CWallet;\n class CWalletTx;\n \n extern unsigned int nWalletDBUpdated;\n-extern bool fDetachDB;\n-extern DbEnv dbenv;\n \n-extern void DBFlush(bool fShutdown);\n void ThreadFlushWalletDB(void* parg);\n bool BackupWallet(const CWallet& wallet, const std::string& strDest);\n \n \n+class CDBEnv\n+{\n+private:\n+    bool fDetachDB;\n+    bool fDbEnvInit;\n+    boost::filesystem::path pathEnv;\n+\n+    void EnvShutdown();\n+\n+public:\n+    mutable CCriticalSection cs_db;\n+    DbEnv dbenv;\n+\n+    CDBEnv();\n+    ~CDBEnv();\n+    bool Open(boost::filesystem::path pathEnv_);\n+    void Close();\n+    void Flush(bool fShutdown);\n+    void CheckpointLSN(std::string strFile);\n+    void SetDetach(bool fDetachDB_) { fDetachDB = fDetachDB_; }\n+};\n+\n+extern CDBEnv bitdb;\n+\n+\n /** RAII class that provides access to a Berkeley database */\n class CDB\n {\n@@ -216,7 +238,7 @@ class CDB\n         if (!pdb)\n             return false;\n         DbTxn* ptxn = NULL;\n-        int ret = dbenv.txn_begin(GetTxn(), &ptxn, DB_TXN_NOSYNC);\n+        int ret = bitdb.dbenv.txn_begin(GetTxn(), &ptxn, DB_TXN_NOSYNC);\n         if (!ptxn || ret != 0)\n             return false;\n         vTxn.push_back(ptxn);"
+      },
+      {
+        "sha": "06eb499f294114c4d291d27e99402eaddabbe67c",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 3,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1e3624093d77f2b050bf33c9fa67616e798847d6/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1e3624093d77f2b050bf33c9fa67616e798847d6/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=1e3624093d77f2b050bf33c9fa67616e798847d6",
+        "patch": "@@ -54,9 +54,9 @@ void Shutdown(void* parg)\n     {\n         fShutdown = true;\n         nTransactionsUpdated++;\n-        DBFlush(false);\n+        bitdb.Flush(false);\n         StopNode();\n-        DBFlush(true);\n+        bitdb.Flush(true);\n         boost::filesystem::remove(GetPidFile());\n         UnregisterWallet(pwalletMain);\n         delete pwalletMain;\n@@ -295,7 +295,7 @@ bool AppInit2()\n     }\n \n     fDebug = GetBoolArg(\"-debug\");\n-    fDetachDB = GetBoolArg(\"-detachdb\", false);\n+    bitdb.SetDetach(GetBoolArg(\"-detachdb\", false));\n \n #if !defined(WIN32) && !defined(QT_GUI)\n     fDaemon = GetBoolArg(\"-daemon\");"
+      },
+      {
+        "sha": "06c3adc60991320416b81fd66c5e84aff2f0186c",
+        "filename": "src/walletdb.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 7,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/1e3624093d77f2b050bf33c9fa67616e798847d6/src/walletdb.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/1e3624093d77f2b050bf33c9fa67616e798847d6/src/walletdb.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/walletdb.cpp?ref=1e3624093d77f2b050bf33c9fa67616e798847d6",
+        "patch": "@@ -13,7 +13,6 @@ using namespace boost;\n \n static uint64 nAccountingEntryNumber = 0;\n \n-extern CCriticalSection cs_db;\n extern map<string, int> mapFileUseCount;\n extern void CloseDb(const string& strFile);\n \n@@ -350,7 +349,7 @@ void ThreadFlushWalletDB(void* parg)\n \n         if (nLastFlushed != nWalletDBUpdated && GetTime() - nLastWalletUpdate >= 2)\n         {\n-            TRY_LOCK(cs_db,lockDb);\n+            TRY_LOCK(bitdb.cs_db,lockDb);\n             if (lockDb)\n             {\n                 // Don't do this if any databases are in use\n@@ -374,8 +373,7 @@ void ThreadFlushWalletDB(void* parg)\n \n                         // Flush wallet.dat so it's self contained\n                         CloseDb(strFile);\n-                        dbenv.txn_checkpoint(0, 0, 0);\n-                        dbenv.lsn_reset(strFile.c_str(), 0);\n+                        bitdb.CheckpointLSN(strFile);\n \n                         mapFileUseCount.erase(mi++);\n                         printf(\"Flushed wallet.dat %\"PRI64d\"ms\\n\", GetTimeMillis() - nStart);\n@@ -393,13 +391,12 @@ bool BackupWallet(const CWallet& wallet, const string& strDest)\n     while (!fShutdown)\n     {\n         {\n-            LOCK(cs_db);\n+            LOCK(bitdb.cs_db);\n             if (!mapFileUseCount.count(wallet.strWalletFile) || mapFileUseCount[wallet.strWalletFile] == 0)\n             {\n                 // Flush log data to the dat file\n                 CloseDb(wallet.strWalletFile);\n-                dbenv.txn_checkpoint(0, 0, 0);\n-                dbenv.lsn_reset(wallet.strWalletFile.c_str(), 0);\n+                bitdb.CheckpointLSN(wallet.strWalletFile);\n                 mapFileUseCount.erase(wallet.strWalletFile);\n \n                 // Copy wallet.dat"
+      }
+    ]
+  },
+  {
+    "sha": "accb0268e218f2dd75bcf361f6dc5f24206e7780",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphY2NiMDI2OGUyMThmMmRkNzViY2YzNjFmNmRjNWYyNDIwNmU3Nzgw",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-05-14T16:33:34Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-05-14T16:33:34Z"
+      },
+      "message": "Create CDBEnv::TxnBegin(), and use it in CDB::TxnBegin()",
+      "tree": {
+        "sha": "79047fbe151ca402180b3371618eff1cfcebf48e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/79047fbe151ca402180b3371618eff1cfcebf48e"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/accb0268e218f2dd75bcf361f6dc5f24206e7780",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/accb0268e218f2dd75bcf361f6dc5f24206e7780",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/accb0268e218f2dd75bcf361f6dc5f24206e7780",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/accb0268e218f2dd75bcf361f6dc5f24206e7780/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "1e3624093d77f2b050bf33c9fa67616e798847d6",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/1e3624093d77f2b050bf33c9fa67616e798847d6",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/1e3624093d77f2b050bf33c9fa67616e798847d6"
+      }
+    ],
+    "stats": {
+      "total": 14,
+      "additions": 11,
+      "deletions": 3
+    },
+    "files": [
+      {
+        "sha": "73fac2f864cf33cbd5195eb112df9b297e6a8b6c",
+        "filename": "src/db.h",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 3,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/accb0268e218f2dd75bcf361f6dc5f24206e7780/src/db.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/accb0268e218f2dd75bcf361f6dc5f24206e7780/src/db.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.h?ref=accb0268e218f2dd75bcf361f6dc5f24206e7780",
+        "patch": "@@ -50,6 +50,15 @@ class CDBEnv\n     void Flush(bool fShutdown);\n     void CheckpointLSN(std::string strFile);\n     void SetDetach(bool fDetachDB_) { fDetachDB = fDetachDB_; }\n+\n+    DbTxn *TxnBegin(DbTxn *baseTxn, int flags=DB_TXN_NOSYNC)\n+    {\n+        DbTxn* ptxn = NULL;\n+        int ret = dbenv.txn_begin(baseTxn, &ptxn, flags);\n+        if (!ptxn || ret != 0)\n+            return NULL;\n+        return ptxn;\n+    }\n };\n \n extern CDBEnv bitdb;\n@@ -237,9 +246,8 @@ class CDB\n     {\n         if (!pdb)\n             return false;\n-        DbTxn* ptxn = NULL;\n-        int ret = bitdb.dbenv.txn_begin(GetTxn(), &ptxn, DB_TXN_NOSYNC);\n-        if (!ptxn || ret != 0)\n+        DbTxn* ptxn = bitdb.TxnBegin(GetTxn());\n+        if (!ptxn)\n             return false;\n         vTxn.push_back(ptxn);\n         return true;"
+      }
+    ]
+  },
+  {
+    "sha": "c7ab7e596e10ee5ad21a6a67a1f98b2feca45cf6",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjN2FiN2U1OTZlMTBlZTVhZDIxYTZhNjdhMWY5OGIyZmVjYTQ1Y2Y2",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-05-14T16:39:29Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-05-14T16:39:29Z"
+      },
+      "message": "Remove unused nested BDB transaction support",
+      "tree": {
+        "sha": "0b6a214b899832ff8de80777649e17a95e0612ad",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/0b6a214b899832ff8de80777649e17a95e0612ad"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/c7ab7e596e10ee5ad21a6a67a1f98b2feca45cf6",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c7ab7e596e10ee5ad21a6a67a1f98b2feca45cf6",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/c7ab7e596e10ee5ad21a6a67a1f98b2feca45cf6",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c7ab7e596e10ee5ad21a6a67a1f98b2feca45cf6/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "accb0268e218f2dd75bcf361f6dc5f24206e7780",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/accb0268e218f2dd75bcf361f6dc5f24206e7780",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/accb0268e218f2dd75bcf361f6dc5f24206e7780"
+      }
+    ],
+    "stats": {
+      "total": 50,
+      "additions": 19,
+      "deletions": 31
+    },
+    "files": [
+      {
+        "sha": "ccdc439d95f8cc319593b576579bed60fa34da14",
+        "filename": "src/db.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 3,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c7ab7e596e10ee5ad21a6a67a1f98b2feca45cf6/src/db.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c7ab7e596e10ee5ad21a6a67a1f98b2feca45cf6/src/db.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.cpp?ref=c7ab7e596e10ee5ad21a6a67a1f98b2feca45cf6",
+        "patch": "@@ -169,9 +169,9 @@ void CDB::Close()\n {\n     if (!pdb)\n         return;\n-    if (!vTxn.empty())\n-        vTxn.front()->abort();\n-    vTxn.clear();\n+    if (activeTxn)\n+        activeTxn->abort();\n+    activeTxn = NULL;\n     pdb = NULL;\n \n     // Flush database activity from memory pool to disk log"
+      },
+      {
+        "sha": "95b5450300b321e1875096036300d152b986ac47",
+        "filename": "src/db.h",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 28,
+        "changes": 44,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c7ab7e596e10ee5ad21a6a67a1f98b2feca45cf6/src/db.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c7ab7e596e10ee5ad21a6a67a1f98b2feca45cf6/src/db.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.h?ref=c7ab7e596e10ee5ad21a6a67a1f98b2feca45cf6",
+        "patch": "@@ -51,10 +51,10 @@ class CDBEnv\n     void CheckpointLSN(std::string strFile);\n     void SetDetach(bool fDetachDB_) { fDetachDB = fDetachDB_; }\n \n-    DbTxn *TxnBegin(DbTxn *baseTxn, int flags=DB_TXN_NOSYNC)\n+    DbTxn *TxnBegin(int flags=DB_TXN_NOSYNC)\n     {\n         DbTxn* ptxn = NULL;\n-        int ret = dbenv.txn_begin(baseTxn, &ptxn, flags);\n+        int ret = dbenv.txn_begin(NULL, &ptxn, flags);\n         if (!ptxn || ret != 0)\n             return NULL;\n         return ptxn;\n@@ -70,7 +70,7 @@ class CDB\n protected:\n     Db* pdb;\n     std::string strFile;\n-    std::vector<DbTxn*> vTxn;\n+    DbTxn *activeTxn;\n     bool fReadOnly;\n \n     explicit CDB(const char* pszFile, const char* pszMode=\"r+\");\n@@ -97,7 +97,7 @@ class CDB\n         // Read\n         Dbt datValue;\n         datValue.set_flags(DB_DBT_MALLOC);\n-        int ret = pdb->get(GetTxn(), &datKey, &datValue, 0);\n+        int ret = pdb->get(activeTxn, &datKey, &datValue, 0);\n         memset(datKey.get_data(), 0, datKey.get_size());\n         if (datValue.get_data() == NULL)\n             return false;\n@@ -133,7 +133,7 @@ class CDB\n         Dbt datValue(&ssValue[0], ssValue.size());\n \n         // Write\n-        int ret = pdb->put(GetTxn(), &datKey, &datValue, (fOverwrite ? 0 : DB_NOOVERWRITE));\n+        int ret = pdb->put(activeTxn, &datKey, &datValue, (fOverwrite ? 0 : DB_NOOVERWRITE));\n \n         // Clear memory in case it was a private key\n         memset(datKey.get_data(), 0, datKey.get_size());\n@@ -156,7 +156,7 @@ class CDB\n         Dbt datKey(&ssKey[0], ssKey.size());\n \n         // Erase\n-        int ret = pdb->del(GetTxn(), &datKey, 0);\n+        int ret = pdb->del(activeTxn, &datKey, 0);\n \n         // Clear memory\n         memset(datKey.get_data(), 0, datKey.get_size());\n@@ -176,7 +176,7 @@ class CDB\n         Dbt datKey(&ssKey[0], ssKey.size());\n \n         // Exists\n-        int ret = pdb->exists(GetTxn(), &datKey, 0);\n+        int ret = pdb->exists(activeTxn, &datKey, 0);\n \n         // Clear memory\n         memset(datKey.get_data(), 0, datKey.get_size());\n@@ -233,45 +233,33 @@ class CDB\n         return 0;\n     }\n \n-    DbTxn* GetTxn()\n-    {\n-        if (!vTxn.empty())\n-            return vTxn.back();\n-        else\n-            return NULL;\n-    }\n-\n public:\n     bool TxnBegin()\n     {\n-        if (!pdb)\n+        if (!pdb || activeTxn)\n             return false;\n-        DbTxn* ptxn = bitdb.TxnBegin(GetTxn());\n+        DbTxn* ptxn = bitdb.TxnBegin();\n         if (!ptxn)\n             return false;\n-        vTxn.push_back(ptxn);\n+        activeTxn = ptxn;\n         return true;\n     }\n \n     bool TxnCommit()\n     {\n-        if (!pdb)\n-            return false;\n-        if (vTxn.empty())\n+        if (!pdb || !activeTxn)\n             return false;\n-        int ret = vTxn.back()->commit(0);\n-        vTxn.pop_back();\n+        int ret = activeTxn->commit(0);\n+        activeTxn = NULL;\n         return (ret == 0);\n     }\n \n     bool TxnAbort()\n     {\n-        if (!pdb)\n-            return false;\n-        if (vTxn.empty())\n+        if (!pdb || !activeTxn)\n             return false;\n-        int ret = vTxn.back()->abort();\n-        vTxn.pop_back();\n+        int ret = activeTxn->abort();\n+        activeTxn = NULL;\n         return (ret == 0);\n     }\n "
+      }
+    ]
+  },
+  {
+    "sha": "ccb0a0d128103b69a20864f4158368afdd9d4d0c",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjY2IwYTBkMTI4MTAzYjY5YTIwODY0ZjQxNTgzNjhhZmRkOWQ0ZDBj",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-05-14T05:51:37Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-05-14T16:40:50Z"
+      },
+      "message": "Move hash->CBlockIndex BDB into its own database, blkhash.dat\n\nblkindex.dat stores all kinds of data, and as such, each key is overloaded to\nform a namespace.  All keys beginning with \"blockindex\" form the\nhash->CBlockIndex data that is loaded into mapBlockIndex.\n\nThis change moves mapBlockIndex data to its own database, custom tailored for\nthe sort of data we wish to store:\n\n- BDB type changed from btree to hash\n- key is uint256 hash, with no prefixes\n\nUsage is cleaner, and uses slightly less CPU and disk space than the previous\nsolution.",
+      "tree": {
+        "sha": "e824d5903a0b98ec4297563d154820e6ee5842ba",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/e824d5903a0b98ec4297563d154820e6ee5842ba"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/ccb0a0d128103b69a20864f4158368afdd9d4d0c",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ccb0a0d128103b69a20864f4158368afdd9d4d0c",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/ccb0a0d128103b69a20864f4158368afdd9d4d0c",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ccb0a0d128103b69a20864f4158368afdd9d4d0c/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "c7ab7e596e10ee5ad21a6a67a1f98b2feca45cf6",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c7ab7e596e10ee5ad21a6a67a1f98b2feca45cf6",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c7ab7e596e10ee5ad21a6a67a1f98b2feca45cf6"
+      }
+    ],
+    "stats": {
+      "total": 242,
+      "additions": 140,
+      "deletions": 102
+    },
+    "files": [
+      {
+        "sha": "ae41694f757bac333e777ccc34125580cbd315ef",
+        "filename": "src/db.cpp",
+        "status": "modified",
+        "additions": 69,
+        "deletions": 69,
+        "changes": 138,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ccb0a0d128103b69a20864f4158368afdd9d4d0c/src/db.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ccb0a0d128103b69a20864f4158368afdd9d4d0c/src/db.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.cpp?ref=ccb0a0d128103b69a20864f4158368afdd9d4d0c",
+        "patch": "@@ -109,7 +109,7 @@ void CDBEnv::CheckpointLSN(std::string strFile)\n }\n \n \n-CDB::CDB(const char *pszFile, const char* pszMode) : pdb(NULL)\n+CDB::CDB(const char *pszFile, const char* pszMode, bool fHash) : pdb(NULL)\n {\n     int ret;\n     if (pszFile == NULL)\n@@ -136,7 +136,7 @@ CDB::CDB(const char *pszFile, const char* pszMode) : pdb(NULL)\n             ret = pdb->open(NULL,      // Txn pointer\n                             pszFile,   // Filename\n                             \"main\",    // Logical db name\n-                            DB_BTREE,  // Database type\n+                            fHash ? DB_HASH : DB_BTREE, // Database type\n                             nFlags,    // Flags\n                             0);\n \n@@ -471,16 +471,6 @@ bool CTxDB::ReadDiskTx(COutPoint outpoint, CTransaction& tx)\n     return ReadDiskTx(outpoint.hash, tx, txindex);\n }\n \n-bool CTxDB::WriteBlockIndex(const CDiskBlockIndex& blockindex)\n-{\n-    return Write(make_pair(string(\"blockindex\"), blockindex.GetBlockHash()), blockindex);\n-}\n-\n-bool CTxDB::EraseBlockIndex(uint256 hash)\n-{\n-    return Erase(make_pair(string(\"blockindex\"), hash));\n-}\n-\n bool CTxDB::ReadHashBestChain(uint256& hashBestChain)\n {\n     return Read(string(\"hashBestChain\"), hashBestChain);\n@@ -523,62 +513,6 @@ CBlockIndex static * InsertBlockIndex(uint256 hash)\n \n bool CTxDB::LoadBlockIndex()\n {\n-    // Get database cursor\n-    Dbc* pcursor = GetCursor();\n-    if (!pcursor)\n-        return false;\n-\n-    // Load mapBlockIndex\n-    unsigned int fFlags = DB_SET_RANGE;\n-    loop\n-    {\n-        // Read next record\n-        CDataStream ssKey(SER_DISK, CLIENT_VERSION);\n-        if (fFlags == DB_SET_RANGE)\n-            ssKey << make_pair(string(\"blockindex\"), uint256(0));\n-        CDataStream ssValue(SER_DISK, CLIENT_VERSION);\n-        int ret = ReadAtCursor(pcursor, ssKey, ssValue, fFlags);\n-        fFlags = DB_NEXT;\n-        if (ret == DB_NOTFOUND)\n-            break;\n-        else if (ret != 0)\n-            return false;\n-\n-        // Unserialize\n-        string strType;\n-        ssKey >> strType;\n-        if (strType == \"blockindex\" && !fRequestShutdown)\n-        {\n-            CDiskBlockIndex diskindex;\n-            ssValue >> diskindex;\n-\n-            // Construct block index object\n-            CBlockIndex* pindexNew = InsertBlockIndex(diskindex.GetBlockHash());\n-            pindexNew->pprev          = InsertBlockIndex(diskindex.hashPrev);\n-            pindexNew->pnext          = InsertBlockIndex(diskindex.hashNext);\n-            pindexNew->nFile          = diskindex.nFile;\n-            pindexNew->nBlockPos      = diskindex.nBlockPos;\n-            pindexNew->nHeight        = diskindex.nHeight;\n-            pindexNew->nVersion       = diskindex.nVersion;\n-            pindexNew->hashMerkleRoot = diskindex.hashMerkleRoot;\n-            pindexNew->nTime          = diskindex.nTime;\n-            pindexNew->nBits          = diskindex.nBits;\n-            pindexNew->nNonce         = diskindex.nNonce;\n-\n-            // Watch for genesis block\n-            if (pindexGenesisBlock == NULL && diskindex.GetBlockHash() == hashGenesisBlock)\n-                pindexGenesisBlock = pindexNew;\n-\n-            if (!pindexNew->CheckIndex())\n-                return error(\"LoadBlockIndex() : CheckIndex failed at %d\", pindexNew->nHeight);\n-        }\n-        else\n-        {\n-            break; // if shutdown requested or finished loading block index\n-        }\n-    }\n-    pcursor->close();\n-\n     if (fRequestShutdown)\n         return true;\n \n@@ -735,15 +669,81 @@ bool CTxDB::LoadBlockIndex()\n         CBlock block;\n         if (!block.ReadFromDisk(pindexFork))\n             return error(\"LoadBlockIndex() : block.ReadFromDisk failed\");\n+\n+        CBlockIdxDB blkidxdb;              // ugh\n         CTxDB txdb;\n-        block.SetBestChain(txdb, pindexFork);\n+        block.SetBestChain(blkidxdb, txdb, pindexFork);\n     }\n \n     return true;\n }\n \n \n+//\n+// CBlockIdxDB\n+//\n+\n+bool CBlockIdxDB::WriteBlockIndex(const CDiskBlockIndex& blockindex)\n+{\n+    uint256 hash = blockindex.GetBlockHash();\n+    return Write(hash, blockindex, true);  // is overwrite really ok here?\n+}\n+\n+bool CBlockIdxDB::EraseBlockIndex(uint256 hash)\n+{\n+    return Erase(hash);\n+}\n+\n+bool CBlockIdxDB::LoadBlockIndex()\n+{\n+    // Get database cursor\n+    Dbc* pcursor = GetCursor();\n+    if (!pcursor)\n+        return false;\n \n+    // Load mapBlockIndex\n+    loop\n+    {\n+        // Read next record\n+        CDataStream ssKey(SER_DISK, CLIENT_VERSION);\n+        CDataStream ssValue(SER_DISK, CLIENT_VERSION);\n+        int ret = ReadAtCursor(pcursor, ssKey, ssValue);\n+        if (ret == DB_NOTFOUND)\n+            break;\n+        else if (ret != 0)\n+            return false;\n+\n+        // Unserialize\n+        CDiskBlockIndex diskindex;\n+        ssValue >> diskindex;\n+\n+        // Construct block index object\n+        CBlockIndex* pindexNew = InsertBlockIndex(diskindex.GetBlockHash());\n+        pindexNew->pprev          = InsertBlockIndex(diskindex.hashPrev);\n+        pindexNew->pnext          = InsertBlockIndex(diskindex.hashNext);\n+        pindexNew->nFile          = diskindex.nFile;\n+        pindexNew->nBlockPos      = diskindex.nBlockPos;\n+        pindexNew->nHeight        = diskindex.nHeight;\n+        pindexNew->nVersion       = diskindex.nVersion;\n+        pindexNew->hashMerkleRoot = diskindex.hashMerkleRoot;\n+        pindexNew->nTime          = diskindex.nTime;\n+        pindexNew->nBits          = diskindex.nBits;\n+        pindexNew->nNonce         = diskindex.nNonce;\n+\n+        // Watch for genesis block\n+        if (pindexGenesisBlock == NULL && diskindex.GetBlockHash() == hashGenesisBlock)\n+            pindexGenesisBlock = pindexNew;\n+\n+        if (!pindexNew->CheckIndex())\n+            return error(\"LoadBlockIndex() : CheckIndex failed at %d\", pindexNew->nHeight);\n+\n+        if (fRequestShutdown)\n+            break;\n+    }\n+    pcursor->close();\n+\n+    return true;\n+}\n \n \n //"
+      },
+      {
+        "sha": "6590b862a34c737ff6df5aa76b260d0f402c9079",
+        "filename": "src/db.h",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 3,
+        "changes": 19,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ccb0a0d128103b69a20864f4158368afdd9d4d0c/src/db.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ccb0a0d128103b69a20864f4158368afdd9d4d0c/src/db.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/db.h?ref=ccb0a0d128103b69a20864f4158368afdd9d4d0c",
+        "patch": "@@ -73,7 +73,7 @@ class CDB\n     DbTxn *activeTxn;\n     bool fReadOnly;\n \n-    explicit CDB(const char* pszFile, const char* pszMode=\"r+\");\n+    explicit CDB(const char* pszFile, const char* pszMode=\"r+\", bool fHash=false);\n     ~CDB() { Close(); }\n public:\n     void Close();\n@@ -302,8 +302,6 @@ class CTxDB : public CDB\n     bool ReadDiskTx(uint256 hash, CTransaction& tx);\n     bool ReadDiskTx(COutPoint outpoint, CTransaction& tx, CTxIndex& txindex);\n     bool ReadDiskTx(COutPoint outpoint, CTransaction& tx);\n-    bool WriteBlockIndex(const CDiskBlockIndex& blockindex);\n-    bool EraseBlockIndex(uint256 hash);\n     bool ReadHashBestChain(uint256& hashBestChain);\n     bool WriteHashBestChain(uint256 hashBestChain);\n     bool ReadBestInvalidWork(CBigNum& bnBestInvalidWork);\n@@ -312,6 +310,21 @@ class CTxDB : public CDB\n };\n \n \n+/** Access to the block chain index (blkhash.dat) */\n+class CBlockIdxDB : public CDB\n+{\n+public:\n+    CBlockIdxDB(const char* pszMode=\"r+\") : CDB(\"blkhash.dat\", pszMode, true) {}\n+private:\n+    CBlockIdxDB(const CBlockIdxDB&);\n+    void operator=(const CBlockIdxDB&);\n+public:\n+    bool LoadBlockIndex();\n+    bool WriteBlockIndex(const CDiskBlockIndex& blockindex);\n+    bool EraseBlockIndex(uint256 hash);\n+};\n+\n+\n \n \n /** Access to the (IP) address database (addr.dat) */"
+      },
+      {
+        "sha": "8219678f73bad49870a74b161715856348a09fb4",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 0,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ccb0a0d128103b69a20864f4158368afdd9d4d0c/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ccb0a0d128103b69a20864f4158368afdd9d4d0c/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=ccb0a0d128103b69a20864f4158368afdd9d4d0c",
+        "patch": "@@ -346,8 +346,12 @@ bool AppInit2()\n \n     if (GetBoolArg(\"-loadblockindextest\"))\n     {\n+        CBlockIdxDB blkidxdb(\"r\");\n+        blkidxdb.LoadBlockIndex();\n+\n         CTxDB txdb(\"r\");\n         txdb.LoadBlockIndex();\n+\n         PrintBlockTree();\n         return false;\n     }"
+      },
+      {
+        "sha": "7a0ccdcea8c127b26fb989e73ce86ad7a7713cca",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 44,
+        "deletions": 26,
+        "changes": 70,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ccb0a0d128103b69a20864f4158368afdd9d4d0c/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ccb0a0d128103b69a20864f4158368afdd9d4d0c/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=ccb0a0d128103b69a20864f4158368afdd9d4d0c",
+        "patch": "@@ -1257,7 +1257,8 @@ bool CTransaction::ClientConnectInputs()\n \n \n \n-bool CBlock::DisconnectBlock(CTxDB& txdb, CBlockIndex* pindex)\n+bool CBlock::DisconnectBlock(CBlockIdxDB& blkidxdb, CTxDB& txdb,\n+                             CBlockIndex* pindex)\n {\n     // Disconnect in reverse order\n     for (int i = vtx.size()-1; i >= 0; i--)\n@@ -1270,14 +1271,15 @@ bool CBlock::DisconnectBlock(CTxDB& txdb, CBlockIndex* pindex)\n     {\n         CDiskBlockIndex blockindexPrev(pindex->pprev);\n         blockindexPrev.hashNext = 0;\n-        if (!txdb.WriteBlockIndex(blockindexPrev))\n+        if (!blkidxdb.WriteBlockIndex(blockindexPrev))\n             return error(\"DisconnectBlock() : WriteBlockIndex failed\");\n     }\n \n     return true;\n }\n \n-bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex)\n+bool CBlock::ConnectBlock(CBlockIdxDB& blkidxdb, CTxDB& txdb,\n+                          CBlockIndex* pindex)\n {\n     // Check it again in case a previous version let a bad block in\n     if (!CheckBlock())\n@@ -1368,7 +1370,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex)\n     {\n         CDiskBlockIndex blockindexPrev(pindex->pprev);\n         blockindexPrev.hashNext = pindex->GetBlockHash();\n-        if (!txdb.WriteBlockIndex(blockindexPrev))\n+        if (!blkidxdb.WriteBlockIndex(blockindexPrev))\n             return error(\"ConnectBlock() : WriteBlockIndex failed\");\n     }\n \n@@ -1379,7 +1381,8 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex)\n     return true;\n }\n \n-bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)\n+bool static Reorganize(CBlockIdxDB& blkidxdb, CTxDB& txdb, DbTxn *txn,\n+                       CBlockIndex* pindexNew)\n {\n     printf(\"REORGANIZE\\n\");\n \n@@ -1418,7 +1421,7 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)\n         CBlock block;\n         if (!block.ReadFromDisk(pindex))\n             return error(\"Reorganize() : ReadFromDisk for disconnect failed\");\n-        if (!block.DisconnectBlock(txdb, pindex))\n+        if (!block.DisconnectBlock(blkidxdb, txdb, pindex))\n             return error(\"Reorganize() : DisconnectBlock %s failed\", pindex->GetBlockHash().ToString().substr(0,20).c_str());\n \n         // Queue memory transactions to resurrect\n@@ -1435,7 +1438,7 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)\n         CBlock block;\n         if (!block.ReadFromDisk(pindex))\n             return error(\"Reorganize() : ReadFromDisk for connect failed\");\n-        if (!block.ConnectBlock(txdb, pindex))\n+        if (!block.ConnectBlock(blkidxdb, txdb, pindex))\n         {\n             // Invalid block\n             return error(\"Reorganize() : ConnectBlock %s failed\", pindex->GetBlockHash().ToString().substr(0,20).c_str());\n@@ -1449,7 +1452,7 @@ bool static Reorganize(CTxDB& txdb, CBlockIndex* pindexNew)\n         return error(\"Reorganize() : WriteHashBestChain failed\");\n \n     // Make sure it's successfully written to disk before changing memory structure\n-    if (!txdb.TxnCommit())\n+    if (txn->commit(0) != 0)\n         return error(\"Reorganize() : TxnCommit failed\");\n \n     // Disconnect shorter branch\n@@ -1485,18 +1488,19 @@ runCommand(std::string strCommand)\n }\n \n // Called from inside SetBestChain: attaches a block to the new best chain being built\n-bool CBlock::SetBestChainInner(CTxDB& txdb, CBlockIndex *pindexNew)\n+bool CBlock::SetBestChainInner(CBlockIdxDB& blkidxdb, CTxDB& txdb, DbTxn *txn,\n+                               CBlockIndex *pindexNew)\n {\n     uint256 hash = GetHash();\n \n     // Adding to current best branch\n-    if (!ConnectBlock(txdb, pindexNew) || !txdb.WriteHashBestChain(hash))\n+    if (!ConnectBlock(blkidxdb, txdb, pindexNew) || !txdb.WriteHashBestChain(hash))\n     {\n-        txdb.TxnAbort();\n+        txn->abort();\n         InvalidChainFound(pindexNew);\n         return false;\n     }\n-    if (!txdb.TxnCommit())\n+    if (txn->commit(0) != 0)\n         return error(\"SetBestChain() : TxnCommit failed\");\n \n     // Add to current best branch\n@@ -1509,23 +1513,24 @@ bool CBlock::SetBestChainInner(CTxDB& txdb, CBlockIndex *pindexNew)\n     return true;\n }\n \n-bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)\n+bool CBlock::SetBestChain(CBlockIdxDB& blkidxdb, CTxDB& txdb, CBlockIndex* pindexNew)\n {\n     uint256 hash = GetHash();\n \n-    if (!txdb.TxnBegin())\n+    DbTxn *txn = bitdb.TxnBegin();\n+    if (!txn)\n         return error(\"SetBestChain() : TxnBegin failed\");\n \n     if (pindexGenesisBlock == NULL && hash == hashGenesisBlock)\n     {\n         txdb.WriteHashBestChain(hash);\n-        if (!txdb.TxnCommit())\n+        if (txn->commit(0) != 0)\n             return error(\"SetBestChain() : TxnCommit failed\");\n         pindexGenesisBlock = pindexNew;\n     }\n     else if (hashPrevBlock == hashBestChain)\n     {\n-        if (!SetBestChainInner(txdb, pindexNew))\n+        if (!SetBestChainInner(blkidxdb, txdb, txn, pindexNew))\n             return error(\"SetBestChain() : SetBestChainInner failed\");\n     }\n     else\n@@ -1548,9 +1553,9 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)\n             printf(\"Postponing %i reconnects\\n\", vpindexSecondary.size());\n \n         // Switch to new best branch\n-        if (!Reorganize(txdb, pindexIntermediate))\n+        if (!Reorganize(blkidxdb, txdb, txn, pindexIntermediate))\n         {\n-            txdb.TxnAbort();\n+            txn->abort();\n             InvalidChainFound(pindexNew);\n             return error(\"SetBestChain() : Reorganize failed\");\n         }\n@@ -1564,12 +1569,14 @@ bool CBlock::SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew)\n                 printf(\"SetBestChain() : ReadFromDisk failed\\n\");\n                 break;\n             }\n-            if (!txdb.TxnBegin()) {\n+\n+            txn = bitdb.TxnBegin();\n+            if (!txn) {\n                 printf(\"SetBestChain() : TxnBegin 2 failed\\n\");\n                 break;\n             }\n             // errors now are not fatal, we still did a reorganisation to a new chain in a valid way\n-            if (!block.SetBestChainInner(txdb, pindex))\n+            if (!block.SetBestChainInner(blkidxdb, txdb, txn, pindex))\n                 break;\n         }\n     }\n@@ -1624,19 +1631,22 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos)\n     }\n     pindexNew->bnChainWork = (pindexNew->pprev ? pindexNew->pprev->bnChainWork : 0) + pindexNew->GetBlockWork();\n \n-    CTxDB txdb;\n-    if (!txdb.TxnBegin())\n+    CBlockIdxDB blkidxdb;\n+    if (!blkidxdb.TxnBegin())\n         return false;\n-    txdb.WriteBlockIndex(CDiskBlockIndex(pindexNew));\n-    if (!txdb.TxnCommit())\n+    blkidxdb.WriteBlockIndex(CDiskBlockIndex(pindexNew));\n+    if (!blkidxdb.TxnCommit())\n         return false;\n \n+    CTxDB txdb;\n+\n     // New best\n     if (pindexNew->bnChainWork > bnBestChainWork)\n-        if (!SetBestChain(txdb, pindexNew))\n+        if (!SetBestChain(blkidxdb, txdb, pindexNew))\n             return false;\n \n     txdb.Close();\n+    blkidxdb.Close();\n \n     if (pindexNew == pindexBest)\n     {\n@@ -1918,7 +1928,15 @@ bool LoadBlockIndex(bool fAllowNew)\n     }\n \n     //\n-    // Load block index\n+    // Load block hashes index\n+    //\n+    CBlockIdxDB blkidxdb(\"cr\");\n+    if (!blkidxdb.LoadBlockIndex())\n+        return false;\n+    blkidxdb.Close();\n+\n+    //\n+    // Load TX index\n     //\n     CTxDB txdb(\"cr\");\n     if (!txdb.LoadBlockIndex())"
+      },
+      {
+        "sha": "c792474da871ef33dd554b1140c415a90788f498",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 4,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ccb0a0d128103b69a20864f4158368afdd9d4d0c/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ccb0a0d128103b69a20864f4158368afdd9d4d0c/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=ccb0a0d128103b69a20864f4158368afdd9d4d0c",
+        "patch": "@@ -16,6 +16,8 @@\n \n #include <list>\n \n+class DbTxn;\n+\n class CWallet;\n class CBlock;\n class CBlockIndex;\n@@ -80,6 +82,7 @@ extern int64 nTransactionFee;\n \n \n class CReserveKey;\n+class CBlockIdxDB;\n class CTxDB;\n class CTxIndex;\n \n@@ -1011,16 +1014,16 @@ class CBlock\n     }\n \n \n-    bool DisconnectBlock(CTxDB& txdb, CBlockIndex* pindex);\n-    bool ConnectBlock(CTxDB& txdb, CBlockIndex* pindex);\n+    bool DisconnectBlock(CBlockIdxDB& blkidxdb, CTxDB& txdb, CBlockIndex* pindex);\n+    bool ConnectBlock(CBlockIdxDB& blkidxdb, CTxDB& txdb, CBlockIndex* pindex);\n     bool ReadFromDisk(const CBlockIndex* pindex, bool fReadTransactions=true);\n-    bool SetBestChain(CTxDB& txdb, CBlockIndex* pindexNew);\n+    bool SetBestChain(CBlockIdxDB& blkidxdb, CTxDB& txdb, CBlockIndex* pindexNew);\n     bool AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos);\n     bool CheckBlock() const;\n     bool AcceptBlock();\n \n private:\n-    bool SetBestChainInner(CTxDB& txdb, CBlockIndex *pindexNew);\n+    bool SetBestChainInner(CBlockIdxDB& blkidxdb, CTxDB& txdb, DbTxn *txn, CBlockIndex *pindexNew);\n };\n \n "
+      }
+    ]
+  }
+]

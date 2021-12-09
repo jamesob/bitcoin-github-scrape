@@ -1,0 +1,124 @@
+[
+  {
+    "sha": "a86ab571106884e9f6188c4d1f45e4e810b66a6e",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphODZhYjU3MTEwNjg4NGU5ZjYxODhjNGQxZjQ1ZTRlODEwYjY2YTZl",
+    "commit": {
+      "author": {
+        "name": "practicalswift",
+        "email": "practicalswift@users.noreply.github.com",
+        "date": "2020-09-22T16:09:53Z"
+      },
+      "committer": {
+        "name": "practicalswift",
+        "email": "practicalswift@users.noreply.github.com",
+        "date": "2020-09-25T14:18:42Z"
+      },
+      "message": "log: Mitigate disk filling attacks by rate limiting LogPrintf",
+      "tree": {
+        "sha": "49188204f9846a0f1808b3f6b001ae9ebd2df45f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/49188204f9846a0f1808b3f6b001ae9ebd2df45f"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a86ab571106884e9f6188c4d1f45e4e810b66a6e",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a86ab571106884e9f6188c4d1f45e4e810b66a6e",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a86ab571106884e9f6188c4d1f45e4e810b66a6e",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a86ab571106884e9f6188c4d1f45e4e810b66a6e/comments",
+    "author": {
+      "login": "practicalswift",
+      "id": 7826565,
+      "node_id": "MDQ6VXNlcjc4MjY1NjU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7826565?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/practicalswift",
+      "html_url": "https://github.com/practicalswift",
+      "followers_url": "https://api.github.com/users/practicalswift/followers",
+      "following_url": "https://api.github.com/users/practicalswift/following{/other_user}",
+      "gists_url": "https://api.github.com/users/practicalswift/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/practicalswift/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/practicalswift/subscriptions",
+      "organizations_url": "https://api.github.com/users/practicalswift/orgs",
+      "repos_url": "https://api.github.com/users/practicalswift/repos",
+      "events_url": "https://api.github.com/users/practicalswift/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/practicalswift/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "practicalswift",
+      "id": 7826565,
+      "node_id": "MDQ6VXNlcjc4MjY1NjU=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/7826565?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/practicalswift",
+      "html_url": "https://github.com/practicalswift",
+      "followers_url": "https://api.github.com/users/practicalswift/followers",
+      "following_url": "https://api.github.com/users/practicalswift/following{/other_user}",
+      "gists_url": "https://api.github.com/users/practicalswift/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/practicalswift/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/practicalswift/subscriptions",
+      "organizations_url": "https://api.github.com/users/practicalswift/orgs",
+      "repos_url": "https://api.github.com/users/practicalswift/repos",
+      "events_url": "https://api.github.com/users/practicalswift/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/practicalswift/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "d692d192cda37fda6359ad0736b85de20383db73",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d692d192cda37fda6359ad0736b85de20383db73",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/d692d192cda37fda6359ad0736b85de20383db73"
+      }
+    ],
+    "stats": {
+      "total": 78,
+      "additions": 66,
+      "deletions": 12
+    },
+    "files": [
+      {
+        "sha": "4e6c805413eb350bf564a1b84e3d627a52f69091",
+        "filename": "src/logging.cpp",
+        "status": "modified",
+        "additions": 23,
+        "deletions": 2,
+        "changes": 25,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a86ab571106884e9f6188c4d1f45e4e810b66a6e/src/logging.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a86ab571106884e9f6188c4d1f45e4e810b66a6e/src/logging.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/logging.cpp?ref=a86ab571106884e9f6188c4d1f45e4e810b66a6e",
+        "patch": "@@ -236,7 +236,9 @@ namespace BCLog {\n     }\n }\n \n-void BCLog::Logger::LogPrintStr(const std::string& str)\n+static constexpr uint64_t HOURLY_LOG_QUOTA_IN_BYTES_PER_SOURCE_LOCATION{1024 * 1024};\n+\n+void BCLog::Logger::LogPrintStr(const std::string& str, const std::string& logging_function, const SourceLocation& source_location, const bool skip_disk_usage_rate_limiting)\n {\n     StdLockGuard scoped_lock(m_cs);\n     std::string str_prefixed = LogEscapeMessage(str);\n@@ -247,6 +249,25 @@ void BCLog::Logger::LogPrintStr(const std::string& str)\n \n     str_prefixed = LogTimestampStr(str_prefixed);\n \n+    // Rate limit logging to disk to avoid disk filling attacks.\n+    bool skip_writing_to_disk_due_to_rate_limiting{false};\n+    if (!skip_disk_usage_rate_limiting) {\n+        const std::chrono::seconds now = GetTime<std::chrono::seconds>();\n+        if ((now - m_last_reset_of_bytes_logged_per_source_location) > std::chrono::hours{1}) {\n+            m_bytes_logged_per_source_location.clear();\n+            m_last_reset_of_bytes_logged_per_source_location = now;\n+        }\n+        m_bytes_logged_per_source_location[source_location] += str_prefixed.size();\n+        if (m_bytes_logged_per_source_location[source_location] > HOURLY_LOG_QUOTA_IN_BYTES_PER_SOURCE_LOCATION) {\n+            const bool print_quota_state_change_message = (m_bytes_logged_per_source_location[source_location] - str_prefixed.size()) <= HOURLY_LOG_QUOTA_IN_BYTES_PER_SOURCE_LOCATION;\n+            if (print_quota_state_change_message) {\n+                str_prefixed = LogTimestampStr(strprintf(\"Excessive logging detected from %s:%d (%s): >%d MiB logged during the last hour. Suppressing logging to disk from this source location for up to one hour. Console logging unaffected. Last log entry: %s\", source_location.first, source_location.second, logging_function, HOURLY_LOG_QUOTA_IN_BYTES_PER_SOURCE_LOCATION / (1024 * 1024), str_prefixed));\n+            } else {\n+                skip_writing_to_disk_due_to_rate_limiting = true;\n+            }\n+        }\n+    }\n+\n     m_started_new_line = !str.empty() && str[str.size()-1] == '\\n';\n \n     if (m_buffering) {\n@@ -263,7 +284,7 @@ void BCLog::Logger::LogPrintStr(const std::string& str)\n     for (const auto& cb : m_print_callbacks) {\n         cb(str_prefixed);\n     }\n-    if (m_print_to_file) {\n+    if (m_print_to_file && !skip_writing_to_disk_due_to_rate_limiting) {\n         assert(m_fileout != nullptr);\n \n         // reopen the log file, if requested"
+      },
+      {
+        "sha": "1461cb66ee65aafc81d03ac8b7fc056ad2177596",
+        "filename": "src/logging.h",
+        "status": "modified",
+        "additions": 42,
+        "deletions": 9,
+        "changes": 51,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a86ab571106884e9f6188c4d1f45e4e810b66a6e/src/logging.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a86ab571106884e9f6188c4d1f45e4e810b66a6e/src/logging.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/logging.h?ref=a86ab571106884e9f6188c4d1f45e4e810b66a6e",
+        "patch": "@@ -6,16 +6,21 @@\n #ifndef BITCOIN_LOGGING_H\n #define BITCOIN_LOGGING_H\n \n+#include <crypto/siphash.h>\n #include <fs.h>\n #include <tinyformat.h>\n #include <threadsafety.h>\n #include <util/string.h>\n \n #include <atomic>\n+#include <chrono>\n #include <cstdint>\n+#include <functional>\n #include <list>\n #include <mutex>\n #include <string>\n+#include <unordered_map>\n+#include <utility>\n #include <vector>\n \n static const bool DEFAULT_LOGTIMEMICROS = false;\n@@ -31,6 +36,16 @@ struct LogCategory {\n     bool active;\n };\n \n+// Replace with std::source_location when switching to C++20.\n+using SourceLocation = std::pair<const char*, int>;\n+struct SourceLocationHasher {\n+    size_t operator()(const SourceLocation& source_location) const noexcept\n+    {\n+        // Use CSipHasher(0, 0) as a simple way to get uniform distribution.\n+        return static_cast<size_t>(CSipHasher(0, 0).Write(std::hash<const char*>{}(source_location.first)).Write(std::hash<int>{}(source_location.second)).Finalize());\n+    }\n+};\n+\n namespace BCLog {\n     enum LogFlags : uint32_t {\n         NONE        = 0,\n@@ -67,6 +82,8 @@ namespace BCLog {\n         FILE* m_fileout GUARDED_BY(m_cs) = nullptr;\n         std::list<std::string> m_msgs_before_open GUARDED_BY(m_cs);\n         bool m_buffering GUARDED_BY(m_cs) = true; //!< Buffer messages before logging can be started.\n+        std::unordered_map<SourceLocation, uint64_t, SourceLocationHasher> m_bytes_logged_per_source_location GUARDED_BY(m_cs);\n+        std::chrono::seconds m_last_reset_of_bytes_logged_per_source_location GUARDED_BY(m_cs){0};\n \n         /**\n          * m_started_new_line is a state variable that will suppress printing of\n@@ -95,7 +112,7 @@ namespace BCLog {\n         std::atomic<bool> m_reopen_file{false};\n \n         /** Send a string to the log output */\n-        void LogPrintStr(const std::string& str);\n+        void LogPrintStr(const std::string& str, const std::string& logging_function, const SourceLocation& source_location, const bool skip_disk_usage_rate_limiting);\n \n         /** Returns whether logs will be written to any output */\n         bool Enabled() const\n@@ -161,9 +178,11 @@ bool GetLogCategory(BCLog::LogFlags& flag, const std::string& str);\n // Be conservative when using LogPrintf/error or other things which\n // unconditionally log to debug.log! It should not be the case that an inbound\n // peer can fill up a user's disk with debug.log entries.\n-\n+//\n+// An attempt to mitigate disk filling attacks is made unless skip_disk_usage_rate_limiting\n+// is set to true.\n template <typename... Args>\n-static inline void LogPrintf(const char* fmt, const Args&... args)\n+static inline void LogPrintf_(const std::string& logging_function, const char* source_file, const int source_line, const bool skip_disk_usage_rate_limiting, const char* fmt, const Args&... args)\n {\n     if (LogInstance().Enabled()) {\n         std::string log_msg;\n@@ -173,17 +192,31 @@ static inline void LogPrintf(const char* fmt, const Args&... args)\n             /* Original format string will have newline so don't add one here */\n             log_msg = \"Error \\\"\" + std::string(fmterr.what()) + \"\\\" while formatting log message: \" + fmt;\n         }\n-        LogInstance().LogPrintStr(log_msg);\n+        const SourceLocation source_location = std::make_pair(source_file, source_line);\n+        LogInstance().LogPrintStr(log_msg, logging_function, source_location, skip_disk_usage_rate_limiting);\n     }\n }\n \n+// Unconditional logging. Uses basic rate limiting to mitigate disk filling attacks.\n+#define LogPrintf(...) LogPrintf_(__func__, __FILE__, __LINE__, /* skip_disk_usage_rate_limiting */ false, __VA_ARGS__)\n+\n+// Unconditional logging WITHOUT rate limiting. Use only for log messages that\n+// MUST NOT be rate limited no matter how often they are logged. That requirement\n+// should be extremely rare, so please use with care. Prefer LogPrintf(...) if\n+// possible.\n+#define LogPrintfWithoutRateLimiting(...) LogPrintf_(__func__, __FILE__, __LINE__, /* skip_disk_usage_rate_limiting */ true, __VA_ARGS__)\n+\n // Use a macro instead of a function for conditional logging to prevent\n // evaluating arguments when logging for the category is not enabled.\n-#define LogPrint(category, ...)              \\\n-    do {                                     \\\n-        if (LogAcceptCategory((category))) { \\\n-            LogPrintf(__VA_ARGS__);          \\\n-        }                                    \\\n+//\n+// Note that conditional logging is performed WITHOUT rate limiting. Users\n+// specifying -debug are assumed to be developers or power users who are aware\n+// that -debug may cause excessive disk usage due to logging.\n+#define LogPrint(category, ...)                                                                              \\\n+    do {                                                                                                     \\\n+        if (LogAcceptCategory((category))) {                                                                 \\\n+            LogPrintf_(__func__, __FILE__, __LINE__, /* skip_disk_usage_rate_limiting */ true, __VA_ARGS__); \\\n+        }                                                                                                    \\\n     } while (0)\n \n #endif // BITCOIN_LOGGING_H"
+      },
+      {
+        "sha": "39e7add90d865bb31272f49ddb5b90e86ef80573",
+        "filename": "src/validation.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a86ab571106884e9f6188c4d1f45e4e810b66a6e/src/validation.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a86ab571106884e9f6188c4d1f45e4e810b66a6e/src/validation.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/validation.cpp?ref=a86ab571106884e9f6188c4d1f45e4e810b66a6e",
+        "patch": "@@ -2479,7 +2479,7 @@ static void UpdateTip(CTxMemPool& mempool, const CBlockIndex* pindexNew, const C\n         if (nUpgraded > 0)\n             AppendWarning(warning_messages, strprintf(_(\"%d of last 100 blocks have unexpected version\"), nUpgraded));\n     }\n-    LogPrintf(\"%s: new best=%s height=%d version=0x%08x log2_work=%f tx=%lu date='%s' progress=%f cache=%.1fMiB(%utxo)%s\\n\", __func__,\n+    LogPrintfWithoutRateLimiting(\"%s: new best=%s height=%d version=0x%08x log2_work=%f tx=%lu date='%s' progress=%f cache=%.1fMiB(%utxo)%s\\n\", __func__,\n       pindexNew->GetBlockHash().ToString(), pindexNew->nHeight, pindexNew->nVersion,\n       log(pindexNew->nChainWork.getdouble())/log(2.0), (unsigned long)pindexNew->nChainTx,\n       FormatISO8601DateTime(pindexNew->GetBlockTime()),"
+      }
+    ]
+  }
+]

@@ -1,0 +1,422 @@
+[
+  {
+    "sha": "91dad762c75829f913ed7a96fd3fa38dbdb0ccc7",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5MWRhZDc2MmM3NTgyOWY5MTNlZDdhOTZmZDNmYTM4ZGJkYjBjY2M3",
+    "commit": {
+      "author": {
+        "name": "Fredrik Danerklint",
+        "email": "fredan-git@fredan.se",
+        "date": "2013-03-27T20:33:11Z"
+      },
+      "committer": {
+        "name": "Fredrik Danerklint",
+        "email": "fredan-git@fredan.se",
+        "date": "2013-03-27T20:33:11Z"
+      },
+      "message": "0mq - Zero MQ Support.\n\nUsing a publisher socket to publish three things when they are\nhappening in the Bitcoin client:\n\n1) New transactions\n2) New blocks\n3) New ipaddresses\n\nThis way there are no need to ask the bitcoin client if something\nnew has happen. You will be notified!\n\nTo compile:\n\nUSE_ZMQ=1 make -f makefile.unix\n\nTo run:\n\nbitcoind -zmqpubbind=\"ipc://.bitcoin.pub\"\n\nA Python client that will print all the information:\n\n[CODE]\nimport zmq\n\ndef main():\n\n    context = zmq.Context()\n    socket = context.socket(zmq.SUB)\n    socket.setsockopt(zmq.SUBSCRIBE, \"\")\n    socket.connect(\"ipc://.bitcoin.pub\")\n\n    while True:\n        msg = socket.recv()\n        print \"%s\" % (msg[8:])\n\nif __name__ == '__main__':\n    main()\n[/CODE]\n\nFor more commandline options, see bitcoind --help.",
+      "tree": {
+        "sha": "dfe86db6721573f5557ad601f73904e529495997",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/dfe86db6721573f5557ad601f73904e529495997"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/91dad762c75829f913ed7a96fd3fa38dbdb0ccc7",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/91dad762c75829f913ed7a96fd3fa38dbdb0ccc7",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/91dad762c75829f913ed7a96fd3fa38dbdb0ccc7",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/91dad762c75829f913ed7a96fd3fa38dbdb0ccc7/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "dfd71bb4509d12c26e630bc671a542ad5bab4945",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/dfd71bb4509d12c26e630bc671a542ad5bab4945",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/dfd71bb4509d12c26e630bc671a542ad5bab4945"
+      }
+    ],
+    "stats": {
+      "total": 365,
+      "additions": 357,
+      "deletions": 8
+    },
+    "files": [
+      {
+        "sha": "0ac2fe58d9707ca032d8d948af80f0322397651c",
+        "filename": "src/addrman.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 0,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/91dad762c75829f913ed7a96fd3fa38dbdb0ccc7/src/addrman.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/91dad762c75829f913ed7a96fd3fa38dbdb0ccc7/src/addrman.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/addrman.cpp?ref=91dad762c75829f913ed7a96fd3fa38dbdb0ccc7",
+        "patch": "@@ -5,6 +5,10 @@\n #include \"addrman.h\"\n #include \"hash.h\"\n \n+#ifdef USE_ZMQ\n+#include \"bitcoin_zmq.h\"\n+#endif\n+\n using namespace std;\n \n int CAddrInfo::GetTriedBucket(const std::vector<unsigned char> &nKey) const\n@@ -354,6 +358,9 @@ bool CAddrMan::Add_(const CAddress &addr, const CNetAddr& source, int64 nTimePen\n //        printf(\"Added %s [nTime=%fhr]\\n\", pinfo->ToString().c_str(), (GetAdjustedTime() - pinfo->nTime) / 3600.0);\n         nNew++;\n         fNew = true;\n+#ifdef USE_ZMQ\n+        bz_Send_IpAddress(pinfo->ToString().c_str());\n+#endif\n     }\n \n     int nUBucket = pinfo->GetNewBucket(nKey, source);"
+      },
+      {
+        "sha": "532a47392a9651fc9977f4b8bf328b27efa724e9",
+        "filename": "src/bitcoin_zmq.cpp",
+        "status": "added",
+        "additions": 248,
+        "deletions": 0,
+        "changes": 248,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/91dad762c75829f913ed7a96fd3fa38dbdb0ccc7/src/bitcoin_zmq.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/91dad762c75829f913ed7a96fd3fa38dbdb0ccc7/src/bitcoin_zmq.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoin_zmq.cpp?ref=91dad762c75829f913ed7a96fd3fa38dbdb0ccc7",
+        "patch": "@@ -0,0 +1,248 @@\n+// Copyright (c) 2013 The Bitcoin developers\n+// Distributed under the MIT/X11 software license, see the accompanying\n+// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+#include <zmq.h>\n+\n+#include \"hash.h\"\n+#include \"bitcoinrpc.h\"\n+#include \"main.h\"\n+\n+\n+static void *bz_ctx = NULL;\n+static void *bz_socket_pub = NULL;\n+std::string bz_ID_TRANSACTION = \"cf954abb\";\n+std::string bz_ID_BLOCK = \"ec747b90\";\n+std::string bz_ID_IPADDRESS = \"a610612a\";\n+\n+\n+extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, json_spirit::Object& entry);\n+extern json_spirit::Object blockToJSON(const CBlock& block, const CBlockIndex* blockindex);\n+\n+\n+void bz_InitCtx() {\n+    bz_ctx = zmq_ctx_new();\n+}\n+\n+void bz_InitSockets() {\n+    bz_socket_pub = zmq_socket(bz_ctx, ZMQ_PUB);\n+}\n+\n+void bz_CtxSetOptions(std::string& opt) {\n+    std::string::size_type name_pos = opt.find(\":\");\n+\n+    if (name_pos != std::string::npos) \n+    {\n+        std::string name = opt.substr(0, name_pos);\n+        std::string value = opt.substr(name_pos + 1);\n+        std::stringstream string_to_ints(value);\n+        int value_int = 0;\n+        string_to_ints >> value_int;\n+        int rc = -2;\n+\n+        if (name == \"ZMQ_IO_THREADS\")\n+            rc = zmq_ctx_set(bz_ctx, ZMQ_IO_THREADS, value_int);\n+        if (name ==  \"ZMQ_MAX_SOCKETS\")\n+            rc = zmq_ctx_set(bz_ctx, ZMQ_MAX_SOCKETS, value_int);\n+\n+        if (rc == -2)\n+                printf(\"ZMQ_CTX_SET: ERROR! %s does not exists as an option!\\n\", name.c_str());\n+        else\n+            if (rc < 0)\n+                printf(\"ZMQ_CTX_SET: %s value: %i returncode: %i errno: %i strerror: %s\\n\", name.c_str(), value_int, rc, errno, strerror(errno));\n+            else\n+                printf(\"ZMQ_CTX_SET: %s value: %i OK\\n\", name.c_str(), value_int);\n+    }\n+}\n+\n+void bz_SetSocket(void *socket, const char *socket_name, std::string& opt) {\n+    std::string::size_type name_pos = opt.find(\":\");\n+\n+    if (name_pos != std::string::npos) \n+    {\n+        std::string name = opt.substr(0, name_pos);\n+        std::string value = opt.substr(name_pos + 1);\n+        std::stringstream string_to_ints(value);\n+        int rc = -2;\n+        int value_int = 0; \n+        string_to_ints >> value_int;\n+        uint64_t value_uint64_t = 0;\n+        string_to_ints >> value_uint64_t;\n+        int64_t value_int64_t = 0;\n+        string_to_ints >> value_int64_t;\n+\n+        if (name == \"ZMQ_SNDHWM\")\n+            rc = zmq_setsockopt (socket, ZMQ_SNDHWM, &value_int, sizeof(int));\n+\n+        if (name == \"ZMQ_RCVHWM\")\n+            rc = zmq_setsockopt (socket, ZMQ_RCVHWM, &value_int, sizeof(int));\n+\n+        if (name == \"ZMQ_AFFINITY\")\n+            rc = zmq_setsockopt (socket, ZMQ_AFFINITY, &value_uint64_t, sizeof(uint64_t));\n+\n+        if (name == \"ZMQ_SUBSCRIBE\")\n+            rc = zmq_setsockopt (socket, ZMQ_SUBSCRIBE, value.c_str(), value.length());\n+\n+        if (name == \"ZMQ_UNSUBSCRIBE\")\n+            rc = zmq_setsockopt (socket, ZMQ_UNSUBSCRIBE, value.c_str(), value.length());\n+\n+        if (name == \"ZMQ_IDENTITY\")\n+            rc = zmq_setsockopt (socket, ZMQ_IDENTITY, value.c_str(), value.length());\n+\n+        if (name == \"ZMQ_RATE\")\n+            rc = zmq_setsockopt (socket, ZMQ_RATE, &value_int, sizeof(int));\n+\n+        if (name == \"ZMQ_RECOVERY_IVL\")\n+            rc = zmq_setsockopt (socket, ZMQ_RECOVERY_IVL, &value_int, sizeof(int));\n+\n+        if (name == \"ZMQ_SNDBUF\")\n+            rc = zmq_setsockopt (socket, ZMQ_SNDBUF, &value_int, sizeof(int));\n+\n+        if (name == \"ZMQ_RCVBUF\")\n+            rc = zmq_setsockopt (socket, ZMQ_RCVBUF, &value_int, sizeof(int));\n+\n+        if (name == \"ZMQ_LINGER\")\n+            rc = zmq_setsockopt (socket, ZMQ_LINGER, &value_int, sizeof(int));\n+\n+        if (name == \"ZMQ_RECONNECT_IVL\")\n+            rc = zmq_setsockopt (socket, ZMQ_RECONNECT_IVL, &value_int, sizeof(int));\n+\n+        if (name == \"ZMQ_RECONNECT_IVL_MAX\")\n+            rc = zmq_setsockopt (socket, ZMQ_RECONNECT_IVL_MAX, &value_int, sizeof(int));\n+\n+        if (name == \"ZMQ_BACKLOG\")\n+            rc = zmq_setsockopt (socket, ZMQ_BACKLOG, &value_int, sizeof(int));\n+\n+        if (name == \"ZMQ_MAXMSGSIZE\")\n+            rc = zmq_setsockopt (socket, ZMQ_MAXMSGSIZE, &value_int64_t, sizeof(int64_t));\n+\n+        if (name == \"ZMQ_MULTICAST_HOPS\")\n+            rc = zmq_setsockopt (socket, ZMQ_MULTICAST_HOPS, &value_int, sizeof(int));\n+\n+        if (name == \"ZMQ_RCVTIMEO\")\n+            rc = zmq_setsockopt (socket, ZMQ_RCVTIMEO, &value_int, sizeof(int));\n+\n+        if (name == \"ZMQ_SNDTIMEO\")\n+            rc = zmq_setsockopt (socket, ZMQ_SNDTIMEO, &value_int, sizeof(int));\n+\n+        if (name == \"ZMQ_IPV4ONLY\")\n+            rc = zmq_setsockopt (socket, ZMQ_IPV4ONLY, &value_int, sizeof(int));\n+\n+        if (name == \"ZMQ_DELAY_ATTACH_ON_CONNECT\")\n+            rc = zmq_setsockopt (socket, ZMQ_DELAY_ATTACH_ON_CONNECT, &value_int, sizeof(int));\n+\n+        if (name == \"ZMQ_ROUTER_MANDATORY\")\n+            rc = zmq_setsockopt (socket, ZMQ_ROUTER_MANDATORY, &value_int, sizeof(int));\n+\n+        if (name == \"ZMQ_XPUB_VERBOSE\")\n+            rc = zmq_setsockopt (socket, ZMQ_XPUB_VERBOSE, &value_int, sizeof(int));\n+\n+        if (name == \"ZMQ_TCP_KEEPALIVE\")\n+            rc = zmq_setsockopt (socket, ZMQ_TCP_KEEPALIVE, &value_int, sizeof(int));\n+\n+        if (name == \"ZMQ_TCP_KEEPALIVE_IDLE\")\n+            rc = zmq_setsockopt (socket, ZMQ_TCP_KEEPALIVE_IDLE, &value_int, sizeof(int));\n+\n+        if (name == \"ZMQ_TCP_KEEPALIVE_CNT\")\n+            rc = zmq_setsockopt (socket, ZMQ_TCP_KEEPALIVE_CNT, &value_int, sizeof(int));\n+\n+        if (name == \"ZMQ_TCP_KEEPALIVE_INTVL\")\n+            rc = zmq_setsockopt (socket, ZMQ_TCP_KEEPALIVE_INTVL, &value_int, sizeof(int));\n+\n+        if (name == \"ZMQ_TCP_ACCEPT_FILTER\")\n+            rc = zmq_setsockopt (socket, ZMQ_TCP_ACCEPT_FILTER, value.c_str(), value.length());\n+\n+        if (rc == -2)\n+                printf(\"ZMQ_%s_SETSOCKOPT: ERROR! %s does not exists as an option!\\n\", socket_name, name.c_str());\n+        else\n+            if (rc < 0)\n+                printf(\"ZMQ_%s_SETSOCKOPT: %s value: %s returncode: %i errno: %i strerror: %s\\n\", socket_name, name.c_str(), value.c_str(), rc, errno, strerror(errno));\n+            else\n+                printf(\"ZMQ_%s_SETSOCKOPT: %s value: %s OK (int: %i, int64_t:%li, uint64_t: %lu)\\n\", socket_name, name.c_str(), value.c_str(), value_int, value_int64_t, value_uint64_t);\n+    }\n+}\n+\n+void bz_PubSetOptions(std::string& opt) {\n+    bz_SetSocket(bz_socket_pub, \"PUB\", opt);\n+}\n+\n+void bz_PubBind(std::string& bind_addr) {\n+    int rc = zmq_bind(bz_socket_pub, bind_addr.c_str());\n+    printf(\"ZMQ_BIND Publisher binding to socket: %s \", bind_addr.c_str());\n+    if (rc < 0)\n+        printf(\"ERROR errno: %i strerror: %s\\n\", errno, strerror(errno));\n+    else\n+        printf(\"OK\\n\");\n+}\n+\n+void bz_PubConnect(std::string& connect_addr) {\n+    int rc = zmq_connect(bz_socket_pub, connect_addr.c_str());\n+    printf(\"ZMQ_CONNECT Publisher connecting to socket: %s\", connect_addr.c_str());\n+    if (rc < 0)\n+        printf(\"ERROR errno: %i strerror: %s\\n\", errno, strerror(errno));\n+    else\n+        printf(\"OK\\n\");\n+}\n+\n+void bz_Shutdown() {\n+    printf(\"ZMQ Shutdown() Begin\\n\");\n+\n+    if (bz_socket_pub)\n+        zmq_close(bz_socket_pub);\n+\n+    if (bz_ctx)\n+        zmq_term(bz_ctx);\n+\n+    printf(\"ZMQ Shutdown() End\\n\");\n+}\n+\n+void bz_Version() {\n+    int z_version_major, z_version_minor, z_version_patch;\n+    zmq_version(&z_version_major, &z_version_minor, &z_version_patch);\n+    printf(\"Using ZMQ version API: %i.%i.%i Runtime: %i.%i.%i\\n\", ZMQ_VERSION_MAJOR, ZMQ_VERSION_MINOR, ZMQ_VERSION_PATCH, z_version_major, z_version_minor, z_version_patch);\n+}\n+\n+void bz_Send_TX(CTransaction& tx) {\n+    json_spirit::Object result;\n+    TxToJSON(tx, 0, result);\n+\n+    std::string s = bz_ID_TRANSACTION + json_spirit::write_string(json_spirit::Value(result), false);\n+\n+    int rc = zmq_send(bz_socket_pub, s.c_str(), s.length(), ZMQ_DONTWAIT);\n+\n+    if (rc < 0)\n+        printf(\"ZMQ ERROR in bz_Send_TX() errno: %i strerror: %s\\n\", errno, strerror(errno));\n+}\n+\n+void bz_Send_Block(CBlockIndex* pblockindex) {\n+    CBlock block;\n+    block.ReadFromDisk(pblockindex);\n+\n+    json_spirit::Object result = blockToJSON(block, pblockindex);\n+    std::string s = bz_ID_BLOCK + json_spirit::write_string(json_spirit::Value(result), false);\n+\n+    int rc = zmq_send(bz_socket_pub, s.c_str(), s.length(), ZMQ_DONTWAIT);\n+\n+    if (rc < 0)\n+        printf(\"ZMQ ERROR in bz_Send_Block() errno: %i strerror: %s\\n\", errno, strerror(errno));\n+}\n+\n+void bz_Send_IpAddress(const char *ip) {\n+    std::string i = ip;\n+    std::string::size_type port_pos = i.rfind(\":\");\n+    if (port_pos != std::string::npos) \n+    {\n+        std::string ipaddress = i.substr(0, port_pos);\n+        std::string s = bz_ID_IPADDRESS;\n+        s.append(\"{\\\"ip\\\":\\\"\");\n+        s.append(ipaddress);\n+        s.append(\"\\\",\\\"port\\\":\");\n+        s.append(i.substr(port_pos + 1));\n+        s.append(\"}\");\n+\n+        int rc = zmq_send(bz_socket_pub, s.c_str(), s.length(), ZMQ_DONTWAIT);\n+\n+        if (rc < 0)\n+            printf(\"ZMQ ERROR in bz_Send_IpAddress() errno: %i strerror: %s\\n\", errno, strerror(errno));\n+    }\n+}"
+      },
+      {
+        "sha": "c88f1bad51a622bdf2f80ec9a802bbe6e4a9fea7",
+        "filename": "src/bitcoin_zmq.h",
+        "status": "added",
+        "additions": 22,
+        "deletions": 0,
+        "changes": 22,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/91dad762c75829f913ed7a96fd3fa38dbdb0ccc7/src/bitcoin_zmq.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/91dad762c75829f913ed7a96fd3fa38dbdb0ccc7/src/bitcoin_zmq.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoin_zmq.h?ref=91dad762c75829f913ed7a96fd3fa38dbdb0ccc7",
+        "patch": "@@ -0,0 +1,22 @@\n+// Copyright (c) 2013 The Bitcoin developers\n+// Distributed under the MIT/X11 software license, see the accompanying\n+// file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+#ifndef BITCOIN_ZMQ_H\n+#define BITCOIN_ZMQ_H\n+\n+#include \"main.h\"\n+\n+void bz_InitCtx();\n+void bz_InitSockets();\n+void bz_CtxSetOptions(std::string&);\n+void bz_PubSetOptions(std::string&);\n+void bz_PubBind(std::string&);\n+void bz_PubConnect(std::string&);\n+void bz_Shutdown();\n+void bz_Version();\n+void bz_Send_TX(CTransaction& tx);\n+void bz_Send_Block(CBlockIndex*);\n+void bz_Send_IpAddress(const char *);\n+\n+#endif"
+      },
+      {
+        "sha": "c01ef7ae7b4dd568dec2024c628c39501dacc29c",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 54,
+        "deletions": 1,
+        "changes": 55,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/91dad762c75829f913ed7a96fd3fa38dbdb0ccc7/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/91dad762c75829f913ed7a96fd3fa38dbdb0ccc7/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=91dad762c75829f913ed7a96fd3fa38dbdb0ccc7",
+        "patch": "@@ -22,6 +22,10 @@\n #include <signal.h>\n #endif\n \n+#ifdef USE_ZMQ\n+#include \"bitcoin_zmq.h\"\n+#endif\n+\n using namespace std;\n using namespace boost;\n \n@@ -104,6 +108,9 @@ void Shutdown(void* parg)\n         boost::filesystem::remove(GetPidFile());\n         UnregisterWallet(pwalletMain);\n         delete pwalletMain;\n+#ifdef USE_ZMQ\n+        bz_Shutdown();\n+#endif\n         NewThread(ExitTimeout, NULL);\n         Sleep(50);\n         printf(\"Bitcoin exited\\n\\n\");\n@@ -321,7 +328,16 @@ std::string HelpMessage()\n         \"  -rpcssl                                  \" + _(\"Use OpenSSL (https) for JSON-RPC connections\") + \"\\n\" +\n         \"  -rpcsslcertificatechainfile=<file.cert>  \" + _(\"Server certificate file (default: server.cert)\") + \"\\n\" +\n         \"  -rpcsslprivatekeyfile=<file.pem>         \" + _(\"Server private key (default: server.pem)\") + \"\\n\" +\n-        \"  -rpcsslciphers=<ciphers>                 \" + _(\"Acceptable ciphers (default: TLSv1+HIGH:!SSLv2:!aNULL:!eNULL:!AH:!3DES:@STRENGTH)\") + \"\\n\";\n+        \"  -rpcsslciphers=<ciphers>                 \" + _(\"Acceptable ciphers (default: TLSv1+HIGH:!SSLv2:!aNULL:!eNULL:!AH:!3DES:@STRENGTH)\") + \"\\n\" +\n+\n+#ifdef USE_ZMQ\n+        \"\\n\" + _(\"ZMQ options: \")+ \"\\n\" +\n+        \"  -zmqctxsetopt=<option:value> \" + _(\"ZMQ_CTX_SET (Example: -zmqctxsetopt=ZMQ_IO_THREADS:2)\") + \"\\n\" +\n+        \"  -zmqpubsetopt=<option:value> \" + _(\"ZMQ_SETSOCKOPT for the Publisher socket (Example: -zmqpubsetopt=ZMQ_SNDHWM:10)\") + \"\\n\" +\n+        \"  -zmqpubbind                  \" + _(\"ZMQ_BIND Publisher socket to bind to (default: none)\") + \"\\n\" +\n+        \"  -zmqpubconnect               \" + _(\"ZMQ_CONNECT Publisher socket to connect to (default: none)\") + \"\\n\" +\n+#endif\n+        \"\\n\";\n \n     return strUsage;\n }\n@@ -589,6 +605,9 @@ bool AppInit2()\n     printf(\"\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\");\n     printf(\"Bitcoin version %s (%s)\\n\", FormatFullVersion().c_str(), CLIENT_DATE.c_str());\n     printf(\"Using OpenSSL version %s\\n\", SSLeay_version(SSLEAY_VERSION));\n+#ifdef USE_ZMQ\n+    bz_Version();\n+#endif\n     if (!fLogTimestamps)\n         printf(\"Startup time: %s\\n\", DateTimeStrFormat(\"%Y-%m-%d %H:%M:%S\", GetTime()).c_str());\n     printf(\"Default data directory %s\\n\", GetDefaultDataDir().string().c_str());\n@@ -1024,6 +1043,40 @@ bool AppInit2()\n     printf(\"mapWallet.size() = %\"PRIszu\"\\n\",       pwalletMain->mapWallet.size());\n     printf(\"mapAddressBook.size() = %\"PRIszu\"\\n\",  pwalletMain->mapAddressBook.size());\n \n+#ifdef USE_ZMQ\n+    bz_InitCtx();\n+\n+    if (mapArgs.count(\"-zmqctxsetopt\")) \n+    {\n+        BOOST_FOREACH(string strZmqCtxSetOpt, mapMultiArgs[\"-zmqctxsetopt\"]) {\n+            bz_CtxSetOptions(strZmqCtxSetOpt);\n+        }\n+    }\n+\n+    bz_InitSockets();\n+\n+    if (mapArgs.count(\"-zmqpubsetopt\")) \n+    {\n+        BOOST_FOREACH(string strZmqPubSetOpt, mapMultiArgs[\"-zmqpubsetopt\"]) {\n+            bz_PubSetOptions(strZmqPubSetOpt);\n+        }\n+    }\n+\n+    if (mapArgs.count(\"-zmqpubbind\")) \n+    {\n+        BOOST_FOREACH(string strZmqPubBind, mapMultiArgs[\"-zmqpubbind\"]) {\n+            bz_PubBind(strZmqPubBind);\n+        }\n+    }\n+\n+    if (mapArgs.count(\"-zmqpubconnect\")) \n+    {\n+        BOOST_FOREACH(string strZmqPubConnect, mapMultiArgs[\"-zmqpubconnect\"]) {\n+            bz_PubConnect(strZmqPubConnect);\n+        }\n+    }\n+#endif\n+\n     if (!NewThread(StartNode, NULL))\n         InitError(_(\"Error: could not start node\"));\n "
+      },
+      {
+        "sha": "87c82d0c18b3f697dee4f7074f7379e342f48f55",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 7,
+        "changes": 23,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/91dad762c75829f913ed7a96fd3fa38dbdb0ccc7/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/91dad762c75829f913ed7a96fd3fa38dbdb0ccc7/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=91dad762c75829f913ed7a96fd3fa38dbdb0ccc7",
+        "patch": "@@ -67,7 +67,9 @@ int64 nHPSTimerStart;\n // Settings\n int64 nTransactionFee = 0;\n \n-\n+#ifdef USE_ZMQ\n+#include \"bitcoin_zmq.h\"\n+#endif\n \n //////////////////////////////////////////////////////////////////////////////\n //\n@@ -794,6 +796,10 @@ bool CTxMemPool::accept(CValidationState &state, CTransaction &tx, bool fCheckIn\n     printf(\"CTxMemPool::accept() : accepted %s (poolsz %\"PRIszu\")\\n\",\n            hash.ToString().substr(0,10).c_str(),\n            mapTx.size());\n+#ifdef USE_ZMQ\n+    bz_Send_TX(tx);\n+#endif\n+\n     return true;\n }\n \n@@ -1888,14 +1894,17 @@ bool SetBestChain(CValidationState &state, CBlockIndex* pindexNew)\n         if (nUpgraded > 100/2)\n             // strMiscWarning is read by GetWarnings(), called by Qt and the JSON-RPC code to warn the user:\n             strMiscWarning = _(\"Warning: This version is obsolete, upgrade required!\");\n-    }\n \n-    std::string strCmd = GetArg(\"-blocknotify\", \"\");\n+        std::string strCmd = GetArg(\"-blocknotify\", \"\");\n \n-    if (!fIsInitialDownload && !strCmd.empty())\n-    {\n-        boost::replace_all(strCmd, \"%s\", hashBestChain.GetHex());\n-        boost::thread t(runCommand, strCmd); // thread runs free\n+        if (!strCmd.empty())\n+        {\n+            boost::replace_all(strCmd, \"%s\", hashBestChain.GetHex());\n+            boost::thread t(runCommand, strCmd); // thread runs free\n+        }\n+#ifdef USE_ZMQ\n+        bz_Send_Block(pindexBest);\n+#endif\n     }\n \n     return true;"
+      },
+      {
+        "sha": "70128f68a278c47a18db9aa73063ce0ffdfa79a9",
+        "filename": "src/makefile.unix",
+        "status": "modified",
+        "additions": 10,
+        "deletions": 0,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/91dad762c75829f913ed7a96fd3fa38dbdb0ccc7/src/makefile.unix",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/91dad762c75829f913ed7a96fd3fa38dbdb0ccc7/src/makefile.unix",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/makefile.unix?ref=91dad762c75829f913ed7a96fd3fa38dbdb0ccc7",
+        "patch": "@@ -4,6 +4,7 @@\n \n USE_UPNP:=0\n USE_IPV6:=1\n+USE_ZMQ:=0\n \n LINK:=$(CXX)\n \n@@ -48,6 +49,11 @@ ifneq (${USE_IPV6}, -)\n \tDEFS += -DUSE_IPV6=$(USE_IPV6)\n endif\n \n+ifneq (${USE_ZMQ}, -)\n+        LIBS += -l zmq\n+        DEFS += -DUSE_ZMQ=$(USE_ZMQ)\n+endif\n+\n LIBS+= \\\n  -Wl,-B$(LMODE2) \\\n    -l z \\\n@@ -134,6 +140,10 @@ OBJS= \\\n     obj/leveldb.o \\\n     obj/txdb.o\n \n+ifneq (${USE_ZMQ}, -)\n+    OBJS += obj/bitcoin_zmq.o\n+endif\n+\n \n all: bitcoind\n "
+      }
+    ]
+  },
+  {
+    "sha": "fe0c93cd4496c16f0800601adf3328db9d241cc0",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmZTBjOTNjZDQ0OTZjMTZmMDgwMDYwMWFkZjMzMjhkYjlkMjQxY2Mw",
+    "commit": {
+      "author": {
+        "name": "Fredrik Danerklint",
+        "email": "fredan-git@fredan.se",
+        "date": "2013-03-28T16:05:08Z"
+      },
+      "committer": {
+        "name": "Fredrik Danerklint",
+        "email": "fredan-git@fredan.se",
+        "date": "2013-03-28T16:05:08Z"
+      },
+      "message": "Added a parameter to publish new blocks during the state\n'IsInitialDownload' in main.cpp.\n\nDid notice a document called doc/coding.txt. Oups.\n\nTo compile with 0mq:\n--------------------\nmake -f makefile.unix USE_ZMQ=1\n\nTo compile without 0mq:\n-----------------------\nmake -f makefile.unix USE_ZMQ=0\n\nor\n\nmake -f makefile.unix",
+      "tree": {
+        "sha": "6352979c3df007563c63ab53f972164b2dd2b5cb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/6352979c3df007563c63ab53f972164b2dd2b5cb"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/fe0c93cd4496c16f0800601adf3328db9d241cc0",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fe0c93cd4496c16f0800601adf3328db9d241cc0",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/fe0c93cd4496c16f0800601adf3328db9d241cc0",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fe0c93cd4496c16f0800601adf3328db9d241cc0/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "91dad762c75829f913ed7a96fd3fa38dbdb0ccc7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/91dad762c75829f913ed7a96fd3fa38dbdb0ccc7",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/91dad762c75829f913ed7a96fd3fa38dbdb0ccc7"
+      }
+    ],
+    "stats": {
+      "total": 374,
+      "additions": 190,
+      "deletions": 184
+    },
+    "files": [
+      {
+        "sha": "a5b3983de45a31d9542256e1aa30de92f7ab7906",
+        "filename": "src/addrman.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fe0c93cd4496c16f0800601adf3328db9d241cc0/src/addrman.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fe0c93cd4496c16f0800601adf3328db9d241cc0/src/addrman.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/addrman.cpp?ref=fe0c93cd4496c16f0800601adf3328db9d241cc0",
+        "patch": "@@ -358,8 +358,8 @@ bool CAddrMan::Add_(const CAddress &addr, const CNetAddr& source, int64 nTimePen\n //        printf(\"Added %s [nTime=%fhr]\\n\", pinfo->ToString().c_str(), (GetAdjustedTime() - pinfo->nTime) / 3600.0);\n         nNew++;\n         fNew = true;\n-#ifdef USE_ZMQ\n-        bz_Send_IpAddress(pinfo->ToString().c_str());\n+#if USE_ZMQ\n+        BZmq_SendIPAddress(pinfo->ToString().c_str());\n #endif\n     }\n "
+      },
+      {
+        "sha": "2c8279cdbcde0eca6b2d682b9e6b2a6a2119b1df",
+        "filename": "src/bitcoin_zmq.cpp",
+        "status": "modified",
+        "additions": 146,
+        "deletions": 146,
+        "changes": 292,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fe0c93cd4496c16f0800601adf3328db9d241cc0/src/bitcoin_zmq.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fe0c93cd4496c16f0800601adf3328db9d241cc0/src/bitcoin_zmq.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoin_zmq.cpp?ref=fe0c93cd4496c16f0800601adf3328db9d241cc0",
+        "patch": "@@ -9,240 +9,240 @@\n #include \"main.h\"\n \n \n-static void *bz_ctx = NULL;\n-static void *bz_socket_pub = NULL;\n-std::string bz_ID_TRANSACTION = \"cf954abb\";\n-std::string bz_ID_BLOCK = \"ec747b90\";\n-std::string bz_ID_IPADDRESS = \"a610612a\";\n+static void *pBZmq_ctx = NULL;\n+static void *pBZmq_socket_pub = NULL;\n+std::string strBZmq_ID_TRANSACTION = \"cf954abb\";\n+std::string strBZmq_ID_BLOCK = \"ec747b90\";\n+std::string strBZmq_ID_IPADDRESS = \"a610612a\";\n \n \n extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, json_spirit::Object& entry);\n extern json_spirit::Object blockToJSON(const CBlock& block, const CBlockIndex* blockindex);\n \n \n-void bz_InitCtx() {\n-    bz_ctx = zmq_ctx_new();\n+void BZmq_InitCtx() {\n+    pBZmq_ctx = zmq_ctx_new();\n }\n \n-void bz_InitSockets() {\n-    bz_socket_pub = zmq_socket(bz_ctx, ZMQ_PUB);\n+void BZmq_InitSockets() {\n+    pBZmq_socket_pub = zmq_socket(pBZmq_ctx, ZMQ_PUB);\n }\n \n-void bz_CtxSetOptions(std::string& opt) {\n-    std::string::size_type name_pos = opt.find(\":\");\n+void BZmq_CtxSetOptions(std::string& strOpt) {\n+    std::string::size_type nNamePos = strOpt.find(\":\");\n \n-    if (name_pos != std::string::npos) \n+    if (nNamePos != std::string::npos) \n     {\n-        std::string name = opt.substr(0, name_pos);\n-        std::string value = opt.substr(name_pos + 1);\n-        std::stringstream string_to_ints(value);\n-        int value_int = 0;\n-        string_to_ints >> value_int;\n-        int rc = -2;\n-\n-        if (name == \"ZMQ_IO_THREADS\")\n-            rc = zmq_ctx_set(bz_ctx, ZMQ_IO_THREADS, value_int);\n-        if (name ==  \"ZMQ_MAX_SOCKETS\")\n-            rc = zmq_ctx_set(bz_ctx, ZMQ_MAX_SOCKETS, value_int);\n-\n-        if (rc == -2)\n-                printf(\"ZMQ_CTX_SET: ERROR! %s does not exists as an option!\\n\", name.c_str());\n+        std::string strName = strOpt.substr(0, nNamePos);\n+        std::string strValue = strOpt.substr(nNamePos + 1);\n+        std::stringstream streamStringToInts(strValue);\n+        int nValue_int = 0;\n+        streamStringToInts >> nValue_int;\n+        int nRc = -2;\n+\n+        if (strName == \"ZMQ_IO_THREADS\")\n+            nRc = zmq_ctx_set(pBZmq_ctx, ZMQ_IO_THREADS, nValue_int);\n+        if (strName ==  \"ZMQ_MAX_SOCKETS\")\n+            nRc = zmq_ctx_set(pBZmq_ctx, ZMQ_MAX_SOCKETS, nValue_int);\n+\n+        if (nRc == -2)\n+                printf(\"ZMQ_CTX_SET: ERROR! %s does not exists as an strOption!\\n\", strName.c_str());\n         else\n-            if (rc < 0)\n-                printf(\"ZMQ_CTX_SET: %s value: %i returncode: %i errno: %i strerror: %s\\n\", name.c_str(), value_int, rc, errno, strerror(errno));\n+            if (nRc < 0)\n+                printf(\"ZMQ_CTX_SET: %s value: %i returncode: %i errno: %i strerror: %s\\n\", strName.c_str(), nValue_int, nRc, errno, strerror(errno));\n             else\n-                printf(\"ZMQ_CTX_SET: %s value: %i OK\\n\", name.c_str(), value_int);\n+                printf(\"ZMQ_CTX_SET: %s value: %i OK\\n\", strName.c_str(), nValue_int);\n     }\n }\n \n-void bz_SetSocket(void *socket, const char *socket_name, std::string& opt) {\n-    std::string::size_type name_pos = opt.find(\":\");\n+void BZmq_SetSocket(void *pSocket, const char *pszSocketName, std::string& strOpt) {\n+    std::string::size_type nNamePos = strOpt.find(\":\");\n \n-    if (name_pos != std::string::npos) \n+    if (nNamePos != std::string::npos) \n     {\n-        std::string name = opt.substr(0, name_pos);\n-        std::string value = opt.substr(name_pos + 1);\n-        std::stringstream string_to_ints(value);\n-        int rc = -2;\n-        int value_int = 0; \n-        string_to_ints >> value_int;\n-        uint64_t value_uint64_t = 0;\n-        string_to_ints >> value_uint64_t;\n-        int64_t value_int64_t = 0;\n-        string_to_ints >> value_int64_t;\n+        std::string strName = strOpt.substr(0, nNamePos);\n+        std::string strValue = strOpt.substr(nNamePos + 1);\n+        std::stringstream streamStringToInts(strValue);\n+        int nRc = -2;\n+        int nValue_int = 0; \n+        streamStringToInts >> nValue_int;\n+        uint64_t nValue_uint64_t = 0;\n+        streamStringToInts >> nValue_uint64_t;\n+        int64_t nValue_int64_t = 0;\n+        streamStringToInts >> nValue_int64_t;\n \n-        if (name == \"ZMQ_SNDHWM\")\n-            rc = zmq_setsockopt (socket, ZMQ_SNDHWM, &value_int, sizeof(int));\n+        if (strName == \"ZMQ_SNDHWM\")\n+            nRc = zmq_setsockopt (pSocket, ZMQ_SNDHWM, &nValue_int, sizeof(int));\n \n-        if (name == \"ZMQ_RCVHWM\")\n-            rc = zmq_setsockopt (socket, ZMQ_RCVHWM, &value_int, sizeof(int));\n+        if (strName == \"ZMQ_RCVHWM\")\n+            nRc = zmq_setsockopt (pSocket, ZMQ_RCVHWM, &nValue_int, sizeof(int));\n \n-        if (name == \"ZMQ_AFFINITY\")\n-            rc = zmq_setsockopt (socket, ZMQ_AFFINITY, &value_uint64_t, sizeof(uint64_t));\n+        if (strName == \"ZMQ_AFFINITY\")\n+            nRc = zmq_setsockopt (pSocket, ZMQ_AFFINITY, &nValue_uint64_t, sizeof(uint64_t));\n \n-        if (name == \"ZMQ_SUBSCRIBE\")\n-            rc = zmq_setsockopt (socket, ZMQ_SUBSCRIBE, value.c_str(), value.length());\n+        if (strName == \"ZMQ_SUBSCRIBE\")\n+            nRc = zmq_setsockopt (pSocket, ZMQ_SUBSCRIBE, strValue.c_str(), strValue.length());\n \n-        if (name == \"ZMQ_UNSUBSCRIBE\")\n-            rc = zmq_setsockopt (socket, ZMQ_UNSUBSCRIBE, value.c_str(), value.length());\n+        if (strName == \"ZMQ_UNSUBSCRIBE\")\n+            nRc = zmq_setsockopt (pSocket, ZMQ_UNSUBSCRIBE, strValue.c_str(), strValue.length());\n \n-        if (name == \"ZMQ_IDENTITY\")\n-            rc = zmq_setsockopt (socket, ZMQ_IDENTITY, value.c_str(), value.length());\n+        if (strName == \"ZMQ_IDENTITY\")\n+            nRc = zmq_setsockopt (pSocket, ZMQ_IDENTITY, strValue.c_str(), strValue.length());\n \n-        if (name == \"ZMQ_RATE\")\n-            rc = zmq_setsockopt (socket, ZMQ_RATE, &value_int, sizeof(int));\n+        if (strName == \"ZMQ_RATE\")\n+            nRc = zmq_setsockopt (pSocket, ZMQ_RATE, &nValue_int, sizeof(int));\n \n-        if (name == \"ZMQ_RECOVERY_IVL\")\n-            rc = zmq_setsockopt (socket, ZMQ_RECOVERY_IVL, &value_int, sizeof(int));\n+        if (strName == \"ZMQ_RECOVERY_IVL\")\n+            nRc = zmq_setsockopt (pSocket, ZMQ_RECOVERY_IVL, &nValue_int, sizeof(int));\n \n-        if (name == \"ZMQ_SNDBUF\")\n-            rc = zmq_setsockopt (socket, ZMQ_SNDBUF, &value_int, sizeof(int));\n+        if (strName == \"ZMQ_SNDBUF\")\n+            nRc = zmq_setsockopt (pSocket, ZMQ_SNDBUF, &nValue_int, sizeof(int));\n \n-        if (name == \"ZMQ_RCVBUF\")\n-            rc = zmq_setsockopt (socket, ZMQ_RCVBUF, &value_int, sizeof(int));\n+        if (strName == \"ZMQ_RCVBUF\")\n+            nRc = zmq_setsockopt (pSocket, ZMQ_RCVBUF, &nValue_int, sizeof(int));\n \n-        if (name == \"ZMQ_LINGER\")\n-            rc = zmq_setsockopt (socket, ZMQ_LINGER, &value_int, sizeof(int));\n+        if (strName == \"ZMQ_LINGER\")\n+            nRc = zmq_setsockopt (pSocket, ZMQ_LINGER, &nValue_int, sizeof(int));\n \n-        if (name == \"ZMQ_RECONNECT_IVL\")\n-            rc = zmq_setsockopt (socket, ZMQ_RECONNECT_IVL, &value_int, sizeof(int));\n+        if (strName == \"ZMQ_RECONNECT_IVL\")\n+            nRc = zmq_setsockopt (pSocket, ZMQ_RECONNECT_IVL, &nValue_int, sizeof(int));\n \n-        if (name == \"ZMQ_RECONNECT_IVL_MAX\")\n-            rc = zmq_setsockopt (socket, ZMQ_RECONNECT_IVL_MAX, &value_int, sizeof(int));\n+        if (strName == \"ZMQ_RECONNECT_IVL_MAX\")\n+            nRc = zmq_setsockopt (pSocket, ZMQ_RECONNECT_IVL_MAX, &nValue_int, sizeof(int));\n \n-        if (name == \"ZMQ_BACKLOG\")\n-            rc = zmq_setsockopt (socket, ZMQ_BACKLOG, &value_int, sizeof(int));\n+        if (strName == \"ZMQ_BACKLOG\")\n+            nRc = zmq_setsockopt (pSocket, ZMQ_BACKLOG, &nValue_int, sizeof(int));\n \n-        if (name == \"ZMQ_MAXMSGSIZE\")\n-            rc = zmq_setsockopt (socket, ZMQ_MAXMSGSIZE, &value_int64_t, sizeof(int64_t));\n+        if (strName == \"ZMQ_MAXMSGSIZE\")\n+            nRc = zmq_setsockopt (pSocket, ZMQ_MAXMSGSIZE, &nValue_int64_t, sizeof(int64_t));\n \n-        if (name == \"ZMQ_MULTICAST_HOPS\")\n-            rc = zmq_setsockopt (socket, ZMQ_MULTICAST_HOPS, &value_int, sizeof(int));\n+        if (strName == \"ZMQ_MULTICAST_HOPS\")\n+            nRc = zmq_setsockopt (pSocket, ZMQ_MULTICAST_HOPS, &nValue_int, sizeof(int));\n \n-        if (name == \"ZMQ_RCVTIMEO\")\n-            rc = zmq_setsockopt (socket, ZMQ_RCVTIMEO, &value_int, sizeof(int));\n+        if (strName == \"ZMQ_RCVTIMEO\")\n+            nRc = zmq_setsockopt (pSocket, ZMQ_RCVTIMEO, &nValue_int, sizeof(int));\n \n-        if (name == \"ZMQ_SNDTIMEO\")\n-            rc = zmq_setsockopt (socket, ZMQ_SNDTIMEO, &value_int, sizeof(int));\n+        if (strName == \"ZMQ_SNDTIMEO\")\n+            nRc = zmq_setsockopt (pSocket, ZMQ_SNDTIMEO, &nValue_int, sizeof(int));\n \n-        if (name == \"ZMQ_IPV4ONLY\")\n-            rc = zmq_setsockopt (socket, ZMQ_IPV4ONLY, &value_int, sizeof(int));\n+        if (strName == \"ZMQ_IPV4ONLY\")\n+            nRc = zmq_setsockopt (pSocket, ZMQ_IPV4ONLY, &nValue_int, sizeof(int));\n \n-        if (name == \"ZMQ_DELAY_ATTACH_ON_CONNECT\")\n-            rc = zmq_setsockopt (socket, ZMQ_DELAY_ATTACH_ON_CONNECT, &value_int, sizeof(int));\n+        if (strName == \"ZMQ_DELAY_ATTACH_ON_CONNECT\")\n+            nRc = zmq_setsockopt (pSocket, ZMQ_DELAY_ATTACH_ON_CONNECT, &nValue_int, sizeof(int));\n \n-        if (name == \"ZMQ_ROUTER_MANDATORY\")\n-            rc = zmq_setsockopt (socket, ZMQ_ROUTER_MANDATORY, &value_int, sizeof(int));\n+        if (strName == \"ZMQ_ROUTER_MANDATORY\")\n+            nRc = zmq_setsockopt (pSocket, ZMQ_ROUTER_MANDATORY, &nValue_int, sizeof(int));\n \n-        if (name == \"ZMQ_XPUB_VERBOSE\")\n-            rc = zmq_setsockopt (socket, ZMQ_XPUB_VERBOSE, &value_int, sizeof(int));\n+        if (strName == \"ZMQ_XPUB_VERBOSE\")\n+            nRc = zmq_setsockopt (pSocket, ZMQ_XPUB_VERBOSE, &nValue_int, sizeof(int));\n \n-        if (name == \"ZMQ_TCP_KEEPALIVE\")\n-            rc = zmq_setsockopt (socket, ZMQ_TCP_KEEPALIVE, &value_int, sizeof(int));\n+        if (strName == \"ZMQ_TCP_KEEPALIVE\")\n+            nRc = zmq_setsockopt (pSocket, ZMQ_TCP_KEEPALIVE, &nValue_int, sizeof(int));\n \n-        if (name == \"ZMQ_TCP_KEEPALIVE_IDLE\")\n-            rc = zmq_setsockopt (socket, ZMQ_TCP_KEEPALIVE_IDLE, &value_int, sizeof(int));\n+        if (strName == \"ZMQ_TCP_KEEPALIVE_IDLE\")\n+            nRc = zmq_setsockopt (pSocket, ZMQ_TCP_KEEPALIVE_IDLE, &nValue_int, sizeof(int));\n \n-        if (name == \"ZMQ_TCP_KEEPALIVE_CNT\")\n-            rc = zmq_setsockopt (socket, ZMQ_TCP_KEEPALIVE_CNT, &value_int, sizeof(int));\n+        if (strName == \"ZMQ_TCP_KEEPALIVE_CNT\")\n+            nRc = zmq_setsockopt (pSocket, ZMQ_TCP_KEEPALIVE_CNT, &nValue_int, sizeof(int));\n \n-        if (name == \"ZMQ_TCP_KEEPALIVE_INTVL\")\n-            rc = zmq_setsockopt (socket, ZMQ_TCP_KEEPALIVE_INTVL, &value_int, sizeof(int));\n+        if (strName == \"ZMQ_TCP_KEEPALIVE_INTVL\")\n+            nRc = zmq_setsockopt (pSocket, ZMQ_TCP_KEEPALIVE_INTVL, &nValue_int, sizeof(int));\n \n-        if (name == \"ZMQ_TCP_ACCEPT_FILTER\")\n-            rc = zmq_setsockopt (socket, ZMQ_TCP_ACCEPT_FILTER, value.c_str(), value.length());\n+        if (strName == \"ZMQ_TCP_ACCEPT_FILTER\")\n+            nRc = zmq_setsockopt (pSocket, ZMQ_TCP_ACCEPT_FILTER, strValue.c_str(), strValue.length());\n \n-        if (rc == -2)\n-                printf(\"ZMQ_%s_SETSOCKOPT: ERROR! %s does not exists as an option!\\n\", socket_name, name.c_str());\n+        if (nRc == -2)\n+                printf(\"ZMQ_%s_SETSOCKOPT: ERROR! %s does not exists as an strOption!\\n\", pszSocketName, strName.c_str());\n         else\n-            if (rc < 0)\n-                printf(\"ZMQ_%s_SETSOCKOPT: %s value: %s returncode: %i errno: %i strerror: %s\\n\", socket_name, name.c_str(), value.c_str(), rc, errno, strerror(errno));\n+            if (nRc < 0)\n+                printf(\"ZMQ_%s_SETSOCKOPT: %s value: %s returncode: %i errno: %i strerror: %s\\n\", pszSocketName, strName.c_str(), strValue.c_str(), nRc, errno, strerror(errno));\n             else\n-                printf(\"ZMQ_%s_SETSOCKOPT: %s value: %s OK (int: %i, int64_t:%li, uint64_t: %lu)\\n\", socket_name, name.c_str(), value.c_str(), value_int, value_int64_t, value_uint64_t);\n+                printf(\"ZMQ_%s_SETSOCKOPT: %s value: %s OK (int: %i, int64_t:%li, uint64_t: %lu)\\n\", pszSocketName, strName.c_str(), strValue.c_str(), nValue_int, nValue_int64_t, nValue_uint64_t);\n     }\n }\n \n-void bz_PubSetOptions(std::string& opt) {\n-    bz_SetSocket(bz_socket_pub, \"PUB\", opt);\n+void BZmq_PubSetOptions(std::string& strOpt) {\n+    BZmq_SetSocket(pBZmq_socket_pub, \"PUB\", strOpt);\n }\n \n-void bz_PubBind(std::string& bind_addr) {\n-    int rc = zmq_bind(bz_socket_pub, bind_addr.c_str());\n-    printf(\"ZMQ_BIND Publisher binding to socket: %s \", bind_addr.c_str());\n-    if (rc < 0)\n+void BZmq_PubBind(std::string& strBindAddr) {\n+    int nRc = zmq_bind(pBZmq_socket_pub, strBindAddr.c_str());\n+    printf(\"ZMQ_BIND Publisher binding to socket: %s \", strBindAddr.c_str());\n+    if (nRc < 0)\n         printf(\"ERROR errno: %i strerror: %s\\n\", errno, strerror(errno));\n     else\n         printf(\"OK\\n\");\n }\n \n-void bz_PubConnect(std::string& connect_addr) {\n-    int rc = zmq_connect(bz_socket_pub, connect_addr.c_str());\n-    printf(\"ZMQ_CONNECT Publisher connecting to socket: %s\", connect_addr.c_str());\n-    if (rc < 0)\n+void BZmq_PubConnect(std::string& strConnectAddr) {\n+    int nRc = zmq_connect(pBZmq_socket_pub, strConnectAddr.c_str());\n+    printf(\"ZMQ_CONNECT Publisher connecting to socket: %s\", strConnectAddr.c_str());\n+    if (nRc < 0)\n         printf(\"ERROR errno: %i strerror: %s\\n\", errno, strerror(errno));\n     else\n         printf(\"OK\\n\");\n }\n \n-void bz_Shutdown() {\n+void BZmq_Shutdown() {\n     printf(\"ZMQ Shutdown() Begin\\n\");\n \n-    if (bz_socket_pub)\n-        zmq_close(bz_socket_pub);\n+    if (pBZmq_socket_pub)\n+        zmq_close(pBZmq_socket_pub);\n \n-    if (bz_ctx)\n-        zmq_term(bz_ctx);\n+    if (pBZmq_ctx)\n+        zmq_term(pBZmq_ctx);\n \n     printf(\"ZMQ Shutdown() End\\n\");\n }\n \n-void bz_Version() {\n-    int z_version_major, z_version_minor, z_version_patch;\n-    zmq_version(&z_version_major, &z_version_minor, &z_version_patch);\n-    printf(\"Using ZMQ version API: %i.%i.%i Runtime: %i.%i.%i\\n\", ZMQ_VERSION_MAJOR, ZMQ_VERSION_MINOR, ZMQ_VERSION_PATCH, z_version_major, z_version_minor, z_version_patch);\n+void BZmq_Version() {\n+    int nZmq_version_major, nZmq_version_minor, nZmq_version_patch;\n+    zmq_version(&nZmq_version_major, &nZmq_version_minor, &nZmq_version_patch);\n+    printf(\"Using ZMQ version API: %i.%i.%i Runtime: %i.%i.%i\\n\", ZMQ_VERSION_MAJOR, ZMQ_VERSION_MINOR, ZMQ_VERSION_PATCH, nZmq_version_major, nZmq_version_minor, nZmq_version_patch);\n }\n \n-void bz_Send_TX(CTransaction& tx) {\n+void BZmq_SendTX(CTransaction& tx) {\n     json_spirit::Object result;\n     TxToJSON(tx, 0, result);\n \n-    std::string s = bz_ID_TRANSACTION + json_spirit::write_string(json_spirit::Value(result), false);\n+    std::string strTemp = strBZmq_ID_TRANSACTION + json_spirit::write_string(json_spirit::Value(result), false);\n \n-    int rc = zmq_send(bz_socket_pub, s.c_str(), s.length(), ZMQ_DONTWAIT);\n+    int nRc = zmq_send(pBZmq_socket_pub, strTemp.c_str(), strTemp.length(), ZMQ_DONTWAIT);\n \n-    if (rc < 0)\n-        printf(\"ZMQ ERROR in bz_Send_TX() errno: %i strerror: %s\\n\", errno, strerror(errno));\n+    if (nRc < 0)\n+        printf(\"ZMQ ERROR in BZmq_Send_TX() errno: %i strerror: %s\\n\", errno, strerror(errno));\n }\n \n-void bz_Send_Block(CBlockIndex* pblockindex) {\n+void BZmq_SendBlock(CBlockIndex* pblockindex) {\n     CBlock block;\n     block.ReadFromDisk(pblockindex);\n \n     json_spirit::Object result = blockToJSON(block, pblockindex);\n-    std::string s = bz_ID_BLOCK + json_spirit::write_string(json_spirit::Value(result), false);\n+    std::string strTemp = strBZmq_ID_BLOCK + json_spirit::write_string(json_spirit::Value(result), false);\n \n-    int rc = zmq_send(bz_socket_pub, s.c_str(), s.length(), ZMQ_DONTWAIT);\n+    int nRc = zmq_send(pBZmq_socket_pub, strTemp.c_str(), strTemp.length(), ZMQ_DONTWAIT);\n \n-    if (rc < 0)\n-        printf(\"ZMQ ERROR in bz_Send_Block() errno: %i strerror: %s\\n\", errno, strerror(errno));\n+    if (nRc < 0)\n+        printf(\"ZMQ ERROR in BZmq_Send_Block() errno: %i strerror: %s\\n\", errno, strerror(errno));\n }\n \n-void bz_Send_IpAddress(const char *ip) {\n-    std::string i = ip;\n-    std::string::size_type port_pos = i.rfind(\":\");\n-    if (port_pos != std::string::npos) \n+void BZmq_SendIPAddress(const char *pszIP) {\n+    std::string strIP = pszIP;\n+    std::string::size_type nPortPos = strIP.rfind(\":\");\n+    if (nPortPos != std::string::npos) \n     {\n-        std::string ipaddress = i.substr(0, port_pos);\n-        std::string s = bz_ID_IPADDRESS;\n-        s.append(\"{\\\"ip\\\":\\\"\");\n-        s.append(ipaddress);\n-        s.append(\"\\\",\\\"port\\\":\");\n-        s.append(i.substr(port_pos + 1));\n-        s.append(\"}\");\n-\n-        int rc = zmq_send(bz_socket_pub, s.c_str(), s.length(), ZMQ_DONTWAIT);\n-\n-        if (rc < 0)\n-            printf(\"ZMQ ERROR in bz_Send_IpAddress() errno: %i strerror: %s\\n\", errno, strerror(errno));\n+        std::string strIPAddress = strIP.substr(0, nPortPos);\n+        std::string strTemp = strBZmq_ID_IPADDRESS;\n+        strTemp.append(\"{\\\"ip\\\":\\\"\");\n+        strTemp.append(strIPAddress);\n+        strTemp.append(\"\\\",\\\"port\\\":\");\n+        strTemp.append(strIP.substr(nPortPos + 1));\n+        strTemp.append(\"}\");\n+\n+        int nRc = zmq_send(pBZmq_socket_pub, strTemp.c_str(), strTemp.length(), ZMQ_DONTWAIT);\n+\n+        if (nRc < 0)\n+            printf(\"ZMQ ERROR in BZmq_Send_IpAddress() errno: %i strerror: %s\\n\", errno, strerror(errno));\n     }\n }"
+      },
+      {
+        "sha": "ff1032280b5896247c14dff59be47bb9f0f74ebe",
+        "filename": "src/bitcoin_zmq.h",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 12,
+        "changes": 23,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fe0c93cd4496c16f0800601adf3328db9d241cc0/src/bitcoin_zmq.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fe0c93cd4496c16f0800601adf3328db9d241cc0/src/bitcoin_zmq.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoin_zmq.h?ref=fe0c93cd4496c16f0800601adf3328db9d241cc0",
+        "patch": "@@ -6,17 +6,16 @@\n #define BITCOIN_ZMQ_H\n \n #include \"main.h\"\n-\n-void bz_InitCtx();\n-void bz_InitSockets();\n-void bz_CtxSetOptions(std::string&);\n-void bz_PubSetOptions(std::string&);\n-void bz_PubBind(std::string&);\n-void bz_PubConnect(std::string&);\n-void bz_Shutdown();\n-void bz_Version();\n-void bz_Send_TX(CTransaction& tx);\n-void bz_Send_Block(CBlockIndex*);\n-void bz_Send_IpAddress(const char *);\n+void BZmq_InitCtx();\n+void BZmq_InitSockets();\n+void BZmq_CtxSetOptions(std::string&);\n+void BZmq_PubSetOptions(std::string&);\n+void BZmq_PubBind(std::string&);\n+void BZmq_PubConnect(std::string&);\n+void BZmq_Shutdown();\n+void BZmq_Version();\n+void BZmq_SendTX(CTransaction& tx);\n+void BZmq_SendBlock(CBlockIndex*);\n+void BZmq_SendIPAddress(const char *);\n \n #endif"
+      },
+      {
+        "sha": "8034c9928f1139cafb247f4df92b71db25696031",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 18,
+        "deletions": 17,
+        "changes": 35,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fe0c93cd4496c16f0800601adf3328db9d241cc0/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fe0c93cd4496c16f0800601adf3328db9d241cc0/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=fe0c93cd4496c16f0800601adf3328db9d241cc0",
+        "patch": "@@ -22,7 +22,7 @@\n #include <signal.h>\n #endif\n \n-#ifdef USE_ZMQ\n+#if USE_ZMQ\n #include \"bitcoin_zmq.h\"\n #endif\n \n@@ -108,8 +108,8 @@ void Shutdown(void* parg)\n         boost::filesystem::remove(GetPidFile());\n         UnregisterWallet(pwalletMain);\n         delete pwalletMain;\n-#ifdef USE_ZMQ\n-        bz_Shutdown();\n+#if USE_ZMQ\n+        BZmq_Shutdown();\n #endif\n         NewThread(ExitTimeout, NULL);\n         Sleep(50);\n@@ -330,12 +330,13 @@ std::string HelpMessage()\n         \"  -rpcsslprivatekeyfile=<file.pem>         \" + _(\"Server private key (default: server.pem)\") + \"\\n\" +\n         \"  -rpcsslciphers=<ciphers>                 \" + _(\"Acceptable ciphers (default: TLSv1+HIGH:!SSLv2:!aNULL:!eNULL:!AH:!3DES:@STRENGTH)\") + \"\\n\" +\n \n-#ifdef USE_ZMQ\n+#if USE_ZMQ\n         \"\\n\" + _(\"ZMQ options: \")+ \"\\n\" +\n-        \"  -zmqctxsetopt=<option:value> \" + _(\"ZMQ_CTX_SET (Example: -zmqctxsetopt=ZMQ_IO_THREADS:2)\") + \"\\n\" +\n-        \"  -zmqpubsetopt=<option:value> \" + _(\"ZMQ_SETSOCKOPT for the Publisher socket (Example: -zmqpubsetopt=ZMQ_SNDHWM:10)\") + \"\\n\" +\n-        \"  -zmqpubbind                  \" + _(\"ZMQ_BIND Publisher socket to bind to (default: none)\") + \"\\n\" +\n-        \"  -zmqpubconnect               \" + _(\"ZMQ_CONNECT Publisher socket to connect to (default: none)\") + \"\\n\" +\n+        \"  -zmqctxsetopt=<option:value>    \" + _(\"ZMQ_CTX_SET (Example: -zmqctxsetopt=ZMQ_IO_THREADS:2)\") + \"\\n\" +\n+        \"  -zmqpubsetopt=<option:value>    \" + _(\"ZMQ_SETSOCKOPT for the Publisher socket (Example: -zmqpubsetopt=ZMQ_SNDHWM:10)\") + \"\\n\" +\n+        \"  -zmqpubbind=\\\"<endpoint>\\\"        \" + _(\"ZMQ_BIND Publisher socket to bind to (default: none)\") + \"\\n\" +\n+        \"  -zmqpubconnect=\\\"<endpoint>\\\"     \" + _(\"ZMQ_CONNECT Publisher socket to connect to (default: none)\") + \"\\n\" +\n+        \"  -zmqpublishduringinitaldownload \" + _(\"If we should publish new blocks during the fIsInitalDownload (default: false)\") + \"\\n\" +\n #endif\n         \"\\n\";\n \n@@ -605,8 +606,8 @@ bool AppInit2()\n     printf(\"\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\");\n     printf(\"Bitcoin version %s (%s)\\n\", FormatFullVersion().c_str(), CLIENT_DATE.c_str());\n     printf(\"Using OpenSSL version %s\\n\", SSLeay_version(SSLEAY_VERSION));\n-#ifdef USE_ZMQ\n-    bz_Version();\n+#if USE_ZMQ\n+    BZmq_Version();\n #endif\n     if (!fLogTimestamps)\n         printf(\"Startup time: %s\\n\", DateTimeStrFormat(\"%Y-%m-%d %H:%M:%S\", GetTime()).c_str());\n@@ -1043,36 +1044,36 @@ bool AppInit2()\n     printf(\"mapWallet.size() = %\"PRIszu\"\\n\",       pwalletMain->mapWallet.size());\n     printf(\"mapAddressBook.size() = %\"PRIszu\"\\n\",  pwalletMain->mapAddressBook.size());\n \n-#ifdef USE_ZMQ\n-    bz_InitCtx();\n+#if USE_ZMQ\n+    BZmq_InitCtx();\n \n     if (mapArgs.count(\"-zmqctxsetopt\")) \n     {\n         BOOST_FOREACH(string strZmqCtxSetOpt, mapMultiArgs[\"-zmqctxsetopt\"]) {\n-            bz_CtxSetOptions(strZmqCtxSetOpt);\n+            BZmq_CtxSetOptions(strZmqCtxSetOpt);\n         }\n     }\n \n-    bz_InitSockets();\n+    BZmq_InitSockets();\n \n     if (mapArgs.count(\"-zmqpubsetopt\")) \n     {\n         BOOST_FOREACH(string strZmqPubSetOpt, mapMultiArgs[\"-zmqpubsetopt\"]) {\n-            bz_PubSetOptions(strZmqPubSetOpt);\n+            BZmq_PubSetOptions(strZmqPubSetOpt);\n         }\n     }\n \n     if (mapArgs.count(\"-zmqpubbind\")) \n     {\n         BOOST_FOREACH(string strZmqPubBind, mapMultiArgs[\"-zmqpubbind\"]) {\n-            bz_PubBind(strZmqPubBind);\n+            BZmq_PubBind(strZmqPubBind);\n         }\n     }\n \n     if (mapArgs.count(\"-zmqpubconnect\")) \n     {\n         BOOST_FOREACH(string strZmqPubConnect, mapMultiArgs[\"-zmqpubconnect\"]) {\n-            bz_PubConnect(strZmqPubConnect);\n+            BZmq_PubConnect(strZmqPubConnect);\n         }\n     }\n #endif"
+      },
+      {
+        "sha": "639f892ce71c280eda095d27d12eae67db643e7b",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 5,
+        "changes": 16,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fe0c93cd4496c16f0800601adf3328db9d241cc0/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fe0c93cd4496c16f0800601adf3328db9d241cc0/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=fe0c93cd4496c16f0800601adf3328db9d241cc0",
+        "patch": "@@ -67,7 +67,7 @@ int64 nHPSTimerStart;\n // Settings\n int64 nTransactionFee = 0;\n \n-#ifdef USE_ZMQ\n+#if USE_ZMQ\n #include \"bitcoin_zmq.h\"\n #endif\n \n@@ -796,8 +796,8 @@ bool CTxMemPool::accept(CValidationState &state, CTransaction &tx, bool fCheckIn\n     printf(\"CTxMemPool::accept() : accepted %s (poolsz %\"PRIszu\")\\n\",\n            hash.ToString().substr(0,10).c_str(),\n            mapTx.size());\n-#ifdef USE_ZMQ\n-    bz_Send_TX(tx);\n+#if USE_ZMQ\n+    BZmq_SendTX(tx);\n #endif\n \n     return true;\n@@ -1878,6 +1878,12 @@ bool SetBestChain(CValidationState &state, CBlockIndex* pindexNew)\n       BlockHashStr(hashBestChain).c_str(), nBestHeight, bnBestChainWork.ToString().c_str(), (unsigned long)pindexNew->nChainTx,\n       DateTimeStrFormat(\"%Y-%m-%d %H:%M:%S\", pindexBest->GetBlockTime()).c_str());\n \n+#if USE_ZMQ\n+    bool fZmqPDID = GetBoolArg(\"-zmqpublishduringinitaldownload\", false);\n+    if (fZmqPDID && fIsInitialDownload)\n+        BZmq_SendBlock(pindexBest);\n+#endif\n+\n     // Check the version of the last 100 blocks to see if we need to upgrade:\n     if (!fIsInitialDownload)\n     {\n@@ -1902,8 +1908,8 @@ bool SetBestChain(CValidationState &state, CBlockIndex* pindexNew)\n             boost::replace_all(strCmd, \"%s\", hashBestChain.GetHex());\n             boost::thread t(runCommand, strCmd); // thread runs free\n         }\n-#ifdef USE_ZMQ\n-        bz_Send_Block(pindexBest);\n+#if USE_ZMQ\n+        BZmq_SendBlock(pindexBest);\n #endif\n     }\n "
+      },
+      {
+        "sha": "69de2c97d05d20bf756a01c6d378a791e3eef60a",
+        "filename": "src/makefile.unix",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/fe0c93cd4496c16f0800601adf3328db9d241cc0/src/makefile.unix",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/fe0c93cd4496c16f0800601adf3328db9d241cc0/src/makefile.unix",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/makefile.unix?ref=fe0c93cd4496c16f0800601adf3328db9d241cc0",
+        "patch": "@@ -49,7 +49,7 @@ ifneq (${USE_IPV6}, -)\n \tDEFS += -DUSE_IPV6=$(USE_IPV6)\n endif\n \n-ifneq (${USE_ZMQ}, -)\n+ifeq (${USE_ZMQ}, 1)\n         LIBS += -l zmq\n         DEFS += -DUSE_ZMQ=$(USE_ZMQ)\n endif\n@@ -140,7 +140,7 @@ OBJS= \\\n     obj/leveldb.o \\\n     obj/txdb.o\n \n-ifneq (${USE_ZMQ}, -)\n+ifeq (${USE_ZMQ}, 1)\n     OBJS += obj/bitcoin_zmq.o\n endif\n "
+      }
+    ]
+  },
+  {
+    "sha": "c8fc9e036aeb761ed52b6f85af754ca002bab707",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjOGZjOWUwMzZhZWI3NjFlZDUyYjZmODVhZjc1NGNhMDAyYmFiNzA3",
+    "commit": {
+      "author": {
+        "name": "Fredrik Danerklint",
+        "email": "fredan-git@fredan.se",
+        "date": "2013-03-28T19:03:28Z"
+      },
+      "committer": {
+        "name": "Fredrik Danerklint",
+        "email": "fredan-git@fredan.se",
+        "date": "2013-03-28T19:03:28Z"
+      },
+      "message": "Example in python for using 0mq with the Bitcoin daemon.",
+      "tree": {
+        "sha": "81eaa0803a34d33006723ad2537453d8a907ee45",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/81eaa0803a34d33006723ad2537453d8a907ee45"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/c8fc9e036aeb761ed52b6f85af754ca002bab707",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c8fc9e036aeb761ed52b6f85af754ca002bab707",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/c8fc9e036aeb761ed52b6f85af754ca002bab707",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c8fc9e036aeb761ed52b6f85af754ca002bab707/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "fe0c93cd4496c16f0800601adf3328db9d241cc0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/fe0c93cd4496c16f0800601adf3328db9d241cc0",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/fe0c93cd4496c16f0800601adf3328db9d241cc0"
+      }
+    ],
+    "stats": {
+      "total": 50,
+      "additions": 49,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "db6a48f226936730b3d65eb072fb475b91808568",
+        "filename": "contrib/0mq/bitcoin-zmq.py",
+        "status": "added",
+        "additions": 48,
+        "deletions": 0,
+        "changes": 48,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c8fc9e036aeb761ed52b6f85af754ca002bab707/contrib/0mq/bitcoin-zmq.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c8fc9e036aeb761ed52b6f85af754ca002bab707/contrib/0mq/bitcoin-zmq.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/contrib/0mq/bitcoin-zmq.py?ref=c8fc9e036aeb761ed52b6f85af754ca002bab707",
+        "patch": "@@ -0,0 +1,48 @@\n+#!/usr/bin/env python\n+\n+import zmq\n+\n+def main(argv):\n+\n+    context = zmq.Context()\n+    socket = context.socket(zmq.SUB)\n+\n+    if len(argv) == 1:\n+        socket.setsockopt(zmq.SUBSCRIBE, \"\")\n+    else:\n+        for arg in argv[1:]:\n+            print \"Subscribing to: \", arg\n+            socket.setsockopt(zmq.SUBSCRIBE, arg)\n+\n+    print \"Connecting to host: \", argv[0]\n+    socket.connect(argv[0])\n+\n+    while True:\n+        msg = socket.recv()\n+        print \"%s\" % (msg[8:])\n+\n+if __name__ == '__main__':\n+    import sys\n+\n+    if len(sys.argv) < 2:\n+        print \"usage: bitcoin-zmq.py <address to connect to> [,<subscribe filter>...]\"\n+        print \"\"\n+        print \"Filters to subscribe to:\"\n+        print \"\"\n+        print \"New block.......: ec747b90\"\n+        print \"New transaction.: cf954abb\"\n+        print \"New ipaddress...: a610612a\"\n+        print \"\"\n+        print \"Example:\"\n+        print \"--------\"\n+        print \"(Assuming you are running 'bitcoind -zmqpubbind=\\\"tcp://lo:61771\\\"')\"\n+        print \"\"\n+        print \"  ./bitcoin-zmq.py tcp://localhost:61771\"\n+        print \"Will not filter anything so you get all the messages\"\n+        print \"\"\n+        print \"  ./bitcoin-zmq.py tcp://localhost:61771 ec747b90\"\n+        print \"Will get you only the new block messages\"\n+\n+        raise SystemExit\n+\n+    main(sys.argv[1:])"
+      },
+      {
+        "sha": "98dd4f2302b3d054b31b98be0428a523b7f2b74b",
+        "filename": "src/addrman.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c8fc9e036aeb761ed52b6f85af754ca002bab707/src/addrman.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c8fc9e036aeb761ed52b6f85af754ca002bab707/src/addrman.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/addrman.cpp?ref=c8fc9e036aeb761ed52b6f85af754ca002bab707",
+        "patch": "@@ -5,7 +5,7 @@\n #include \"addrman.h\"\n #include \"hash.h\"\n \n-#ifdef USE_ZMQ\n+#if USE_ZMQ\n #include \"bitcoin_zmq.h\"\n #endif\n "
+      }
+    ]
+  },
+  {
+    "sha": "7c05592af68dd7d1ec9219c1afe76207797f3214",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3YzA1NTkyYWY2OGRkN2QxZWM5MjE5YzFhZmU3NjIwNzc5N2YzMjE0",
+    "commit": {
+      "author": {
+        "name": "Fredrik Danerklint",
+        "email": "fredan-git@fredan.se",
+        "date": "2013-03-29T17:26:59Z"
+      },
+      "committer": {
+        "name": "Fredrik Danerklint",
+        "email": "fredan-git@fredan.se",
+        "date": "2013-03-29T17:26:59Z"
+      },
+      "message": "Implemented a reply socket, which means that there is now\na RPC Server with 0MQ!\n\nIt's running in a seperate thread.\n\nAll rpc command(s) should work, since we are calling the same\nfunctions which the current RPC Server is using.\n\nAn example in Lua is under contrib/0mq/bitcoin-zmq_reqrep.lua.\n\nStart with:\n\n'bitcoind -zmqrepbind=\"ipc://.bitcoin.rep\"'\n\nand then run the example client.",
+      "tree": {
+        "sha": "fe31913bb998c2f74ef4e6919f19b69bf26db9cd",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/fe31913bb998c2f74ef4e6919f19b69bf26db9cd"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/7c05592af68dd7d1ec9219c1afe76207797f3214",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7c05592af68dd7d1ec9219c1afe76207797f3214",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/7c05592af68dd7d1ec9219c1afe76207797f3214",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7c05592af68dd7d1ec9219c1afe76207797f3214/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "c8fc9e036aeb761ed52b6f85af754ca002bab707",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c8fc9e036aeb761ed52b6f85af754ca002bab707",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c8fc9e036aeb761ed52b6f85af754ca002bab707"
+      }
+    ],
+    "stats": {
+      "total": 165,
+      "additions": 157,
+      "deletions": 8
+    },
+    "files": [
+      {
+        "sha": "d0b85fa53c26ac7928a65917c7bdae4a8f0b7efa",
+        "filename": "contrib/0mq/bitcoin-zmq_reqrep.lua",
+        "status": "added",
+        "additions": 17,
+        "deletions": 0,
+        "changes": 17,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7c05592af68dd7d1ec9219c1afe76207797f3214/contrib/0mq/bitcoin-zmq_reqrep.lua",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7c05592af68dd7d1ec9219c1afe76207797f3214/contrib/0mq/bitcoin-zmq_reqrep.lua",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/contrib/0mq/bitcoin-zmq_reqrep.lua?ref=7c05592af68dd7d1ec9219c1afe76207797f3214",
+        "patch": "@@ -0,0 +1,17 @@\n+local zmq = require \"zmq\"\n+\n+local ctx = zmq.init()\n+local s = ctx:socket(zmq.REQ)\n+s:connect(\"ipc://.bitcoin.rep\")\n+\n+v = zmq.version()\n+print(\"Using ZMQ Version \" .. v[1] .. \".\" ..  v[2] .. \".\" .. v[3])\n+s:send(\"[{\\\"method\\\":\\\"getblockcount\\\"},{\\\"method\\\":\\\"getblockcount\\\"}]\")\n+local msg = s:recv()\n+print (msg)\n+s:send(\"{\\\"method\\\":\\\"getblockcount\\\"}\")\n+msg = s:recv()\n+print (msg)\n+s:send(\"{\\\"method\\\":\\\"getblockhash\\\",\\\"params\\\":[228620]}\")\n+msg = s:recv()\n+print (msg)"
+      },
+      {
+        "sha": "87770d7ba48831593fc08bd72783a859992c74a1",
+        "filename": "src/bitcoin_zmq.cpp",
+        "status": "modified",
+        "additions": 110,
+        "deletions": 6,
+        "changes": 116,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7c05592af68dd7d1ec9219c1afe76207797f3214/src/bitcoin_zmq.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7c05592af68dd7d1ec9219c1afe76207797f3214/src/bitcoin_zmq.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoin_zmq.cpp?ref=7c05592af68dd7d1ec9219c1afe76207797f3214",
+        "patch": "@@ -8,16 +8,20 @@\n #include \"bitcoinrpc.h\"\n #include \"main.h\"\n \n+#define BZMQ_BUFFER_SIZE 8388608\n \n static void *pBZmq_ctx = NULL;\n static void *pBZmq_socket_pub = NULL;\n+static void *pBZmq_socket_rep = NULL;\n std::string strBZmq_ID_TRANSACTION = \"cf954abb\";\n std::string strBZmq_ID_BLOCK = \"ec747b90\";\n std::string strBZmq_ID_IPADDRESS = \"a610612a\";\n-\n+bool fBZmq_ThreadReqRep = false;\n \n extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, json_spirit::Object& entry);\n extern json_spirit::Object blockToJSON(const CBlock& block, const CBlockIndex* blockindex);\n+extern std::string JSONRPCExecBatch(const json_spirit::Array&);\n+extern json_spirit::Object JSONRPCExecOne(const json_spirit::Value&);\n \n \n void BZmq_InitCtx() {\n@@ -26,6 +30,7 @@ void BZmq_InitCtx() {\n \n void BZmq_InitSockets() {\n     pBZmq_socket_pub = zmq_socket(pBZmq_ctx, ZMQ_PUB);\n+    pBZmq_socket_rep = zmq_socket(pBZmq_ctx, ZMQ_REP);\n }\n \n void BZmq_CtxSetOptions(std::string& strOpt) {\n@@ -184,16 +189,41 @@ void BZmq_PubConnect(std::string& strConnectAddr) {\n         printf(\"OK\\n\");\n }\n \n+void BZmq_RepSetOptions(std::string& strOpt) {\n+    BZmq_SetSocket(pBZmq_socket_rep, \"REP\", strOpt);\n+}\n+\n+void BZmq_RepBind(std::string& strBindAddr) {\n+    int nRc = zmq_bind(pBZmq_socket_rep, strBindAddr.c_str());\n+    printf(\"ZMQ_BIND Replier binding to socket: %s \", strBindAddr.c_str());\n+    if (nRc < 0)\n+        printf(\"ERROR errno: %i strerror: %s\\n\", errno, strerror(errno));\n+    else\n+        printf(\"OK\\n\");\n+}\n+\n+void BZmq_RepConnect(std::string& strConnectAddr) {\n+    int nRc = zmq_connect(pBZmq_socket_rep, strConnectAddr.c_str());\n+    printf(\"ZMQ_CONNECT Replier connecting to socket: %s\", strConnectAddr.c_str());\n+    if (nRc < 0)\n+        printf(\"ERROR errno: %i strerror: %s\\n\", errno, strerror(errno));\n+    else\n+        printf(\"OK\\n\");\n+}\n+\n void BZmq_Shutdown() {\n-    printf(\"ZMQ Shutdown() Begin\\n\");\n+    printf(\"BZmq_Shutdown() Begin\\n\");\n+\n+    while(fBZmq_ThreadReqRep)\n+        sleep(1);\n \n     if (pBZmq_socket_pub)\n         zmq_close(pBZmq_socket_pub);\n \n     if (pBZmq_ctx)\n         zmq_term(pBZmq_ctx);\n \n-    printf(\"ZMQ Shutdown() End\\n\");\n+    printf(\"BZmq_Shutdown() End\\n\");\n }\n \n void BZmq_Version() {\n@@ -211,7 +241,7 @@ void BZmq_SendTX(CTransaction& tx) {\n     int nRc = zmq_send(pBZmq_socket_pub, strTemp.c_str(), strTemp.length(), ZMQ_DONTWAIT);\n \n     if (nRc < 0)\n-        printf(\"ZMQ ERROR in BZmq_Send_TX() errno: %i strerror: %s\\n\", errno, strerror(errno));\n+        printf(\"ZMQ ERROR in BZmq_SendTX() errno: %i strerror: %s\\n\", errno, strerror(errno));\n }\n \n void BZmq_SendBlock(CBlockIndex* pblockindex) {\n@@ -224,7 +254,7 @@ void BZmq_SendBlock(CBlockIndex* pblockindex) {\n     int nRc = zmq_send(pBZmq_socket_pub, strTemp.c_str(), strTemp.length(), ZMQ_DONTWAIT);\n \n     if (nRc < 0)\n-        printf(\"ZMQ ERROR in BZmq_Send_Block() errno: %i strerror: %s\\n\", errno, strerror(errno));\n+        printf(\"ZMQ ERROR in BZmq_SendBlock() errno: %i strerror: %s\\n\", errno, strerror(errno));\n }\n \n void BZmq_SendIPAddress(const char *pszIP) {\n@@ -243,6 +273,80 @@ void BZmq_SendIPAddress(const char *pszIP) {\n         int nRc = zmq_send(pBZmq_socket_pub, strTemp.c_str(), strTemp.length(), ZMQ_DONTWAIT);\n \n         if (nRc < 0)\n-            printf(\"ZMQ ERROR in BZmq_Send_IpAddress() errno: %i strerror: %s\\n\", errno, strerror(errno));\n+            printf(\"ZMQ ERROR in BZmq_SendIpAddress() errno: %i strerror: %s\\n\", errno, strerror(errno));\n     }\n }\n+\n+void BZmq_ThreadReqRep(void *pArg) {\n+/*\n+    This is the Reply socket thread to question which comes from a Request socket.\n+\n+    To make an long story sort:\n+    This thread is an an RPC Server - but for 0MQ.\n+\n+*/\n+    int nRc, nRc_recv;\n+    fBZmq_ThreadReqRep = true;\n+    RenameThread(\"bitcoin-zmqreqrep\");\n+\n+    zmq_pollitem_t BZmq_pollitems [] = {\n+        {pBZmq_socket_rep, 0, ZMQ_POLLIN, 0 }\n+    };\n+\n+    char *BZmq_buffer = (char *)malloc(BZMQ_BUFFER_SIZE);\n+    if (BZmq_buffer != NULL) {\n+        memset(BZmq_buffer, 0, BZMQ_BUFFER_SIZE);\n+\n+        while(!fShutdown) {\n+            nRc = zmq_poll (BZmq_pollitems, 1, 0);\n+            if (nRc == -1) {\n+                printf(\"ZMQ ERROR: zmq_poll in BZmq_ThreadReqRep() errno: %i strerror: %s\\n\", errno, strerror(errno));\n+                break;\n+            }\n+\n+            if (nRc > 0 && !fShutdown)  {\n+                if (BZmq_pollitems [0].revents & ZMQ_POLLIN) {\n+                    nRc_recv = zmq_recv (pBZmq_socket_rep, &BZmq_buffer[0], BZMQ_BUFFER_SIZE, 0);\n+                    if (nRc_recv != -1) {\n+                        if (nRc_recv == 0 || nRc_recv == BZMQ_BUFFER_SIZE)\n+                            //we don't care about these...\n+                            nRc = zmq_send(pBZmq_socket_rep, \"\", 0, ZMQ_DONTWAIT);\n+                        else {\n+                            std::string strCommand = &BZmq_buffer[0];\n+                            json_spirit::Value jsonCommand;\n+                            std::string strTemp;\n+                            if (json_spirit::read_string(strCommand, jsonCommand)) {\n+\n+                                if (jsonCommand.type() == json_spirit::obj_type) {\n+                                    json_spirit::Object result = JSONRPCExecOne(jsonCommand);\n+                                    strTemp = json_spirit::write_string(json_spirit::Value(result), false);\n+                                } else if (jsonCommand.type() == json_spirit::array_type)\n+                                    // array of requests\n+                                    strTemp = JSONRPCExecBatch(jsonCommand.get_array());\n+                                else\n+                                    printf(\"ZMQ ERROR: no jsonCommand.type() found! %s\\n\", strCommand.c_str());\n+\n+                                nRc = zmq_send(pBZmq_socket_rep, strTemp.c_str(), strTemp.length(), ZMQ_DONTWAIT);\n+                                if (nRc < 0)\n+                                    printf(\"ZMQ ERROR: zmq_send in BZmq_ThreadReqRep() errno: %i strerror: %s\\n\", errno, strerror(errno));\n+                            } else {\n+                                printf(\"ZMQ ERROR: read_string failed for command: '%s'\\n\", strCommand.c_str());\n+                                nRc = zmq_send(pBZmq_socket_rep, \"\", 0, ZMQ_DONTWAIT);\n+                            }\n+                        }\n+                        memset(BZmq_buffer, 0, nRc_recv);\n+                    } else\n+                        printf(\"ZMQ ERROR: zmq_recv in BZmq_ThreadReqRep() errno: %i strerror: %s\\n\", errno, strerror(errno));\n+                }\n+            } else \n+                //we are only sleeping if we don't have anything to do.\n+                usleep(10000);\n+        }\n+    } else \n+        printf(\"ZMQ ERROR: malloc failed in BZmq_ThreadReqRep() errno: %i strerror: %s\\n\", errno, strerror(errno));\n+\n+    if (pBZmq_socket_rep)\n+        zmq_close(pBZmq_socket_rep);\n+\n+    fBZmq_ThreadReqRep = false;\n+}"
+      },
+      {
+        "sha": "e0fd674dc915bae2fcc173da5a04b6d54c2d4f3e",
+        "filename": "src/bitcoin_zmq.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 0,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7c05592af68dd7d1ec9219c1afe76207797f3214/src/bitcoin_zmq.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7c05592af68dd7d1ec9219c1afe76207797f3214/src/bitcoin_zmq.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoin_zmq.h?ref=7c05592af68dd7d1ec9219c1afe76207797f3214",
+        "patch": "@@ -12,6 +12,10 @@ void BZmq_CtxSetOptions(std::string&);\n void BZmq_PubSetOptions(std::string&);\n void BZmq_PubBind(std::string&);\n void BZmq_PubConnect(std::string&);\n+void BZmq_RepSetOptions(std::string&);\n+void BZmq_RepBind(std::string&);\n+void BZmq_RepConnect(std::string&);\n+void BZmq_ThreadReqRep(void *);\n void BZmq_Shutdown();\n void BZmq_Version();\n void BZmq_SendTX(CTransaction& tx);"
+      },
+      {
+        "sha": "e90b493b5816dcb64d4fc100e4926d6b59da85d6",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7c05592af68dd7d1ec9219c1afe76207797f3214/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7c05592af68dd7d1ec9219c1afe76207797f3214/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=7c05592af68dd7d1ec9219c1afe76207797f3214",
+        "patch": "@@ -917,7 +917,7 @@ void JSONRequest::parse(const Value& valRequest)\n         throw JSONRPCError(RPC_INVALID_REQUEST, \"Params must be an array\");\n }\n \n-static Object JSONRPCExecOne(const Value& req)\n+Object JSONRPCExecOne(const Value& req)\n {\n     Object rpc_result;\n \n@@ -941,7 +941,7 @@ static Object JSONRPCExecOne(const Value& req)\n     return rpc_result;\n }\n \n-static string JSONRPCExecBatch(const Array& vReq)\n+string JSONRPCExecBatch(const Array& vReq)\n {\n     Array ret;\n     for (unsigned int reqIdx = 0; reqIdx < vReq.size(); reqIdx++)"
+      },
+      {
+        "sha": "cb495d62bd0e64423c852c3600711b6e0dfb4653",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 24,
+        "deletions": 0,
+        "changes": 24,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7c05592af68dd7d1ec9219c1afe76207797f3214/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7c05592af68dd7d1ec9219c1afe76207797f3214/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=7c05592af68dd7d1ec9219c1afe76207797f3214",
+        "patch": "@@ -337,6 +337,9 @@ std::string HelpMessage()\n         \"  -zmqpubbind=\\\"<endpoint>\\\"        \" + _(\"ZMQ_BIND Publisher socket to bind to (default: none)\") + \"\\n\" +\n         \"  -zmqpubconnect=\\\"<endpoint>\\\"     \" + _(\"ZMQ_CONNECT Publisher socket to connect to (default: none)\") + \"\\n\" +\n         \"  -zmqpublishduringinitaldownload \" + _(\"If we should publish new blocks during the fIsInitalDownload (default: false)\") + \"\\n\" +\n+        \"  -zmqrepsetopt=<option:value>    \" + _(\"ZMQ_SETSOCKOPT for the Replier socket (Example: -zmqrepsetopt=ZMQ_LINGER:0)\") + \"\\n\" +\n+        \"  -zmqrepbind=\\\"<endpoint>\\\"        \" + _(\"ZMQ_BIND Replier socket to bind to (default: none)\") + \"\\n\" +\n+        \"  -zmqrepconnect=\\\"<endpoint>\\\"     \" + _(\"ZMQ_CONNECT Replier socket to connect to (default: none)\") + \"\\n\" +\n #endif\n         \"\\n\";\n \n@@ -1076,6 +1079,27 @@ bool AppInit2()\n             BZmq_PubConnect(strZmqPubConnect);\n         }\n     }\n+    if (mapArgs.count(\"-zmqrepsetopt\")) \n+    {\n+        BOOST_FOREACH(string strZmqRepSetOpt, mapMultiArgs[\"-zmqrepsetopt\"]) {\n+            BZmq_RepSetOptions(strZmqRepSetOpt);\n+        }\n+    }\n+\n+    if (mapArgs.count(\"-zmqrepbind\")) \n+    {\n+        BOOST_FOREACH(string strZmqRepBind, mapMultiArgs[\"-zmqrepbind\"]) {\n+            BZmq_RepBind(strZmqRepBind);\n+        }\n+    }\n+\n+    if (mapArgs.count(\"-zmqrepconnect\")) \n+    {\n+        BOOST_FOREACH(string strZmqRepConnect, mapMultiArgs[\"-zmqrepconnect\"]) {\n+            BZmq_RepConnect(strZmqRepConnect);\n+        }\n+    }\n+    NewThread(BZmq_ThreadReqRep, NULL);\n #endif\n \n     if (!NewThread(StartNode, NULL))"
+      }
+    ]
+  }
+]

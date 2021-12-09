@@ -1,0 +1,122 @@
+[
+  {
+    "sha": "a4305bf16eade27f1f6e2784e90945360b81cf9a",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphNDMwNWJmMTZlYWRlMjdmMWY2ZTI3ODRlOTA5NDUzNjBiODFjZjlh",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-11-05T06:33:07Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-11-16T02:08:09Z"
+      },
+      "message": "RPC: Avoid cleartext passwords by default\n\nAlthough in theory RPC API access should be locked down, there are\noccasions where cleartext passwords have been used anyway.\n\nHTTP Basic authentication remains, but a new default \"Bitcoin\" HTTP\nAuthorization header is used.  HTTP Digest authentication was considered\ninitially, but that may require additional HTTP round-trips.  The standard\nHMAC-SHA256 algorithm pair was chosen instead, with some additional stirring\nfactors (random nonce, time).\n\nThe HTTP server will accept Basic or Bitcoin authentication now.\n\nThe HTTP client will attempt Bitcoin authentication, and fall back to\nBasic if that fails.",
+      "tree": {
+        "sha": "b9053d1cf33fae5c71741166f82d618fdcb5f447",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/b9053d1cf33fae5c71741166f82d618fdcb5f447"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a4305bf16eade27f1f6e2784e90945360b81cf9a",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a4305bf16eade27f1f6e2784e90945360b81cf9a",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a4305bf16eade27f1f6e2784e90945360b81cf9a",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a4305bf16eade27f1f6e2784e90945360b81cf9a/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "6caffb5358b1e403b293846b3c832433fa928e46",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6caffb5358b1e403b293846b3c832433fa928e46",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/6caffb5358b1e403b293846b3c832433fa928e46"
+      }
+    ],
+    "stats": {
+      "total": 131,
+      "additions": 117,
+      "deletions": 14
+    },
+    "files": [
+      {
+        "sha": "dbaf314db8c9b45b08b48e384bd80a4aeb7b945b",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 117,
+        "deletions": 14,
+        "changes": 131,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a4305bf16eade27f1f6e2784e90945360b81cf9a/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a4305bf16eade27f1f6e2784e90945360b81cf9a/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=a4305bf16eade27f1f6e2784e90945360b81cf9a",
+        "patch": "@@ -24,6 +24,7 @@\n #include <boost/filesystem/fstream.hpp>\n #include <boost/shared_ptr.hpp>\n #include <list>\n+#include <openssl/hmac.h>\n \n using namespace std;\n using namespace boost;\n@@ -465,16 +466,101 @@ int ReadHTTPMessage(std::basic_istream<char>& stream, map<string,\n     return HTTP_OK;\n }\n \n-bool HTTPAuthorized(map<string, string>& mapHeaders)\n+static bool HTTPAuthBasic(string& strAuth)\n {\n-    string strAuth = mapHeaders[\"authorization\"];\n-    if (strAuth.substr(0,6) != \"Basic \")\n-        return false;\n     string strUserPass64 = strAuth.substr(6); boost::trim(strUserPass64);\n     string strUserPass = DecodeBase64(strUserPass64);\n     return strUserPass == strRPCUserColonPass;\n }\n \n+static uint256 BitcoinHMAC(string& strKey, string& strText)\n+{\n+    uint256 hash;\n+\n+    // standard HMAC, using SHA256 as the hash\n+    HMAC(EVP_sha256(), strKey.c_str(), strKey.size(),\n+         (unsigned char *) strText.c_str(), strText.size(),\n+         (unsigned char *)&hash, NULL);\n+\n+    return hash;\n+}\n+\n+static uint256 BitcoinAuthHash(string &strKey, string& strUser,\n+                               string &strDate, string& strNonce,\n+                               const string &strBodyHash)\n+{\n+    // Format: username : timestamp : nonce : body double-hash (hex)\n+    string strText = strprintf(\"%s:%s:%s:%s\",\n+                               strUser.c_str(),\n+                               strDate.c_str(),\n+                               strNonce.c_str(),\n+                               strBodyHash.c_str());\n+\n+    return BitcoinHMAC(strKey, strText);\n+}\n+\n+static bool HTTPAuthBitcoin(string& strAuth, string& strRequest)\n+{\n+    // Format: Bitcoin SP $Username SP $Timestamp SP $Nonce SP $HMAC_hash (hex)\n+\n+    vector<string> vWords;\n+    boost::split(vWords, strAuth, boost::is_any_of(\" \"));\n+    if (vWords.size() != 5)\n+        return false;\n+\n+    // parse args\n+    if (vWords[0] != \"Bitcoin\")\n+        return false;\n+    string strUser = vWords[1];\n+    if (strUser != mapArgs[\"-rpcuser\"])\n+        return false;\n+    string strDate = vWords[2];\n+    string strNonce = vWords[3];\n+    string strHash = vWords[4];\n+    if (strHash.size() < (sizeof(uint256) * 2))\n+        return false;\n+    uint256 hash;\n+    hash.SetHex(strHash.c_str());\n+\n+    // build text to hash\n+    uint256 req_hash = Hash(strRequest.begin(), strRequest.end());\n+    uint256 check_hash = BitcoinAuthHash(mapArgs[\"-rpcpassword\"],\n+                                         strUser, strDate, strNonce,\n+                                         req_hash.GetHex());\n+    return (check_hash == hash);\n+}\n+\n+static string AuthBitcoinHeader(string &strRequest)\n+{\n+    string strDate = strprintf(\"%\"PRI64d, GetTime());\n+\n+    unsigned char randbuf[16];\n+    RAND_bytes(&randbuf[0], sizeof(randbuf));\n+    string strNonce = EncodeBase64(randbuf, sizeof(randbuf));\n+\n+    uint256 req_hash = Hash(strRequest.begin(), strRequest.end());\n+\n+    uint256 check_hash = BitcoinAuthHash(mapArgs[\"-rpcpassword\"],\n+                                         mapArgs[\"-rpcuser\"], strDate,\n+                                         strNonce, req_hash.GetHex());\n+\n+    // Format: Bitcoin SP $Username SP $Timestamp SP $Nonce SP $HMAC_hash (hex)\n+    return strprintf(\"Bitcoin %s %s %s %s\",\n+                     mapArgs[\"-rpcuser\"].c_str(),\n+                     strDate.c_str(),\n+                     strNonce.c_str(),\n+                     check_hash.GetHex().c_str());\n+}\n+\n+bool HTTPAuthorized(map<string, string>& mapHeaders, string& strRequest)\n+{\n+    string strAuth = mapHeaders[\"authorization\"];\n+    if (strAuth.substr(0,6) == \"Basic \")\n+        return HTTPAuthBasic(strAuth);\n+\n+    return HTTPAuthBitcoin(strAuth, strRequest);\n+}\n+\n //\n // JSON-RPC protocol.  Bitcoin speaks version 1.0 for maximum compatibility,\n // but uses JSON-RPC 1.1/2.0 standards for parts of the 1.0 standard that were\n@@ -987,7 +1073,7 @@ void ThreadRPCServer3(void* parg)\n             conn->stream() << HTTPReply(HTTP_UNAUTHORIZED, \"\", false) << std::flush;\n             break;\n         }\n-        if (!HTTPAuthorized(mapHeaders))\n+        if (!HTTPAuthorized(mapHeaders, strRequest))\n         {\n             printf(\"ThreadRPCServer incorrect password attempt from %s\\n\", conn->peer_address_to_string().c_str());\n             /* Deter brute-forcing short passwords.\n@@ -1101,13 +1187,14 @@ Object CallRPC(const string& strMethod, const Array& params)\n     if (!d.connect(GetArg(\"-rpcconnect\", \"127.0.0.1\"), GetArg(\"-rpcport\", itostr(GetDefaultRPCPort()))))\n         throw runtime_error(\"couldn't connect to server\");\n \n-    // HTTP basic authentication\n-    string strUserPass64 = EncodeBase64(mapArgs[\"-rpcuser\"] + \":\" + mapArgs[\"-rpcpassword\"]);\n+    // Build request\n+    string strRequest = JSONRPCRequest(strMethod, params, 1);\n+\n+    // HTTP \"Bitcoin\" authentication\n     map<string, string> mapRequestHeaders;\n-    mapRequestHeaders[\"Authorization\"] = string(\"Basic \") + strUserPass64;\n+    mapRequestHeaders[\"Authorization\"] = AuthBitcoinHeader(strRequest);\n \n     // Send request\n-    string strRequest = JSONRPCRequest(strMethod, params, 1);\n     string strPost = HTTPPost(strRequest, mapRequestHeaders);\n     stream << strPost << std::flush;\n \n@@ -1118,12 +1205,28 @@ Object CallRPC(const string& strMethod, const Array& params)\n     // Receive HTTP reply message headers and body\n     map<string, string> mapHeaders;\n     string strReply;\n-    ReadHTTPMessage(stream, mapHeaders, strReply, nProto);\n-\n-    if (nStatus == HTTP_UNAUTHORIZED)\n-        throw runtime_error(\"incorrect rpcuser or rpcpassword (authorization failed)\");\n-    else if (nStatus >= 400 && nStatus != HTTP_BAD_REQUEST && nStatus != HTTP_NOT_FOUND && nStatus != HTTP_INTERNAL_SERVER_ERROR)\n+    int nStatus2 = ReadHTTPMessage(stream, mapHeaders, strReply, nProto);\n+    if (nStatus == HTTP_UNAUTHORIZED) {\n+        // retry with HTTP basic authentication\n+        string strUserPass64 = EncodeBase64(mapArgs[\"-rpcuser\"] + \":\" + mapArgs[\"-rpcpassword\"]);\n+        mapRequestHeaders.clear();\n+        mapRequestHeaders[\"Authorization\"] = string(\"Basic \") + strUserPass64;\n+\n+        // Send request\n+        strPost = HTTPPost(strRequest, mapRequestHeaders);\n+        stream << strPost << std::flush;\n+\n+        // Receive reply\n+        mapHeaders.clear();\n+        strReply.clear();\n+        nStatus = ReadHTTPStatus(stream, nProto);\n+        nStatus2 = ReadHTTPMessage(stream, mapHeaders, strReply, nProto);\n+        if (nStatus == HTTP_UNAUTHORIZED)\n+            throw runtime_error(\"incorrect rpcuser or rpcpassword (authorization failed)\");\n+    } else if (nStatus >= 400 && nStatus != HTTP_BAD_REQUEST && nStatus != HTTP_NOT_FOUND && nStatus != HTTP_INTERNAL_SERVER_ERROR)\n         throw runtime_error(strprintf(\"server returned HTTP error %d\", nStatus));\n+    else if (nStatus2 != HTTP_OK)\n+        throw runtime_error(strprintf(\"server returned HTTP error %d\", nStatus2));\n     else if (strReply.empty())\n         throw runtime_error(\"no response from server\");\n "
+      }
+    ]
+  },
+  {
+    "sha": "010cc65142f83b1045bc21b64cfe7cb46b8eff78",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowMTBjYzY1MTQyZjgzYjEwNDViYzIxYjY0Y2ZlN2NiNDZiOGVmZjc4",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-11-05T18:05:33Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-11-16T02:08:09Z"
+      },
+      "message": "RPC: clamp HTTP auth timestamp to +/- 60 seconds",
+      "tree": {
+        "sha": "112bbc5cb1bf34faa28d363512e6fa52d3f12236",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/112bbc5cb1bf34faa28d363512e6fa52d3f12236"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/010cc65142f83b1045bc21b64cfe7cb46b8eff78",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/010cc65142f83b1045bc21b64cfe7cb46b8eff78",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/010cc65142f83b1045bc21b64cfe7cb46b8eff78",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/010cc65142f83b1045bc21b64cfe7cb46b8eff78/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "a4305bf16eade27f1f6e2784e90945360b81cf9a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a4305bf16eade27f1f6e2784e90945360b81cf9a",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/a4305bf16eade27f1f6e2784e90945360b81cf9a"
+      }
+    ],
+    "stats": {
+      "total": 13,
+      "additions": 13,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "facbc7f9f14b1b507d11c6708d0692ea75330c82",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 0,
+        "changes": 13,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/010cc65142f83b1045bc21b64cfe7cb46b8eff78/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/010cc65142f83b1045bc21b64cfe7cb46b8eff78/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=010cc65142f83b1045bc21b64cfe7cb46b8eff78",
+        "patch": "@@ -499,6 +499,17 @@ static uint256 BitcoinAuthHash(string &strKey, string& strUser,\n     return BitcoinHMAC(strKey, strText);\n }\n \n+static bool ValidAuthTimestamp(const string& strDate)\n+{\n+    int64 timestamp = (int64) atoll(strDate.c_str());\n+    int64 now = GetTime();\n+\n+    if ((timestamp < (now - 60)) ||\n+        (timestamp > (now + 60)))\n+        return false;\n+    return true;\n+}\n+\n static bool HTTPAuthBitcoin(string& strAuth, string& strRequest)\n {\n     // Format: Bitcoin SP $Username SP $Timestamp SP $Nonce SP $HMAC_hash (hex)\n@@ -515,6 +526,8 @@ static bool HTTPAuthBitcoin(string& strAuth, string& strRequest)\n     if (strUser != mapArgs[\"-rpcuser\"])\n         return false;\n     string strDate = vWords[2];\n+    if (!ValidAuthTimestamp(strDate))\n+        return false;\n     string strNonce = vWords[3];\n     string strHash = vWords[4];\n     if (strHash.size() < (sizeof(uint256) * 2))"
+      }
+    ]
+  }
+]

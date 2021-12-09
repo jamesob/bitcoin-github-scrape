@@ -1,0 +1,110 @@
+[
+  {
+    "sha": "0b51af6b28ea446fb37f6c3fc59d94496e069e70",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowYjUxYWY2YjI4ZWE0NDZmYjM3ZjZjM2ZjNTlkOTQ0OTZlMDY5ZTcw",
+    "commit": {
+      "author": {
+        "name": "Marko Bencun",
+        "email": "marko.bencun@monetas.net",
+        "date": "2017-07-23T19:24:51Z"
+      },
+      "committer": {
+        "name": "Marko Bencun",
+        "email": "marko.bencun@monetas.net",
+        "date": "2017-08-03T22:38:13Z"
+      },
+      "message": "Refactor fRelayTxes global to CConnman member",
+      "tree": {
+        "sha": "c90d33c770500b9b2a9c029d0683c2577dd239d0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/c90d33c770500b9b2a9c029d0683c2577dd239d0"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/0b51af6b28ea446fb37f6c3fc59d94496e069e70",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0b51af6b28ea446fb37f6c3fc59d94496e069e70",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/0b51af6b28ea446fb37f6c3fc59d94496e069e70",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0b51af6b28ea446fb37f6c3fc59d94496e069e70/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "e222618a32a16cf0efae392e6349c10c38e57db6",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e222618a32a16cf0efae392e6349c10c38e57db6",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/e222618a32a16cf0efae392e6349c10c38e57db6"
+      }
+    ],
+    "stats": {
+      "total": 20,
+      "additions": 13,
+      "deletions": 7
+    },
+    "files": [
+      {
+        "sha": "8ec78f376fc182af04777cc8d93231d258d9665f",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0b51af6b28ea446fb37f6c3fc59d94496e069e70/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0b51af6b28ea446fb37f6c3fc59d94496e069e70/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=0b51af6b28ea446fb37f6c3fc59d94496e069e70",
+        "patch": "@@ -1338,7 +1338,6 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)\n     // see Step 2: parameter interactions for more information about these\n     fListen = GetBoolArg(\"-listen\", DEFAULT_LISTEN);\n     fDiscover = GetBoolArg(\"-discover\", true);\n-    fRelayTxes = !GetBoolArg(\"-blocksonly\", DEFAULT_BLOCKSONLY);\n \n     for (const std::string& strAddr : gArgs.GetArgs(\"-externalip\")) {\n         CService addrLocal;\n@@ -1639,6 +1638,7 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)\n     MapPort(GetBoolArg(\"-upnp\", DEFAULT_UPNP));\n \n     CConnman::Options connOptions;\n+    connOptions.m_relay_txes = !GetBoolArg(\"-blocksonly\", DEFAULT_BLOCKSONLY);\n     connOptions.nLocalServices = nLocalServices;\n     connOptions.nRelevantServices = nRelevantServices;\n     connOptions.nMaxConnections = nMaxConnections;"
+      },
+      {
+        "sha": "cacb06785bbf2820c9b022fa22aeabb7e555fee2",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 1,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0b51af6b28ea446fb37f6c3fc59d94496e069e70/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0b51af6b28ea446fb37f6c3fc59d94496e069e70/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=0b51af6b28ea446fb37f6c3fc59d94496e069e70",
+        "patch": "@@ -81,7 +81,6 @@ static const uint64_t RANDOMIZER_ID_LOCALHOSTNONCE = 0xd93e69e2bbfa5735ULL; // S\n //\n bool fDiscover = true;\n bool fListen = true;\n-bool fRelayTxes = true;\n CCriticalSection cs_mapLocalHost;\n std::map<CNetAddr, LocalServiceInfo> mapLocalHost;\n static bool vfLimited[NET_MAX] = {};\n@@ -2202,6 +2201,7 @@ void CConnman::SetNetworkActive(bool active)\n \n CConnman::CConnman(uint64_t nSeed0In, uint64_t nSeed1In) : nSeed0(nSeed0In), nSeed1(nSeed1In)\n {\n+    m_relay_txes = false;\n     fNetworkActive = true;\n     setBannedIsDirty = false;\n     fAddressesInitialized = false;\n@@ -2256,6 +2256,7 @@ bool CConnman::InitBinds(const std::vector<CService>& binds, const std::vector<C\n \n bool CConnman::Start(CScheduler& scheduler, Options connOptions)\n {\n+    m_relay_txes = connOptions.m_relay_txes;\n     nTotalBytesRecv = 0;\n     nTotalBytesSent = 0;\n     nMaxOutboundTotalBytesSentInCycle = 0;\n@@ -2693,6 +2694,8 @@ int CConnman::GetBestHeight() const\n     return nBestHeight.load(std::memory_order_acquire);\n }\n \n+bool CConnman::GetRelayTxes() const { return m_relay_txes; }\n+\n unsigned int CConnman::GetReceiveFloodSize() const { return nReceiveFloodSize; }\n \n CNode::CNode(NodeId idIn, ServiceFlags nLocalServicesIn, int nMyStartingHeightIn, SOCKET hSocketIn, const CAddress& addrIn, uint64_t nKeyedNetGroupIn, uint64_t nLocalHostNonceIn, const CAddress &addrBindIn, const std::string& addrNameIn, bool fInboundIn) :"
+      },
+      {
+        "sha": "e452e15b2f4f459f2b75b42adf9d8bf46fed4740",
+        "filename": "src/net.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 1,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0b51af6b28ea446fb37f6c3fc59d94496e069e70/src/net.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0b51af6b28ea446fb37f6c3fc59d94496e069e70/src/net.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.h?ref=0b51af6b28ea446fb37f6c3fc59d94496e069e70",
+        "patch": "@@ -130,6 +130,7 @@ class CConnman\n \n     struct Options\n     {\n+        bool m_relay_txes = false;\n         ServiceFlags nLocalServices = NODE_NONE;\n         ServiceFlags nRelevantServices = NODE_NONE;\n         int nMaxConnections = 0;\n@@ -242,6 +243,8 @@ class CConnman\n     bool DisconnectNode(const std::string& node);\n     bool DisconnectNode(NodeId id);\n \n+    bool GetRelayTxes() const;\n+\n     ServiceFlags GetLocalServices() const;\n \n     //!set the max outbound target in bytes\n@@ -349,6 +352,7 @@ class CConnman\n     unsigned int nSendBufferMaxSize;\n     unsigned int nReceiveFloodSize;\n \n+    bool m_relay_txes;\n     std::vector<ListenSocket> vhListenSocket;\n     std::atomic<bool> fNetworkActive;\n     banmap_t setBanned;\n@@ -461,7 +465,6 @@ CAddress GetLocalAddress(const CNetAddr *paddrPeer, ServiceFlags nLocalServices)\n \n extern bool fDiscover;\n extern bool fListen;\n-extern bool fRelayTxes;\n \n extern limitedmap<uint256, int64_t> mapAlreadyAskedFor;\n "
+      },
+      {
+        "sha": "3c67399dd8229df4ea0c3465b5eff26155e9be1f",
+        "filename": "src/net_processing.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 3,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0b51af6b28ea446fb37f6c3fc59d94496e069e70/src/net_processing.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0b51af6b28ea446fb37f6c3fc59d94496e069e70/src/net_processing.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.cpp?ref=0b51af6b28ea446fb37f6c3fc59d94496e069e70",
+        "patch": "@@ -256,7 +256,7 @@ void PushNodeVersion(CNode *pnode, CConnman& connman, int64_t nTime)\n     CAddress addrMe = CAddress(CService(), nLocalNodeServices);\n \n     connman.PushMessage(pnode, CNetMsgMaker(INIT_PROTO_VERSION).Make(NetMsgType::VERSION, PROTOCOL_VERSION, (uint64_t)nLocalNodeServices, nTime, addrYou, addrMe,\n-            nonce, strSubVersion, nNodeStartingHeight, ::fRelayTxes));\n+            nonce, strSubVersion, nNodeStartingHeight, connman.GetRelayTxes()));\n \n     if (fLogIPs) {\n         LogPrint(BCLog::NET, \"send version message: version %d, blocks=%d, us=%s, them=%s, peer=%d\\n\", PROTOCOL_VERSION, nNodeStartingHeight, addrMe.ToString(), addrYou.ToString(), nodeid);\n@@ -1527,7 +1527,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr\n             return error(\"message inv size() = %u\", vInv.size());\n         }\n \n-        bool fBlocksOnly = !fRelayTxes;\n+        bool fBlocksOnly = !connman.GetRelayTxes();\n \n         // Allow whitelisted peers to send data other than blocks in blocks only mode if whitelistrelay is true\n         if (pfrom->fWhitelisted && GetBoolArg(\"-whitelistrelay\", DEFAULT_WHITELISTRELAY))\n@@ -1771,7 +1771,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr\n     {\n         // Stop processing the transaction early if\n         // We are in blocks only mode and peer is either not whitelisted or whitelistrelay is off\n-        if (!fRelayTxes && (!pfrom->fWhitelisted || !GetBoolArg(\"-whitelistrelay\", DEFAULT_WHITELISTRELAY)))\n+        if (!connman.GetRelayTxes() && (!pfrom->fWhitelisted || !GetBoolArg(\"-whitelistrelay\", DEFAULT_WHITELISTRELAY)))\n         {\n             LogPrint(BCLog::NET, \"transaction sent in violation of protocol peer=%d\\n\", pfrom->GetId());\n             return true;"
+      },
+      {
+        "sha": "3089ae6baaf1891bc7c22e01258ff316ba5c2ece",
+        "filename": "src/rpc/net.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0b51af6b28ea446fb37f6c3fc59d94496e069e70/src/rpc/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0b51af6b28ea446fb37f6c3fc59d94496e069e70/src/rpc/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/net.cpp?ref=0b51af6b28ea446fb37f6c3fc59d94496e069e70",
+        "patch": "@@ -460,7 +460,7 @@ UniValue getnetworkinfo(const JSONRPCRequest& request)\n     obj.push_back(Pair(\"protocolversion\",PROTOCOL_VERSION));\n     if(g_connman)\n         obj.push_back(Pair(\"localservices\", strprintf(\"%016x\", g_connman->GetLocalServices())));\n-    obj.push_back(Pair(\"localrelay\",     fRelayTxes));\n+    obj.push_back(Pair(\"localrelay\",     g_connman->GetRelayTxes()));\n     obj.push_back(Pair(\"timeoffset\",    GetTimeOffset()));\n     if (g_connman) {\n         obj.push_back(Pair(\"networkactive\", g_connman->GetNetworkActive()));"
+      }
+    ]
+  }
+]

@@ -1,0 +1,122 @@
+[
+  {
+    "sha": "6d47acb8a0322e5970c0e7b8962d2f0dc1f4bbf9",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2ZDQ3YWNiOGEwMzIyZTU5NzBjMGU3Yjg5NjJkMmYwZGMxZjRiYmY5",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2013-09-04T17:32:43Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-05-20T20:44:02Z"
+      },
+      "message": "RPC: createrawtransactions gains 'fee' pseudo-address for fee safety\n\nSuggested by gmaxwell.",
+      "tree": {
+        "sha": "752020616fa81878fe03fc2179f5ca7d024cd535",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/752020616fa81878fe03fc2179f5ca7d024cd535"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/6d47acb8a0322e5970c0e7b8962d2f0dc1f4bbf9",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6d47acb8a0322e5970c0e7b8962d2f0dc1f4bbf9",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/6d47acb8a0322e5970c0e7b8962d2f0dc1f4bbf9",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6d47acb8a0322e5970c0e7b8962d2f0dc1f4bbf9/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "9d97e83bf677ce595c6b2dc5d6805c2fcb1bc05b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9d97e83bf677ce595c6b2dc5d6805c2fcb1bc05b",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/9d97e83bf677ce595c6b2dc5d6805c2fcb1bc05b"
+      }
+    ],
+    "stats": {
+      "total": 45,
+      "additions": 45,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "2c1eba3603d890ffba660c655d0d6fa9aebbf3b9",
+        "filename": "src/rpcrawtransaction.cpp",
+        "status": "modified",
+        "additions": 45,
+        "deletions": 0,
+        "changes": 45,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6d47acb8a0322e5970c0e7b8962d2f0dc1f4bbf9/src/rpcrawtransaction.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6d47acb8a0322e5970c0e7b8962d2f0dc1f4bbf9/src/rpcrawtransaction.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcrawtransaction.cpp?ref=6d47acb8a0322e5970c0e7b8962d2f0dc1f4bbf9",
+        "patch": "@@ -311,6 +311,41 @@ Value listunspent(const Array& params, bool fHelp)\n }\n #endif\n \n+static int64 txInputTotal(const CTransaction& tx)\n+{\n+    int64 total = 0;\n+    for (unsigned int i = 0; i < tx.vin.size(); i++) {\n+        CCoins coin;\n+        if (!pcoinsTip->GetCoins(tx.vin[i].prevout.hash, coin))\n+            return -1;\n+        if (!coin.IsAvailable(tx.vin[i].prevout.n))\n+            return -1;\n+        total += coin.vout[tx.vin[i].prevout.n].nValue;\n+    }\n+\n+    return total;\n+}\n+\n+static int64 txOutputTotal(const CTransaction& tx)\n+{\n+    int64 total = 0;\n+    for (unsigned int i = 0; i < tx.vout.size(); i++)\n+        total += tx.vout[i].nValue;\n+\n+    return total;\n+}\n+\n+static bool txFeeSafetyCheck(const CTransaction& tx, const int64 fee)\n+{\n+    int64 inTotal = txInputTotal(tx);\n+    if (inTotal < 0)\n+        return false;\n+\n+    int64 outTotal = txOutputTotal(tx);\n+\n+    return ((inTotal + fee) == outTotal);\n+}\n+\n Value createrawtransaction(const Array& params, bool fHelp)\n {\n     if (fHelp || params.size() != 2)\n@@ -368,9 +403,16 @@ Value createrawtransaction(const Array& params, bool fHelp)\n         rawTx.vin.push_back(in);\n     }\n \n+    int64 feeCheck = -1;\n+\n     set<CBitcoinAddress> setAddress;\n     BOOST_FOREACH(const Pair& s, sendTo)\n     {\n+        if (s.name_ == \"fee\") {\n+            feeCheck = AmountFromValue(s.value_);\n+            continue;\n+        }\n+\n         CBitcoinAddress address(s.name_);\n         if (!address.IsValid())\n             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, string(\"Invalid Bitcoin address: \")+s.name_);\n@@ -386,6 +428,9 @@ Value createrawtransaction(const Array& params, bool fHelp)\n         CTxOut out(nAmount, scriptPubKey);\n         rawTx.vout.push_back(out);\n     }\n+    \n+    if ((feeCheck >= 0) && (!txFeeSafetyCheck(rawTx, feeCheck)))\n+        throw JSONRPCError(RPC_INVALID_PARAMETER, string(\"Inputs + fee != outputs\"));\n \n     CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);\n     ss << rawTx;"
+      }
+    ]
+  },
+  {
+    "sha": "be96bf0a577faf928376e62840cd1ea33e5fbd16",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiZTk2YmYwYTU3N2ZhZjkyODM3NmU2Mjg0MGNkMWVhMzNlNWZiZDE2",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-05-20T20:50:47Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-05-20T20:50:47Z"
+      },
+      "message": "rpcrawtransaction: use int64_t rather than int64",
+      "tree": {
+        "sha": "598f3da13681a75b035e2ae7af68f03c73249640",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/598f3da13681a75b035e2ae7af68f03c73249640"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/be96bf0a577faf928376e62840cd1ea33e5fbd16",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/be96bf0a577faf928376e62840cd1ea33e5fbd16",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/be96bf0a577faf928376e62840cd1ea33e5fbd16",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/be96bf0a577faf928376e62840cd1ea33e5fbd16/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "6d47acb8a0322e5970c0e7b8962d2f0dc1f4bbf9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6d47acb8a0322e5970c0e7b8962d2f0dc1f4bbf9",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/6d47acb8a0322e5970c0e7b8962d2f0dc1f4bbf9"
+      }
+    ],
+    "stats": {
+      "total": 16,
+      "additions": 8,
+      "deletions": 8
+    },
+    "files": [
+      {
+        "sha": "89179a612c7faca996efbb3e54bd1151238e91aa",
+        "filename": "src/rpcrawtransaction.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 8,
+        "changes": 16,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/be96bf0a577faf928376e62840cd1ea33e5fbd16/src/rpcrawtransaction.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/be96bf0a577faf928376e62840cd1ea33e5fbd16/src/rpcrawtransaction.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcrawtransaction.cpp?ref=be96bf0a577faf928376e62840cd1ea33e5fbd16",
+        "patch": "@@ -311,9 +311,9 @@ Value listunspent(const Array& params, bool fHelp)\n }\n #endif\n \n-static int64 txInputTotal(const CTransaction& tx)\n+static int64_t txInputTotal(const CTransaction& tx)\n {\n-    int64 total = 0;\n+    int64_t total = 0;\n     for (unsigned int i = 0; i < tx.vin.size(); i++) {\n         CCoins coin;\n         if (!pcoinsTip->GetCoins(tx.vin[i].prevout.hash, coin))\n@@ -326,22 +326,22 @@ static int64 txInputTotal(const CTransaction& tx)\n     return total;\n }\n \n-static int64 txOutputTotal(const CTransaction& tx)\n+static int64_t txOutputTotal(const CTransaction& tx)\n {\n-    int64 total = 0;\n+    int64_t total = 0;\n     for (unsigned int i = 0; i < tx.vout.size(); i++)\n         total += tx.vout[i].nValue;\n \n     return total;\n }\n \n-static bool txFeeSafetyCheck(const CTransaction& tx, const int64 fee)\n+static bool txFeeSafetyCheck(const CTransaction& tx, const int64_t fee)\n {\n-    int64 inTotal = txInputTotal(tx);\n+    int64_t inTotal = txInputTotal(tx);\n     if (inTotal < 0)\n         return false;\n \n-    int64 outTotal = txOutputTotal(tx);\n+    int64_t outTotal = txOutputTotal(tx);\n \n     return ((inTotal + fee) == outTotal);\n }\n@@ -403,7 +403,7 @@ Value createrawtransaction(const Array& params, bool fHelp)\n         rawTx.vin.push_back(in);\n     }\n \n-    int64 feeCheck = -1;\n+    int64_t feeCheck = -1;\n \n     set<CBitcoinAddress> setAddress;\n     BOOST_FOREACH(const Pair& s, sendTo)"
+      }
+    ]
+  }
+]

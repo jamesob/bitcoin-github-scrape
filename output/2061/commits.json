@@ -1,0 +1,797 @@
+[
+  {
+    "sha": "5fa36553e14772aaf47ee080586be13d891ae187",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1ZmEzNjU1M2UxNDc3MmFhZjQ3ZWUwODA1ODZiZTEzZDg5MWFlMTg3",
+    "commit": {
+      "author": {
+        "name": "Hal Finney",
+        "email": "hal.finney@gmail.com",
+        "date": "2011-02-08T20:20:50Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieterw@google.com",
+        "date": "2013-03-04T20:17:58Z"
+      },
+      "message": "Add speedup for sig verification based on secp256k1.",
+      "tree": {
+        "sha": "56a5be53b38654edf7a818fdbbbc401c30b4408c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/56a5be53b38654edf7a818fdbbbc401c30b4408c"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/5fa36553e14772aaf47ee080586be13d891ae187",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5fa36553e14772aaf47ee080586be13d891ae187",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/5fa36553e14772aaf47ee080586be13d891ae187",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5fa36553e14772aaf47ee080586be13d891ae187/comments",
+    "author": {
+      "login": "halfinney",
+      "id": 563777,
+      "node_id": "MDQ6VXNlcjU2Mzc3Nw==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/563777?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/halfinney",
+      "html_url": "https://github.com/halfinney",
+      "followers_url": "https://api.github.com/users/halfinney/followers",
+      "following_url": "https://api.github.com/users/halfinney/following{/other_user}",
+      "gists_url": "https://api.github.com/users/halfinney/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/halfinney/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/halfinney/subscriptions",
+      "organizations_url": "https://api.github.com/users/halfinney/orgs",
+      "repos_url": "https://api.github.com/users/halfinney/repos",
+      "events_url": "https://api.github.com/users/halfinney/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/halfinney/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": null,
+    "parents": [
+      {
+        "sha": "a0db772d13a33a3ff18b3dc615a4a1e9c81f6f43",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a0db772d13a33a3ff18b3dc615a4a1e9c81f6f43",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/a0db772d13a33a3ff18b3dc615a4a1e9c81f6f43"
+      }
+    ],
+    "stats": {
+      "total": 148,
+      "additions": 143,
+      "deletions": 5
+    },
+    "files": [
+      {
+        "sha": "7b80baecdd65d32d7d89e9c16b334da1765405b9",
+        "filename": "src/key.cpp",
+        "status": "modified",
+        "additions": 143,
+        "deletions": 5,
+        "changes": 148,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5fa36553e14772aaf47ee080586be13d891ae187/src/key.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5fa36553e14772aaf47ee080586be13d891ae187/src/key.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/key.cpp?ref=5fa36553e14772aaf47ee080586be13d891ae187",
+        "patch": "@@ -120,6 +120,148 @@ int ECDSA_SIG_recover_key_GFp(EC_KEY *eckey, ECDSA_SIG *ecsig, const unsigned ch\n     return ret;\n }\n \n+// Split a secp256k1 exponent k into two smaller ones k1 and k2 such that for any point Y,\n+// k*Y = k1*Y + k2*Y', where Y' = lambda*Y is very fast\n+int static secp256k1Splitk (BIGNUM *bnk1, BIGNUM *bnk2, const BIGNUM *bnk, const BIGNUM *bnn, BN_CTX *ctx)\n+{\n+    BIGNUM *bnc1 = BN_new();\n+    BIGNUM *bnc2 = BN_new();\n+    BIGNUM *bnt1 = BN_new();\n+    BIGNUM *bnt2 = BN_new();\n+    BIGNUM *bnn2 = BN_new();\n+    static unsigned char a1b2[] = {\n+        0x30, 0x86, 0xd2, 0x21, 0xa7, 0xd4, 0x6b, 0xcd,\n+        0xe8, 0x6c, 0x90, 0xe4, 0x92, 0x84, 0xeb, 0x15,\n+    };\n+    static unsigned char b1m[] = {\n+        0xe4, 0x43, 0x7e, 0xd6, 0x01, 0x0e, 0x88, 0x28,\n+        0x6f, 0x54, 0x7f, 0xa9, 0x0a, 0xbf, 0xe4, 0xc3,\n+    };\n+    static unsigned char a2[] = {\n+        0x01, 0x14, 0xca, 0x50, 0xf7, 0xa8, 0xe2, 0xf3,\n+        0xf6, 0x57, 0xc1, 0x10, 0x8d, 0x9d, 0x44, 0xcf,\n+        0xd8,\n+    };\n+    BIGNUM *bna1b2 = BN_bin2bn(a1b2, sizeof(a1b2), NULL);\n+    BIGNUM *bnb1m = BN_bin2bn(b1m, sizeof(b1m), NULL);\n+    BIGNUM *bna2 = BN_bin2bn(a2, sizeof(a2), NULL);\n+\n+    BN_rshift1(bnn2, bnn);\n+    BN_mul(bnc1, bnk, bna1b2, ctx);\n+    BN_add(bnc1, bnc1, bnn2);\n+    BN_div(bnc1, NULL, bnc1, bnn, ctx);\n+    BN_mul(bnc2, bnk, bnb1m, ctx);\n+    BN_add(bnc2, bnc2, bnn2);\n+    BN_div(bnc2, NULL, bnc2, bnn, ctx);\n+\n+    BN_mul(bnt1, bnc1, bna1b2, ctx);\n+    BN_mul(bnt2, bnc2, bna2, ctx);\n+    BN_add(bnt1, bnt1, bnt2);\n+    BN_sub(bnk1, bnk, bnt1);\n+    BN_mul(bnt1, bnc1, bnb1m, ctx);\n+    BN_mul(bnt2, bnc2, bna1b2, ctx);\n+    BN_sub(bnk2, bnt1, bnt2);\n+\n+    BN_free(bnc1);\n+    BN_free(bnc2);\n+    BN_free(bnt1);\n+    BN_free(bnt2);\n+    BN_free(bnn2);\n+    BN_free(bna1b2);\n+    BN_free(bnb1m);\n+    BN_free(bna2);\n+    return 0;\n+}\n+\n+bool static secp256k1Verify(const unsigned char hash[32], const unsigned char *dersig, size_t sigsize, const EC_KEY *pkey)\n+{\n+    bool rslt = false;;\n+    const EC_GROUP *group = EC_KEY_get0_group(pkey);\n+    const EC_POINT *Y = EC_KEY_get0_public_key(pkey);\n+    const EC_POINT *G = EC_GROUP_get0_generator(group);\n+    EC_POINT *Glam = EC_POINT_new(group);\n+    EC_POINT *Ylam = EC_POINT_new(group);\n+    EC_POINT *R = EC_POINT_new(group);\n+    const EC_POINT *Points[3];\n+    const BIGNUM *bnexps[3];\n+    BIGNUM *bnp = BN_new();\n+    BIGNUM *bnn = BN_new();\n+    BIGNUM *bnx = BN_new();\n+    BIGNUM *bny = BN_new();\n+    BIGNUM *bnk = BN_new();\n+    BIGNUM *bnk1 = BN_new();\n+    BIGNUM *bnk2 = BN_new();\n+    BIGNUM *bnk1a = BN_new();\n+    BIGNUM *bnk2a = BN_new();\n+    BIGNUM *bnsinv = BN_new();\n+    BIGNUM *bnh = BN_bin2bn(hash, 32, NULL);\n+    static unsigned char beta[] = {\n+        0x7a, 0xe9, 0x6a, 0x2b, 0x65, 0x7c, 0x07, 0x10,\n+        0x6e, 0x64, 0x47, 0x9e, 0xac, 0x34, 0x34, 0xe9,\n+        0x9c, 0xf0, 0x49, 0x75, 0x12, 0xf5, 0x89, 0x95,\n+        0xc1, 0x39, 0x6c, 0x28, 0x71, 0x95, 0x01, 0xee,\n+    };\n+    BIGNUM *bnbeta = BN_bin2bn(beta, 32, NULL);\n+    BN_CTX *ctx = BN_CTX_new();\n+    ECDSA_SIG *sig = d2i_ECDSA_SIG(NULL, &dersig, sigsize);\n+\n+    if (sig == NULL)\n+        goto done;\n+\n+    EC_GROUP_get_curve_GFp(group, bnp, NULL, NULL, ctx);\n+    EC_GROUP_get_order(group, bnn, ctx);\n+\n+    if (BN_is_zero(sig->r) || BN_is_negative(sig->r) || BN_ucmp(sig->r, bnn) >= 0\n+        || BN_is_zero(sig->s) || BN_is_negative(sig->s) || BN_ucmp(sig->s, bnn) >= 0)\n+        goto done;\n+\n+    EC_POINT_get_affine_coordinates_GFp(group, G, bnx, bny, ctx);\n+    BN_mod_mul(bnx, bnx, bnbeta, bnp, ctx);\n+    EC_POINT_set_affine_coordinates_GFp(group, Glam, bnx, bny, ctx);\n+    EC_POINT_get_affine_coordinates_GFp(group, Y, bnx, bny, ctx);\n+    BN_mod_mul(bnx, bnx, bnbeta, bnp, ctx);\n+    EC_POINT_set_affine_coordinates_GFp(group, Ylam, bnx, bny, ctx);\n+\n+    Points[0] = Glam;\n+    Points[1] = Y;\n+    Points[2] = Ylam;\n+\n+    BN_mod_inverse(bnsinv, sig->s, bnn, ctx);\n+    BN_mod_mul(bnk, bnh, bnsinv, bnn, ctx);\n+    secp256k1Splitk(bnk1, bnk2, bnk, bnn, ctx);\n+    bnexps[0] = bnk2;\n+    BN_mod_mul(bnk, sig->r, bnsinv, bnn, ctx);\n+    secp256k1Splitk(bnk1a, bnk2a, bnk, bnn, ctx);\n+    bnexps[1] = bnk1a;\n+    bnexps[2] = bnk2a;\n+\n+    EC_POINTs_mul(group, R, bnk1, 3, Points, bnexps, ctx);\n+    EC_POINT_get_affine_coordinates_GFp(group, R, bnx, NULL, ctx);\n+    BN_mod(bnx, bnx, bnn, ctx);\n+    rslt = (BN_cmp(bnx, sig->r) == 0);\n+\n+    ECDSA_SIG_free(sig);\n+done:\n+    EC_POINT_free(Glam);\n+    EC_POINT_free(Ylam);\n+    EC_POINT_free(R);\n+    BN_free(bnp);\n+    BN_free(bnn);\n+    BN_free(bnx);\n+    BN_free(bny);\n+    BN_free(bnk);\n+    BN_free(bnk1);\n+    BN_free(bnk2);\n+    BN_free(bnk1a);\n+    BN_free(bnk2a);\n+    BN_free(bnsinv);\n+    BN_free(bnh);\n+    BN_free(bnbeta);\n+    BN_CTX_free(ctx);\n+\n+    return rslt;\n+}\n+\n void CKey::SetCompressedPubKey(bool fCompressed)\n {\n     EC_KEY_set_conv_form(pkey, fCompressed ? POINT_CONVERSION_COMPRESSED : POINT_CONVERSION_UNCOMPRESSED);\n@@ -372,11 +514,7 @@ bool CKey::SetCompactSignature(uint256 hash, const std::vector<unsigned char>& v\n \n bool CKey::Verify(uint256 hash, const std::vector<unsigned char>& vchSig)\n {\n-    // -1 = error, 0 = bad sig, 1 = good\n-    if (ECDSA_verify(0, (unsigned char*)&hash, sizeof(hash), &vchSig[0], vchSig.size(), pkey) != 1)\n-        return false;\n-\n-    return true;\n+    return secp256k1Verify((unsigned char*)&hash, &vchSig[0], vchSig.size(), pkey);\n }\n \n bool CKey::VerifyCompact(uint256 hash, const std::vector<unsigned char>& vchSig)"
+      }
+    ]
+  },
+  {
+    "sha": "3993c8f7559d34ddf5932cb99e81d858f4cbc0cc",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozOTkzYzhmNzU1OWQzNGRkZjU5MzJjYjk5ZTgxZDg1OGY0Y2JjMGNj",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2012-12-02T14:37:50Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieterw@google.com",
+        "date": "2013-03-04T20:17:58Z"
+      },
+      "message": "Some optimizations for Hal's secp256k1 verifier",
+      "tree": {
+        "sha": "01364e63f449bb848d2208bdfc35bc367b5dcb75",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/01364e63f449bb848d2208bdfc35bc367b5dcb75"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/3993c8f7559d34ddf5932cb99e81d858f4cbc0cc",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3993c8f7559d34ddf5932cb99e81d858f4cbc0cc",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/3993c8f7559d34ddf5932cb99e81d858f4cbc0cc",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3993c8f7559d34ddf5932cb99e81d858f4cbc0cc/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": null,
+    "parents": [
+      {
+        "sha": "5fa36553e14772aaf47ee080586be13d891ae187",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5fa36553e14772aaf47ee080586be13d891ae187",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/5fa36553e14772aaf47ee080586be13d891ae187"
+      }
+    ],
+    "stats": {
+      "total": 134,
+      "additions": 62,
+      "deletions": 72
+    },
+    "files": [
+      {
+        "sha": "0fdc56cf15b645ee45fbaca73aab0a1356b7bf89",
+        "filename": "src/key.cpp",
+        "status": "modified",
+        "additions": 62,
+        "deletions": 72,
+        "changes": 134,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3993c8f7559d34ddf5932cb99e81d858f4cbc0cc/src/key.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3993c8f7559d34ddf5932cb99e81d858f4cbc0cc/src/key.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/key.cpp?ref=3993c8f7559d34ddf5932cb99e81d858f4cbc0cc",
+        "patch": "@@ -120,57 +120,62 @@ int ECDSA_SIG_recover_key_GFp(EC_KEY *eckey, ECDSA_SIG *ecsig, const unsigned ch\n     return ret;\n }\n \n+static const unsigned char secp256k1_a1b2[] = {       0x30, 0x86, 0xd2, 0x21, 0xa7, 0xd4, 0x6b, 0xcd, 0xe8, 0x6c, 0x90, 0xe4, 0x92, 0x84, 0xeb, 0x15 };\n+static const unsigned char secp256k1_b1m[] =  {       0xe4, 0x43, 0x7e, 0xd6, 0x01, 0x0e, 0x88, 0x28, 0x6f, 0x54, 0x7f, 0xa9, 0x0a, 0xbf, 0xe4, 0xc3 };\n+static const unsigned char secp256k1_a2[] =   { 0x01, 0x14, 0xca, 0x50, 0xf7, 0xa8, 0xe2, 0xf3, 0xf6, 0x57, 0xc1, 0x10, 0x8d, 0x9d, 0x44, 0xcf, 0xd8 };\n+static const unsigned char secp256k1_beta[] = { 0x7a, 0xe9, 0x6a, 0x2b, 0x65, 0x7c, 0x07, 0x10, 0x6e, 0x64, 0x47, 0x9e, 0xac, 0x34, 0x34, 0xe9, 0x9c, 0xf0, 0x49, 0x75, 0x12, 0xf5, 0x89, 0x95, 0xc1, 0x39, 0x6c, 0x28, 0x71, 0x95, 0x01, 0xee };\n+\n+struct CSecp256k1Consts {\n+    BIGNUM* bna1b2;\n+    BIGNUM* bnb1m;\n+    BIGNUM* bna2;\n+    BIGNUM* bnbeta;\n+\n+    CSecp256k1Consts() {\n+        bna1b2 = BN_bin2bn(secp256k1_a1b2, sizeof(secp256k1_a1b2), NULL);\n+        bnb1m  = BN_bin2bn(secp256k1_b1m,  sizeof(secp256k1_b1m),  NULL);\n+        bna2   = BN_bin2bn(secp256k1_a2,   sizeof(secp256k1_a2),   NULL);\n+        bnbeta = BN_bin2bn(secp256k1_beta, sizeof(secp256k1_beta), NULL);\n+    }\n+\n+    ~CSecp256k1Consts() {\n+        BN_free(bna1b2);\n+        BN_free(bnb1m);\n+        BN_free(bna2);\n+        BN_free(bnbeta);\n+    }\n+};\n+\n+static CSecp256k1Consts secp256k1Consts;\n+\n // Split a secp256k1 exponent k into two smaller ones k1 and k2 such that for any point Y,\n // k*Y = k1*Y + k2*Y', where Y' = lambda*Y is very fast\n-int static secp256k1Splitk (BIGNUM *bnk1, BIGNUM *bnk2, const BIGNUM *bnk, const BIGNUM *bnn, BN_CTX *ctx)\n+void static secp256k1Splitk (BIGNUM *bnk1, BIGNUM *bnk2, const BIGNUM *bnk, const BIGNUM *bnn, BN_CTX *ctx)\n {\n-    BIGNUM *bnc1 = BN_new();\n-    BIGNUM *bnc2 = BN_new();\n-    BIGNUM *bnt1 = BN_new();\n-    BIGNUM *bnt2 = BN_new();\n-    BIGNUM *bnn2 = BN_new();\n-    static unsigned char a1b2[] = {\n-        0x30, 0x86, 0xd2, 0x21, 0xa7, 0xd4, 0x6b, 0xcd,\n-        0xe8, 0x6c, 0x90, 0xe4, 0x92, 0x84, 0xeb, 0x15,\n-    };\n-    static unsigned char b1m[] = {\n-        0xe4, 0x43, 0x7e, 0xd6, 0x01, 0x0e, 0x88, 0x28,\n-        0x6f, 0x54, 0x7f, 0xa9, 0x0a, 0xbf, 0xe4, 0xc3,\n-    };\n-    static unsigned char a2[] = {\n-        0x01, 0x14, 0xca, 0x50, 0xf7, 0xa8, 0xe2, 0xf3,\n-        0xf6, 0x57, 0xc1, 0x10, 0x8d, 0x9d, 0x44, 0xcf,\n-        0xd8,\n-    };\n-    BIGNUM *bna1b2 = BN_bin2bn(a1b2, sizeof(a1b2), NULL);\n-    BIGNUM *bnb1m = BN_bin2bn(b1m, sizeof(b1m), NULL);\n-    BIGNUM *bna2 = BN_bin2bn(a2, sizeof(a2), NULL);\n+    BN_CTX_start(ctx);\n+    BIGNUM *bnc1 = BN_CTX_get(ctx);\n+    BIGNUM *bnc2 = BN_CTX_get(ctx);\n+    BIGNUM *bnt1 = BN_CTX_get(ctx);\n+    BIGNUM *bnt2 = BN_CTX_get(ctx);\n+    BIGNUM *bnn2 = BN_CTX_get(ctx);\n \n     BN_rshift1(bnn2, bnn);\n-    BN_mul(bnc1, bnk, bna1b2, ctx);\n+    BN_mul(bnc1, bnk,  secp256k1Consts.bna1b2, ctx);\n     BN_add(bnc1, bnc1, bnn2);\n     BN_div(bnc1, NULL, bnc1, bnn, ctx);\n-    BN_mul(bnc2, bnk, bnb1m, ctx);\n+    BN_mul(bnc2, bnk,  secp256k1Consts.bnb1m, ctx);\n     BN_add(bnc2, bnc2, bnn2);\n     BN_div(bnc2, NULL, bnc2, bnn, ctx);\n \n-    BN_mul(bnt1, bnc1, bna1b2, ctx);\n-    BN_mul(bnt2, bnc2, bna2, ctx);\n+    BN_mul(bnt1, bnc1, secp256k1Consts.bna1b2, ctx);\n+    BN_mul(bnt2, bnc2, secp256k1Consts.bna2, ctx);\n     BN_add(bnt1, bnt1, bnt2);\n-    BN_sub(bnk1, bnk, bnt1);\n-    BN_mul(bnt1, bnc1, bnb1m, ctx);\n-    BN_mul(bnt2, bnc2, bna1b2, ctx);\n+    BN_sub(bnk1, bnk,  bnt1);\n+    BN_mul(bnt1, bnc1, secp256k1Consts.bnb1m, ctx);\n+    BN_mul(bnt2, bnc2, secp256k1Consts.bna1b2, ctx);\n     BN_sub(bnk2, bnt1, bnt2);\n \n-    BN_free(bnc1);\n-    BN_free(bnc2);\n-    BN_free(bnt1);\n-    BN_free(bnt2);\n-    BN_free(bnn2);\n-    BN_free(bna1b2);\n-    BN_free(bnb1m);\n-    BN_free(bna2);\n-    return 0;\n+    BN_CTX_end(ctx);\n }\n \n bool static secp256k1Verify(const unsigned char hash[32], const unsigned char *dersig, size_t sigsize, const EC_KEY *pkey)\n@@ -183,26 +188,21 @@ bool static secp256k1Verify(const unsigned char hash[32], const unsigned char *d\n     EC_POINT *Ylam = EC_POINT_new(group);\n     EC_POINT *R = EC_POINT_new(group);\n     const EC_POINT *Points[3];\n-    const BIGNUM *bnexps[3];\n-    BIGNUM *bnp = BN_new();\n-    BIGNUM *bnn = BN_new();\n-    BIGNUM *bnx = BN_new();\n-    BIGNUM *bny = BN_new();\n-    BIGNUM *bnk = BN_new();\n-    BIGNUM *bnk1 = BN_new();\n-    BIGNUM *bnk2 = BN_new();\n-    BIGNUM *bnk1a = BN_new();\n-    BIGNUM *bnk2a = BN_new();\n-    BIGNUM *bnsinv = BN_new();\n-    BIGNUM *bnh = BN_bin2bn(hash, 32, NULL);\n-    static unsigned char beta[] = {\n-        0x7a, 0xe9, 0x6a, 0x2b, 0x65, 0x7c, 0x07, 0x10,\n-        0x6e, 0x64, 0x47, 0x9e, 0xac, 0x34, 0x34, 0xe9,\n-        0x9c, 0xf0, 0x49, 0x75, 0x12, 0xf5, 0x89, 0x95,\n-        0xc1, 0x39, 0x6c, 0x28, 0x71, 0x95, 0x01, 0xee,\n-    };\n-    BIGNUM *bnbeta = BN_bin2bn(beta, 32, NULL);\n     BN_CTX *ctx = BN_CTX_new();\n+    const BIGNUM *bnexps[3];\n+    BN_CTX_start(ctx);\n+    BIGNUM *bnp = BN_CTX_get(ctx);\n+    BIGNUM *bnn = BN_CTX_get(ctx);\n+    BIGNUM *bnx = BN_CTX_get(ctx);\n+    BIGNUM *bny = BN_CTX_get(ctx);\n+    BIGNUM *bnk = BN_CTX_get(ctx);\n+    BIGNUM *bnk1 = BN_CTX_get(ctx);\n+    BIGNUM *bnk2 = BN_CTX_get(ctx);\n+    BIGNUM *bnk1a = BN_CTX_get(ctx);\n+    BIGNUM *bnk2a = BN_CTX_get(ctx);\n+    BIGNUM *bnsinv = BN_CTX_get(ctx);\n+    BIGNUM *bnh = BN_CTX_get(ctx);\n+    bnh = BN_bin2bn(hash, 32, bnh);\n     ECDSA_SIG *sig = d2i_ECDSA_SIG(NULL, &dersig, sigsize);\n \n     if (sig == NULL)\n@@ -216,10 +216,10 @@ bool static secp256k1Verify(const unsigned char hash[32], const unsigned char *d\n         goto done;\n \n     EC_POINT_get_affine_coordinates_GFp(group, G, bnx, bny, ctx);\n-    BN_mod_mul(bnx, bnx, bnbeta, bnp, ctx);\n+    BN_mod_mul(bnx, bnx, secp256k1Consts.bnbeta, bnp, ctx);\n     EC_POINT_set_affine_coordinates_GFp(group, Glam, bnx, bny, ctx);\n     EC_POINT_get_affine_coordinates_GFp(group, Y, bnx, bny, ctx);\n-    BN_mod_mul(bnx, bnx, bnbeta, bnp, ctx);\n+    BN_mod_mul(bnx, bnx, secp256k1Consts.bnbeta, bnp, ctx);\n     EC_POINT_set_affine_coordinates_GFp(group, Ylam, bnx, bny, ctx);\n \n     Points[0] = Glam;\n@@ -240,23 +240,13 @@ bool static secp256k1Verify(const unsigned char hash[32], const unsigned char *d\n     BN_mod(bnx, bnx, bnn, ctx);\n     rslt = (BN_cmp(bnx, sig->r) == 0);\n \n-    ECDSA_SIG_free(sig);\n done:\n+    if (sig)\n+        ECDSA_SIG_free(sig);\n     EC_POINT_free(Glam);\n     EC_POINT_free(Ylam);\n     EC_POINT_free(R);\n-    BN_free(bnp);\n-    BN_free(bnn);\n-    BN_free(bnx);\n-    BN_free(bny);\n-    BN_free(bnk);\n-    BN_free(bnk1);\n-    BN_free(bnk2);\n-    BN_free(bnk1a);\n-    BN_free(bnk2a);\n-    BN_free(bnsinv);\n-    BN_free(bnh);\n-    BN_free(bnbeta);\n+    BN_CTX_end(ctx);\n     BN_CTX_free(ctx);\n \n     return rslt;"
+      }
+    ]
+  },
+  {
+    "sha": "0bed41e45e1bde996743f677312b6591e4e8f409",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowYmVkNDFlNDVlMWJkZTk5Njc0M2Y2NzczMTJiNjU5MWU0ZThmNDA5",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2012-12-08T16:46:44Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieterw@google.com",
+        "date": "2013-03-04T20:17:58Z"
+      },
+      "message": "Precalculate P, N and G*lambda in CSecp256k1Consts",
+      "tree": {
+        "sha": "afef3af6ad2e2b47c893f8aa47e3890face1f9d6",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/afef3af6ad2e2b47c893f8aa47e3890face1f9d6"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/0bed41e45e1bde996743f677312b6591e4e8f409",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0bed41e45e1bde996743f677312b6591e4e8f409",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/0bed41e45e1bde996743f677312b6591e4e8f409",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0bed41e45e1bde996743f677312b6591e4e8f409/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": null,
+    "parents": [
+      {
+        "sha": "3993c8f7559d34ddf5932cb99e81d858f4cbc0cc",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3993c8f7559d34ddf5932cb99e81d858f4cbc0cc",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/3993c8f7559d34ddf5932cb99e81d858f4cbc0cc"
+      }
+    ],
+    "stats": {
+      "total": 57,
+      "additions": 36,
+      "deletions": 21
+    },
+    "files": [
+      {
+        "sha": "9d1bf1219f2da8f2d7d25405a2d598e81c33a776",
+        "filename": "src/key.cpp",
+        "status": "modified",
+        "additions": 36,
+        "deletions": 21,
+        "changes": 57,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0bed41e45e1bde996743f677312b6591e4e8f409/src/key.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0bed41e45e1bde996743f677312b6591e4e8f409/src/key.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/key.cpp?ref=0bed41e45e1bde996743f677312b6591e4e8f409",
+        "patch": "@@ -126,19 +126,45 @@ static const unsigned char secp256k1_a2[] =   { 0x01, 0x14, 0xca, 0x50, 0xf7, 0x\n static const unsigned char secp256k1_beta[] = { 0x7a, 0xe9, 0x6a, 0x2b, 0x65, 0x7c, 0x07, 0x10, 0x6e, 0x64, 0x47, 0x9e, 0xac, 0x34, 0x34, 0xe9, 0x9c, 0xf0, 0x49, 0x75, 0x12, 0xf5, 0x89, 0x95, 0xc1, 0x39, 0x6c, 0x28, 0x71, 0x95, 0x01, 0xee };\n \n struct CSecp256k1Consts {\n+    BIGNUM* bnn;\n+    BIGNUM* bnp;\n     BIGNUM* bna1b2;\n     BIGNUM* bnb1m;\n     BIGNUM* bna2;\n     BIGNUM* bnbeta;\n+    EC_POINT* Glam;\n \n     CSecp256k1Consts() {\n+        EC_KEY *pkey = EC_KEY_new_by_curve_name(NID_secp256k1);\n+        const EC_GROUP *group = EC_KEY_get0_group(pkey);\n+        const EC_POINT *G = EC_GROUP_get0_generator(group);\n+        BN_CTX *ctx = BN_CTX_new();\n+        BN_CTX_start(ctx);\n+        BIGNUM *bnx = BN_CTX_get(ctx);\n+        BIGNUM *bny = BN_CTX_get(ctx);\n+\n+        bnp = BN_new();\n+        bnn = BN_new();\n+        EC_GROUP_get_curve_GFp(group, bnp, NULL, NULL, ctx);\n+        EC_GROUP_get_order(group, bnn, ctx);\n         bna1b2 = BN_bin2bn(secp256k1_a1b2, sizeof(secp256k1_a1b2), NULL);\n         bnb1m  = BN_bin2bn(secp256k1_b1m,  sizeof(secp256k1_b1m),  NULL);\n         bna2   = BN_bin2bn(secp256k1_a2,   sizeof(secp256k1_a2),   NULL);\n         bnbeta = BN_bin2bn(secp256k1_beta, sizeof(secp256k1_beta), NULL);\n+        EC_POINT_get_affine_coordinates_GFp(group, G, bnx, bny, ctx);\n+        BN_mod_mul(bnx, bnx, bnbeta, bnp, ctx);\n+        Glam = EC_POINT_new(group);\n+        EC_POINT_set_affine_coordinates_GFp(group, Glam, bnx, bny, ctx);\n+\n+        BN_CTX_end(ctx);\n+        BN_CTX_free(ctx);\n+        EC_KEY_free(pkey);\n     }\n \n     ~CSecp256k1Consts() {\n+        EC_POINT_free(Glam);\n+        BN_free(bnn);\n+        BN_free(bnp);\n         BN_free(bna1b2);\n         BN_free(bnb1m);\n         BN_free(bna2);\n@@ -183,16 +209,12 @@ bool static secp256k1Verify(const unsigned char hash[32], const unsigned char *d\n     bool rslt = false;;\n     const EC_GROUP *group = EC_KEY_get0_group(pkey);\n     const EC_POINT *Y = EC_KEY_get0_public_key(pkey);\n-    const EC_POINT *G = EC_GROUP_get0_generator(group);\n-    EC_POINT *Glam = EC_POINT_new(group);\n     EC_POINT *Ylam = EC_POINT_new(group);\n     EC_POINT *R = EC_POINT_new(group);\n     const EC_POINT *Points[3];\n     BN_CTX *ctx = BN_CTX_new();\n     const BIGNUM *bnexps[3];\n     BN_CTX_start(ctx);\n-    BIGNUM *bnp = BN_CTX_get(ctx);\n-    BIGNUM *bnn = BN_CTX_get(ctx);\n     BIGNUM *bnx = BN_CTX_get(ctx);\n     BIGNUM *bny = BN_CTX_get(ctx);\n     BIGNUM *bnk = BN_CTX_get(ctx);\n@@ -208,42 +230,35 @@ bool static secp256k1Verify(const unsigned char hash[32], const unsigned char *d\n     if (sig == NULL)\n         goto done;\n \n-    EC_GROUP_get_curve_GFp(group, bnp, NULL, NULL, ctx);\n-    EC_GROUP_get_order(group, bnn, ctx);\n-\n-    if (BN_is_zero(sig->r) || BN_is_negative(sig->r) || BN_ucmp(sig->r, bnn) >= 0\n-        || BN_is_zero(sig->s) || BN_is_negative(sig->s) || BN_ucmp(sig->s, bnn) >= 0)\n+    if (BN_is_zero(sig->r) || BN_is_negative(sig->r) || BN_ucmp(sig->r, secp256k1Consts.bnn) >= 0\n+        || BN_is_zero(sig->s) || BN_is_negative(sig->s) || BN_ucmp(sig->s, secp256k1Consts.bnn) >= 0)\n         goto done;\n \n-    EC_POINT_get_affine_coordinates_GFp(group, G, bnx, bny, ctx);\n-    BN_mod_mul(bnx, bnx, secp256k1Consts.bnbeta, bnp, ctx);\n-    EC_POINT_set_affine_coordinates_GFp(group, Glam, bnx, bny, ctx);\n     EC_POINT_get_affine_coordinates_GFp(group, Y, bnx, bny, ctx);\n-    BN_mod_mul(bnx, bnx, secp256k1Consts.bnbeta, bnp, ctx);\n+    BN_mod_mul(bnx, bnx, secp256k1Consts.bnbeta, secp256k1Consts.bnp, ctx);\n     EC_POINT_set_affine_coordinates_GFp(group, Ylam, bnx, bny, ctx);\n \n-    Points[0] = Glam;\n+    Points[0] = secp256k1Consts.Glam;\n     Points[1] = Y;\n     Points[2] = Ylam;\n \n-    BN_mod_inverse(bnsinv, sig->s, bnn, ctx);\n-    BN_mod_mul(bnk, bnh, bnsinv, bnn, ctx);\n-    secp256k1Splitk(bnk1, bnk2, bnk, bnn, ctx);\n+    BN_mod_inverse(bnsinv, sig->s, secp256k1Consts.bnn, ctx);\n+    BN_mod_mul(bnk, bnh, bnsinv, secp256k1Consts.bnn, ctx);\n+    secp256k1Splitk(bnk1, bnk2, bnk, secp256k1Consts.bnn, ctx);\n     bnexps[0] = bnk2;\n-    BN_mod_mul(bnk, sig->r, bnsinv, bnn, ctx);\n-    secp256k1Splitk(bnk1a, bnk2a, bnk, bnn, ctx);\n+    BN_mod_mul(bnk, sig->r, bnsinv, secp256k1Consts.bnn, ctx);\n+    secp256k1Splitk(bnk1a, bnk2a, bnk, secp256k1Consts.bnn, ctx);\n     bnexps[1] = bnk1a;\n     bnexps[2] = bnk2a;\n \n     EC_POINTs_mul(group, R, bnk1, 3, Points, bnexps, ctx);\n     EC_POINT_get_affine_coordinates_GFp(group, R, bnx, NULL, ctx);\n-    BN_mod(bnx, bnx, bnn, ctx);\n+    BN_mod(bnx, bnx, secp256k1Consts.bnn, ctx);\n     rslt = (BN_cmp(bnx, sig->r) == 0);\n \n done:\n     if (sig)\n         ECDSA_SIG_free(sig);\n-    EC_POINT_free(Glam);\n     EC_POINT_free(Ylam);\n     EC_POINT_free(R);\n     BN_CTX_end(ctx);"
+      }
+    ]
+  },
+  {
+    "sha": "2acc872fd809b747a289efc649baadf8d3cbad4e",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoyYWNjODcyZmQ4MDliNzQ3YTI4OWVmYzY0OWJhYWRmOGQzY2JhZDRl",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2012-12-09T18:16:51Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieterw@google.com",
+        "date": "2013-03-04T20:17:59Z"
+      },
+      "message": "Refactor secp256k1 ECDSA verify code to mimic generic version",
+      "tree": {
+        "sha": "984e33d39e591c60a6763afe6e3da1a386fecd53",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/984e33d39e591c60a6763afe6e3da1a386fecd53"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/2acc872fd809b747a289efc649baadf8d3cbad4e",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2acc872fd809b747a289efc649baadf8d3cbad4e",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/2acc872fd809b747a289efc649baadf8d3cbad4e",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2acc872fd809b747a289efc649baadf8d3cbad4e/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": null,
+    "parents": [
+      {
+        "sha": "0bed41e45e1bde996743f677312b6591e4e8f409",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0bed41e45e1bde996743f677312b6591e4e8f409",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/0bed41e45e1bde996743f677312b6591e4e8f409"
+      }
+    ],
+    "stats": {
+      "total": 287,
+      "additions": 183,
+      "deletions": 104
+    },
+    "files": [
+      {
+        "sha": "ddd6db002508c86c685f2de84781605807e8ef7b",
+        "filename": "src/key.cpp",
+        "status": "modified",
+        "additions": 183,
+        "deletions": 104,
+        "changes": 287,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/2acc872fd809b747a289efc649baadf8d3cbad4e/src/key.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/2acc872fd809b747a289efc649baadf8d3cbad4e/src/key.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/key.cpp?ref=2acc872fd809b747a289efc649baadf8d3cbad4e",
+        "patch": "@@ -120,21 +120,71 @@ int ECDSA_SIG_recover_key_GFp(EC_KEY *eckey, ECDSA_SIG *ecsig, const unsigned ch\n     return ret;\n }\n \n-static const unsigned char secp256k1_a1b2[] = {       0x30, 0x86, 0xd2, 0x21, 0xa7, 0xd4, 0x6b, 0xcd, 0xe8, 0x6c, 0x90, 0xe4, 0x92, 0x84, 0xeb, 0x15 };\n-static const unsigned char secp256k1_b1m[] =  {       0xe4, 0x43, 0x7e, 0xd6, 0x01, 0x0e, 0x88, 0x28, 0x6f, 0x54, 0x7f, 0xa9, 0x0a, 0xbf, 0xe4, 0xc3 };\n-static const unsigned char secp256k1_a2[] =   { 0x01, 0x14, 0xca, 0x50, 0xf7, 0xa8, 0xe2, 0xf3, 0xf6, 0x57, 0xc1, 0x10, 0x8d, 0x9d, 0x44, 0xcf, 0xd8 };\n-static const unsigned char secp256k1_beta[] = { 0x7a, 0xe9, 0x6a, 0x2b, 0x65, 0x7c, 0x07, 0x10, 0x6e, 0x64, 0x47, 0x9e, 0xac, 0x34, 0x34, 0xe9, 0x9c, 0xf0, 0x49, 0x75, 0x12, 0xf5, 0x89, 0x95, 0xc1, 0x39, 0x6c, 0x28, 0x71, 0x95, 0x01, 0xee };\n \n-struct CSecp256k1Consts {\n-    BIGNUM* bnn;\n+class CSecp256k1Math {\n+private:\n+    BIGNUM* order;\n     BIGNUM* bnp;\n     BIGNUM* bna1b2;\n     BIGNUM* bnb1m;\n     BIGNUM* bna2;\n     BIGNUM* bnbeta;\n+    BIGNUM* bnlambda;\n     EC_POINT* Glam;\n \n-    CSecp256k1Consts() {\n+    // Split a secp256k1 exponent k into two smaller ones k1 and k2 such that for any point Y,\n+    // k*Y = k1*Y + k2*Y', where Y' = lambda*Y is very fast\n+    void splitk(BIGNUM *bnk1, BIGNUM *bnk2, const BIGNUM *bnk, BN_CTX *ctx) {\n+        BN_CTX_start(ctx);\n+        BIGNUM *bnc1 = BN_CTX_get(ctx);\n+        BIGNUM *bnc2 = BN_CTX_get(ctx);\n+        BIGNUM *bnt1 = BN_CTX_get(ctx);\n+        BIGNUM *bnt2 = BN_CTX_get(ctx);\n+        BIGNUM *bnn2 = BN_CTX_get(ctx);\n+\n+        BN_rshift1(bnn2, order);\n+        BN_mul(bnc1, bnk,  bna1b2, ctx);\n+        BN_add(bnc1, bnc1, bnn2);\n+        BN_div(bnc1, NULL, bnc1, order, ctx);\n+        BN_mul(bnc2, bnk,  bnb1m, ctx);\n+        BN_add(bnc2, bnc2, bnn2);\n+        BN_div(bnc2, NULL, bnc2, order, ctx);\n+\n+        BN_mul(bnt1, bnc1, bna1b2, ctx);\n+        BN_mul(bnt2, bnc2, bna2, ctx);\n+        BN_add(bnt1, bnt1, bnt2);\n+        BN_sub(bnk1, bnk,  bnt1);\n+        BN_mul(bnt1, bnc1, bnb1m, ctx);\n+        BN_mul(bnt2, bnc2, bna1b2, ctx);\n+        BN_sub(bnk2, bnt1, bnt2);\n+\n+        BN_CTX_end(ctx);\n+    }\n+\n+    // p2 = lambda*p, where lambda is chosen such that this operation is very fast\n+    void mullambda(const EC_GROUP *group, EC_POINT *p2, const EC_POINT *p, BN_CTX *ctx) {\n+        BN_CTX_start(ctx);\n+        BIGNUM *x = BN_CTX_get(ctx);\n+        BIGNUM *y = BN_CTX_get(ctx);\n+\n+        // deconstruct p as (x,y)\n+        EC_POINT_get_affine_coordinates_GFp(group, p, x, y, ctx);\n+        // x' = x*beta\n+        BN_mod_mul(x, x, bnbeta, bnp, ctx);\n+        // construct p2 as (x',y)\n+        EC_POINT_set_affine_coordinates_GFp(group, p2, x, y, ctx);\n+\n+        BN_CTX_end(ctx);\n+    }\n+\n+public:\n+    CSecp256k1Math() {\n+        static const unsigned char a1b2[] =   {       0x30, 0x86, 0xd2, 0x21, 0xa7, 0xd4, 0x6b, 0xcd, 0xe8, 0x6c, 0x90, 0xe4, 0x92, 0x84, 0xeb, 0x15 };\n+        static const unsigned char b1m[] =    {       0xe4, 0x43, 0x7e, 0xd6, 0x01, 0x0e, 0x88, 0x28, 0x6f, 0x54, 0x7f, 0xa9, 0x0a, 0xbf, 0xe4, 0xc3 };\n+        static const unsigned char a2[] =     { 0x01, 0x14, 0xca, 0x50, 0xf7, 0xa8, 0xe2, 0xf3, 0xf6, 0x57, 0xc1, 0x10, 0x8d, 0x9d, 0x44, 0xcf, 0xd8 };\n+        static const unsigned char beta[] =   { 0x7a, 0xe9, 0x6a, 0x2b, 0x65, 0x7c, 0x07, 0x10, 0x6e, 0x64, 0x47, 0x9e, 0xac, 0x34, 0x34, 0xe9, 0x9c, 0xf0, 0x49, 0x75, 0x12, 0xf5, 0x89, 0x95, 0xc1, 0x39, 0x6c, 0x28, 0x71, 0x95, 0x01, 0xee };\n+        static const unsigned char lambda[] = { 0x53, 0x63, 0xad, 0x4c, 0xc0, 0x5c, 0x30, 0xe0, 0xa5, 0x26, 0x1c, 0x02, 0x88, 0x12, 0x64, 0x5a, 0x12, 0x2e, 0x22, 0xea, 0x20, 0x81, 0x66, 0x78, 0xdf, 0x02, 0x96, 0x7c, 0x1b, 0x23, 0xbd, 0x72 };\n+\n         EC_KEY *pkey = EC_KEY_new_by_curve_name(NID_secp256k1);\n         const EC_GROUP *group = EC_KEY_get0_group(pkey);\n         const EC_POINT *G = EC_GROUP_get0_generator(group);\n@@ -144,13 +194,14 @@ struct CSecp256k1Consts {\n         BIGNUM *bny = BN_CTX_get(ctx);\n \n         bnp = BN_new();\n-        bnn = BN_new();\n+        order = BN_new();\n         EC_GROUP_get_curve_GFp(group, bnp, NULL, NULL, ctx);\n-        EC_GROUP_get_order(group, bnn, ctx);\n-        bna1b2 = BN_bin2bn(secp256k1_a1b2, sizeof(secp256k1_a1b2), NULL);\n-        bnb1m  = BN_bin2bn(secp256k1_b1m,  sizeof(secp256k1_b1m),  NULL);\n-        bna2   = BN_bin2bn(secp256k1_a2,   sizeof(secp256k1_a2),   NULL);\n-        bnbeta = BN_bin2bn(secp256k1_beta, sizeof(secp256k1_beta), NULL);\n+        EC_GROUP_get_order(group, order, ctx);\n+        bna1b2   = BN_bin2bn(a1b2,   sizeof(a1b2),   NULL);\n+        bnb1m    = BN_bin2bn(b1m,    sizeof(b1m),    NULL);\n+        bna2     = BN_bin2bn(a2,     sizeof(a2),     NULL);\n+        bnbeta   = BN_bin2bn(beta,   sizeof(beta),   NULL);\n+        bnlambda = BN_bin2bn(lambda, sizeof(lambda), NULL);\n         EC_POINT_get_affine_coordinates_GFp(group, G, bnx, bny, ctx);\n         BN_mod_mul(bnx, bnx, bnbeta, bnp, ctx);\n         Glam = EC_POINT_new(group);\n@@ -161,110 +212,134 @@ struct CSecp256k1Consts {\n         EC_KEY_free(pkey);\n     }\n \n-    ~CSecp256k1Consts() {\n+    ~CSecp256k1Math() {\n         EC_POINT_free(Glam);\n-        BN_free(bnn);\n+        BN_free(order);\n         BN_free(bnp);\n         BN_free(bna1b2);\n         BN_free(bnb1m);\n         BN_free(bna2);\n         BN_free(bnbeta);\n+        BN_free(bnlambda);\n+    }\n+\n+    // calculate r = n*G + m*q\n+    int EC_POINT_mul(const EC_GROUP *group, EC_POINT *r, const BIGNUM *n, const EC_POINT *q, const BIGNUM *m, BN_CTX *ctx) {\n+        BN_CTX_start(ctx);\n+        BIGNUM *na = BN_CTX_get(ctx);\n+        BIGNUM *nb = BN_CTX_get(ctx);\n+        BIGNUM *ma = BN_CTX_get(ctx);\n+        BIGNUM *mb = BN_CTX_get(ctx);\n+        EC_POINT *qlam = EC_POINT_new(group);\n+\n+        // rewrite n*G as na*G + nb*Glam, where na and nb are small, and Glam = lambda*G is precomputed\n+        splitk(na, nb, n, ctx); // split n\n+\n+        // rewrite m*q as ma*q + mb*qlam, where ma and mb are small, and qlam = lambda*q is efficiently computable\n+        splitk(ma, mb, m, ctx); // split m\n+        mullambda(group, qlam, q, ctx); // calculate qlam = lamda*Q\n+\n+        // the actual calculation now becomes: r = nb*Glam + ma*q + mb*qlam + na*G, where [na,nb,ma,mb] are small\n+        const EC_POINT *points[3] = {Glam, q,  qlam};\n+        const BIGNUM   *exps[3]   = {nb,   ma, mb};\n+        int ret = EC_POINTs_mul(group, r, na, 3, points, exps, ctx); // the exponent na to G is passed separately\n+\n+        EC_POINT_free(qlam);\n+        BN_CTX_end(ctx);\n+        return ret;\n+    }\n+\n+    const BIGNUM *get_order() {\n+        return order;\n     }\n };\n \n-static CSecp256k1Consts secp256k1Consts;\n+static CSecp256k1Math secp256k1math;\n \n-// Split a secp256k1 exponent k into two smaller ones k1 and k2 such that for any point Y,\n-// k*Y = k1*Y + k2*Y', where Y' = lambda*Y is very fast\n-void static secp256k1Splitk (BIGNUM *bnk1, BIGNUM *bnk2, const BIGNUM *bnk, const BIGNUM *bnn, BN_CTX *ctx)\n+/** this is an almost exact copy of OpenSSL's ecdsa_do_verify, except:\n+ *  - it takes fixed size input\n+ *  - it uses a static order (which is a constant, assuming secp256k1)\n+ *  - it uses the optimized EC_POINT_mul operation from CSecp256k1Math\n+ */\n+int static secp256k1_ecdsa_do_verify(const unsigned char hash[32], const ECDSA_SIG *sig, const EC_KEY *eckey)\n {\n-    BN_CTX_start(ctx);\n-    BIGNUM *bnc1 = BN_CTX_get(ctx);\n-    BIGNUM *bnc2 = BN_CTX_get(ctx);\n-    BIGNUM *bnt1 = BN_CTX_get(ctx);\n-    BIGNUM *bnt2 = BN_CTX_get(ctx);\n-    BIGNUM *bnn2 = BN_CTX_get(ctx);\n-\n-    BN_rshift1(bnn2, bnn);\n-    BN_mul(bnc1, bnk,  secp256k1Consts.bna1b2, ctx);\n-    BN_add(bnc1, bnc1, bnn2);\n-    BN_div(bnc1, NULL, bnc1, bnn, ctx);\n-    BN_mul(bnc2, bnk,  secp256k1Consts.bnb1m, ctx);\n-    BN_add(bnc2, bnc2, bnn2);\n-    BN_div(bnc2, NULL, bnc2, bnn, ctx);\n-\n-    BN_mul(bnt1, bnc1, secp256k1Consts.bna1b2, ctx);\n-    BN_mul(bnt2, bnc2, secp256k1Consts.bna2, ctx);\n-    BN_add(bnt1, bnt1, bnt2);\n-    BN_sub(bnk1, bnk,  bnt1);\n-    BN_mul(bnt1, bnc1, secp256k1Consts.bnb1m, ctx);\n-    BN_mul(bnt2, bnc2, secp256k1Consts.bna1b2, ctx);\n-    BN_sub(bnk2, bnt1, bnt2);\n-\n-    BN_CTX_end(ctx);\n-}\n+    int ret = -1;\n \n-bool static secp256k1Verify(const unsigned char hash[32], const unsigned char *dersig, size_t sigsize, const EC_KEY *pkey)\n-{\n-    bool rslt = false;;\n-    const EC_GROUP *group = EC_KEY_get0_group(pkey);\n-    const EC_POINT *Y = EC_KEY_get0_public_key(pkey);\n-    EC_POINT *Ylam = EC_POINT_new(group);\n-    EC_POINT *R = EC_POINT_new(group);\n-    const EC_POINT *Points[3];\n-    BN_CTX *ctx = BN_CTX_new();\n-    const BIGNUM *bnexps[3];\n+    const EC_GROUP *group;\n+    const EC_POINT *pub_key;\n+    EC_POINT *point = NULL;\n+    BIGNUM *m, *u2, *u1, *X;\n+    const BIGNUM *order;\n+    BN_CTX *ctx = NULL;\n+\n+    // check input values\n+    if (eckey == NULL || (group = EC_KEY_get0_group(eckey)) == NULL ||\n+        (pub_key = EC_KEY_get0_public_key(eckey)) == NULL || sig == NULL)\n+        goto err;\n+\n+    ctx = BN_CTX_new();\n     BN_CTX_start(ctx);\n-    BIGNUM *bnx = BN_CTX_get(ctx);\n-    BIGNUM *bny = BN_CTX_get(ctx);\n-    BIGNUM *bnk = BN_CTX_get(ctx);\n-    BIGNUM *bnk1 = BN_CTX_get(ctx);\n-    BIGNUM *bnk2 = BN_CTX_get(ctx);\n-    BIGNUM *bnk1a = BN_CTX_get(ctx);\n-    BIGNUM *bnk2a = BN_CTX_get(ctx);\n-    BIGNUM *bnsinv = BN_CTX_get(ctx);\n-    BIGNUM *bnh = BN_CTX_get(ctx);\n-    bnh = BN_bin2bn(hash, 32, bnh);\n-    ECDSA_SIG *sig = d2i_ECDSA_SIG(NULL, &dersig, sigsize);\n-\n-    if (sig == NULL)\n-        goto done;\n-\n-    if (BN_is_zero(sig->r) || BN_is_negative(sig->r) || BN_ucmp(sig->r, secp256k1Consts.bnn) >= 0\n-        || BN_is_zero(sig->s) || BN_is_negative(sig->s) || BN_ucmp(sig->s, secp256k1Consts.bnn) >= 0)\n-        goto done;\n-\n-    EC_POINT_get_affine_coordinates_GFp(group, Y, bnx, bny, ctx);\n-    BN_mod_mul(bnx, bnx, secp256k1Consts.bnbeta, secp256k1Consts.bnp, ctx);\n-    EC_POINT_set_affine_coordinates_GFp(group, Ylam, bnx, bny, ctx);\n-\n-    Points[0] = secp256k1Consts.Glam;\n-    Points[1] = Y;\n-    Points[2] = Ylam;\n-\n-    BN_mod_inverse(bnsinv, sig->s, secp256k1Consts.bnn, ctx);\n-    BN_mod_mul(bnk, bnh, bnsinv, secp256k1Consts.bnn, ctx);\n-    secp256k1Splitk(bnk1, bnk2, bnk, secp256k1Consts.bnn, ctx);\n-    bnexps[0] = bnk2;\n-    BN_mod_mul(bnk, sig->r, bnsinv, secp256k1Consts.bnn, ctx);\n-    secp256k1Splitk(bnk1a, bnk2a, bnk, secp256k1Consts.bnn, ctx);\n-    bnexps[1] = bnk1a;\n-    bnexps[2] = bnk2a;\n-\n-    EC_POINTs_mul(group, R, bnk1, 3, Points, bnexps, ctx);\n-    EC_POINT_get_affine_coordinates_GFp(group, R, bnx, NULL, ctx);\n-    BN_mod(bnx, bnx, secp256k1Consts.bnn, ctx);\n-    rslt = (BN_cmp(bnx, sig->r) == 0);\n-\n-done:\n-    if (sig)\n-        ECDSA_SIG_free(sig);\n-    EC_POINT_free(Ylam);\n-    EC_POINT_free(R);\n-    BN_CTX_end(ctx);\n-    BN_CTX_free(ctx);\n \n-    return rslt;\n+    m = BN_CTX_get(ctx);\n+    u2 = BN_CTX_get(ctx);\n+    u1 = BN_CTX_get(ctx);\n+    X = BN_CTX_get(ctx);\n+    if (!X)\n+        goto err;\n+\n+    // identical to: BIGNUM *order = BN_CTX_get(ctx); EC_GROUP_get_order(group, order, ctx);\n+    order = secp256k1math.get_order();\n+\n+    // sanity checks\n+    if (BN_is_zero(sig->r) || BN_is_negative(sig->r) || BN_ucmp(sig->r, order) >= 0\n+        || BN_is_zero(sig->s) || BN_is_negative(sig->s) || BN_ucmp(sig->s, order) >= 0)\n+        goto err;\n+\n+    // calculate tmp = inv(S) mod order\n+    if (!BN_mod_inverse(u2, sig->s, order, ctx))\n+        goto err;\n+\n+    // turn message into number\n+    if (!BN_bin2bn(hash, 32, m))\n+        goto err;\n+\n+    // u1 = m * tmp mod order\n+    if (!BN_mod_mul(u1, m, u2, order, ctx))\n+        goto err;\n+\n+    // u2 = r * tmp mod order\n+    if (!BN_mod_mul(u2, sig->r, u2, order, ctx))\n+        goto err;\n+\n+    // allocate result point\n+    if ((point = EC_POINT_new(group)) == NULL)\n+        goto err;\n+\n+    // calculate point = u1*G + u2*pub_key\n+    // identical to: EC_POINT_mul(group, point, u1, pub_key, u2, ctx)\n+    if (!secp256k1math.EC_POINT_mul(group, point, u1, pub_key, u2, ctx))\n+        goto err;\n+\n+    // extract X coordinate from result point\n+    if (!EC_POINT_get_affine_coordinates_GFp(group, point, X, NULL, ctx))\n+        goto err;\n+\n+    // u1 = X mod order\n+    if (!BN_nnmod(u1, X, order, ctx))\n+        goto err;\n+\n+    // compare u1 to r\n+    ret = (BN_ucmp(u1, sig->r) == 0);\n+\n+err:\n+    if (point)\n+        EC_POINT_free(point);\n+    if (ctx) {\n+        BN_CTX_end(ctx);\n+        BN_CTX_free(ctx);\n+    }\n+\n+    return ret;\n }\n \n void CKey::SetCompressedPubKey(bool fCompressed)\n@@ -519,7 +594,11 @@ bool CKey::SetCompactSignature(uint256 hash, const std::vector<unsigned char>& v\n \n bool CKey::Verify(uint256 hash, const std::vector<unsigned char>& vchSig)\n {\n-    return secp256k1Verify((unsigned char*)&hash, &vchSig[0], vchSig.size(), pkey);\n+    const unsigned char *ptr = &vchSig[0];\n+    ECDSA_SIG *sig = d2i_ECDSA_SIG(NULL, &ptr, vchSig.size());\n+    bool ret = (secp256k1_ecdsa_do_verify((unsigned char*)&hash, sig, pkey) == 1);\n+    ECDSA_SIG_free(sig);\n+    return ret;\n }\n \n bool CKey::VerifyCompact(uint256 hash, const std::vector<unsigned char>& vchSig)"
+      }
+    ]
+  },
+  {
+    "sha": "dd942280918dd95881618780bda434d9d342bb8c",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkZDk0MjI4MDkxOGRkOTU4ODE2MTg3ODBiZGE0MzRkOWQzNDJiYjhj",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2012-12-10T22:43:26Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieterw@google.com",
+        "date": "2013-03-04T20:17:59Z"
+      },
+      "message": "Allow verification of optimized secp256k1 code",
+      "tree": {
+        "sha": "c041c14ba5c9eb46a0726e0fa4801b101be186a4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/c041c14ba5c9eb46a0726e0fa4801b101be186a4"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/dd942280918dd95881618780bda434d9d342bb8c",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/dd942280918dd95881618780bda434d9d342bb8c",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/dd942280918dd95881618780bda434d9d342bb8c",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/dd942280918dd95881618780bda434d9d342bb8c/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": null,
+    "parents": [
+      {
+        "sha": "2acc872fd809b747a289efc649baadf8d3cbad4e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2acc872fd809b747a289efc649baadf8d3cbad4e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/2acc872fd809b747a289efc649baadf8d3cbad4e"
+      }
+    ],
+    "stats": {
+      "total": 44,
+      "additions": 42,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "d8edbbd5dc15551610b0bc64c1b6669cbccb6b0a",
+        "filename": "src/key.cpp",
+        "status": "modified",
+        "additions": 42,
+        "deletions": 2,
+        "changes": 44,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/dd942280918dd95881618780bda434d9d342bb8c/src/key.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/dd942280918dd95881618780bda434d9d342bb8c/src/key.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/key.cpp?ref=dd942280918dd95881618780bda434d9d342bb8c",
+        "patch": "@@ -158,6 +158,16 @@ class CSecp256k1Math {\n         BN_mul(bnt2, bnc2, bna1b2, ctx);\n         BN_sub(bnk2, bnt1, bnt2);\n \n+#ifdef VERIFY_OPTIMIZED_SECP256K1\n+        // verify k == k1 + lambda*k2\n+        BIGNUM *bnt = BN_new();\n+        BN_mul(bnt, bnk2, bnlambda, ctx);\n+        BN_add(bnt, bnt, bnk1);\n+        BN_nnmod(bnt, bnt, order, ctx);\n+        assert(BN_cmp(bnk, bnt) == 0);\n+        BN_free(bnt);\n+#endif\n+\n         BN_CTX_end(ctx);\n     }\n \n@@ -174,6 +184,14 @@ class CSecp256k1Math {\n         // construct p2 as (x',y)\n         EC_POINT_set_affine_coordinates_GFp(group, p2, x, y, ctx);\n \n+#ifdef VERIFY_OPTIMIZED_SECP256K1\n+        // verify p2 == lambda*p\n+        EC_POINT *t = EC_POINT_new(group);\n+        ::EC_POINT_mul(group, t, NULL, p, bnlambda, ctx);\n+        assert(EC_POINT_cmp(group, t, p2, ctx) == 0);\n+        EC_POINT_free(t);\n+#endif\n+\n         BN_CTX_end(ctx);\n     }\n \n@@ -268,6 +286,10 @@ int static secp256k1_ecdsa_do_verify(const unsigned char hash[32], const ECDSA_S\n     const EC_GROUP *group;\n     const EC_POINT *pub_key;\n     EC_POINT *point = NULL;\n+#ifdef VERIFY_OPTIMIZED_SECP256K1\n+    EC_POINT *point2 = NULL;\n+    BIGNUM *order2 = NULL;\n+#endif\n     BIGNUM *m, *u2, *u1, *X;\n     const BIGNUM *order;\n     BN_CTX *ctx = NULL;\n@@ -287,9 +309,15 @@ int static secp256k1_ecdsa_do_verify(const unsigned char hash[32], const ECDSA_S\n     if (!X)\n         goto err;\n \n-    // identical to: BIGNUM *order = BN_CTX_get(ctx); EC_GROUP_get_order(group, order, ctx);\n     order = secp256k1math.get_order();\n \n+#ifdef VERIFY_OPTIMIZED_SECP256K1\n+    // verify order == group.order\n+    order2 = BN_CTX_get(ctx);\n+    assert(EC_GROUP_get_order(group, order2, ctx));\n+    assert(BN_cmp(order, order2) == 0);\n+#endif\n+\n     // sanity checks\n     if (BN_is_zero(sig->r) || BN_is_negative(sig->r) || BN_ucmp(sig->r, order) >= 0\n         || BN_is_zero(sig->s) || BN_is_negative(sig->s) || BN_ucmp(sig->s, order) >= 0)\n@@ -316,10 +344,17 @@ int static secp256k1_ecdsa_do_verify(const unsigned char hash[32], const ECDSA_S\n         goto err;\n \n     // calculate point = u1*G + u2*pub_key\n-    // identical to: EC_POINT_mul(group, point, u1, pub_key, u2, ctx)\n     if (!secp256k1math.EC_POINT_mul(group, point, u1, pub_key, u2, ctx))\n         goto err;\n \n+#ifdef VERIFY_OPTIMIZED_SECP256K1\n+    // verify point == u1*G + u2*pub_key\n+    assert((point2 = EC_POINT_new(group)));\n+    assert(EC_POINT_mul(group, point2, u1, pub_key, u2, ctx));\n+    assert(EC_POINT_cmp(group, point, point2, ctx) == 0);\n+    EC_POINT_free(point2);\n+#endif\n+\n     // extract X coordinate from result point\n     if (!EC_POINT_get_affine_coordinates_GFp(group, point, X, NULL, ctx))\n         goto err;\n@@ -597,6 +632,11 @@ bool CKey::Verify(uint256 hash, const std::vector<unsigned char>& vchSig)\n     const unsigned char *ptr = &vchSig[0];\n     ECDSA_SIG *sig = d2i_ECDSA_SIG(NULL, &ptr, vchSig.size());\n     bool ret = (secp256k1_ecdsa_do_verify((unsigned char*)&hash, sig, pkey) == 1);\n+#ifdef VERIFY_OPTIMIZED_SECP256K1\n+    int fuzzpos = rand() % 256;\n+    hash += ((uint256)1) << fuzzpos;\n+    secp256k1_ecdsa_do_verify((unsigned char*)&hash, sig, pkey);\n+#endif\n     ECDSA_SIG_free(sig);\n     return ret;\n }"
+      }
+    ]
+  },
+  {
+    "sha": "9a2d3f738a2094836a9b6a4cc65f04f1ed3d8528",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5YTJkM2Y3MzhhMjA5NDgzNmE5YjZhNGNjNjVmMDRmMWVkM2Q4NTI4",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2012-12-25T18:24:25Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieterw@google.com",
+        "date": "2013-03-04T20:17:59Z"
+      },
+      "message": "Implement Hal's suggestion for a faster G split",
+      "tree": {
+        "sha": "ba48a1ced59a71335d0a155df5971e58031e4ae9",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/ba48a1ced59a71335d0a155df5971e58031e4ae9"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/9a2d3f738a2094836a9b6a4cc65f04f1ed3d8528",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9a2d3f738a2094836a9b6a4cc65f04f1ed3d8528",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/9a2d3f738a2094836a9b6a4cc65f04f1ed3d8528",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9a2d3f738a2094836a9b6a4cc65f04f1ed3d8528/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": null,
+    "parents": [
+      {
+        "sha": "dd942280918dd95881618780bda434d9d342bb8c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/dd942280918dd95881618780bda434d9d342bb8c",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/dd942280918dd95881618780bda434d9d342bb8c"
+      }
+    ],
+    "stats": {
+      "total": 27,
+      "additions": 14,
+      "deletions": 13
+    },
+    "files": [
+      {
+        "sha": "15e9268effd5fa15225d40e1befa26917f6366a7",
+        "filename": "src/key.cpp",
+        "status": "modified",
+        "additions": 14,
+        "deletions": 13,
+        "changes": 27,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9a2d3f738a2094836a9b6a4cc65f04f1ed3d8528/src/key.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9a2d3f738a2094836a9b6a4cc65f04f1ed3d8528/src/key.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/key.cpp?ref=9a2d3f738a2094836a9b6a4cc65f04f1ed3d8528",
+        "patch": "@@ -130,7 +130,7 @@ class CSecp256k1Math {\n     BIGNUM* bna2;\n     BIGNUM* bnbeta;\n     BIGNUM* bnlambda;\n-    EC_POINT* Glam;\n+    EC_POINT* G128; // G * 2^128\n \n     // Split a secp256k1 exponent k into two smaller ones k1 and k2 such that for any point Y,\n     // k*Y = k1*Y + k2*Y', where Y' = lambda*Y is very fast\n@@ -205,11 +205,9 @@ class CSecp256k1Math {\n \n         EC_KEY *pkey = EC_KEY_new_by_curve_name(NID_secp256k1);\n         const EC_GROUP *group = EC_KEY_get0_group(pkey);\n-        const EC_POINT *G = EC_GROUP_get0_generator(group);\n         BN_CTX *ctx = BN_CTX_new();\n         BN_CTX_start(ctx);\n-        BIGNUM *bnx = BN_CTX_get(ctx);\n-        BIGNUM *bny = BN_CTX_get(ctx);\n+        BIGNUM *bn128 = BN_CTX_get(ctx);\n \n         bnp = BN_new();\n         order = BN_new();\n@@ -220,18 +218,19 @@ class CSecp256k1Math {\n         bna2     = BN_bin2bn(a2,     sizeof(a2),     NULL);\n         bnbeta   = BN_bin2bn(beta,   sizeof(beta),   NULL);\n         bnlambda = BN_bin2bn(lambda, sizeof(lambda), NULL);\n-        EC_POINT_get_affine_coordinates_GFp(group, G, bnx, bny, ctx);\n-        BN_mod_mul(bnx, bnx, bnbeta, bnp, ctx);\n-        Glam = EC_POINT_new(group);\n-        EC_POINT_set_affine_coordinates_GFp(group, Glam, bnx, bny, ctx);\n+\n+        BN_one(bn128);\n+        BN_lshift(bn128, bn128, 128);\n+        G128 = EC_POINT_new(group);\n+        ::EC_POINT_mul(group, G128, bn128, NULL, NULL, ctx);\n \n         BN_CTX_end(ctx);\n         BN_CTX_free(ctx);\n         EC_KEY_free(pkey);\n     }\n \n     ~CSecp256k1Math() {\n-        EC_POINT_free(Glam);\n+        EC_POINT_free(G128);\n         BN_free(order);\n         BN_free(bnp);\n         BN_free(bna1b2);\n@@ -250,15 +249,17 @@ class CSecp256k1Math {\n         BIGNUM *mb = BN_CTX_get(ctx);\n         EC_POINT *qlam = EC_POINT_new(group);\n \n-        // rewrite n*G as na*G + nb*Glam, where na and nb are small, and Glam = lambda*G is precomputed\n-        splitk(na, nb, n, ctx); // split n\n+        // rewrite n*G as na*G + nb*G128, where na and nb are small, and G128 = G*2^128 is precomputed\n+        BN_copy(na, n);\n+        BN_mask_bits(na, 128);\n+        BN_rshift(nb, n, 128);\n \n         // rewrite m*q as ma*q + mb*qlam, where ma and mb are small, and qlam = lambda*q is efficiently computable\n         splitk(ma, mb, m, ctx); // split m\n         mullambda(group, qlam, q, ctx); // calculate qlam = lamda*Q\n \n-        // the actual calculation now becomes: r = nb*Glam + ma*q + mb*qlam + na*G, where [na,nb,ma,mb] are small\n-        const EC_POINT *points[3] = {Glam, q,  qlam};\n+        // the actual calculation now becomes: r = nb*G128 + ma*q + mb*qlam + na*G, where [na,nb,ma,mb] are small\n+        const EC_POINT *points[3] = {G128, q,  qlam};\n         const BIGNUM   *exps[3]   = {nb,   ma, mb};\n         int ret = EC_POINTs_mul(group, r, na, 3, points, exps, ctx); // the exponent na to G is passed separately\n "
+      }
+    ]
+  },
+  {
+    "sha": "b27c39550183bd3fd62494d1594acdb83982eb8e",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiMjdjMzk1NTAxODNiZDNmZDYyNDk0ZDE1OTRhY2RiODM5ODJlYjhl",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2013-01-24T00:10:40Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieterw@google.com",
+        "date": "2013-03-04T20:17:59Z"
+      },
+      "message": "Build test objects separately",
+      "tree": {
+        "sha": "ae1e1341cafbb3cd968c243ad06e6d538f0acdf5",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/ae1e1341cafbb3cd968c243ad06e6d538f0acdf5"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/b27c39550183bd3fd62494d1594acdb83982eb8e",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b27c39550183bd3fd62494d1594acdb83982eb8e",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/b27c39550183bd3fd62494d1594acdb83982eb8e",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b27c39550183bd3fd62494d1594acdb83982eb8e/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": null,
+    "parents": [
+      {
+        "sha": "9a2d3f738a2094836a9b6a4cc65f04f1ed3d8528",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9a2d3f738a2094836a9b6a4cc65f04f1ed3d8528",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/9a2d3f738a2094836a9b6a4cc65f04f1ed3d8528"
+      }
+    ],
+    "stats": {
+      "total": 39,
+      "additions": 30,
+      "deletions": 9
+    },
+    "files": [
+      {
+        "sha": "a5223649ef35914fc9a924ba38285612b6a8f566",
+        "filename": "bitcoin-qt.pro",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b27c39550183bd3fd62494d1594acdb83982eb8e/bitcoin-qt.pro",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b27c39550183bd3fd62494d1594acdb83982eb8e/bitcoin-qt.pro",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/bitcoin-qt.pro?ref=b27c39550183bd3fd62494d1594acdb83982eb8e",
+        "patch": "@@ -300,7 +300,7 @@ HEADERS += src/qt/test/uritests.h\n DEPENDPATH += src/qt/test\n QT += testlib\n TARGET = bitcoin-qt_test\n-DEFINES += BITCOIN_QT_TEST\n+DEFINES += BITCOIN_QT_TEST VERIFY_OPTIMIZED_SECP256K1=1\n   macx: CONFIG -= app_bundle\n }\n "
+      },
+      {
+        "sha": "1e586d9f15415faf43a774021f6087f750f5a06d",
+        "filename": "src/makefile.linux-mingw",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 2,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b27c39550183bd3fd62494d1594acdb83982eb8e/src/makefile.linux-mingw",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b27c39550183bd3fd62494d1594acdb83982eb8e/src/makefile.linux-mingw",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/makefile.linux-mingw?ref=b27c39550183bd3fd62494d1594acdb83982eb8e",
+        "patch": "@@ -40,7 +40,7 @@ CFLAGS=-O2 -w -Wall -Wextra -Wformat -Wformat-security -Wno-unused-parameter $(D\n # enable: ASLR, DEP and large address aware\n LDFLAGS=-Wl,--dynamicbase -Wl,--nxcompat -Wl,--large-address-aware\n \n-TESTDEFS = -DTEST_DATA_DIR=$(abspath test/data)\n+TESTDEFS = -DTEST_DATA_DIR=$(abspath test/data) -DVERIFY_OPTIMIZED_SECP256K1\n \n ifndef USE_UPNP\n \toverride USE_UPNP = -\n@@ -117,7 +117,10 @@ TESTOBJS := $(patsubst test/%.cpp,obj-test/%.o,$(wildcard test/*.cpp))\n obj-test/%.o: test/%.cpp $(HEADERS)\n \t$(CXX) -c $(TESTDEFS) $(CFLAGS) -o $@ $<\n \n-test_bitcoin.exe: $(TESTOBJS) $(filter-out obj/init.o,$(OBJS:obj/%=obj/%))\n+obj-test/%.o: %.cpp $(HEADERS)\n+\t$(CXX) -c $(TESTDEFS) $(CFLAGS) -o $@ $<\n+\n+test_bitcoin.exe: $(TESTOBJS) $(filter-out obj-test/init.o,$(OBJS:obj/%=obj-test/%))\n \t$(CXX) $(CFLAGS) $(LDFLAGS) -o $@ $(LIBPATHS) $^ -lboost_unit_test_framework-mt-s $(LIBS)\n \n "
+      },
+      {
+        "sha": "07261f2434447a9b88e3a56ba32fa40159ecc0f3",
+        "filename": "src/makefile.mingw",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 2,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b27c39550183bd3fd62494d1594acdb83982eb8e/src/makefile.mingw",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b27c39550183bd3fd62494d1594acdb83982eb8e/src/makefile.mingw",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/makefile.mingw?ref=b27c39550183bd3fd62494d1594acdb83982eb8e",
+        "patch": "@@ -49,7 +49,7 @@ CFLAGS=-mthreads -O2 -w -Wall -Wextra -Wformat -Wformat-security -Wno-unused-par\n # enable: ASLR, DEP and large address aware\n LDFLAGS=-Wl,--dynamicbase -Wl,--nxcompat -Wl,--large-address-aware\n \n-TESTDEFS = -DTEST_DATA_DIR=$(abspath test/data)\n+TESTDEFS = -DTEST_DATA_DIR=$(abspath test/data) -DVERIFY_OPTIMIZED_SECP256K1\n \n ifndef USE_UPNP\n \toverride USE_UPNP = -\n@@ -128,7 +128,10 @@ TESTOBJS := $(patsubst test/%.cpp,obj-test/%.o,$(wildcard test/*.cpp))\n obj-test/%.o: test/%.cpp $(HEADERS)\n \t$(CXX) -c $(TESTDEFS) $(CFLAGS) -o $@ $<\n \n-test_bitcoin.exe: $(TESTOBJS) $(filter-out obj/init.o,$(OBJS:obj/%=obj/%))\n+obj-test/%.o: %.cpp $(HEADERS)\n+\t$(CXX) -c $(TESTDEFS) $(CFLAGS) -o $@ $<\n+\n+test_bitcoin.exe: $(TESTOBJS) $(filter-out obj-test/init.o,$(OBJS:obj/%=obj-test/%))\n \t$(CXX) $(CFLAGS) $(LDFLAGS) -o $@ $(LIBPATHS) $^ -lboost_unit_test_framework$(BOOST_SUFFIX) $(LIBS)\n \n clean:"
+      },
+      {
+        "sha": "4d7a68ff163b7d37694c99b696ebd36bc6380ba4",
+        "filename": "src/makefile.osx",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 2,
+        "changes": 11,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b27c39550183bd3fd62494d1594acdb83982eb8e/src/makefile.osx",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b27c39550183bd3fd62494d1594acdb83982eb8e/src/makefile.osx",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/makefile.osx?ref=b27c39550183bd3fd62494d1594acdb83982eb8e",
+        "patch": "@@ -24,7 +24,7 @@ USE_IPV6:=1\n \n LIBS= -dead_strip\n \n-TESTDEFS = -DTEST_DATA_DIR=$(abspath test/data)\n+TESTDEFS = -DTEST_DATA_DIR=$(abspath test/data) -DVERIFY_OPTIMIZED_SECP256K1\n \n ifdef STATIC\n # Build STATIC if you are redistributing the bitcoind binary\n@@ -161,7 +161,14 @@ obj-test/%.o: test/%.cpp\n \t      -e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \\\n \t  rm -f $(@:%.o=%.d)\n \n-test_bitcoin: $(TESTOBJS) $(filter-out obj/init.o,$(OBJS:obj/%=obj/%))\n+obj-test/%.o: %.cpp\n+\t$(CXX) -c $(TESTDEFS) $(CFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<\n+\t@cp $(@:%.o=%.d) $(@:%.o=%.P); \\\n+\t  sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\\\$$//' \\\n+\t      -e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \\\n+\t  rm -f $(@:%.o=%.d)\n+\n+test_bitcoin: $(TESTOBJS) $(filter-out obj-test/init.o,$(OBJS:obj/%=obj-test/%))\n \t$(CXX) $(CFLAGS) -o $@ $(LIBPATHS) $^ $(LIBS) $(TESTLIBS)\n \n clean:"
+      },
+      {
+        "sha": "08770a15777bbded0dac4721f24e1cc7a64682d0",
+        "filename": "src/makefile.unix",
+        "status": "modified",
+        "additions": 10,
+        "deletions": 2,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b27c39550183bd3fd62494d1594acdb83982eb8e/src/makefile.unix",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b27c39550183bd3fd62494d1594acdb83982eb8e/src/makefile.unix",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/makefile.unix?ref=b27c39550183bd3fd62494d1594acdb83982eb8e",
+        "patch": "@@ -12,7 +12,7 @@ DEFS=-DBOOST_SPIRIT_THREADSAFE -D_FILE_OFFSET_BITS=64\n DEFS += $(addprefix -I,$(CURDIR) $(CURDIR)/obj $(BOOST_INCLUDE_PATH) $(BDB_INCLUDE_PATH) $(OPENSSL_INCLUDE_PATH))\n LIBS = $(addprefix -L,$(BOOST_LIB_PATH) $(BDB_LIB_PATH) $(OPENSSL_LIB_PATH))\n \n-TESTDEFS = -DTEST_DATA_DIR=$(abspath test/data)\n+TESTDEFS = -DTEST_DATA_DIR=$(abspath test/data) -DVERIFY_OPTIMIZED_SECP256K1\n \n LMODE = dynamic\n LMODE2 = dynamic\n@@ -178,7 +178,15 @@ obj-test/%.o: test/%.cpp\n \t      -e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \\\n \t  rm -f $(@:%.o=%.d)\n \n-test_bitcoin: $(TESTOBJS) $(filter-out obj/init.o,$(OBJS:obj/%=obj/%))\n+obj-test/%.o: %.cpp\n+\t$(CXX) -c $(TESTDEFS) $(xCXXFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<\n+\t@cp $(@:%.o=%.d) $(@:%.o=%.P); \\\n+\t  sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\\\$$//' \\\n+\t      -e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \\\n+\t  rm -f $(@:%.o=%.d)\n+\n+\n+test_bitcoin: $(TESTOBJS) $(filter-out obj-test/init.o,$(OBJS:obj/%=obj-test/%))\n \t$(LINK) $(xCXXFLAGS) -o $@ $(LIBPATHS) $^ -Wl,-B$(LMODE) -lboost_unit_test_framework $(xLDFLAGS) $(LIBS)\n \n clean:"
+      }
+    ]
+  },
+  {
+    "sha": "7ec8dcdba11cc6346c7a2afd06bdf17aea16c143",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3ZWM4ZGNkYmExMWNjNjM0NmM3YTJhZmQwNmJkZjE3YWVhMTZjMTQz",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2013-03-04T17:39:12Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieterw@google.com",
+        "date": "2013-03-04T20:17:59Z"
+      },
+      "message": "Precompute multiples of G",
+      "tree": {
+        "sha": "04cea7644b9d57da33d73b2a95982fc44a115045",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/04cea7644b9d57da33d73b2a95982fc44a115045"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/7ec8dcdba11cc6346c7a2afd06bdf17aea16c143",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7ec8dcdba11cc6346c7a2afd06bdf17aea16c143",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/7ec8dcdba11cc6346c7a2afd06bdf17aea16c143",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7ec8dcdba11cc6346c7a2afd06bdf17aea16c143/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": null,
+    "parents": [
+      {
+        "sha": "b27c39550183bd3fd62494d1594acdb83982eb8e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b27c39550183bd3fd62494d1594acdb83982eb8e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b27c39550183bd3fd62494d1594acdb83982eb8e"
+      }
+    ],
+    "stats": {
+      "total": 9,
+      "additions": 6,
+      "deletions": 3
+    },
+    "files": [
+      {
+        "sha": "26d30ce465f217f849221abd90c3bdbe2d24797a",
+        "filename": "src/key.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 3,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7ec8dcdba11cc6346c7a2afd06bdf17aea16c143/src/key.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7ec8dcdba11cc6346c7a2afd06bdf17aea16c143/src/key.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/key.cpp?ref=7ec8dcdba11cc6346c7a2afd06bdf17aea16c143",
+        "patch": "@@ -131,6 +131,7 @@ class CSecp256k1Math {\n     BIGNUM* bnbeta;\n     BIGNUM* bnlambda;\n     EC_POINT* G128; // G * 2^128\n+    EC_GROUP* group;\n \n     // Split a secp256k1 exponent k into two smaller ones k1 and k2 such that for any point Y,\n     // k*Y = k1*Y + k2*Y', where Y' = lambda*Y is very fast\n@@ -172,7 +173,7 @@ class CSecp256k1Math {\n     }\n \n     // p2 = lambda*p, where lambda is chosen such that this operation is very fast\n-    void mullambda(const EC_GROUP *group, EC_POINT *p2, const EC_POINT *p, BN_CTX *ctx) {\n+    void mullambda(const EC_GROUP *group_, EC_POINT *p2, const EC_POINT *p, BN_CTX *ctx) {\n         BN_CTX_start(ctx);\n         BIGNUM *x = BN_CTX_get(ctx);\n         BIGNUM *y = BN_CTX_get(ctx);\n@@ -204,13 +205,14 @@ class CSecp256k1Math {\n         static const unsigned char lambda[] = { 0x53, 0x63, 0xad, 0x4c, 0xc0, 0x5c, 0x30, 0xe0, 0xa5, 0x26, 0x1c, 0x02, 0x88, 0x12, 0x64, 0x5a, 0x12, 0x2e, 0x22, 0xea, 0x20, 0x81, 0x66, 0x78, 0xdf, 0x02, 0x96, 0x7c, 0x1b, 0x23, 0xbd, 0x72 };\n \n         EC_KEY *pkey = EC_KEY_new_by_curve_name(NID_secp256k1);\n-        const EC_GROUP *group = EC_KEY_get0_group(pkey);\n         BN_CTX *ctx = BN_CTX_new();\n         BN_CTX_start(ctx);\n         BIGNUM *bn128 = BN_CTX_get(ctx);\n \n         bnp = BN_new();\n         order = BN_new();\n+        group = EC_GROUP_dup(EC_KEY_get0_group(pkey));\n+        EC_GROUP_precompute_mult(group, ctx);\n         EC_GROUP_get_curve_GFp(group, bnp, NULL, NULL, ctx);\n         EC_GROUP_get_order(group, order, ctx);\n         bna1b2   = BN_bin2bn(a1b2,   sizeof(a1b2),   NULL);\n@@ -230,6 +232,7 @@ class CSecp256k1Math {\n     }\n \n     ~CSecp256k1Math() {\n+        EC_GROUP_free(group);\n         EC_POINT_free(G128);\n         BN_free(order);\n         BN_free(bnp);\n@@ -241,7 +244,7 @@ class CSecp256k1Math {\n     }\n \n     // calculate r = n*G + m*q\n-    int EC_POINT_mul(const EC_GROUP *group, EC_POINT *r, const BIGNUM *n, const EC_POINT *q, const BIGNUM *m, BN_CTX *ctx) {\n+    int EC_POINT_mul(const EC_GROUP *group_, EC_POINT *r, const BIGNUM *n, const EC_POINT *q, const BIGNUM *m, BN_CTX *ctx) {\n         BN_CTX_start(ctx);\n         BIGNUM *na = BN_CTX_get(ctx);\n         BIGNUM *nb = BN_CTX_get(ctx);"
+      }
+    ]
+  },
+  {
+    "sha": "92d1d41fabc9ebcd81368386c7df07bd08d0fb19",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5MmQxZDQxZmFiYzllYmNkODEzNjgzODZjN2RmMDdiZDA4ZDBmYjE5",
+    "commit": {
+      "author": {
+        "name": "Pieter Wuille",
+        "email": "pieter.wuille@gmail.com",
+        "date": "2013-03-04T17:51:24Z"
+      },
+      "committer": {
+        "name": "Pieter Wuille",
+        "email": "pieterw@google.com",
+        "date": "2013-03-04T20:17:59Z"
+      },
+      "message": "Make optimized secp256k1 optional",
+      "tree": {
+        "sha": "2ff5c1988da046fe174c9a53e9d6edfc3d5bb793",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/2ff5c1988da046fe174c9a53e9d6edfc3d5bb793"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/92d1d41fabc9ebcd81368386c7df07bd08d0fb19",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/92d1d41fabc9ebcd81368386c7df07bd08d0fb19",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/92d1d41fabc9ebcd81368386c7df07bd08d0fb19",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/92d1d41fabc9ebcd81368386c7df07bd08d0fb19/comments",
+    "author": {
+      "login": "sipa",
+      "id": 548488,
+      "node_id": "MDQ6VXNlcjU0ODQ4OA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/548488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/sipa",
+      "html_url": "https://github.com/sipa",
+      "followers_url": "https://api.github.com/users/sipa/followers",
+      "following_url": "https://api.github.com/users/sipa/following{/other_user}",
+      "gists_url": "https://api.github.com/users/sipa/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/sipa/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/sipa/subscriptions",
+      "organizations_url": "https://api.github.com/users/sipa/orgs",
+      "repos_url": "https://api.github.com/users/sipa/repos",
+      "events_url": "https://api.github.com/users/sipa/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/sipa/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": null,
+    "parents": [
+      {
+        "sha": "7ec8dcdba11cc6346c7a2afd06bdf17aea16c143",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7ec8dcdba11cc6346c7a2afd06bdf17aea16c143",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/7ec8dcdba11cc6346c7a2afd06bdf17aea16c143"
+      }
+    ],
+    "stats": {
+      "total": 31,
+      "additions": 23,
+      "deletions": 8
+    },
+    "files": [
+      {
+        "sha": "4ea392efd9eb9a4d7db86f5576c41618dff3b7a2",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 0,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/92d1d41fabc9ebcd81368386c7df07bd08d0fb19/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/92d1d41fabc9ebcd81368386c7df07bd08d0fb19/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=92d1d41fabc9ebcd81368386c7df07bd08d0fb19",
+        "patch": "@@ -9,6 +9,7 @@\n #include \"net.h\"\n #include \"init.h\"\n #include \"util.h\"\n+#include \"key.h\"\n #include \"ui_interface.h\"\n \n #include <boost/filesystem.hpp>\n@@ -311,6 +312,7 @@ std::string HelpMessage()\n         \"  -loadblock=<file>      \" + _(\"Imports blocks from external blk000??.dat file\") + \"\\n\" +\n         \"  -reindex               \" + _(\"Rebuild blockchain index from current blk000??.dat files\") + \"\\n\" +\n         \"  -par=N                 \" + _(\"Set the number of script verification threads (1-16, 0=auto, default: 0)\") + \"\\n\" +\n+        \"  -turbo                 \" + _(\"Enable experimental optimized verification code (default: 0)\") + \"\\n\" +\n \n         \"\\n\" + _(\"Block creation options:\") + \"\\n\" +\n         \"  -blockminsize=<n>      \"   + _(\"Set minimum block size in bytes (default: 0)\") + \"\\n\" +\n@@ -494,6 +496,8 @@ bool AppInit2()\n     fDebug = GetBoolArg(\"-debug\");\n     fBenchmark = GetBoolArg(\"-benchmark\");\n \n+    fOptimizedEC = GetBoolArg(\"-turbo\", false);\n+\n     // -par=0 means autodetect, but nScriptCheckThreads==0 means no concurrency\n     nScriptCheckThreads = GetArg(\"-par\", 0);\n     if (nScriptCheckThreads == 0)"
+      },
+      {
+        "sha": "bcc0d0eff3510d5a6c159263a06fd83ab3c5862a",
+        "filename": "src/key.cpp",
+        "status": "modified",
+        "additions": 15,
+        "deletions": 8,
+        "changes": 23,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/92d1d41fabc9ebcd81368386c7df07bd08d0fb19/src/key.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/92d1d41fabc9ebcd81368386c7df07bd08d0fb19/src/key.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/key.cpp?ref=92d1d41fabc9ebcd81368386c7df07bd08d0fb19",
+        "patch": "@@ -9,6 +9,8 @@\n \n #include \"key.h\"\n \n+bool fOptimizedEC = false;\n+\n // Generate a private key from just the secret parameter\n int EC_KEY_regenerate_key(EC_KEY *eckey, BIGNUM *priv_key)\n {\n@@ -633,16 +635,21 @@ bool CKey::SetCompactSignature(uint256 hash, const std::vector<unsigned char>& v\n \n bool CKey::Verify(uint256 hash, const std::vector<unsigned char>& vchSig)\n {\n-    const unsigned char *ptr = &vchSig[0];\n-    ECDSA_SIG *sig = d2i_ECDSA_SIG(NULL, &ptr, vchSig.size());\n-    bool ret = (secp256k1_ecdsa_do_verify((unsigned char*)&hash, sig, pkey) == 1);\n+    if (fOptimizedEC) {\n+        const unsigned char *ptr = &vchSig[0];\n+        ECDSA_SIG *sig = d2i_ECDSA_SIG(NULL, &ptr, vchSig.size());\n+        bool ret = (secp256k1_ecdsa_do_verify((unsigned char*)&hash, sig, pkey) == 1);\n #ifdef VERIFY_OPTIMIZED_SECP256K1\n-    int fuzzpos = rand() % 256;\n-    hash += ((uint256)1) << fuzzpos;\n-    secp256k1_ecdsa_do_verify((unsigned char*)&hash, sig, pkey);\n+        int fuzzpos = rand() % 256;\n+        hash += ((uint256)1) << fuzzpos;\n+        secp256k1_ecdsa_do_verify((unsigned char*)&hash, sig, pkey);\n #endif\n-    ECDSA_SIG_free(sig);\n-    return ret;\n+        ECDSA_SIG_free(sig);\n+        return ret;\n+    }\n+    if (ECDSA_verify(0, (unsigned char*)&hash, sizeof(hash), &vchSig[0], vchSig.size(), pkey) != 1)\n+        return false;\n+    return true;\n }\n \n bool CKey::VerifyCompact(uint256 hash, const std::vector<unsigned char>& vchSig)"
+      },
+      {
+        "sha": "956aaa6a17f09014d1bfec13609365b2e6ef9b46",
+        "filename": "src/key.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/92d1d41fabc9ebcd81368386c7df07bd08d0fb19/src/key.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/92d1d41fabc9ebcd81368386c7df07bd08d0fb19/src/key.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/key.h?ref=92d1d41fabc9ebcd81368386c7df07bd08d0fb19",
+        "patch": "@@ -15,6 +15,8 @@\n \n #include <openssl/ec.h> // for EC_KEY definition\n \n+extern bool fOptimizedEC;\n+\n // secp160k1\n // const unsigned int PRIVATE_KEY_SIZE = 192;\n // const unsigned int PUBLIC_KEY_SIZE  = 41;"
+      },
+      {
+        "sha": "c2bdad6d156f2635070e723a9505aa991284827c",
+        "filename": "src/test/test_bitcoin.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/92d1d41fabc9ebcd81368386c7df07bd08d0fb19/src/test/test_bitcoin.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/92d1d41fabc9ebcd81368386c7df07bd08d0fb19/src/test/test_bitcoin.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/test_bitcoin.cpp?ref=92d1d41fabc9ebcd81368386c7df07bd08d0fb19",
+        "patch": "@@ -6,6 +6,7 @@\n #include \"txdb.h\"\n #include \"main.h\"\n #include \"wallet.h\"\n+#include \"key.h\"\n #include \"util.h\"\n \n CWallet* pwalletMain;\n@@ -20,6 +21,7 @@ struct TestingSetup {\n \n     TestingSetup() {\n         fPrintToDebugger = true; // don't want to write to debug.log file\n+        fOptimizedEC = true;\n         noui_connect();\n         bitdb.MakeMock();\n         pathTemp = GetTempPath() / strprintf(\"test_bitcoin_%lu_%i\", (unsigned long)GetTime(), (int)(GetRand(100000)));"
+      }
+    ]
+  }
+]

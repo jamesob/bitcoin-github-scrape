@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "d513e73239b03774cf81c32a329f2464824057f7",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkNTEzZTczMjM5YjAzNzc0Y2Y4MWMzMmEzMjlmMjQ2NDgyNDA1N2Y3",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-08-31T22:26:59Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-11-04T16:26:25Z"
+      },
+      "message": "enhance proxy support / network init\n\n- add -proxy6 to specify a SOCKS5 proxy for reaching IPv6 peers\n- enhance control flow for proxy init code\n- new init order Tor -> IPv6 -> Base proxy\n- remove redundant .IsValid() checks\n- don't set Tor proxy, when IsLimited(NET_TOR)\n- don't allow SOCKS versions != 4 or != 5\n- disable the usage of -proxy for Tor and IPv6, when SOCKS4 is used\n- update parameter help messages to reflect changes and tweak them to\n  be more clear",
+      "tree": {
+        "sha": "cc57b23e375484afe36016f93aa98cb38a0badbb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/cc57b23e375484afe36016f93aa98cb38a0badbb"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/d513e73239b03774cf81c32a329f2464824057f7",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d513e73239b03774cf81c32a329f2464824057f7",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/d513e73239b03774cf81c32a329f2464824057f7",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d513e73239b03774cf81c32a329f2464824057f7/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "a56d3f8a10e3c9f844aee1f362635ae14b872023",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a56d3f8a10e3c9f844aee1f362635ae14b872023",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/a56d3f8a10e3c9f844aee1f362635ae14b872023"
+      }
+    ],
+    "stats": {
+      "total": 77,
+      "additions": 48,
+      "deletions": 29
+    },
+    "files": [
+      {
+        "sha": "5906ebc5ef853a97efff3b9438bc0684ef5d6979",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 48,
+        "deletions": 29,
+        "changes": 77,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d513e73239b03774cf81c32a329f2464824057f7/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d513e73239b03774cf81c32a329f2464824057f7/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=d513e73239b03774cf81c32a329f2464824057f7",
+        "patch": "@@ -238,9 +238,10 @@ std::string HelpMessage()\n         \"  -dbcache=<n>           \" + _(\"Set database cache size in megabytes (default: 25)\") + \"\\n\" +\n         \"  -dblogsize=<n>         \" + _(\"Set database disk log size in megabytes (default: 100)\") + \"\\n\" +\n         \"  -timeout=<n>           \" + _(\"Specify connection timeout in milliseconds (default: 5000)\") + \"\\n\" +\n-        \"  -proxy=<ip:port>       \" + _(\"Connect through socks proxy\") + \"\\n\" +\n-        \"  -socks=<n>             \" + _(\"Select the version of socks proxy to use (4-5, default: 5)\") + \"\\n\" +\n-        \"  -tor=<ip:port>         \" + _(\"Use proxy to reach tor hidden services (default: same as -proxy)\") + \"\\n\"\n+        \"  -proxy=<ip:port>       \" + _(\"Connect through SOCKS proxy\") + \"\\n\" +\n+        \"  -socks=<n>             \" + _(\"Select SOCKS version for -proxy (4 or 5, default: 5)\") + \"\\n\" +\n+        \"  -proxy6=<ip:port>      \" + _(\"Use separate SOCKS5 proxy to reach IPv6 peers (default: -proxy)\") + \"\\n\" +\n+        \"  -tor=<ip:port>         \" + _(\"Use separate SOCKS5 proxy to reach Tor hidden services (default: -proxy)\") + \"\\n\"\n         \"  -dns                   \" + _(\"Allow DNS lookups for -addnode, -seednode and -connect\") + \"\\n\" +\n         \"  -port=<port>           \" + _(\"Listen for connections on <port> (default: 8333 or testnet: 18333)\") + \"\\n\" +\n         \"  -maxconnections=<n>    \" + _(\"Maintain at most <n> connections to peers (default: 125)\") + \"\\n\" +\n@@ -310,7 +311,6 @@ std::string HelpMessage()\n     return strUsage;\n }\n \n-\n /** Initialize bitcoin.\n  *  @pre Parameters should be parsed and config file should be read.\n  */\n@@ -538,7 +538,6 @@ bool AppInit2()\n     // ********************************************************* Step 6: network initialization\n \n     int nSocksVersion = GetArg(\"-socks\", 5);\n-\n     if (nSocksVersion != 4 && nSocksVersion != 5)\n         return InitError(strprintf(_(\"Unknown -socks proxy version requested: %i\"), nSocksVersion));\n \n@@ -564,35 +563,55 @@ bool AppInit2()\n #endif\n \n     CService addrProxy;\n-    bool fProxy = false;\n+    bool fNetExplicit[NET_MAX] = {};\n+\n+    // setup separate SOCKS5 proxy to reach Tor hidden services\n+    // -tor overrides base proxy, -notor disables Tor proxy\n+    if (!IsLimited(NET_TOR) && mapArgs.count(\"-tor\") && !(mapArgs[\"-tor\"] == \"0\")) {\n+        addrProxy = CService(mapArgs[\"-tor\"], 9050);\n+        if (!(fNetExplicit[NET_TOR] = SetProxy(NET_TOR, addrProxy, 5)))\n+            return InitError(strprintf(_(\"Invalid -tor address: '%s'\"), mapArgs[\"-tor\"].c_str()));\n+        else\n+            SetReachable(NET_TOR);\n+        }\n+    }\n+\n+#ifdef USE_IPV6\n+    // setup separate SOCKS5 proxy to reach IPv6 peers\n+    // -proxy6 overrides base proxy, -noproxy6 disables IPv6 proxy\n+    if (!IsLimited(NET_IPV6) && mapArgs.count(\"-proxy6\") && !(mapArgs[\"-proxy6\"] == \"0\")) {\n+        addrProxy = CService(mapArgs[\"-proxy6\"], 9050);\n+        if (!(fNetExplicit[NET_IPV6] = SetProxy(NET_IPV6, addrProxy, 5)))\n+            return InitError(strprintf(_(\"Invalid -proxy6 address: '%s'\"), mapArgs[\"-proxy6\"].c_str()));\n+    }\n+#endif\n+\n+    // setup base SOCKS proxy\n     if (mapArgs.count(\"-proxy\")) {\n         addrProxy = CService(mapArgs[\"-proxy\"], 9050);\n-        if (!addrProxy.IsValid())\n-            return InitError(strprintf(_(\"Invalid -proxy address: '%s'\"), mapArgs[\"-proxy\"].c_str()));\n-\n         if (!IsLimited(NET_IPV4))\n-            SetProxy(NET_IPV4, addrProxy, nSocksVersion);\n-        if (nSocksVersion > 4) {\n+            if (!SetProxy(NET_IPV4, addrProxy, nSocksVersion))\n+                return InitError(strprintf(_(\"Invalid -proxy address: '%s'\"), mapArgs[\"-proxy\"].c_str()));\n+\n+        if (nSocksVersion == 4) {\n+            // disable outgoing Tor / IPv6 connections if not explicitly enabled\n+            if (!fNetExplicit[NET_TOR])\n+                SetLimited(NET_TOR);\n+            if (!fNetExplicit[NET_IPV6])\n+                SetLimited(NET_IPV6);\n+        }\n+        else if (nSocksVersion == 5) {\n+            // enable outgoing Tor / IPv6 connections if not already explicitly enabled or network limited\n+            if (!fNetExplicit[NET_TOR] && !IsLimited(NET_TOR)) {\n+                SetProxy(NET_TOR, addrProxy, nSocksVersion);  // Todo: Error check!\n+                SetReachable(NET_TOR);\n+            }\n #ifdef USE_IPV6\n-            if (!IsLimited(NET_IPV6))\n-                SetProxy(NET_IPV6, addrProxy, nSocksVersion);\n+            if (!fNetExplicit[NET_IPV6] && !IsLimited(NET_IPV6))\n+                SetProxy(NET_IPV6, addrProxy, nSocksVersion);  // Todo: Error check!\n #endif\n-            SetNameProxy(addrProxy, nSocksVersion);\n+            SetNameProxy(addrProxy, nSocksVersion);  // Todo: Error check!\n         }\n-        fProxy = true;\n-    }\n-\n-    // -tor can override normal proxy, -notor disables tor entirely\n-    if (!(mapArgs.count(\"-tor\") && mapArgs[\"-tor\"] == \"0\") && (fProxy || mapArgs.count(\"-tor\"))) {\n-        CService addrOnion;\n-        if (!mapArgs.count(\"-tor\"))\n-            addrOnion = addrProxy;\n-        else\n-            addrOnion = CService(mapArgs[\"-tor\"], 9050);\n-        if (!addrOnion.IsValid())\n-            return InitError(strprintf(_(\"Invalid -tor address: '%s'\"), mapArgs[\"-tor\"].c_str()));\n-        SetProxy(NET_TOR, addrOnion, 5);\n-        SetReachable(NET_TOR);\n     }\n \n     // see Step 2: parameter interactions for more information about these\n@@ -822,7 +841,7 @@ bool AppInit2()\n \n     //// debug print\n     printf(\"mapBlockIndex.size() = %\"PRIszu\"\\n\",   mapBlockIndex.size());\n-    printf(\"nBestHeight = %d\\n\",            nBestHeight);\n+    printf(\"nBestHeight = %d\\n\",                   nBestHeight);\n     printf(\"setKeyPool.size() = %\"PRIszu\"\\n\",      pwalletMain->setKeyPool.size());\n     printf(\"mapWallet.size() = %\"PRIszu\"\\n\",       pwalletMain->mapWallet.size());\n     printf(\"mapAddressBook.size() = %\"PRIszu\"\\n\",  pwalletMain->mapAddressBook.size());"
+      }
+    ]
+  }
+]

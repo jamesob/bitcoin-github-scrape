@@ -1,0 +1,86 @@
+[
+  {
+    "sha": "80fccb0eb3756af5385460d9008b9b8b17b7cda5",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo4MGZjY2IwZWIzNzU2YWY1Mzg1NDYwZDkwMDhiOWI4YjE3YjdjZGE1",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-05-19T18:20:06Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-06-02T15:40:28Z"
+      },
+      "message": "Bitcoin-Qt: setup testnet GUI directly\n\n- this directly sets up all GUI elements that have testnet special-casing\n  without first setting up main net stuff and changing afterwards (titles,\n  icons etc.)\n- also fixes 2 wrong icons shown during testnet usage on our toolbar",
+      "tree": {
+        "sha": "0335a4ae78da38c39ef8447476686c003ee4ab67",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/0335a4ae78da38c39ef8447476686c003ee4ab67"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/80fccb0eb3756af5385460d9008b9b8b17b7cda5",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/80fccb0eb3756af5385460d9008b9b8b17b7cda5",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/80fccb0eb3756af5385460d9008b9b8b17b7cda5",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/80fccb0eb3756af5385460d9008b9b8b17b7cda5/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "50b4086a4a4fbba8241c4b8807870d7b44c109fe",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/50b4086a4a4fbba8241c4b8807870d7b44c109fe",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/50b4086a4a4fbba8241c4b8807870d7b44c109fe"
+      }
+    ],
+    "stats": {
+      "total": 95,
+      "additions": 47,
+      "deletions": 48
+    },
+    "files": [
+      {
+        "sha": "9bcac59798a1616c594518cc53860e9be98bcb7a",
+        "filename": "src/qt/bitcoin.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 12,
+        "changes": 13,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/80fccb0eb3756af5385460d9008b9b8b17b7cda5/src/qt/bitcoin.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/80fccb0eb3756af5385460d9008b9b8b17b7cda5/src/qt/bitcoin.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoin.cpp?ref=80fccb0eb3756af5385460d9008b9b8b17b7cda5",
+        "patch": "@@ -15,9 +15,6 @@\n #include \"ui_interface.h\"\n #include \"paymentserver.h\"\n #include \"splashscreen.h\"\n-#ifdef Q_OS_MAC\n-#include \"macdockiconhandler.h\"\n-#endif\n \n #include <QMessageBox>\n #if QT_VERSION < 0x050000\n@@ -205,14 +202,6 @@ int main(int argc, char *argv[])\n         return 1;\n     }\n \n-#ifdef Q_OS_MAC\n-    // on mac, also change the icon now because it would look strange to have a testnet splash (green) and a std app icon (orange)\n-    if(GetBoolArg(\"-testnet\", false))\n-    {\n-        MacDockIconHandler::instance()->setIcon(QIcon(\":icons/bitcoin_testnet\"));\n-    }\n-#endif\n-\n     SplashScreen splash(QPixmap(), 0);\n     if (GetBoolArg(\"-splash\", true) && !GetBoolArg(\"-min\", false))\n     {\n@@ -232,7 +221,7 @@ int main(int argc, char *argv[])\n \n         boost::thread_group threadGroup;\n \n-        BitcoinGUI window;\n+        BitcoinGUI window(GetBoolArg(\"-testnet\", false), 0);\n         guiref = &window;\n \n         QTimer* pollShutdownTimer = new QTimer(guiref);"
+      },
+      {
+        "sha": "190da6caf80f3a7482b6860d1fab49a21339ea59",
+        "filename": "src/qt/bitcoingui.cpp",
+        "status": "modified",
+        "additions": 43,
+        "deletions": 33,
+        "changes": 76,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/80fccb0eb3756af5385460d9008b9b8b17b7cda5/src/qt/bitcoingui.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/80fccb0eb3756af5385460d9008b9b8b17b7cda5/src/qt/bitcoingui.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoingui.cpp?ref=80fccb0eb3756af5385460d9008b9b8b17b7cda5",
+        "patch": "@@ -57,7 +57,7 @@\n \n const QString BitcoinGUI::DEFAULT_WALLET = \"~Default\";\n \n-BitcoinGUI::BitcoinGUI(QWidget *parent) :\n+BitcoinGUI::BitcoinGUI(bool fIsTestnet, QWidget *parent) :\n     QMainWindow(parent),\n     clientModel(0),\n     encryptWalletAction(0),\n@@ -69,14 +69,30 @@ BitcoinGUI::BitcoinGUI(QWidget *parent) :\n     prevBlocks(0)\n {\n     restoreWindowGeometry();\n-    setWindowTitle(tr(\"Bitcoin\") + \" - \" + tr(\"Wallet\"));\n+\n #ifndef Q_OS_MAC\n-    QApplication::setWindowIcon(QIcon(\":icons/bitcoin\"));\n-    setWindowIcon(QIcon(\":icons/bitcoin\"));\n+    if (!fIsTestnet)\n+    {\n+        setWindowTitle(tr(\"Bitcoin\") + \" - \" + tr(\"Wallet\"));\n+        QApplication::setWindowIcon(QIcon(\":icons/bitcoin\"));\n+        setWindowIcon(QIcon(\":icons/bitcoin\"));\n+    }\n+    else\n+    {\n+        setWindowTitle(tr(\"Bitcoin\") + \" - \" + tr(\"Wallet\") + \" \" + tr(\"[testnet]\"));\n+        QApplication::setWindowIcon(QIcon(\":icons/bitcoin_testnet\"));\n+        setWindowIcon(QIcon(\":icons/bitcoin_testnet\"));\n+    }\n #else\n     setUnifiedTitleAndToolBarOnMac(true);\n     QApplication::setAttribute(Qt::AA_DontShowIconsInMenus);\n+\n+    if (!fIsTestnet)\n+        MacDockIconHandler::instance()->setIcon(QIcon(\":icons/bitcoin\"));\n+    else\n+        MacDockIconHandler::instance()->setIcon(QIcon(\":icons/bitcoin_testnet\"));\n #endif\n+\n     // Create wallet frame and make it the central widget\n     walletFrame = new WalletFrame(this);\n     setCentralWidget(walletFrame);\n@@ -86,7 +102,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent) :\n \n     // Create actions for the toolbar, menu bar and tray/dock icon\n     // Needs walletFrame to be initialized\n-    createActions();\n+    createActions(fIsTestnet);\n \n     // Create application menu bar\n     createMenuBar();\n@@ -95,7 +111,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent) :\n     createToolBars();\n \n     // Create system tray icon and notification\n-    createTrayIcon();\n+    createTrayIcon(fIsTestnet);\n \n     // Create status bar\n     statusBar();\n@@ -159,7 +175,7 @@ BitcoinGUI::~BitcoinGUI()\n #endif\n }\n \n-void BitcoinGUI::createActions()\n+void BitcoinGUI::createActions(bool fIsTestnet)\n {\n     QActionGroup *tabGroup = new QActionGroup(this);\n \n@@ -213,7 +229,10 @@ void BitcoinGUI::createActions()\n     quitAction->setStatusTip(tr(\"Quit application\"));\n     quitAction->setShortcut(QKeySequence(Qt::CTRL + Qt::Key_Q));\n     quitAction->setMenuRole(QAction::QuitRole);\n-    aboutAction = new QAction(QIcon(\":/icons/bitcoin\"), tr(\"&About Bitcoin\"), this);\n+    if (!fIsTestnet)\n+        aboutAction = new QAction(QIcon(\":/icons/bitcoin\"), tr(\"&About Bitcoin\"), this);\n+    else\n+        aboutAction = new QAction(QIcon(\":/icons/bitcoin_testnet\"), tr(\"&About Bitcoin\"), this);\n     aboutAction->setStatusTip(tr(\"Show information about Bitcoin\"));\n     aboutAction->setMenuRole(QAction::AboutRole);\n     aboutQtAction = new QAction(QIcon(\":/trolltech/qmessagebox/images/qtlogo-64.png\"), tr(\"About &Qt\"), this);\n@@ -222,7 +241,10 @@ void BitcoinGUI::createActions()\n     optionsAction = new QAction(QIcon(\":/icons/options\"), tr(\"&Options...\"), this);\n     optionsAction->setStatusTip(tr(\"Modify configuration options for Bitcoin\"));\n     optionsAction->setMenuRole(QAction::PreferencesRole);\n-    toggleHideAction = new QAction(QIcon(\":/icons/bitcoin\"), tr(\"&Show / Hide\"), this);\n+    if (!fIsTestnet)\n+        toggleHideAction = new QAction(QIcon(\":/icons/bitcoin\"), tr(\"&Show / Hide\"), this);\n+    else\n+        toggleHideAction = new QAction(QIcon(\":/icons/bitcoin_testnet\"), tr(\"&Show / Hide\"), this);\n     toggleHideAction->setStatusTip(tr(\"Show or hide the main Window\"));\n \n     encryptWalletAction = new QAction(QIcon(\":/icons/lock_closed\"), tr(\"&Encrypt Wallet...\"), this);\n@@ -299,27 +321,6 @@ void BitcoinGUI::setClientModel(ClientModel *clientModel)\n     this->clientModel = clientModel;\n     if(clientModel)\n     {\n-        // Replace some strings and icons, when using the testnet\n-        if(clientModel->isTestNet())\n-        {\n-            setWindowTitle(windowTitle() + QString(\" \") + tr(\"[testnet]\"));\n-#ifndef Q_OS_MAC\n-            QApplication::setWindowIcon(QIcon(\":icons/bitcoin_testnet\"));\n-            setWindowIcon(QIcon(\":icons/bitcoin_testnet\"));\n-#else\n-            MacDockIconHandler::instance()->setIcon(QIcon(\":icons/bitcoin_testnet\"));\n-#endif\n-            if(trayIcon)\n-            {\n-                // Just attach \" [testnet]\" to the existing tooltip\n-                trayIcon->setToolTip(trayIcon->toolTip() + QString(\" \") + tr(\"[testnet]\"));\n-                trayIcon->setIcon(QIcon(\":/icons/toolbar_testnet\"));\n-            }\n-\n-            toggleHideAction->setIcon(QIcon(\":/icons/toolbar_testnet\"));\n-            aboutAction->setIcon(QIcon(\":/icons/toolbar_testnet\"));\n-        }\n-\n         // Create system tray menu (or setup the dock menu) that late to prevent users from calling actions,\n         // while the client has not yet fully loaded\n         createTrayIconMenu();\n@@ -354,13 +355,22 @@ void BitcoinGUI::removeAllWallets()\n     walletFrame->removeAllWallets();\n }\n \n-void BitcoinGUI::createTrayIcon()\n+void BitcoinGUI::createTrayIcon(bool fIsTestnet)\n {\n #ifndef Q_OS_MAC\n     trayIcon = new QSystemTrayIcon(this);\n \n-    trayIcon->setToolTip(tr(\"Bitcoin client\"));\n-    trayIcon->setIcon(QIcon(\":/icons/toolbar\"));\n+    if (!fIsTestnet)\n+    {\n+        trayIcon->setToolTip(tr(\"Bitcoin client\"));\n+        trayIcon->setIcon(QIcon(\":/icons/toolbar\"));\n+    }\n+    else\n+    {\n+        trayIcon->setToolTip(tr(\"Bitcoin client\") + \" \" + tr(\"[testnet]\"));\n+        trayIcon->setIcon(QIcon(\":/icons/toolbar_testnet\"));\n+    }\n+\n     trayIcon->show();\n #endif\n "
+      },
+      {
+        "sha": "685ce8b4302c17cabde6a45e8601f72fe40733e0",
+        "filename": "src/qt/bitcoingui.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 3,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/80fccb0eb3756af5385460d9008b9b8b17b7cda5/src/qt/bitcoingui.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/80fccb0eb3756af5385460d9008b9b8b17b7cda5/src/qt/bitcoingui.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bitcoingui.h?ref=80fccb0eb3756af5385460d9008b9b8b17b7cda5",
+        "patch": "@@ -43,7 +43,7 @@ class BitcoinGUI : public QMainWindow\n public:\n     static const QString DEFAULT_WALLET;\n \n-    explicit BitcoinGUI(QWidget *parent = 0);\n+    explicit BitcoinGUI(bool fIsTestnet = false, QWidget *parent = 0);\n     ~BitcoinGUI();\n \n     /** Set the client model.\n@@ -113,13 +113,13 @@ class BitcoinGUI : public QMainWindow\n     int prevBlocks;\n \n     /** Create the main UI actions. */\n-    void createActions();\n+    void createActions(bool fIsTestnet);\n     /** Create the menu bar and sub-menus. */\n     void createMenuBar();\n     /** Create the toolbars */\n     void createToolBars();\n     /** Create system tray icon and notification */\n-    void createTrayIcon();\n+    void createTrayIcon(bool fIsTestnet);\n     /** Create system tray menu (or setup the dock menu) */\n     void createTrayIconMenu();\n     /** Save window size and position */"
+      }
+    ]
+  }
+]

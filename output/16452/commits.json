@@ -1,0 +1,98 @@
+[
+  {
+    "sha": "9bc8b28c1d26c28edf4bbc890be97c0ad7a73cb9",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5YmM4YjI4YzFkMjZjMjhlZGY0YmJjODkwYmU5N2MwYWQ3YTczY2I5",
+    "commit": {
+      "author": {
+        "name": "Antoine Riard",
+        "email": "ariard@student.42.fr",
+        "date": "2019-07-24T21:27:49Z"
+      },
+      "committer": {
+        "name": "Antoine Riard",
+        "email": "ariard@student.42.fr",
+        "date": "2019-07-24T23:47:56Z"
+      },
+      "message": "refactor : use RelayTransaction in BroadcastTransaction utility\n\nTo do so, we also refactor RelayTransaction to take a txid\ninstead of passing a tx",
+      "tree": {
+        "sha": "d2ac6d3dedad0d2773273ccaf838161840957cc5",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/d2ac6d3dedad0d2773273ccaf838161840957cc5"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/9bc8b28c1d26c28edf4bbc890be97c0ad7a73cb9",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9bc8b28c1d26c28edf4bbc890be97c0ad7a73cb9",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/9bc8b28c1d26c28edf4bbc890be97c0ad7a73cb9",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9bc8b28c1d26c28edf4bbc890be97c0ad7a73cb9/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "0626b8cbdf0aa971500eb5613c7ab4096c496966",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0626b8cbdf0aa971500eb5613c7ab4096c496966",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/0626b8cbdf0aa971500eb5613c7ab4096c496966"
+      }
+    ],
+    "stats": {
+      "total": 25,
+      "additions": 13,
+      "deletions": 12
+    },
+    "files": [
+      {
+        "sha": "22e4aaedafc5193d84874d127e697ba78e42dba9",
+        "filename": "src/interfaces/chain.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9bc8b28c1d26c28edf4bbc890be97c0ad7a73cb9/src/interfaces/chain.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9bc8b28c1d26c28edf4bbc890be97c0ad7a73cb9/src/interfaces/chain.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/interfaces/chain.cpp?ref=9bc8b28c1d26c28edf4bbc890be97c0ad7a73cb9",
+        "patch": "@@ -9,6 +9,7 @@\n #include <interfaces/handler.h>\n #include <interfaces/wallet.h>\n #include <net.h>\n+#include <net_processing.h>\n #include <node/coin.h>\n #include <policy/fees.h>\n #include <policy/policy.h>\n@@ -292,8 +293,7 @@ class ChainImpl : public Chain\n     }\n     void relayTransaction(const uint256& txid) override\n     {\n-        CInv inv(MSG_TX, txid);\n-        g_connman->ForEachNode([&inv](CNode* node) { node->PushInventory(inv); });\n+        RelayTransaction(txid, *g_connman);\n     }\n     void getTransactionAncestry(const uint256& txid, size_t& ancestors, size_t& descendants) override\n     {"
+      },
+      {
+        "sha": "4e631fd00e7eca2f909cafde5a8d80858c7049c7",
+        "filename": "src/net_processing.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 6,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9bc8b28c1d26c28edf4bbc890be97c0ad7a73cb9/src/net_processing.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9bc8b28c1d26c28edf4bbc890be97c0ad7a73cb9/src/net_processing.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.cpp?ref=9bc8b28c1d26c28edf4bbc890be97c0ad7a73cb9",
+        "patch": "@@ -1305,10 +1305,10 @@ bool static AlreadyHave(const CInv& inv) EXCLUSIVE_LOCKS_REQUIRED(cs_main)\n     return true;\n }\n \n-static void RelayTransaction(const CTransaction& tx, CConnman* connman)\n+void RelayTransaction(const uint256& txid, const CConnman& connman)\n {\n-    CInv inv(MSG_TX, tx.GetHash());\n-    connman->ForEachNode([&inv](CNode* pnode)\n+    CInv inv(MSG_TX, txid);\n+    connman.ForEachNode([&inv](CNode* pnode)\n     {\n         pnode->PushInventory(inv);\n     });\n@@ -1811,7 +1811,7 @@ void static ProcessOrphanTx(CConnman* connman, std::set<uint256>& orphan_work_se\n         if (setMisbehaving.count(fromPeer)) continue;\n         if (AcceptToMemoryPool(mempool, orphan_state, porphanTx, &fMissingInputs2, &removed_txn, false /* bypass_limits */, 0 /* nAbsurdFee */)) {\n             LogPrint(BCLog::MEMPOOL, \"   accepted orphan tx %s\\n\", orphanHash.ToString());\n-            RelayTransaction(orphanTx, connman);\n+            RelayTransaction(orphanHash, *connman);\n             for (unsigned int i = 0; i < orphanTx.vout.size(); i++) {\n                 auto it_by_prev = mapOrphanTransactionsByPrev.find(COutPoint(orphanHash, i));\n                 if (it_by_prev != mapOrphanTransactionsByPrev.end()) {\n@@ -2498,7 +2498,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr\n         if (!AlreadyHave(inv) &&\n             AcceptToMemoryPool(mempool, state, ptx, &fMissingInputs, &lRemovedTxn, false /* bypass_limits */, 0 /* nAbsurdFee */)) {\n             mempool.check(pcoinsTip.get());\n-            RelayTransaction(tx, connman);\n+            RelayTransaction(tx.GetHash(), *connman);\n             for (unsigned int i = 0; i < tx.vout.size(); i++) {\n                 auto it_by_prev = mapOrphanTransactionsByPrev.find(COutPoint(inv.hash, i));\n                 if (it_by_prev != mapOrphanTransactionsByPrev.end()) {\n@@ -2577,7 +2577,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr\n                     LogPrintf(\"Not relaying invalid transaction %s from whitelisted peer=%d (%s)\\n\", tx.GetHash().ToString(), pfrom->GetId(), FormatStateMessage(state));\n                 } else {\n                     LogPrintf(\"Force relaying tx %s from whitelisted peer=%d\\n\", tx.GetHash().ToString(), pfrom->GetId());\n-                    RelayTransaction(tx, connman);\n+                    RelayTransaction(tx.GetHash(), *connman);\n                 }\n             }\n         }"
+      },
+      {
+        "sha": "1d26164b18befa5fcae3709123488b1092819344",
+        "filename": "src/net_processing.h",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 0,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9bc8b28c1d26c28edf4bbc890be97c0ad7a73cb9/src/net_processing.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9bc8b28c1d26c28edf4bbc890be97c0ad7a73cb9/src/net_processing.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.h?ref=9bc8b28c1d26c28edf4bbc890be97c0ad7a73cb9",
+        "patch": "@@ -90,4 +90,7 @@ struct CNodeStateStats {\n /** Get statistics from node state */\n bool GetNodeStateStats(NodeId nodeid, CNodeStateStats &stats);\n \n+/** Relay transaction to every node */\n+void RelayTransaction(const uint256&, const CConnman& connman);\n+\n #endif // BITCOIN_NET_PROCESSING_H"
+      },
+      {
+        "sha": "5cd567a5c4f5eb01238e5f33fc034913e0ef4751",
+        "filename": "src/node/transaction.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 4,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/9bc8b28c1d26c28edf4bbc890be97c0ad7a73cb9/src/node/transaction.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/9bc8b28c1d26c28edf4bbc890be97c0ad7a73cb9/src/node/transaction.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/node/transaction.cpp?ref=9bc8b28c1d26c28edf4bbc890be97c0ad7a73cb9",
+        "patch": "@@ -5,6 +5,7 @@\n \n #include <consensus/validation.h>\n #include <net.h>\n+#include <net_processing.h>\n #include <txmempool.h>\n #include <util/validation.h>\n #include <validation.h>\n@@ -69,10 +70,7 @@ TransactionError BroadcastTransaction(const CTransactionRef tx, uint256& hashTx,\n         return TransactionError::P2P_DISABLED;\n     }\n \n-    CInv inv(MSG_TX, hashTx);\n-    g_connman->ForEachNode([&inv](CNode* pnode) {\n-        pnode->PushInventory(inv);\n-    });\n+    RelayTransaction(hashTx, *g_connman);\n \n     return TransactionError::OK;\n }"
+      }
+    ]
+  }
+]

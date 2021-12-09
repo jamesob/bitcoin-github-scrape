@@ -1,0 +1,74 @@
+[
+  {
+    "sha": "bdc83e8f450456c9f547f1c4eab43571bac631c2",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiZGM4M2U4ZjQ1MDQ1NmM5ZjU0N2YxYzRlYWI0MzU3MWJhYzYzMWMy",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2013-11-16T00:54:29Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-05-06T19:20:00Z"
+      },
+      "message": "[Qt] ensure payment request network matches client network\n\n- replaces checks in SendCoinsDialog::handlePaymentRequest() that belong\n  to PaymentServer (normal URIs are special cased, as only an isValid\n  check is done on BTC addresses)\n- prevents the client to handle payment requests that do not match the\n  clients network and shows an error instead (mainly a problem with\n  drag&drop payment requests onto the client window)\n- includes some small comment changes also",
+      "tree": {
+        "sha": "3a05f2d4f36689a707e992bca1fca4ea018aa1d5",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/3a05f2d4f36689a707e992bca1fca4ea018aa1d5"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/bdc83e8f450456c9f547f1c4eab43571bac631c2",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/bdc83e8f450456c9f547f1c4eab43571bac631c2",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/bdc83e8f450456c9f547f1c4eab43571bac631c2",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/bdc83e8f450456c9f547f1c4eab43571bac631c2/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "acc2d2ca5f7dadcf9807ed1bfcac6c010fe3649d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/acc2d2ca5f7dadcf9807ed1bfcac6c010fe3649d",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/acc2d2ca5f7dadcf9807ed1bfcac6c010fe3649d"
+      }
+    ],
+    "stats": {
+      "total": 103,
+      "additions": 62,
+      "deletions": 41
+    },
+    "files": [
+      {
+        "sha": "4c455856856de9896316d802d5cc7e89d54c3325",
+        "filename": "src/qt/paymentserver.cpp",
+        "status": "modified",
+        "additions": 60,
+        "deletions": 21,
+        "changes": 81,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/bdc83e8f450456c9f547f1c4eab43571bac631c2/src/qt/paymentserver.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/bdc83e8f450456c9f547f1c4eab43571bac631c2/src/qt/paymentserver.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/paymentserver.cpp?ref=bdc83e8f450456c9f547f1c4eab43571bac631c2",
+        "patch": "@@ -178,6 +178,9 @@ void PaymentServer::LoadRootCAs(X509_STORE* _store)\n // and the items in savedPaymentRequest will be handled\n // when uiReady() is called.\n //\n+// Warning: ipcSendCommandLine() is called early in init,\n+// so don't use \"emit message()\", but \"QMessageBox::\"!\n+//\n bool PaymentServer::ipcParseCommandLine(int argc, char* argv[])\n {\n     for (int i = 1; i < argc; i++)\n@@ -411,7 +414,15 @@ void PaymentServer::handleURIOrFile(const QString& s)\n         {\n             SendCoinsRecipient recipient;\n             if (GUIUtil::parseBitcoinURI(s, &recipient))\n-                emit receivedPaymentRequest(recipient);\n+            {\n+                CBitcoinAddress address(recipient.address.toStdString());\n+                if (!address.IsValid()) {\n+                    emit message(tr(\"URI handling\"), tr(\"Invalid payment address %1\").arg(recipient.address),\n+                        CClientUIInterface::MSG_ERROR);\n+                }\n+                else\n+                    emit receivedPaymentRequest(recipient);\n+            }\n             else\n                 emit message(tr(\"URI handling\"),\n                     tr(\"URI can not be parsed! This can be caused by an invalid Bitcoin address or malformed URI parameters.\"),\n@@ -425,12 +436,14 @@ void PaymentServer::handleURIOrFile(const QString& s)\n     {\n         PaymentRequestPlus request;\n         SendCoinsRecipient recipient;\n-        if (readPaymentRequest(s, request) && processPaymentRequest(request, recipient))\n-            emit receivedPaymentRequest(recipient);\n-        else\n+        if (!readPaymentRequest(s, request))\n+        {\n             emit message(tr(\"Payment request file handling\"),\n-                tr(\"Payment request file can not be read or processed! This can be caused by an invalid payment request file.\"),\n+                tr(\"Payment request file can not be read! This can be caused by an invalid payment request file.\"),\n                 CClientUIInterface::ICON_WARNING);\n+        }\n+        else if (processPaymentRequest(request, recipient))\n+            emit receivedPaymentRequest(recipient);\n \n         return;\n     }\n@@ -482,6 +495,35 @@ bool PaymentServer::processPaymentRequest(PaymentRequestPlus& request, SendCoins\n     if (!optionsModel)\n         return false;\n \n+    if (request.IsInitialized()) {\n+        const payments::PaymentDetails& details = request.getDetails();\n+\n+        // Payment request network matches client network?\n+        if ((details.network() == \"main\" && TestNet()) ||\n+            (details.network() == \"test\" && !TestNet()))\n+        {\n+            emit message(tr(\"Payment request rejected\"), tr(\"Payment request network doesn't match client network.\"),\n+                CClientUIInterface::MSG_ERROR);\n+\n+            return false;\n+        }\n+\n+        // Expired payment request?\n+        if (details.has_expires() && (int64_t)details.expires() < GetTime())\n+        {\n+            emit message(tr(\"Payment request rejected\"), tr(\"Payment request has expired.\"),\n+                CClientUIInterface::MSG_ERROR);\n+\n+            return false;\n+        }\n+    }\n+    else {\n+        emit message(tr(\"Payment request error\"), tr(\"Payment request is not initialized.\"),\n+            CClientUIInterface::MSG_ERROR);\n+\n+        return false;\n+    }\n+\n     recipient.paymentRequest = request;\n     recipient.message = GUIUtil::HtmlEscape(request.getDetails().memo());\n \n@@ -497,11 +539,11 @@ bool PaymentServer::processPaymentRequest(PaymentRequestPlus& request, SendCoins\n             // Append destination address\n             addresses.append(QString::fromStdString(CBitcoinAddress(dest).ToString()));\n         }\n-        else if (!recipient.authenticatedMerchant.isEmpty()){\n+        else if (!recipient.authenticatedMerchant.isEmpty()) {\n             // Insecure payments to custom bitcoin addresses are not supported\n             // (there is no good way to tell the user where they are paying in a way\n             // they'd have a chance of understanding).\n-            emit message(tr(\"Payment request error\"),\n+            emit message(tr(\"Payment request rejected\"),\n                 tr(\"Unverified payment requests to custom payment scripts are unsupported.\"),\n                 CClientUIInterface::MSG_ERROR);\n             return false;\n@@ -510,11 +552,10 @@ bool PaymentServer::processPaymentRequest(PaymentRequestPlus& request, SendCoins\n         // Extract and check amounts\n         CTxOut txOut(sendingTo.second, sendingTo.first);\n         if (txOut.IsDust(CTransaction::nMinRelayTxFee)) {\n-            QString msg = tr(\"Requested payment amount of %1 is too small (considered dust).\")\n-                .arg(BitcoinUnits::formatWithUnit(optionsModel->getDisplayUnit(), sendingTo.second));\n+            emit message(tr(\"Payment request error\"), tr(\"Requested payment amount of %1 is too small (considered dust).\")\n+                .arg(BitcoinUnits::formatWithUnit(optionsModel->getDisplayUnit(), sendingTo.second)),\n+                CClientUIInterface::MSG_ERROR);\n \n-            qDebug() << \"PaymentServer::processPaymentRequest : \" << msg;\n-            emit message(tr(\"Payment request error\"), msg, CClientUIInterface::MSG_ERROR);\n             return false;\n         }\n \n@@ -581,8 +622,8 @@ void PaymentServer::fetchPaymentACK(CWallet* wallet, SendCoinsRecipient recipien\n             refund_to->set_script(&s[0], s.size());\n         }\n         else {\n-            // This should never happen, because sending coins should have just unlocked the wallet\n-            // and refilled the keypool\n+            // This should never happen, because sending coins should have\n+            // just unlocked the wallet and refilled the keypool.\n             qDebug() << \"PaymentServer::fetchPaymentACK : Error getting refund key, refund_to not set\";\n         }\n     }\n@@ -594,7 +635,7 @@ void PaymentServer::fetchPaymentACK(CWallet* wallet, SendCoinsRecipient recipien\n         netManager->post(netRequest, serData);\n     }\n     else {\n-        // This should never happen, either:\n+        // This should never happen, either.\n         qDebug() << \"PaymentServer::fetchPaymentACK : Error serializing payment message\";\n     }\n }\n@@ -620,17 +661,15 @@ void PaymentServer::netRequestFinished(QNetworkReply* reply)\n     {\n         PaymentRequestPlus request;\n         SendCoinsRecipient recipient;\n-        if (request.parse(data) && processPaymentRequest(request, recipient))\n+        if (!request.parse(data))\n         {\n-            emit receivedPaymentRequest(recipient);\n-        }\n-        else\n-        {\n-            qDebug() << \"PaymentServer::netRequestFinished : Error processing payment request\";\n+            qDebug() << \"PaymentServer::netRequestFinished : Error parsing payment request\";\n             emit message(tr(\"Payment request error\"),\n-                tr(\"Payment request can not be parsed or processed!\"),\n+                tr(\"Payment request can not be parsed!\"),\n                 CClientUIInterface::MSG_ERROR);\n         }\n+        else if (processPaymentRequest(request, recipient))\n+            emit receivedPaymentRequest(recipient);\n \n         return;\n     }"
+      },
+      {
+        "sha": "23b8ef83e2c2d944c3756ec160506637b36d020b",
+        "filename": "src/qt/sendcoinsdialog.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 20,
+        "changes": 22,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/bdc83e8f450456c9f547f1c4eab43571bac631c2/src/qt/sendcoinsdialog.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/bdc83e8f450456c9f547f1c4eab43571bac631c2/src/qt/sendcoinsdialog.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/sendcoinsdialog.cpp?ref=bdc83e8f450456c9f547f1c4eab43571bac631c2",
+        "patch": "@@ -377,26 +377,8 @@ void SendCoinsDialog::pasteEntry(const SendCoinsRecipient &rv)\n \n bool SendCoinsDialog::handlePaymentRequest(const SendCoinsRecipient &rv)\n {\n-    QString strSendCoins = tr(\"Send Coins\");\n-    if (rv.paymentRequest.IsInitialized()) {\n-        // Expired payment request?\n-        const payments::PaymentDetails& details = rv.paymentRequest.getDetails();\n-        if (details.has_expires() && (int64_t)details.expires() < GetTime())\n-        {\n-            emit message(strSendCoins, tr(\"Payment request expired\"),\n-                CClientUIInterface::MSG_WARNING);\n-            return false;\n-        }\n-    }\n-    else {\n-        CBitcoinAddress address(rv.address.toStdString());\n-        if (!address.IsValid()) {\n-            emit message(strSendCoins, tr(\"Invalid payment address %1\").arg(rv.address),\n-                CClientUIInterface::MSG_WARNING);\n-            return false;\n-        }\n-    }\n-\n+    // Just paste the entry, all pre-checks\n+    // are done in paymentserver.cpp.\n     pasteEntry(rv);\n     return true;\n }"
+      }
+    ]
+  }
+]

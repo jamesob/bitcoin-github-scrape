@@ -1,0 +1,74 @@
+[
+  {
+    "sha": "581791c62067403fbeb4e1fd88c1d80549627c94",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1ODE3OTFjNjIwNjc0MDNmYmViNGUxZmQ4OGMxZDgwNTQ5NjI3Yzk0",
+    "commit": {
+      "author": {
+        "name": "bruno",
+        "email": "bgarcia@3xbit.com.br",
+        "date": "2021-03-02T13:52:02Z"
+      },
+      "committer": {
+        "name": "bruno",
+        "email": "bgarcia@3xbit.com.br",
+        "date": "2021-03-19T23:30:52Z"
+      },
+      "message": "test: add functional test for anchors.dat",
+      "tree": {
+        "sha": "8d93dc5596d3c6acc9e35eed7bf201bca2e73c68",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/8d93dc5596d3c6acc9e35eed7bf201bca2e73c68"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/581791c62067403fbeb4e1fd88c1d80549627c94",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/581791c62067403fbeb4e1fd88c1d80549627c94",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/581791c62067403fbeb4e1fd88c1d80549627c94",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/581791c62067403fbeb4e1fd88c1d80549627c94/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "b9f41df1ead4b6a83a51fc41966b111c8459c313",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b9f41df1ead4b6a83a51fc41966b111c8459c313",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b9f41df1ead4b6a83a51fc41966b111c8459c313"
+      }
+    ],
+    "stats": {
+      "total": 86,
+      "additions": 86,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "a60a723b3e363fb9774a0c65165838c4a16a80a0",
+        "filename": "test/functional/feature_anchors.py",
+        "status": "added",
+        "additions": 85,
+        "deletions": 0,
+        "changes": 85,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/581791c62067403fbeb4e1fd88c1d80549627c94/test/functional/feature_anchors.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/581791c62067403fbeb4e1fd88c1d80549627c94/test/functional/feature_anchors.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/feature_anchors.py?ref=581791c62067403fbeb4e1fd88c1d80549627c94",
+        "patch": "@@ -0,0 +1,85 @@\n+#!/usr/bin/env python3\n+# Copyright (c) 2020 The Bitcoin Core developers\n+# Distributed under the MIT software license, see the accompanying\n+# file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\"\"\"Test Anchors functionality\"\"\"\n+\n+import os\n+\n+from test_framework.p2p import P2PInterface\n+from test_framework.test_framework import BitcoinTestFramework\n+from test_framework.util import assert_equal\n+\n+\n+def check_node_connections(*, node, num_in, num_out):\n+    info = node.getnetworkinfo()\n+    assert_equal(info[\"connections_in\"], num_in)\n+    assert_equal(info[\"connections_out\"], num_out)\n+\n+\n+class AnchorsTest(BitcoinTestFramework):\n+    def set_test_params(self):\n+        self.num_nodes = 1\n+\n+    def setup_network(self):\n+        self.setup_nodes()\n+\n+    def run_test(self):\n+        self.log.info(\"Add 2 block-relay-only connections to node 0\")\n+        for i in range(2):\n+            self.log.debug(f\"block-relay-only: {i}\")\n+            self.nodes[0].add_outbound_p2p_connection(\n+                P2PInterface(), p2p_idx=i, connection_type=\"block-relay-only\"\n+            )\n+\n+        self.log.info(\"Add 5 inbound connections to node 0\")\n+        for i in range(5):\n+            self.log.debug(f\"inbound: {i}\")\n+            self.nodes[0].add_p2p_connection(P2PInterface())\n+\n+        self.log.info(\"Check node 0 connections\")\n+        check_node_connections(node=self.nodes[0], num_in=5, num_out=2)\n+\n+        # 127.0.0.1\n+        ip = \"7f000001\"\n+\n+        # Since the ip is always 127.0.0.1 for this case,\n+        # we store only the port to identify the peers\n+        block_relay_nodes_port = []\n+        inbound_nodes_port = []\n+        for p in self.nodes[0].getpeerinfo():\n+            addr_split = p[\"addr\"].split(\":\")\n+            if p[\"connection_type\"] == \"block-relay-only\":\n+                block_relay_nodes_port.append(hex(int(addr_split[1]))[2:])\n+            else:\n+                inbound_nodes_port.append(hex(int(addr_split[1]))[2:])\n+\n+        self.log.info(\"Stop node 0\")\n+        self.stop_node(0)\n+\n+        node0_anchors_path = os.path.join(\n+            self.nodes[0].datadir, \"regtest\", \"anchors.dat\"\n+        )\n+\n+        # It should contain only the block-relay-only addresses\n+        self.log.info(\"Check the addresses in anchors.dat\")\n+\n+        with open(node0_anchors_path, \"rb\") as file_handler:\n+            anchors = file_handler.read().hex()\n+\n+        for port in block_relay_nodes_port:\n+            ip_port = ip + port\n+            assert ip_port in anchors\n+        for port in inbound_nodes_port:\n+            ip_port = ip + port\n+            assert ip_port not in anchors\n+\n+        self.log.info(\"Start node 0\")\n+        self.start_node(0)\n+\n+        self.log.info(\"When node starts, check if anchors.dat doesn't exist anymore\")\n+        assert not os.path.exists(node0_anchors_path)\n+\n+\n+if __name__ == \"__main__\":\n+    AnchorsTest().main()"
+      },
+      {
+        "sha": "28d35187158d53c23c2907269fee03d6c1bb02b0",
+        "filename": "test/functional/test_runner.py",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/581791c62067403fbeb4e1fd88c1d80549627c94/test/functional/test_runner.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/581791c62067403fbeb4e1fd88c1d80549627c94/test/functional/test_runner.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/test_runner.py?ref=581791c62067403fbeb4e1fd88c1d80549627c94",
+        "patch": "@@ -279,6 +279,7 @@\n     'p2p_ping.py',\n     'rpc_scantxoutset.py',\n     'feature_logging.py',\n+    'feature_anchors.py',\n     'p2p_node_network_limited.py',\n     'p2p_permissions.py',\n     'feature_blocksdir.py',"
+      }
+    ]
+  }
+]

@@ -1,0 +1,350 @@
+[
+  {
+    "sha": "ed6d34baf45a9520043982aea9c97691e51badf7",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplZDZkMzRiYWY0NWE5NTIwMDQzOTgyYWVhOWM5NzY5MWU1MWJhZGY3",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-08-11T22:18:42Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-08-11T22:18:42Z"
+      },
+      "message": "Encapsulate & protect COutPoint core structure",
+      "tree": {
+        "sha": "d8ec1d64d5a41e7017f1e46521c4aba809b7551f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/d8ec1d64d5a41e7017f1e46521c4aba809b7551f"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/ed6d34baf45a9520043982aea9c97691e51badf7",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ed6d34baf45a9520043982aea9c97691e51badf7",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/ed6d34baf45a9520043982aea9c97691e51badf7",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ed6d34baf45a9520043982aea9c97691e51badf7/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "8b11d3de7aa4fc3f6c4e7bf292495850034ded2c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8b11d3de7aa4fc3f6c4e7bf292495850034ded2c",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/8b11d3de7aa4fc3f6c4e7bf292495850034ded2c"
+      }
+    ],
+    "stats": {
+      "total": 269,
+      "additions": 126,
+      "deletions": 143
+    },
+    "files": [
+      {
+        "sha": "0705c101c0b114178adad8af7b3ad842cd2dae74",
+        "filename": "src/bitcoin-tx.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed6d34baf45a9520043982aea9c97691e51badf7/src/bitcoin-tx.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed6d34baf45a9520043982aea9c97691e51badf7/src/bitcoin-tx.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoin-tx.cpp?ref=ed6d34baf45a9520043982aea9c97691e51badf7",
+        "patch": "@@ -417,11 +417,11 @@ static void MutateTxSign(CMutableTransaction& tx, const string& flagStr)\n     for (unsigned int i = 0; i < mergedTx.vin.size(); i++) {\n         CTxIn& txin = mergedTx.vin[i];\n         CCoins coins;\n-        if (!view.GetCoins(txin.prevout.hash, coins) || !coins.IsAvailable(txin.prevout.n)) {\n+        if (!view.GetCoins(txin.prevout.Hash(), coins) || !coins.IsAvailable(txin.prevout.Index())) {\n             fComplete = false;\n             continue;\n         }\n-        const CScript& prevPubKey = coins.vout[txin.prevout.n].scriptPubKey;\n+        const CScript& prevPubKey = coins.vout[txin.prevout.Index()].scriptPubKey;\n \n         txin.scriptSig.clear();\n         // Only sign SIGHASH_SINGLE if there's a corresponding output:"
+      },
+      {
+        "sha": "3c89d4b96d806660f5b42e1abf19cb42fc39e325",
+        "filename": "src/coins.cpp",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 13,
+        "changes": 26,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed6d34baf45a9520043982aea9c97691e51badf7/src/coins.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed6d34baf45a9520043982aea9c97691e51badf7/src/coins.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/coins.cpp?ref=ed6d34baf45a9520043982aea9c97691e51badf7",
+        "patch": "@@ -30,12 +30,12 @@ void CCoins::CalcMaskSize(unsigned int &nBytes, unsigned int &nNonzeroBytes) con\n }\n \n bool CCoins::Spend(const COutPoint &out, CTxInUndo &undo) {\n-    if (out.n >= vout.size())\n+    if (out.Index() >= vout.size())\n         return false;\n-    if (vout[out.n].IsNull())\n+    if (vout[out.Index()].IsNull())\n         return false;\n-    undo = CTxInUndo(vout[out.n]);\n-    vout[out.n].SetNull();\n+    undo = CTxInUndo(vout[out.Index()]);\n+    vout[out.Index()].SetNull();\n     Cleanup();\n     if (vout.size() == 0) {\n         undo.nHeight = nHeight;\n@@ -150,9 +150,9 @@ unsigned int CCoinsViewCache::GetCacheSize() {\n \n const CTxOut &CCoinsViewCache::GetOutputFor(const CTxIn& input)\n {\n-    const CCoins &coins = GetCoins(input.prevout.hash);\n-    assert(coins.IsAvailable(input.prevout.n));\n-    return coins.vout[input.prevout.n];\n+    const CCoins &coins = GetCoins(input.prevout.Hash());\n+    assert(coins.IsAvailable(input.prevout.Index()));\n+    return coins.vout[input.prevout.Index()];\n }\n \n int64_t CCoinsViewCache::GetValueIn(const CTransaction& tx)\n@@ -173,15 +173,15 @@ bool CCoinsViewCache::HaveInputs(const CTransaction& tx)\n         // first check whether information about the prevout hash is available\n         for (unsigned int i = 0; i < tx.vin.size(); i++) {\n             const COutPoint &prevout = tx.vin[i].prevout;\n-            if (!HaveCoins(prevout.hash))\n+            if (!HaveCoins(prevout.Hash()))\n                 return false;\n         }\n \n         // then check whether the actual outputs are available\n         for (unsigned int i = 0; i < tx.vin.size(); i++) {\n             const COutPoint &prevout = tx.vin[i].prevout;\n-            const CCoins &coins = GetCoins(prevout.hash);\n-            if (!coins.IsAvailable(prevout.n))\n+            const CCoins &coins = GetCoins(prevout.Hash());\n+            if (!coins.IsAvailable(prevout.Index()))\n                 return false;\n         }\n     }\n@@ -195,10 +195,10 @@ double CCoinsViewCache::GetPriority(const CTransaction &tx, int nHeight)\n     double dResult = 0.0;\n     BOOST_FOREACH(const CTxIn& txin, tx.vin)\n     {\n-        const CCoins &coins = GetCoins(txin.prevout.hash);\n-        if (!coins.IsAvailable(txin.prevout.n)) continue;\n+        const CCoins &coins = GetCoins(txin.prevout.Hash());\n+        if (!coins.IsAvailable(txin.prevout.Index())) continue;\n         if (coins.nHeight < nHeight) {\n-            dResult += coins.vout[txin.prevout.n].nValue * (nHeight-coins.nHeight);\n+            dResult += coins.vout[txin.prevout.Index()].nValue * (nHeight-coins.nHeight);\n         }\n     }\n     return tx.ComputePriority(dResult);"
+      },
+      {
+        "sha": "b388ff0486f218fa8e7295a24c729d710d093819",
+        "filename": "src/core.h",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 2,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed6d34baf45a9520043982aea9c97691e51badf7/src/core.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed6d34baf45a9520043982aea9c97691e51badf7/src/core.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/core.h?ref=ed6d34baf45a9520043982aea9c97691e51badf7",
+        "patch": "@@ -21,16 +21,21 @@ inline bool MoneyRange(int64_t nValue) { return (nValue >= 0 && nValue <= MAX_MO\n /** An outpoint - a combination of a transaction hash and an index n into its vout */\n class COutPoint\n {\n-public:\n+protected:\n     uint256 hash;\n     unsigned int n;\n \n+public:\n     COutPoint() { SetNull(); }\n-    COutPoint(uint256 hashIn, unsigned int nIn) { hash = hashIn; n = nIn; }\n+    COutPoint(uint256 hashIn, unsigned int nIn) { Set(hashIn, nIn); }\n     IMPLEMENT_SERIALIZE( READWRITE(FLATDATA(*this)); )\n     void SetNull() { hash = 0; n = (unsigned int) -1; }\n     bool IsNull() const { return (hash == 0 && n == (unsigned int) -1); }\n \n+    void Set(uint256 hashIn, unsigned int nIn) { hash = hashIn; n = nIn; }\n+    uint256 Hash() const { return hash; }\n+    unsigned int Index() const { return n; }\n+\n     friend bool operator<(const COutPoint& a, const COutPoint& b)\n     {\n         return (a.hash < b.hash || (a.hash == b.hash && a.n < b.n));"
+      },
+      {
+        "sha": "4fcf4f6d1187ae77697e1acac3ff32abc001b1f4",
+        "filename": "src/core_write.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed6d34baf45a9520043982aea9c97691e51badf7/src/core_write.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed6d34baf45a9520043982aea9c97691e51badf7/src/core_write.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/core_write.cpp?ref=ed6d34baf45a9520043982aea9c97691e51badf7",
+        "patch": "@@ -56,8 +56,8 @@ void TxToUniv(const CTransaction& tx, const uint256& hashBlock, UniValue& entry)\n         if (tx.IsCoinBase())\n             in.pushKV(\"coinbase\", HexStr(txin.scriptSig.begin(), txin.scriptSig.end()));\n         else {\n-            in.pushKV(\"txid\", txin.prevout.hash.GetHex());\n-            in.pushKV(\"vout\", (int64_t)txin.prevout.n);\n+            in.pushKV(\"txid\", txin.prevout.Hash().GetHex());\n+            in.pushKV(\"vout\", (int64_t)txin.prevout.Index());\n             UniValue o(UniValue::VOBJ);\n             o.pushKV(\"asm\", txin.scriptSig.ToString());\n             o.pushKV(\"hex\", HexStr(txin.scriptSig.begin(), txin.scriptSig.end()));"
+      },
+      {
+        "sha": "2696cf1f945d1eef41083d25c0468b50fd922cc3",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 16,
+        "deletions": 16,
+        "changes": 32,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed6d34baf45a9520043982aea9c97691e51badf7/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed6d34baf45a9520043982aea9c97691e51badf7/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=ed6d34baf45a9520043982aea9c97691e51badf7",
+        "patch": "@@ -482,7 +482,7 @@ bool AddOrphanTx(const CTransaction& tx)\n \n     mapOrphanTransactions[hash] = tx;\n     BOOST_FOREACH(const CTxIn& txin, tx.vin)\n-        mapOrphanTransactionsByPrev[txin.prevout.hash].insert(hash);\n+        mapOrphanTransactionsByPrev[txin.prevout.Hash()].insert(hash);\n \n     LogPrint(\"mempool\", \"stored orphan tx %s (mapsz %u)\\n\", hash.ToString(),\n         mapOrphanTransactions.size());\n@@ -496,9 +496,9 @@ void static EraseOrphanTx(uint256 hash)\n     const CTransaction& tx = mapOrphanTransactions[hash];\n     BOOST_FOREACH(const CTxIn& txin, tx.vin)\n     {\n-        mapOrphanTransactionsByPrev[txin.prevout.hash].erase(hash);\n-        if (mapOrphanTransactionsByPrev[txin.prevout.hash].empty())\n-            mapOrphanTransactionsByPrev.erase(txin.prevout.hash);\n+        mapOrphanTransactionsByPrev[txin.prevout.Hash()].erase(hash);\n+        if (mapOrphanTransactionsByPrev[txin.prevout.Hash()].empty())\n+            mapOrphanTransactionsByPrev.erase(txin.prevout.Hash());\n     }\n     mapOrphanTransactions.erase(hash);\n }\n@@ -931,7 +931,7 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa\n         // Note that this does not check for the presence of actual outputs (see the next check for that),\n         // only helps filling in pfMissingInputs (to determine missing vs spent).\n         BOOST_FOREACH(const CTxIn txin, tx.vin) {\n-            if (!view.HaveCoins(txin.prevout.hash)) {\n+            if (!view.HaveCoins(txin.prevout.Hash())) {\n                 if (pfMissingInputs)\n                     *pfMissingInputs = true;\n                 return false;\n@@ -1435,7 +1435,7 @@ void UpdateCoins(const CTransaction& tx, CValidationState &state, CCoinsViewCach\n     // mark inputs spent\n     if (!tx.IsCoinBase()) {\n         BOOST_FOREACH(const CTxIn &txin, tx.vin) {\n-            CCoins &coins = inputs.GetCoins(txin.prevout.hash);\n+            CCoins &coins = inputs.GetCoins(txin.prevout.Hash());\n             CTxInUndo undo;\n             ret = coins.Spend(txin.prevout, undo);\n             assert(ret);\n@@ -1481,7 +1481,7 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, CCoinsViewCach\n         for (unsigned int i = 0; i < tx.vin.size(); i++)\n         {\n             const COutPoint &prevout = tx.vin[i].prevout;\n-            const CCoins &coins = inputs.GetCoins(prevout.hash);\n+            const CCoins &coins = inputs.GetCoins(prevout.Hash());\n \n             // If prev is coinbase, check that it's matured\n             if (coins.IsCoinBase()) {\n@@ -1492,8 +1492,8 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, CCoinsViewCach\n             }\n \n             // Check for negative or overflow input values\n-            nValueIn += coins.vout[prevout.n].nValue;\n-            if (!MoneyRange(coins.vout[prevout.n].nValue) || !MoneyRange(nValueIn))\n+            nValueIn += coins.vout[prevout.Index()].nValue;\n+            if (!MoneyRange(coins.vout[prevout.Index()].nValue) || !MoneyRange(nValueIn))\n                 return state.DoS(100, error(\"CheckInputs() : txin values out of range\"),\n                                  REJECT_INVALID, \"bad-txns-inputvalues-outofrange\");\n \n@@ -1523,7 +1523,7 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, CCoinsViewCach\n         if (fScriptChecks) {\n             for (unsigned int i = 0; i < tx.vin.size(); i++) {\n                 const COutPoint &prevout = tx.vin[i].prevout;\n-                const CCoins &coins = inputs.GetCoins(prevout.hash);\n+                const CCoins &coins = inputs.GetCoins(prevout.Hash());\n \n                 // Verify signature\n                 CScriptCheck check(coins, tx, i, flags, 0);\n@@ -1614,7 +1614,7 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex\n                 const COutPoint &out = tx.vin[j].prevout;\n                 const CTxInUndo &undo = txundo.vprevout[j];\n                 CCoins coins;\n-                view.GetCoins(out.hash, coins); // this can fail if the prevout was already entirely spent\n+                view.GetCoins(out.Hash(), coins); // this can fail if the prevout was already entirely spent\n                 if (undo.nHeight != 0) {\n                     // undo data contains height: this is the last output of the prevout tx being spent\n                     if (!coins.IsPruned())\n@@ -1627,12 +1627,12 @@ bool DisconnectBlock(CBlock& block, CValidationState& state, CBlockIndex* pindex\n                     if (coins.IsPruned())\n                         fClean = fClean && error(\"DisconnectBlock() : undo data adding output to missing transaction\");\n                 }\n-                if (coins.IsAvailable(out.n))\n+                if (coins.IsAvailable(out.Index()))\n                     fClean = fClean && error(\"DisconnectBlock() : undo data overwriting existing output\");\n-                if (coins.vout.size() < out.n+1)\n-                    coins.vout.resize(out.n+1);\n-                coins.vout[out.n] = undo.txout;\n-                if (!view.SetCoins(out.hash, coins))\n+                if (coins.vout.size() < out.Index()+1)\n+                    coins.vout.resize(out.Index()+1);\n+                coins.vout[out.Index()] = undo.txout;\n+                if (!view.SetCoins(out.Hash(), coins))\n                     return error(\"DisconnectBlock() : cannot restore coin inputs\");\n             }\n         }"
+      },
+      {
+        "sha": "8bd22bcfbbd27a357cafa9f4cec49e428d4c5628",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed6d34baf45a9520043982aea9c97691e51badf7/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed6d34baf45a9520043982aea9c97691e51badf7/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=ed6d34baf45a9520043982aea9c97691e51badf7",
+        "patch": "@@ -385,7 +385,7 @@ class CScriptCheck\n public:\n     CScriptCheck() {}\n     CScriptCheck(const CCoins& txFromIn, const CTransaction& txToIn, unsigned int nInIn, unsigned int nFlagsIn, int nHashTypeIn) :\n-        scriptPubKey(txFromIn.vout[txToIn.vin[nInIn].prevout.n].scriptPubKey),\n+        scriptPubKey(txFromIn.vout[txToIn.vin[nInIn].prevout.Index()].scriptPubKey),\n         ptxTo(&txToIn), nIn(nInIn), nFlags(nFlagsIn), nHashType(nHashTypeIn) { }\n \n     bool operator()() const;"
+      },
+      {
+        "sha": "c60bd405fdcc38b5896dc8fc148778605bef059d",
+        "filename": "src/miner.cpp",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 7,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed6d34baf45a9520043982aea9c97691e51badf7/src/miner.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed6d34baf45a9520043982aea9c97691e51badf7/src/miner.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/miner.cpp?ref=ed6d34baf45a9520043982aea9c97691e51badf7",
+        "patch": "@@ -146,12 +146,12 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)\n             BOOST_FOREACH(const CTxIn& txin, tx.vin)\n             {\n                 // Read prev transaction\n-                if (!view.HaveCoins(txin.prevout.hash))\n+                if (!view.HaveCoins(txin.prevout.Hash()))\n                 {\n                     // This should never happen; all transactions in the memory\n                     // pool should connect to either transactions in the chain\n                     // or other transactions in the memory pool.\n-                    if (!mempool.mapTx.count(txin.prevout.hash))\n+                    if (!mempool.mapTx.count(txin.prevout.Hash()))\n                     {\n                         LogPrintf(\"ERROR: mempool transaction missing input\\n\");\n                         if (fDebug) assert(\"mempool transaction missing input\" == 0);\n@@ -168,14 +168,14 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)\n                         vOrphan.push_back(COrphan(&tx));\n                         porphan = &vOrphan.back();\n                     }\n-                    mapDependers[txin.prevout.hash].push_back(porphan);\n-                    porphan->setDependsOn.insert(txin.prevout.hash);\n-                    nTotalIn += mempool.mapTx[txin.prevout.hash].GetTx().vout[txin.prevout.n].nValue;\n+                    mapDependers[txin.prevout.Hash()].push_back(porphan);\n+                    porphan->setDependsOn.insert(txin.prevout.Hash());\n+                    nTotalIn += mempool.mapTx[txin.prevout.Hash()].GetTx().vout[txin.prevout.Index()].nValue;\n                     continue;\n                 }\n-                const CCoins &coins = view.GetCoins(txin.prevout.hash);\n+                const CCoins &coins = view.GetCoins(txin.prevout.Hash());\n \n-                int64_t nValueIn = coins.vout[txin.prevout.n].nValue;\n+                int64_t nValueIn = coins.vout[txin.prevout.Index()].nValue;\n                 nTotalIn += nValueIn;\n \n                 int nConf = pindexPrev->nHeight - coins.nHeight + 1;"
+      },
+      {
+        "sha": "6618a83155d8ea45e702dac5716bd3961dd01af6",
+        "filename": "src/qt/transactiondesc.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 3,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed6d34baf45a9520043982aea9c97691e51badf7/src/qt/transactiondesc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed6d34baf45a9520043982aea9c97691e51badf7/src/qt/transactiondesc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/transactiondesc.cpp?ref=ed6d34baf45a9520043982aea9c97691e51badf7",
+        "patch": "@@ -291,12 +291,12 @@ QString TransactionDesc::toHTML(CWallet *wallet, CWalletTx &wtx, TransactionReco\n             COutPoint prevout = txin.prevout;\n \n             CCoins prev;\n-            if(pcoinsTip->GetCoins(prevout.hash, prev))\n+            if(pcoinsTip->GetCoins(prevout.Hash(), prev))\n             {\n-                if (prevout.n < prev.vout.size())\n+                if (prevout.Index() < prev.vout.size())\n                 {\n                     strHTML += \"<li>\";\n-                    const CTxOut &vout = prev.vout[prevout.n];\n+                    const CTxOut &vout = prev.vout[prevout.Index()];\n                     CTxDestination address;\n                     if (ExtractDestination(vout.scriptPubKey, address))\n                     {"
+      },
+      {
+        "sha": "2e39e82dad896d45bebb1196a37c3c1289df130d",
+        "filename": "src/qt/walletmodel.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 9,
+        "changes": 18,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed6d34baf45a9520043982aea9c97691e51badf7/src/qt/walletmodel.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed6d34baf45a9520043982aea9c97691e51badf7/src/qt/walletmodel.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/walletmodel.cpp?ref=ed6d34baf45a9520043982aea9c97691e51badf7",
+        "patch": "@@ -565,18 +565,18 @@ void WalletModel::getOutputs(const std::vector<COutPoint>& vOutpoints, std::vect\n     LOCK2(cs_main, wallet->cs_wallet);\n     BOOST_FOREACH(const COutPoint& outpoint, vOutpoints)\n     {\n-        if (!wallet->mapWallet.count(outpoint.hash)) continue;\n-        int nDepth = wallet->mapWallet[outpoint.hash].GetDepthInMainChain();\n+        if (!wallet->mapWallet.count(outpoint.Hash())) continue;\n+        int nDepth = wallet->mapWallet[outpoint.Hash()].GetDepthInMainChain();\n         if (nDepth < 0) continue;\n-        COutput out(&wallet->mapWallet[outpoint.hash], outpoint.n, nDepth, true);\n+        COutput out(&wallet->mapWallet[outpoint.Hash()], outpoint.Index(), nDepth, true);\n         vOutputs.push_back(out);\n     }\n }\n \n bool WalletModel::isSpent(const COutPoint& outpoint) const\n {\n     LOCK2(cs_main, wallet->cs_wallet);\n-    return wallet->IsSpent(outpoint.hash, outpoint.n);\n+    return wallet->IsSpent(outpoint.Hash(), outpoint.Index());\n }\n \n // AvailableCoins + LockedCoins grouped by wallet address (put change in one group with wallet address)\n@@ -592,10 +592,10 @@ void WalletModel::listCoins(std::map<QString, std::vector<COutput> >& mapCoins)\n     // add locked coins\n     BOOST_FOREACH(const COutPoint& outpoint, vLockedCoins)\n     {\n-        if (!wallet->mapWallet.count(outpoint.hash)) continue;\n-        int nDepth = wallet->mapWallet[outpoint.hash].GetDepthInMainChain();\n+        if (!wallet->mapWallet.count(outpoint.Hash())) continue;\n+        int nDepth = wallet->mapWallet[outpoint.Hash()].GetDepthInMainChain();\n         if (nDepth < 0) continue;\n-        COutput out(&wallet->mapWallet[outpoint.hash], outpoint.n, nDepth, true);\n+        COutput out(&wallet->mapWallet[outpoint.Hash()], outpoint.Index(), nDepth, true);\n         vCoins.push_back(out);\n     }\n \n@@ -605,8 +605,8 @@ void WalletModel::listCoins(std::map<QString, std::vector<COutput> >& mapCoins)\n \n         while (wallet->IsChange(cout.tx->vout[cout.i]) && cout.tx->vin.size() > 0 && wallet->IsMine(cout.tx->vin[0]))\n         {\n-            if (!wallet->mapWallet.count(cout.tx->vin[0].prevout.hash)) break;\n-            cout = COutput(&wallet->mapWallet[cout.tx->vin[0].prevout.hash], cout.tx->vin[0].prevout.n, 0, true);\n+            if (!wallet->mapWallet.count(cout.tx->vin[0].prevout.Hash())) break;\n+            cout = COutput(&wallet->mapWallet[cout.tx->vin[0].prevout.Hash()], cout.tx->vin[0].prevout.Index(), 0, true);\n         }\n \n         CTxDestination address;"
+      },
+      {
+        "sha": "5b9329ab0b90c7420e006445a03c173f90b2e90a",
+        "filename": "src/rpcblockchain.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed6d34baf45a9520043982aea9c97691e51badf7/src/rpcblockchain.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed6d34baf45a9520043982aea9c97691e51badf7/src/rpcblockchain.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcblockchain.cpp?ref=ed6d34baf45a9520043982aea9c97691e51badf7",
+        "patch": "@@ -183,8 +183,8 @@ Value getrawmempool(const Array& params, bool fHelp)\n             set<string> setDepends;\n             BOOST_FOREACH(const CTxIn& txin, tx.vin)\n             {\n-                if (mempool.exists(txin.prevout.hash))\n-                    setDepends.insert(txin.prevout.hash.ToString());\n+                if (mempool.exists(txin.prevout.Hash()))\n+                    setDepends.insert(txin.prevout.Hash().ToString());\n             }\n             Array depends(setDepends.begin(), setDepends.end());\n             info.push_back(Pair(\"depends\", depends));"
+      },
+      {
+        "sha": "5f4bec60bfed531ca012e2afe8f349fcdd8938bf",
+        "filename": "src/rpcmining.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed6d34baf45a9520043982aea9c97691e51badf7/src/rpcmining.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed6d34baf45a9520043982aea9c97691e51badf7/src/rpcmining.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcmining.cpp?ref=ed6d34baf45a9520043982aea9c97691e51badf7",
+        "patch": "@@ -480,8 +480,8 @@ Value getblocktemplate(const Array& params, bool fHelp)\n         Array deps;\n         BOOST_FOREACH (const CTxIn &in, tx.vin)\n         {\n-            if (setTxIndex.count(in.prevout.hash))\n-                deps.push_back(setTxIndex[in.prevout.hash]);\n+            if (setTxIndex.count(in.prevout.Hash()))\n+                deps.push_back(setTxIndex[in.prevout.Hash()]);\n         }\n         entry.push_back(Pair(\"depends\", deps));\n "
+      },
+      {
+        "sha": "f275d1cb69a0ea93a2fd084187cb36f2fedc640a",
+        "filename": "src/rpcrawtransaction.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 5,
+        "changes": 10,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed6d34baf45a9520043982aea9c97691e51badf7/src/rpcrawtransaction.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed6d34baf45a9520043982aea9c97691e51badf7/src/rpcrawtransaction.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcrawtransaction.cpp?ref=ed6d34baf45a9520043982aea9c97691e51badf7",
+        "patch": "@@ -62,8 +62,8 @@ void TxToJSON(const CTransaction& tx, const uint256 hashBlock, Object& entry)\n         if (tx.IsCoinBase())\n             in.push_back(Pair(\"coinbase\", HexStr(txin.scriptSig.begin(), txin.scriptSig.end())));\n         else {\n-            in.push_back(Pair(\"txid\", txin.prevout.hash.GetHex()));\n-            in.push_back(Pair(\"vout\", (int64_t)txin.prevout.n));\n+            in.push_back(Pair(\"txid\", txin.prevout.Hash().GetHex()));\n+            in.push_back(Pair(\"vout\", (int64_t)txin.prevout.Index()));\n             Object o;\n             o.push_back(Pair(\"asm\", txin.scriptSig.ToString()));\n             o.push_back(Pair(\"hex\", HexStr(txin.scriptSig.begin(), txin.scriptSig.end())));\n@@ -563,7 +563,7 @@ Value signrawtransaction(const Array& params, bool fHelp)\n         view.SetBackend(viewMempool); // temporarily switch cache backend to db+mempool view\n \n         BOOST_FOREACH(const CTxIn& txin, mergedTx.vin) {\n-            const uint256& prevHash = txin.prevout.hash;\n+            const uint256& prevHash = txin.prevout.Hash();\n             CCoins coins;\n             view.GetCoins(prevHash, coins); // this is certainly allowed to fail\n         }\n@@ -670,11 +670,11 @@ Value signrawtransaction(const Array& params, bool fHelp)\n     for (unsigned int i = 0; i < mergedTx.vin.size(); i++) {\n         CTxIn& txin = mergedTx.vin[i];\n         CCoins coins;\n-        if (!view.GetCoins(txin.prevout.hash, coins) || !coins.IsAvailable(txin.prevout.n)) {\n+        if (!view.GetCoins(txin.prevout.Hash(), coins) || !coins.IsAvailable(txin.prevout.Index())) {\n             fComplete = false;\n             continue;\n         }\n-        const CScript& prevPubKey = coins.vout[txin.prevout.n].scriptPubKey;\n+        const CScript& prevPubKey = coins.vout[txin.prevout.Index()].scriptPubKey;\n \n         txin.scriptSig.clear();\n         // Only sign SIGHASH_SINGLE if there's a corresponding output:"
+      },
+      {
+        "sha": "57ab2739193039468d2515f614083bb0709a44ae",
+        "filename": "src/rpcwallet.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed6d34baf45a9520043982aea9c97691e51badf7/src/rpcwallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed6d34baf45a9520043982aea9c97691e51badf7/src/rpcwallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcwallet.cpp?ref=ed6d34baf45a9520043982aea9c97691e51badf7",
+        "patch": "@@ -1915,8 +1915,8 @@ Value listlockunspent(const Array& params, bool fHelp)\n     BOOST_FOREACH(COutPoint &outpt, vOutpts) {\n         Object o;\n \n-        o.push_back(Pair(\"txid\", outpt.hash.GetHex()));\n-        o.push_back(Pair(\"vout\", (int)outpt.n));\n+        o.push_back(Pair(\"txid\", outpt.Hash().GetHex()));\n+        o.push_back(Pair(\"vout\", (int)outpt.Index()));\n         ret.push_back(o);\n     }\n "
+      },
+      {
+        "sha": "b4b9f36a4196259bea88262697f7817b9d67fdf8",
+        "filename": "src/script.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed6d34baf45a9520043982aea9c97691e51badf7/src/script.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed6d34baf45a9520043982aea9c97691e51badf7/src/script.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script.cpp?ref=ed6d34baf45a9520043982aea9c97691e51badf7",
+        "patch": "@@ -1695,8 +1695,8 @@ bool SignSignature(const CKeyStore &keystore, const CTransaction& txFrom, CMutab\n {\n     assert(nIn < txTo.vin.size());\n     CTxIn& txin = txTo.vin[nIn];\n-    assert(txin.prevout.n < txFrom.vout.size());\n-    const CTxOut& txout = txFrom.vout[txin.prevout.n];\n+    assert(txin.prevout.Index() < txFrom.vout.size());\n+    const CTxOut& txout = txFrom.vout[txin.prevout.Index()];\n \n     return SignSignature(keystore, txout.scriptPubKey, txTo, nIn, nHashType);\n }"
+      },
+      {
+        "sha": "0712f1a4644724e9767efd8719d7c3691d40ab27",
+        "filename": "src/test/DoS_tests.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 6,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed6d34baf45a9520043982aea9c97691e51badf7/src/test/DoS_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed6d34baf45a9520043982aea9c97691e51badf7/src/test/DoS_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/DoS_tests.cpp?ref=ed6d34baf45a9520043982aea9c97691e51badf7",
+        "patch": "@@ -170,8 +170,7 @@ BOOST_AUTO_TEST_CASE(DoS_mapOrphans)\n     {\n         CMutableTransaction tx;\n         tx.vin.resize(1);\n-        tx.vin[0].prevout.n = 0;\n-        tx.vin[0].prevout.hash = GetRandHash();\n+        tx.vin[0].prevout.Set(GetRandHash(), 0);\n         tx.vin[0].scriptSig << OP_1;\n         tx.vout.resize(1);\n         tx.vout[0].nValue = 1*CENT;\n@@ -187,8 +186,7 @@ BOOST_AUTO_TEST_CASE(DoS_mapOrphans)\n \n         CMutableTransaction tx;\n         tx.vin.resize(1);\n-        tx.vin[0].prevout.n = 0;\n-        tx.vin[0].prevout.hash = txPrev.GetHash();\n+        tx.vin[0].prevout.Set(txPrev.GetHash(), 0);\n         tx.vout.resize(1);\n         tx.vout[0].nValue = 1*CENT;\n         tx.vout[0].scriptPubKey.SetDestination(key.GetPubKey().GetID());\n@@ -209,8 +207,7 @@ BOOST_AUTO_TEST_CASE(DoS_mapOrphans)\n         tx.vin.resize(500);\n         for (unsigned int j = 0; j < tx.vin.size(); j++)\n         {\n-            tx.vin[j].prevout.n = j;\n-            tx.vin[j].prevout.hash = txPrev.GetHash();\n+            tx.vin[j].prevout.Set(txPrev.GetHash(), j);\n         }\n         SignSignature(keystore, txPrev, tx, 0);\n         // Re-use same signature for other inputs"
+      },
+      {
+        "sha": "f0dc9652a91c36d1eec74092d699f347310648be",
+        "filename": "src/test/bloom_tests.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 2,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed6d34baf45a9520043982aea9c97691e51badf7/src/test/bloom_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed6d34baf45a9520043982aea9c97691e51badf7/src/test/bloom_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/bloom_tests.cpp?ref=ed6d34baf45a9520043982aea9c97691e51badf7",
+        "patch": "@@ -154,8 +154,9 @@ BOOST_AUTO_TEST_CASE(bloom_match)\n     COutPoint prevOutPoint(uint256(\"0x90c122d70786e899529d71dbeba91ba216982fb6ba58f3bdaab65e73b7e9260b\"), 0);\n     {\n         vector<unsigned char> data(32 + sizeof(unsigned int));\n-        memcpy(&data[0], prevOutPoint.hash.begin(), 32);\n-        memcpy(&data[32], &prevOutPoint.n, sizeof(unsigned int));\n+        memcpy(&data[0], prevOutPoint.Hash().begin(), 32);\n+        uint32_t n = prevOutPoint.Index();\n+        memcpy(&data[32], &n, sizeof(unsigned int));\n         filter.insert(data);\n     }\n     BOOST_CHECK_MESSAGE(filter.IsRelevantAndUpdate(tx), \"Simple Bloom filter didn't match manually serialized COutPoint\");"
+      },
+      {
+        "sha": "0f1e93c8276c0b834ad1f4f86a756172ab46a85c",
+        "filename": "src/test/miner_tests.cpp",
+        "status": "modified",
+        "additions": 12,
+        "deletions": 16,
+        "changes": 28,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed6d34baf45a9520043982aea9c97691e51badf7/src/test/miner_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed6d34baf45a9520043982aea9c97691e51badf7/src/test/miner_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/miner_tests.cpp?ref=ed6d34baf45a9520043982aea9c97691e51badf7",
+        "patch": "@@ -93,16 +93,15 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n     tx.vin.resize(1);\n     // NOTE: OP_NOP is used to force 20 SigOps for the CHECKMULTISIG\n     tx.vin[0].scriptSig = CScript() << OP_0 << OP_0 << OP_0 << OP_NOP << OP_CHECKMULTISIG << OP_1;\n-    tx.vin[0].prevout.hash = txFirst[0]->GetHash();\n-    tx.vin[0].prevout.n = 0;\n+    tx.vin[0].prevout.Set(txFirst[0]->GetHash(), 0);\n     tx.vout.resize(1);\n     tx.vout[0].nValue = 5000000000LL;\n     for (unsigned int i = 0; i < 1001; ++i)\n     {\n         tx.vout[0].nValue -= 1000000;\n         hash = tx.GetHash();\n         mempool.addUnchecked(hash, CTxMemPoolEntry(tx, 11, GetTime(), 111.0, 11));\n-        tx.vin[0].prevout.hash = hash;\n+        tx.vin[0].prevout.Set(hash, 0);\n     }\n     BOOST_CHECK(pblocktemplate = CreateNewBlock(scriptPubKey));\n     delete pblocktemplate;\n@@ -115,14 +114,14 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n     for (unsigned int i = 0; i < 18; ++i)\n         tx.vin[0].scriptSig << vchData << OP_DROP;\n     tx.vin[0].scriptSig << OP_1;\n-    tx.vin[0].prevout.hash = txFirst[0]->GetHash();\n+    tx.vin[0].prevout.Set(txFirst[0]->GetHash(), 0);\n     tx.vout[0].nValue = 5000000000LL;\n     for (unsigned int i = 0; i < 128; ++i)\n     {\n         tx.vout[0].nValue -= 10000000;\n         hash = tx.GetHash();\n         mempool.addUnchecked(hash, CTxMemPoolEntry(tx, 11, GetTime(), 111.0, 11));\n-        tx.vin[0].prevout.hash = hash;\n+        tx.vin[0].prevout.Set(hash, 0);\n     }\n     BOOST_CHECK(pblocktemplate = CreateNewBlock(scriptPubKey));\n     delete pblocktemplate;\n@@ -137,15 +136,14 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n \n     // child with higher priority than parent\n     tx.vin[0].scriptSig = CScript() << OP_1;\n-    tx.vin[0].prevout.hash = txFirst[1]->GetHash();\n+    tx.vin[0].prevout.Set(txFirst[1]->GetHash(), 0);\n     tx.vout[0].nValue = 4900000000LL;\n     hash = tx.GetHash();\n     mempool.addUnchecked(hash, CTxMemPoolEntry(tx, 11, GetTime(), 111.0, 11));\n-    tx.vin[0].prevout.hash = hash;\n+    tx.vin[0].prevout.Set(hash, 0);\n     tx.vin.resize(2);\n     tx.vin[1].scriptSig = CScript() << OP_1;\n-    tx.vin[1].prevout.hash = txFirst[0]->GetHash();\n-    tx.vin[1].prevout.n = 0;\n+    tx.vin[1].prevout.Set(txFirst[0]->GetHash(), 0);\n     tx.vout[0].nValue = 5900000000LL;\n     hash = tx.GetHash();\n     mempool.addUnchecked(hash, CTxMemPoolEntry(tx, 11, GetTime(), 111.0, 11));\n@@ -165,15 +163,14 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n     mempool.clear();\n \n     // invalid (pre-p2sh) txn in mempool\n-    tx.vin[0].prevout.hash = txFirst[0]->GetHash();\n-    tx.vin[0].prevout.n = 0;\n+    tx.vin[0].prevout.Set(txFirst[0]->GetHash(), 0);\n     tx.vin[0].scriptSig = CScript() << OP_1;\n     tx.vout[0].nValue = 4900000000LL;\n     script = CScript() << OP_0;\n     tx.vout[0].scriptPubKey.SetDestination(script.GetID());\n     hash = tx.GetHash();\n     mempool.addUnchecked(hash, CTxMemPoolEntry(tx, 11, GetTime(), 111.0, 11));\n-    tx.vin[0].prevout.hash = hash;\n+    tx.vin[0].prevout.Set(hash, 0);\n     tx.vin[0].scriptSig = CScript() << (std::vector<unsigned char>)script;\n     tx.vout[0].nValue -= 1000000;\n     hash = tx.GetHash();\n@@ -183,7 +180,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n     mempool.clear();\n \n     // double spend txn pair in mempool\n-    tx.vin[0].prevout.hash = txFirst[0]->GetHash();\n+    tx.vin[0].prevout.Set(txFirst[0]->GetHash(), 0);\n     tx.vin[0].scriptSig = CScript() << OP_1;\n     tx.vout[0].nValue = 4900000000LL;\n     tx.vout[0].scriptPubKey = CScript() << OP_1;\n@@ -210,7 +207,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n     SetMockTime(chainActive.Tip()->GetMedianTimePast()+1);\n \n     // height locked\n-    tx.vin[0].prevout.hash = txFirst[0]->GetHash();\n+    tx.vin[0].prevout.Set(txFirst[0]->GetHash(), 0);\n     tx.vin[0].scriptSig = CScript() << OP_1;\n     tx.vin[0].nSequence = 0;\n     tx.vout[0].nValue = 4900000000LL;\n@@ -222,8 +219,7 @@ BOOST_AUTO_TEST_CASE(CreateNewBlock_validity)\n \n     // time locked\n     tx2.vin.resize(1);\n-    tx2.vin[0].prevout.hash = txFirst[1]->GetHash();\n-    tx2.vin[0].prevout.n = 0;\n+    tx2.vin[0].prevout.Set(txFirst[1]->GetHash(), 0);\n     tx2.vin[0].scriptSig = CScript() << OP_1;\n     tx2.vin[0].nSequence = 0;\n     tx2.vout.resize(1);"
+      },
+      {
+        "sha": "ff0b24fc671c94fde4dda6357c8e16303cdb3052",
+        "filename": "src/test/multisig_tests.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 4,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed6d34baf45a9520043982aea9c97691e51badf7/src/test/multisig_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed6d34baf45a9520043982aea9c97691e51badf7/src/test/multisig_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/multisig_tests.cpp?ref=ed6d34baf45a9520043982aea9c97691e51badf7",
+        "patch": "@@ -64,8 +64,7 @@ BOOST_AUTO_TEST_CASE(multisig_verify)\n     {\n         txTo[i].vin.resize(1);\n         txTo[i].vout.resize(1);\n-        txTo[i].vin[0].prevout.n = i;\n-        txTo[i].vin[0].prevout.hash = txFrom.GetHash();\n+        txTo[i].vin[0].prevout.Set(txFrom.GetHash(), i);\n         txTo[i].vout[0].nValue = 1;\n     }\n \n@@ -279,8 +278,7 @@ BOOST_AUTO_TEST_CASE(multisig_Sign)\n     {\n         txTo[i].vin.resize(1);\n         txTo[i].vout.resize(1);\n-        txTo[i].vin[0].prevout.n = i;\n-        txTo[i].vin[0].prevout.hash = txFrom.GetHash();\n+        txTo[i].vin[0].prevout.Set(txFrom.GetHash(), i);\n         txTo[i].vout[0].nValue = 1;\n     }\n "
+      },
+      {
+        "sha": "64aad240cb7d872eb320614b6bba6c2ffcda4456",
+        "filename": "src/test/script_P2SH_tests.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 12,
+        "changes": 18,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed6d34baf45a9520043982aea9c97691e51badf7/src/test/script_P2SH_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed6d34baf45a9520043982aea9c97691e51badf7/src/test/script_P2SH_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/script_P2SH_tests.cpp?ref=ed6d34baf45a9520043982aea9c97691e51badf7",
+        "patch": "@@ -34,8 +34,7 @@ Verify(const CScript& scriptSig, const CScript& scriptPubKey, bool fStrict)\n     CMutableTransaction txTo;\n     txTo.vin.resize(1);\n     txTo.vout.resize(1);\n-    txTo.vin[0].prevout.n = 0;\n-    txTo.vin[0].prevout.hash = txFrom.GetHash();\n+    txTo.vin[0].prevout.Set(txFrom.GetHash(), 0);\n     txTo.vin[0].scriptSig = scriptSig;\n     txTo.vout[0].nValue = 1;\n \n@@ -92,8 +91,7 @@ BOOST_AUTO_TEST_CASE(sign)\n     {\n         txTo[i].vin.resize(1);\n         txTo[i].vout.resize(1);\n-        txTo[i].vin[0].prevout.n = i;\n-        txTo[i].vin[0].prevout.hash = txFrom.GetHash();\n+        txTo[i].vin[0].prevout.Set(txFrom.GetHash(), i);\n         txTo[i].vout[0].nValue = 1;\n         BOOST_CHECK_MESSAGE(IsMine(keystore, txFrom.vout[i].scriptPubKey), strprintf(\"IsMine %d\", i));\n     }\n@@ -185,8 +183,7 @@ BOOST_AUTO_TEST_CASE(set)\n     {\n         txTo[i].vin.resize(1);\n         txTo[i].vout.resize(1);\n-        txTo[i].vin[0].prevout.n = i;\n-        txTo[i].vin[0].prevout.hash = txFrom.GetHash();\n+        txTo[i].vin[0].prevout.Set(txFrom.GetHash(), i);\n         txTo[i].vout[0].nValue = 1*CENT;\n         txTo[i].vout[0].scriptPubKey = inner[i];\n         BOOST_CHECK_MESSAGE(IsMine(keystore, txFrom.vout[i].scriptPubKey), strprintf(\"IsMine %d\", i));\n@@ -318,8 +315,7 @@ BOOST_AUTO_TEST_CASE(AreInputsStandard)\n     txTo.vin.resize(5);\n     for (int i = 0; i < 5; i++)\n     {\n-        txTo.vin[i].prevout.n = i;\n-        txTo.vin[i].prevout.hash = txFrom.GetHash();\n+        txTo.vin[i].prevout.Set(txFrom.GetHash(), i);\n     }\n     BOOST_CHECK(SignSignature(keystore, txFrom, txTo, 0));\n     BOOST_CHECK(SignSignature(keystore, txFrom, txTo, 1));\n@@ -348,8 +344,7 @@ BOOST_AUTO_TEST_CASE(AreInputsStandard)\n     txToNonStd1.vout[0].scriptPubKey.SetDestination(key[1].GetPubKey().GetID());\n     txToNonStd1.vout[0].nValue = 1000;\n     txToNonStd1.vin.resize(1);\n-    txToNonStd1.vin[0].prevout.n = 5;\n-    txToNonStd1.vin[0].prevout.hash = txFrom.GetHash();\n+    txToNonStd1.vin[0].prevout.Set(txFrom.GetHash(), 5);\n     txToNonStd1.vin[0].scriptSig << static_cast<vector<unsigned char> >(sixteenSigops);\n \n     BOOST_CHECK(!::AreInputsStandard(txToNonStd1, coins));\n@@ -360,8 +355,7 @@ BOOST_AUTO_TEST_CASE(AreInputsStandard)\n     txToNonStd2.vout[0].scriptPubKey.SetDestination(key[1].GetPubKey().GetID());\n     txToNonStd2.vout[0].nValue = 1000;\n     txToNonStd2.vin.resize(1);\n-    txToNonStd2.vin[0].prevout.n = 6;\n-    txToNonStd2.vin[0].prevout.hash = txFrom.GetHash();\n+    txToNonStd2.vin[0].prevout.Set(txFrom.GetHash(), 6);\n     txToNonStd2.vin[0].scriptSig << static_cast<vector<unsigned char> >(twentySigops);\n \n     BOOST_CHECK(!::AreInputsStandard(txToNonStd2, coins));"
+      },
+      {
+        "sha": "6daf4c8e2b5f095c0c8c53968dd07dc24526b173",
+        "filename": "src/test/script_tests.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 6,
+        "changes": 9,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed6d34baf45a9520043982aea9c97691e51badf7/src/test/script_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed6d34baf45a9520043982aea9c97691e51badf7/src/test/script_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/script_tests.cpp?ref=ed6d34baf45a9520043982aea9c97691e51badf7",
+        "patch": "@@ -177,8 +177,7 @@ BOOST_AUTO_TEST_CASE(script_CHECKMULTISIG12)\n     CMutableTransaction txTo12;\n     txTo12.vin.resize(1);\n     txTo12.vout.resize(1);\n-    txTo12.vin[0].prevout.n = 0;\n-    txTo12.vin[0].prevout.hash = txFrom12.GetHash();\n+    txTo12.vin[0].prevout.Set(txFrom12.GetHash(), 0);\n     txTo12.vout[0].nValue = 1;\n \n     CScript goodsig1 = sign_multisig(scriptPubKey12, key1, txTo12);\n@@ -211,8 +210,7 @@ BOOST_AUTO_TEST_CASE(script_CHECKMULTISIG23)\n     CMutableTransaction txTo23;\n     txTo23.vin.resize(1);\n     txTo23.vout.resize(1);\n-    txTo23.vin[0].prevout.n = 0;\n-    txTo23.vin[0].prevout.hash = txFrom23.GetHash();\n+    txTo23.vin[0].prevout.Set(txFrom23.GetHash(), 0);\n     txTo23.vout[0].nValue = 1;\n \n     std::vector<CKey> keys;\n@@ -282,8 +280,7 @@ BOOST_AUTO_TEST_CASE(script_combineSigs)\n     CMutableTransaction txTo;\n     txTo.vin.resize(1);\n     txTo.vout.resize(1);\n-    txTo.vin[0].prevout.n = 0;\n-    txTo.vin[0].prevout.hash = txFrom.GetHash();\n+    txTo.vin[0].prevout.Set(txFrom.GetHash(), 0);\n     CScript& scriptSig = txTo.vin[0].scriptSig;\n     txTo.vout[0].nValue = 1;\n "
+      },
+      {
+        "sha": "11f3028d4c3ca4a1361a5ba6cf6587e8407cccb4",
+        "filename": "src/test/sighash_tests.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 2,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed6d34baf45a9520043982aea9c97691e51badf7/src/test/sighash_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed6d34baf45a9520043982aea9c97691e51badf7/src/test/sighash_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/sighash_tests.cpp?ref=ed6d34baf45a9520043982aea9c97691e51badf7",
+        "patch": "@@ -100,8 +100,7 @@ void static RandomTransaction(CMutableTransaction &tx, bool fSingle) {\n     for (int in = 0; in < ins; in++) {\n         tx.vin.push_back(CTxIn());\n         CTxIn &txin = tx.vin.back();\n-        txin.prevout.hash = GetRandHash();\n-        txin.prevout.n = insecure_rand() % 4;\n+        txin.prevout.Set(GetRandHash(), insecure_rand() % 4);\n         RandomScript(txin.scriptSig);\n         txin.nSequence = (insecure_rand() % 2) ? insecure_rand() : (unsigned int)-1;\n     }"
+      },
+      {
+        "sha": "c36ac17fb80fbd269e5d69420d9df5108a9f82cb",
+        "filename": "src/test/transaction_tests.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 8,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed6d34baf45a9520043982aea9c97691e51badf7/src/test/transaction_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed6d34baf45a9520043982aea9c97691e51badf7/src/test/transaction_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/test/transaction_tests.cpp?ref=ed6d34baf45a9520043982aea9c97691e51badf7",
+        "patch": "@@ -265,14 +265,11 @@ BOOST_AUTO_TEST_CASE(test_Get)\n \n     CMutableTransaction t1;\n     t1.vin.resize(3);\n-    t1.vin[0].prevout.hash = dummyTransactions[0].GetHash();\n-    t1.vin[0].prevout.n = 1;\n+    t1.vin[0].prevout.Set(dummyTransactions[0].GetHash(), 1);\n     t1.vin[0].scriptSig << std::vector<unsigned char>(65, 0);\n-    t1.vin[1].prevout.hash = dummyTransactions[1].GetHash();\n-    t1.vin[1].prevout.n = 0;\n+    t1.vin[1].prevout.Set(dummyTransactions[1].GetHash(), 0);\n     t1.vin[1].scriptSig << std::vector<unsigned char>(65, 0) << std::vector<unsigned char>(33, 4);\n-    t1.vin[2].prevout.hash = dummyTransactions[1].GetHash();\n-    t1.vin[2].prevout.n = 1;\n+    t1.vin[2].prevout.Set(dummyTransactions[1].GetHash(), 1);\n     t1.vin[2].scriptSig << std::vector<unsigned char>(65, 0) << std::vector<unsigned char>(33, 4);\n     t1.vout.resize(2);\n     t1.vout[0].nValue = 90*CENT;\n@@ -300,8 +297,7 @@ BOOST_AUTO_TEST_CASE(test_IsStandard)\n \n     CMutableTransaction t;\n     t.vin.resize(1);\n-    t.vin[0].prevout.hash = dummyTransactions[0].GetHash();\n-    t.vin[0].prevout.n = 1;\n+    t.vin[0].prevout.Set(dummyTransactions[0].GetHash(), 1);\n     t.vin[0].scriptSig << std::vector<unsigned char>(65, 0);\n     t.vout.resize(1);\n     t.vout[0].nValue = 90*CENT;"
+      },
+      {
+        "sha": "305a90b5e0f78accdd68fbedd8d5c5fd87592fce",
+        "filename": "src/txmempool.cpp",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 6,
+        "changes": 12,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed6d34baf45a9520043982aea9c97691e51badf7/src/txmempool.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed6d34baf45a9520043982aea9c97691e51badf7/src/txmempool.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/txmempool.cpp?ref=ed6d34baf45a9520043982aea9c97691e51badf7",
+        "patch": "@@ -371,8 +371,8 @@ void CTxMemPool::pruneSpent(const uint256 &hashTx, CCoins &coins)\n     std::map<COutPoint, CInPoint>::iterator it = mapNextTx.lower_bound(COutPoint(hashTx, 0));\n \n     // iterate over all COutPoints in mapNextTx whose hash equals the provided hashTx\n-    while (it != mapNextTx.end() && it->first.hash == hashTx) {\n-        coins.Spend(it->first.n); // and remove those outputs from coins\n+    while (it != mapNextTx.end() && it->first.Hash() == hashTx) {\n+        coins.Spend(it->first.Index()); // and remove those outputs from coins\n         it++;\n     }\n }\n@@ -493,13 +493,13 @@ void CTxMemPool::check(CCoinsViewCache *pcoins) const\n         const CTransaction& tx = it->second.GetTx();\n         BOOST_FOREACH(const CTxIn &txin, tx.vin) {\n             // Check that every mempool transaction's inputs refer to available coins, or other mempool tx's.\n-            std::map<uint256, CTxMemPoolEntry>::const_iterator it2 = mapTx.find(txin.prevout.hash);\n+            std::map<uint256, CTxMemPoolEntry>::const_iterator it2 = mapTx.find(txin.prevout.Hash());\n             if (it2 != mapTx.end()) {\n                 const CTransaction& tx2 = it2->second.GetTx();\n-                assert(tx2.vout.size() > txin.prevout.n && !tx2.vout[txin.prevout.n].IsNull());\n+                assert(tx2.vout.size() > txin.prevout.Index() && !tx2.vout[txin.prevout.Index()].IsNull());\n             } else {\n-                CCoins &coins = pcoins->GetCoins(txin.prevout.hash);\n-                assert(coins.IsAvailable(txin.prevout.n));\n+                CCoins &coins = pcoins->GetCoins(txin.prevout.Hash());\n+                assert(coins.IsAvailable(txin.prevout.Index()));\n             }\n             // Check whether its inputs are marked in mapNextTx.\n             std::map<COutPoint, CInPoint>::const_iterator it3 = mapNextTx.find(txin.prevout);"
+      },
+      {
+        "sha": "ed982932bbd1501b5ddb279b2eb9491e3ae3bc6d",
+        "filename": "src/wallet.cpp",
+        "status": "modified",
+        "additions": 11,
+        "deletions": 11,
+        "changes": 22,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed6d34baf45a9520043982aea9c97691e51badf7/src/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed6d34baf45a9520043982aea9c97691e51badf7/src/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.cpp?ref=ed6d34baf45a9520043982aea9c97691e51badf7",
+        "patch": "@@ -653,8 +653,8 @@ void CWallet::SyncTransaction(const CTransaction& tx, const CBlock* pblock)\n     // recomputed, also:\n     BOOST_FOREACH(const CTxIn& txin, tx.vin)\n     {\n-        if (mapWallet.count(txin.prevout.hash))\n-            mapWallet[txin.prevout.hash].MarkDirty();\n+        if (mapWallet.count(txin.prevout.Hash()))\n+            mapWallet[txin.prevout.Hash()].MarkDirty();\n     }\n }\n \n@@ -675,12 +675,12 @@ isminetype CWallet::IsMine(const CTxIn &txin) const\n {\n     {\n         LOCK(cs_wallet);\n-        map<uint256, CWalletTx>::const_iterator mi = mapWallet.find(txin.prevout.hash);\n+        map<uint256, CWalletTx>::const_iterator mi = mapWallet.find(txin.prevout.Hash());\n         if (mi != mapWallet.end())\n         {\n             const CWalletTx& prev = (*mi).second;\n-            if (txin.prevout.n < prev.vout.size())\n-                return IsMine(prev.vout[txin.prevout.n]);\n+            if (txin.prevout.Index() < prev.vout.size())\n+                return IsMine(prev.vout[txin.prevout.Index()]);\n         }\n     }\n     return ISMINE_NO;\n@@ -690,13 +690,13 @@ int64_t CWallet::GetDebit(const CTxIn &txin, const isminefilter& filter) const\n {\n     {\n         LOCK(cs_wallet);\n-        map<uint256, CWalletTx>::const_iterator mi = mapWallet.find(txin.prevout.hash);\n+        map<uint256, CWalletTx>::const_iterator mi = mapWallet.find(txin.prevout.Hash());\n         if (mi != mapWallet.end())\n         {\n             const CWalletTx& prev = (*mi).second;\n-            if (txin.prevout.n < prev.vout.size())\n-                if (IsMine(prev.vout[txin.prevout.n]) & filter)\n-                    return prev.vout[txin.prevout.n].nValue;\n+            if (txin.prevout.Index() < prev.vout.size())\n+                if (IsMine(prev.vout[txin.prevout.Index()]) & filter)\n+                    return prev.vout[txin.prevout.Index()].nValue;\n         }\n     }\n     return 0;\n@@ -1501,7 +1501,7 @@ bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey)\n             set<CWalletTx*> setCoins;\n             BOOST_FOREACH(const CTxIn& txin, wtxNew.vin)\n             {\n-                CWalletTx &coin = mapWallet[txin.prevout.hash];\n+                CWalletTx &coin = mapWallet[txin.prevout.Hash()];\n                 coin.BindWallet(this);\n                 NotifyTransactionChanged(this, coin.GetHash(), CT_UPDATED);\n             }\n@@ -1887,7 +1887,7 @@ set< set<CTxDestination> > CWallet::GetAddressGroupings()\n                 CTxDestination address;\n                 if(!IsMine(txin)) /* If this input isn't mine, ignore it */\n                     continue;\n-                if(!ExtractDestination(mapWallet[txin.prevout.hash].vout[txin.prevout.n].scriptPubKey, address))\n+                if(!ExtractDestination(mapWallet[txin.prevout.Hash()].vout[txin.prevout.Index()].scriptPubKey, address))\n                     continue;\n                 grouping.insert(address);\n                 any_mine = true;"
+      },
+      {
+        "sha": "6cacdd370efe0c537ae70e8d98e8687dc8f44f30",
+        "filename": "src/wallet.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 2,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/ed6d34baf45a9520043982aea9c97691e51badf7/src/wallet.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/ed6d34baf45a9520043982aea9c97691e51badf7/src/wallet.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.h?ref=ed6d34baf45a9520043982aea9c97691e51badf7",
+        "patch": "@@ -784,10 +784,10 @@ class CWalletTx : public CMerkleTx\n         BOOST_FOREACH(const CTxIn& txin, vin)\n         {\n             // Transactions not sent by us: not trusted\n-            const CWalletTx* parent = pwallet->GetWalletTx(txin.prevout.hash);\n+            const CWalletTx* parent = pwallet->GetWalletTx(txin.prevout.Hash());\n             if (parent == NULL)\n                 return false;\n-            const CTxOut& parentOut = parent->vout[txin.prevout.n];\n+            const CTxOut& parentOut = parent->vout[txin.prevout.Index()];\n             if (pwallet->IsMine(parentOut) != ISMINE_SPENDABLE)\n                 return false;\n         }"
+      }
+    ]
+  }
+]

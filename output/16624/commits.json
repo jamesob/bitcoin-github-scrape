@@ -1,0 +1,326 @@
+[
+  {
+    "sha": "a31be09bfd77eed497a8e251d31358e16e2f2eb1",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphMzFiZTA5YmZkNzdlZWQ0OTdhOGUyNTFkMzEzNThlMTZlMmYyZWIx",
+    "commit": {
+      "author": {
+        "name": "Antoine Riard",
+        "email": "ariard@student.42.fr",
+        "date": "2019-08-12T22:12:12Z"
+      },
+      "committer": {
+        "name": "Antoine Riard",
+        "email": "ariard@student.42.fr",
+        "date": "2019-08-23T18:53:20Z"
+      },
+      "message": "Encapsulate tx status in a Confirmation struct\n\nInstead of relying on combination of hashBlock and nIndex\nvalues to manage tx in its lifecycle, we introduce 4\nstatus : CONFIRMED, UNCONFIRMED, CONFLICTED, ABANDONED.\n\nhashBlock and nIndex magic values should only be used at\nserialization/deserialization for backward-compatibility.\n\nAt block disconnection, we know flag txn as UNCONFIRMED where\npreviously they kept their states until being override by a\nblock connection or abandontransaction call. This is a change\nin behavior for which user may have to call abandon twice\nif transaction is disconnected and not accepted back in the mempool.\n\nWe assert status transitioning right in AddToWallet. Doing so\nflagged a misbehavior in ComputeTimeSmart unit test where same\ntx is confirmed twice in different block. To avoid inconsistencies\nwe unconfirmed tx before new connection in different block. We\nalso remove a cs_main lock in test, as AddToWallet and its\ncallees don't rely on locked chain.",
+      "tree": {
+        "sha": "cc833b4dd423ba7d9d8b961f94c852e3a38c800e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/cc833b4dd423ba7d9d8b961f94c852e3a38c800e"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a31be09bfd77eed497a8e251d31358e16e2f2eb1",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a31be09bfd77eed497a8e251d31358e16e2f2eb1",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a31be09bfd77eed497a8e251d31358e16e2f2eb1",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a31be09bfd77eed497a8e251d31358e16e2f2eb1/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "442a9c64775454a7073aff9872721c58b1dd35c5",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/442a9c64775454a7073aff9872721c58b1dd35c5",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/442a9c64775454a7073aff9872721c58b1dd35c5"
+      }
+    ],
+    "stats": {
+      "total": 202,
+      "additions": 127,
+      "deletions": 75
+    },
+    "files": [
+      {
+        "sha": "0c8d92eba502ab05233d91ce1177030d8057e9de",
+        "filename": "src/interfaces/wallet.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a31be09bfd77eed497a8e251d31358e16e2f2eb1/src/interfaces/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a31be09bfd77eed497a8e251d31358e16e2f2eb1/src/interfaces/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/interfaces/wallet.cpp?ref=a31be09bfd77eed497a8e251d31358e16e2f2eb1",
+        "patch": "@@ -65,7 +65,7 @@ WalletTx MakeWalletTx(interfaces::Chain::Lock& locked_chain, CWallet& wallet, co\n WalletTxStatus MakeWalletTxStatus(interfaces::Chain::Lock& locked_chain, const CWalletTx& wtx)\n {\n     WalletTxStatus result;\n-    result.block_height = locked_chain.getBlockHeight(wtx.hashBlock).get_value_or(std::numeric_limits<int>::max());\n+    result.block_height = locked_chain.getBlockHeight(wtx.m_confirm.hashBlock).get_value_or(std::numeric_limits<int>::max());\n     result.blocks_to_maturity = wtx.GetBlocksToMaturity(locked_chain);\n     result.depth_in_main_chain = wtx.GetDepthInMainChain(locked_chain);\n     result.time_received = wtx.nTimeReceived;"
+      },
+      {
+        "sha": "f52e4318c8e101214d3c53e317bad310bcdd36ab",
+        "filename": "src/wallet/rpcdump.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 2,
+        "changes": 3,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a31be09bfd77eed497a8e251d31358e16e2f2eb1/src/wallet/rpcdump.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a31be09bfd77eed497a8e251d31358e16e2f2eb1/src/wallet/rpcdump.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/rpcdump.cpp?ref=a31be09bfd77eed497a8e251d31358e16e2f2eb1",
+        "patch": "@@ -384,8 +384,7 @@ UniValue importprunedfunds(const JSONRPCRequest& request)\n         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, \"Something wrong with merkleblock\");\n     }\n \n-    wtx.nIndex = txnIndex;\n-    wtx.hashBlock = merkleBlock.header.GetHash();\n+    wtx.SetConf(CWalletTx::Status::CONFIRMED, merkleBlock.header.GetHash(), txnIndex);\n \n     auto locked_chain = pwallet->chain().lock();\n     LOCK(pwallet->cs_wallet);"
+      },
+      {
+        "sha": "8a11f766093759674e729f58de62395b9a470b19",
+        "filename": "src/wallet/rpcwallet.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 3,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a31be09bfd77eed497a8e251d31358e16e2f2eb1/src/wallet/rpcwallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a31be09bfd77eed497a8e251d31358e16e2f2eb1/src/wallet/rpcwallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/rpcwallet.cpp?ref=a31be09bfd77eed497a8e251d31358e16e2f2eb1",
+        "patch": "@@ -134,10 +134,10 @@ static void WalletTxToJSON(interfaces::Chain& chain, interfaces::Chain::Lock& lo\n         entry.pushKV(\"generated\", true);\n     if (confirms > 0)\n     {\n-        entry.pushKV(\"blockhash\", wtx.hashBlock.GetHex());\n-        entry.pushKV(\"blockindex\", wtx.nIndex);\n+        entry.pushKV(\"blockhash\", wtx.m_confirm.hashBlock.GetHex());\n+        entry.pushKV(\"blockindex\", wtx.m_confirm.nIndex);\n         int64_t block_time;\n-        bool found_block = chain.findBlock(wtx.hashBlock, nullptr /* block */, &block_time);\n+        bool found_block = chain.findBlock(wtx.m_confirm.hashBlock, nullptr /* block */, &block_time);\n         assert(found_block);\n         entry.pushKV(\"blocktime\", block_time);\n     } else {"
+      },
+      {
+        "sha": "fc3be2b6abfb25f0b9abd4501b9a24c0c475a46b",
+        "filename": "src/wallet/test/wallet_tests.cpp",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 9,
+        "changes": 22,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a31be09bfd77eed497a8e251d31358e16e2f2eb1/src/wallet/test/wallet_tests.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a31be09bfd77eed497a8e251d31358e16e2f2eb1/src/wallet/test/wallet_tests.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/test/wallet_tests.cpp?ref=a31be09bfd77eed497a8e251d31358e16e2f2eb1",
+        "patch": "@@ -249,8 +249,7 @@ BOOST_FIXTURE_TEST_CASE(coin_mark_dirty_immature_credit, TestChain100Setup)\n     LockAssertion lock(::cs_main);\n     LOCK(wallet.cs_wallet);\n \n-    wtx.hashBlock = ::ChainActive().Tip()->GetBlockHash();\n-    wtx.nIndex = 0;\n+    wtx.SetConf(CWalletTx::Status::CONFIRMED, ::ChainActive().Tip()->GetBlockHash(), 0);\n \n     // Call GetImmatureCredit() once before adding the key to the wallet to\n     // cache the current immature credit amount, which is 0.\n@@ -281,14 +280,19 @@ static int64_t AddTx(CWallet& wallet, uint32_t lockTime, int64_t mockTime, int64\n     }\n \n     CWalletTx wtx(&wallet, MakeTransactionRef(tx));\n-    if (block) {\n-        wtx.SetMerkleBranch(block->GetBlockHash(), 0);\n-    }\n-    {\n-        LOCK(cs_main);\n+    LOCK(cs_main);\n+    LOCK(wallet.cs_wallet);\n+    // If transaction is already in map, to avoid inconsistencies, unconfirmation\n+    // is needed before confirm again with different block.\n+    std::map<uint256, CWalletTx>::iterator it = wallet.mapWallet.find(wtx.GetHash());\n+    if (it != wallet.mapWallet.end()) {\n+        wtx.setUnconfirmed();\n         wallet.AddToWallet(wtx);\n     }\n-    LOCK(wallet.cs_wallet);\n+    if (block) {\n+        wtx.SetConf(CWalletTx::Status::CONFIRMED, block->GetBlockHash(), 0);\n+    }\n+    wallet.AddToWallet(wtx);\n     return wallet.mapWallet.at(wtx.GetHash()).nTimeSmart;\n }\n \n@@ -382,7 +386,7 @@ class ListCoinsTestingSetup : public TestChain100Setup\n         LOCK(wallet->cs_wallet);\n         auto it = wallet->mapWallet.find(tx->GetHash());\n         BOOST_CHECK(it != wallet->mapWallet.end());\n-        it->second.SetMerkleBranch(::ChainActive().Tip()->GetBlockHash(), 1);\n+        it->second.SetConf(CWalletTx::Status::CONFIRMED, ::ChainActive().Tip()->GetBlockHash(), 1);\n         return it->second;\n     }\n "
+      },
+      {
+        "sha": "098f7990ad659daf0d0cf3d5b45259b75d4ea8ed",
+        "filename": "src/wallet/wallet.cpp",
+        "status": "modified",
+        "additions": 41,
+        "deletions": 41,
+        "changes": 82,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a31be09bfd77eed497a8e251d31358e16e2f2eb1/src/wallet/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a31be09bfd77eed497a8e251d31358e16e2f2eb1/src/wallet/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.cpp?ref=a31be09bfd77eed497a8e251d31358e16e2f2eb1",
+        "patch": "@@ -1118,22 +1118,14 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn, bool fFlushOnClose)\n     bool fUpdated = false;\n     if (!fInsertedNew)\n     {\n-        // Merge\n-        if (!wtxIn.hashUnset() && wtxIn.hashBlock != wtx.hashBlock)\n-        {\n-            wtx.hashBlock = wtxIn.hashBlock;\n-            fUpdated = true;\n-        }\n-        // If no longer abandoned, update\n-        if (wtxIn.hashBlock.IsNull() && wtx.isAbandoned())\n-        {\n-            wtx.hashBlock = wtxIn.hashBlock;\n-            fUpdated = true;\n-        }\n-        if (wtxIn.nIndex != -1 && (wtxIn.nIndex != wtx.nIndex))\n-        {\n-            wtx.nIndex = wtxIn.nIndex;\n+        if (wtxIn.m_confirm.status != wtx.m_confirm.status) {\n+            wtx.m_confirm.status = wtxIn.m_confirm.status;\n+            wtx.m_confirm.nIndex = wtxIn.m_confirm.nIndex;\n+            wtx.m_confirm.hashBlock = wtxIn.m_confirm.hashBlock;\n             fUpdated = true;\n+        } else {\n+            assert(wtx.m_confirm.nIndex == wtxIn.m_confirm.nIndex);\n+            assert(wtx.m_confirm.hashBlock == wtxIn.m_confirm.hashBlock);\n         }\n         if (wtxIn.fFromMe && wtxIn.fFromMe != wtx.fFromMe)\n         {\n@@ -1194,14 +1186,14 @@ void CWallet::LoadToWallet(const CWalletTx& wtxIn)\n         auto it = mapWallet.find(txin.prevout.hash);\n         if (it != mapWallet.end()) {\n             CWalletTx& prevtx = it->second;\n-            if (prevtx.nIndex == -1 && !prevtx.hashUnset()) {\n-                MarkConflicted(prevtx.hashBlock, wtx.GetHash());\n+            if (prevtx.isConflicted()) {\n+                MarkConflicted(prevtx.m_confirm.hashBlock, wtx.GetHash());\n             }\n         }\n     }\n }\n \n-bool CWallet::AddToWalletIfInvolvingMe(const CTransactionRef& ptx, const uint256& block_hash, int posInBlock, bool fUpdate)\n+bool CWallet::AddToWalletIfInvolvingMe(const CTransactionRef& ptx, CWalletTx::Status status, const uint256& block_hash, int posInBlock, bool fUpdate)\n {\n     const CTransaction& tx = *ptx;\n     {\n@@ -1248,9 +1240,9 @@ bool CWallet::AddToWalletIfInvolvingMe(const CTransactionRef& ptx, const uint256\n \n             CWalletTx wtx(this, ptx);\n \n-            // Get merkle branch if transaction was found in a block\n-            if (!block_hash.IsNull())\n-                wtx.SetMerkleBranch(block_hash, posInBlock);\n+            // Block disconnection override an abandoned tx as unconfirmed\n+            // which means user may have to call abandontransaction again\n+            wtx.SetConf(status, block_hash, posInBlock);\n \n             return AddToWallet(wtx, false);\n         }\n@@ -1310,7 +1302,7 @@ bool CWallet::AbandonTransaction(interfaces::Chain::Lock& locked_chain, const ui\n         if (currentconfirm == 0 && !wtx.isAbandoned()) {\n             // If the orig tx was not in block/mempool, none of its spends can be in mempool\n             assert(!wtx.InMempool());\n-            wtx.nIndex = -1;\n+            wtx.m_confirm.nIndex = 0;\n             wtx.setAbandoned();\n             wtx.MarkDirty();\n             batch.WriteTx(wtx);\n@@ -1364,8 +1356,9 @@ void CWallet::MarkConflicted(const uint256& hashBlock, const uint256& hashTx)\n         if (conflictconfirms < currentconfirm) {\n             // Block is 'more conflicted' than current confirm; update.\n             // Mark transaction as conflicted with this block.\n-            wtx.nIndex = -1;\n-            wtx.hashBlock = hashBlock;\n+            wtx.m_confirm.nIndex = 0;\n+            wtx.m_confirm.hashBlock = hashBlock;\n+            wtx.setConflicted();\n             wtx.MarkDirty();\n             batch.WriteTx(wtx);\n             // Iterate over all its outputs, and mark transactions in the wallet that spend them conflicted too\n@@ -1383,8 +1376,9 @@ void CWallet::MarkConflicted(const uint256& hashBlock, const uint256& hashTx)\n     }\n }\n \n-void CWallet::SyncTransaction(const CTransactionRef& ptx, const uint256& block_hash, int posInBlock, bool update_tx) {\n-    if (!AddToWalletIfInvolvingMe(ptx, block_hash, posInBlock, update_tx))\n+void CWallet::SyncTransaction(const CTransactionRef& ptx, CWalletTx::Status status, const uint256& block_hash, int posInBlock, bool update_tx)\n+{\n+    if (!AddToWalletIfInvolvingMe(ptx, status, block_hash, posInBlock, update_tx))\n         return; // Not one of ours\n \n     // If a transaction changes 'conflicted' state, that changes the balance\n@@ -1396,7 +1390,7 @@ void CWallet::SyncTransaction(const CTransactionRef& ptx, const uint256& block_h\n void CWallet::TransactionAddedToMempool(const CTransactionRef& ptx) {\n     auto locked_chain = chain().lock();\n     LOCK(cs_wallet);\n-    SyncTransaction(ptx, {} /* block hash */, 0 /* position in block */);\n+    SyncTransaction(ptx, CWalletTx::Status::UNCONFIRMED, {} /* block hash */, 0 /* position in block */);\n \n     auto it = mapWallet.find(ptx->GetHash());\n     if (it != mapWallet.end()) {\n@@ -1425,11 +1419,11 @@ void CWallet::BlockConnected(const CBlock& block, const std::vector<CTransaction\n     // the notification that the conflicted transaction was evicted.\n \n     for (const CTransactionRef& ptx : vtxConflicted) {\n-        SyncTransaction(ptx, {} /* block hash */, 0 /* position in block */);\n+        SyncTransaction(ptx, CWalletTx::Status::CONFLICTED, {} /* block hash */, 0 /* position in block */);\n         TransactionRemovedFromMempool(ptx);\n     }\n     for (size_t i = 0; i < block.vtx.size(); i++) {\n-        SyncTransaction(block.vtx[i], block_hash, i);\n+        SyncTransaction(block.vtx[i], CWalletTx::Status::CONFIRMED, block_hash, i);\n         TransactionRemovedFromMempool(block.vtx[i]);\n     }\n \n@@ -1440,8 +1434,12 @@ void CWallet::BlockDisconnected(const CBlock& block) {\n     auto locked_chain = chain().lock();\n     LOCK(cs_wallet);\n \n+    // At block disconnection, this will change an abandoned transaction to\n+    // be unconfirmed, whether or not the transaction is added back to the mempool.\n+    // User may have to call abandontransaction again. It may be addressed in the\n+    // future with a stickier abandoned state or even removing abandontransaction call.\n     for (const CTransactionRef& ptx : block.vtx) {\n-        SyncTransaction(ptx, {} /* block hash */, 0 /* position in block */);\n+        SyncTransaction(ptx, CWalletTx::Status::UNCONFIRMED, {} /* block hash */, 0 /* position in block */);\n     }\n }\n \n@@ -2078,7 +2076,7 @@ CWallet::ScanResult CWallet::ScanForWalletTransactions(const uint256& start_bloc\n                 break;\n             }\n             for (size_t posInBlock = 0; posInBlock < block.vtx.size(); ++posInBlock) {\n-                SyncTransaction(block.vtx[posInBlock], block_hash, posInBlock, fUpdate);\n+                SyncTransaction(block.vtx[posInBlock], CWalletTx::Status::CONFIRMED, block_hash, posInBlock, fUpdate);\n             }\n             // scan succeeded, record block as most recent successfully scanned\n             result.last_scanned_block = block_hash;\n@@ -4050,7 +4048,7 @@ void CWallet::GetKeyBirthTimes(interfaces::Chain::Lock& locked_chain, std::map<C\n     for (const auto& entry : mapWallet) {\n         // iterate over all wallet transactions...\n         const CWalletTx &wtx = entry.second;\n-        if (Optional<int> height = locked_chain.getBlockHeight(wtx.hashBlock)) {\n+        if (Optional<int> height = locked_chain.getBlockHeight(wtx.m_confirm.hashBlock)) {\n             // ... which are already in a block\n             for (const CTxOut &txout : wtx.tx->vout) {\n                 // iterate over all their outputs\n@@ -4093,9 +4091,9 @@ void CWallet::GetKeyBirthTimes(interfaces::Chain::Lock& locked_chain, std::map<C\n unsigned int CWallet::ComputeTimeSmart(const CWalletTx& wtx) const\n {\n     unsigned int nTimeSmart = wtx.nTimeReceived;\n-    if (!wtx.hashUnset()) {\n+    if (!wtx.isUnconfirmed() && !wtx.isAbandoned()) {\n         int64_t blocktime;\n-        if (chain().findBlock(wtx.hashBlock, nullptr /* block */, &blocktime)) {\n+        if (chain().findBlock(wtx.m_confirm.hashBlock, nullptr /* block */, &blocktime)) {\n             int64_t latestNow = wtx.nTimeReceived;\n             int64_t latestEntry = 0;\n \n@@ -4123,7 +4121,7 @@ unsigned int CWallet::ComputeTimeSmart(const CWalletTx& wtx) const\n \n             nTimeSmart = std::max(latestEntry, std::min(blocktime, latestNow));\n         } else {\n-            WalletLogPrintf(\"%s: found %s in block %s not in index\\n\", __func__, wtx.GetHash().ToString(), wtx.hashBlock.ToString());\n+            WalletLogPrintf(\"%s: found %s in block %s not in index\\n\", __func__, wtx.GetHash().ToString(), wtx.m_confirm.hashBlock.ToString());\n         }\n     }\n     return nTimeSmart;\n@@ -4634,21 +4632,23 @@ CKeyPool::CKeyPool(const CPubKey& vchPubKeyIn, bool internalIn)\n     m_pre_split = false;\n }\n \n-void CWalletTx::SetMerkleBranch(const uint256& block_hash, int posInBlock)\n+void CWalletTx::SetConf(Status status, const uint256& block_hash, int posInBlock)\n {\n+    // Update tx status\n+    m_confirm.status = status;\n+\n     // Update the tx's hashBlock\n-    hashBlock = block_hash;\n+    m_confirm.hashBlock = block_hash;\n \n     // set the position of the transaction in the block\n-    nIndex = posInBlock;\n+    m_confirm.nIndex = posInBlock;\n }\n \n int CWalletTx::GetDepthInMainChain(interfaces::Chain::Lock& locked_chain) const\n {\n-    if (hashUnset())\n-        return 0;\n+    if (isUnconfirmed() || isAbandoned()) return 0;\n \n-    return locked_chain.getBlockDepth(hashBlock) * (nIndex == -1 ? -1 : 1);\n+    return locked_chain.getBlockDepth(m_confirm.hashBlock) * (isConflicted() ? -1 : 1);\n }\n \n int CWalletTx::GetBlocksToMaturity(interfaces::Chain::Lock& locked_chain) const"
+      },
+      {
+        "sha": "d50ba2fb914e0769ccc2fc3b5b3a00c4e4caadd8",
+        "filename": "src/wallet/wallet.h",
+        "status": "modified",
+        "additions": 68,
+        "deletions": 19,
+        "changes": 87,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a31be09bfd77eed497a8e251d31358e16e2f2eb1/src/wallet/wallet.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a31be09bfd77eed497a8e251d31358e16e2f2eb1/src/wallet/wallet.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.h?ref=a31be09bfd77eed497a8e251d31358e16e2f2eb1",
+        "patch": "@@ -396,7 +396,9 @@ class CWalletTx\n private:\n     const CWallet* pwallet;\n \n-  /** Constant used in hashBlock to indicate tx has been abandoned */\n+    /** Constant used in hashBlock to indicate tx has been abandoned, only used at\n+     * serialization/deserialization to avoid ambiguity with conflicted.\n+     */\n     static const uint256 ABANDON_HASH;\n \n public:\n@@ -457,9 +459,7 @@ class CWalletTx\n     mutable CAmount nChangeCached;\n \n     CWalletTx(const CWallet* pwalletIn, CTransactionRef arg)\n-        : tx(std::move(arg)),\n-          hashBlock(uint256()),\n-          nIndex(-1)\n+        : tx(std::move(arg))\n     {\n         Init(pwalletIn);\n     }\n@@ -477,16 +477,37 @@ class CWalletTx\n         fInMempool = false;\n         nChangeCached = 0;\n         nOrderPos = -1;\n+        m_confirm = Confirmation{};\n     }\n \n     CTransactionRef tx;\n-    uint256 hashBlock;\n-    /* An nIndex == -1 means that hashBlock (in nonzero) refers to the earliest\n-     * block in the chain we know this or any in-wallet dependency conflicts\n-     * with. Older clients interpret nIndex == -1 as unconfirmed for backward\n-     * compatibility.\n+\n+    /* New transactions start as UNCONFIRMED. At BlockConnected,\n+     * they will transition to CONFIRMED. In case of reorg, at BlockDisconnected,\n+     * they roll back to UNCONFIRMED. If we detect a conflicting transaction at\n+     * block connection, we update conflicted tx and its dependencies as CONFLICTED.\n+     * If tx isn't confirmed and outside of mempool, the user may switch it to ABANDONED\n+     * by using the abandontransaction call. This last status may be override by a CONFLICTED\n+     * or CONFIRMED transition.\n+     */\n+    enum Status {\n+        UNCONFIRMED,\n+        CONFIRMED,\n+        CONFLICTED,\n+        ABANDONED\n+    };\n+\n+    /* Confirmation includes tx status and a pair of {block hash/tx index in block} at which tx has been confirmed.\n+     * This pair is both 0 if tx hasn't confirmed yet. Meaning of these fields changes with CONFLICTED state\n+     * where they instead point to block hash and index of the deepest conflicting tx.\n      */\n-    int nIndex;\n+    struct Confirmation {\n+        Status status = UNCONFIRMED;\n+        uint256 hashBlock = uint256();\n+        int nIndex = 0;\n+    };\n+\n+    Confirmation m_confirm;\n \n     template<typename Stream>\n     void Serialize(Stream& s) const\n@@ -502,7 +523,9 @@ class CWalletTx\n         std::vector<char> dummy_vector1; //!< Used to be vMerkleBranch\n         std::vector<char> dummy_vector2; //!< Used to be vtxPrev\n         bool dummy_bool = false; //!< Used to be fSpent\n-        s << tx << hashBlock << dummy_vector1 << nIndex << dummy_vector2 << mapValueCopy << vOrderForm << fTimeReceivedIsTxTime << nTimeReceived << fFromMe << dummy_bool;\n+        uint256 serializedHash = isAbandoned() ? ABANDON_HASH : m_confirm.hashBlock;\n+        int serializedIndex = isAbandoned() || isConflicted() ? -1 : m_confirm.nIndex;\n+        s << tx << serializedHash << dummy_vector1 << serializedIndex << dummy_vector2 << mapValueCopy << vOrderForm << fTimeReceivedIsTxTime << nTimeReceived << fFromMe << dummy_bool;\n     }\n \n     template<typename Stream>\n@@ -513,7 +536,25 @@ class CWalletTx\n         std::vector<uint256> dummy_vector1; //!< Used to be vMerkleBranch\n         std::vector<CMerkleTx> dummy_vector2; //!< Used to be vtxPrev\n         bool dummy_bool; //! Used to be fSpent\n-        s >> tx >> hashBlock >> dummy_vector1 >> nIndex >> dummy_vector2 >> mapValue >> vOrderForm >> fTimeReceivedIsTxTime >> nTimeReceived >> fFromMe >> dummy_bool;\n+        int serializedIndex;\n+        s >> tx >> m_confirm.hashBlock >> dummy_vector1 >> serializedIndex >> dummy_vector2 >> mapValue >> vOrderForm >> fTimeReceivedIsTxTime >> nTimeReceived >> fFromMe >> dummy_bool;\n+\n+        /* At serialization/deserialization, an nIndex == -1 means that hashBlock refers to\n+         * the earliest block in the chain we know this or any in-wallet ancestor conflicts\n+         * with. If nIndex == -1 and hashBlock is ABANDON_HASH, it means transaction is abandoned.\n+         * In same context, an nIndex >= 0 refers to a confirmed transaction (if hashBlock set) or\n+         * unconfirmed one. Older clients interpret nIndex == -1 as unconfirmed for backward\n+         * compatibility (pre-commit 9ac63d6).\n+         */\n+        if (serializedIndex == -1 && m_confirm.hashBlock == ABANDON_HASH) {\n+            m_confirm.hashBlock = uint256();\n+            setAbandoned();\n+        } else if (serializedIndex == -1) {\n+            setConflicted();\n+        } else if (!m_confirm.hashBlock.IsNull()) {\n+            m_confirm.nIndex = serializedIndex;\n+            setConfirmed();\n+        }\n \n         ReadOrderPos(nOrderPos, mapValue);\n         nTimeSmart = mapValue.count(\"timesmart\") ? (unsigned int)atoi64(mapValue[\"timesmart\"]) : 0;\n@@ -590,7 +631,7 @@ class CWalletTx\n     // in place.\n     std::set<uint256> GetConflicts() const NO_THREAD_SAFETY_ANALYSIS;\n \n-    void SetMerkleBranch(const uint256& block_hash, int posInBlock);\n+    void SetConf(Status status, const uint256& block_hash, int posInBlock);\n \n     /**\n      * Return depth of transaction in blockchain:\n@@ -607,10 +648,18 @@ class CWalletTx\n      * >0 : is a coinbase transaction which matures in this many blocks\n      */\n     int GetBlocksToMaturity(interfaces::Chain::Lock& locked_chain) const;\n-    bool hashUnset() const { return (hashBlock.IsNull() || hashBlock == ABANDON_HASH); }\n-    bool isAbandoned() const { return (hashBlock == ABANDON_HASH); }\n-    void setAbandoned() { hashBlock = ABANDON_HASH; }\n-\n+    bool isAbandoned() const { return m_confirm.status == CWalletTx::ABANDONED; }\n+    void setAbandoned()\n+    {\n+        m_confirm.status = CWalletTx::ABANDONED;\n+        m_confirm.hashBlock = uint256();\n+        m_confirm.nIndex = 0;\n+    }\n+    bool isConflicted() const { return m_confirm.status == CWalletTx::CONFLICTED; }\n+    void setConflicted() { m_confirm.status = CWalletTx::CONFLICTED; }\n+    bool isUnconfirmed() const { return m_confirm.status == CWalletTx::UNCONFIRMED; }\n+    void setUnconfirmed() { m_confirm.status = CWalletTx::UNCONFIRMED; }\n+    void setConfirmed() { m_confirm.status = CWalletTx::CONFIRMED; }\n     const uint256& GetHash() const { return tx->GetHash(); }\n     bool IsCoinBase() const { return tx->IsCoinBase(); }\n     bool IsImmatureCoinBase(interfaces::Chain::Lock& locked_chain) const;\n@@ -750,7 +799,7 @@ class CWallet final : public FillableSigningProvider, private interfaces::Chain:\n      * Abandoned state should probably be more carefully tracked via different\n      * posInBlock signals or by checking mempool presence when necessary.\n      */\n-    bool AddToWalletIfInvolvingMe(const CTransactionRef& tx, const uint256& block_hash, int posInBlock, bool fUpdate) EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);\n+    bool AddToWalletIfInvolvingMe(const CTransactionRef& tx, CWalletTx::Status status, const uint256& block_hash, int posInBlock, bool fUpdate) EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);\n \n     /* Mark a transaction (and its in-wallet descendants) as conflicting with a particular block. */\n     void MarkConflicted(const uint256& hashBlock, const uint256& hashTx);\n@@ -762,7 +811,7 @@ class CWallet final : public FillableSigningProvider, private interfaces::Chain:\n \n     /* Used by TransactionAddedToMemorypool/BlockConnected/Disconnected/ScanForWalletTransactions.\n      * Should be called with non-zero block_hash and posInBlock if this is for a transaction that is included in a block. */\n-    void SyncTransaction(const CTransactionRef& tx, const uint256& block_hash, int posInBlock = 0, bool update_tx = true) EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);\n+    void SyncTransaction(const CTransactionRef& tx, CWalletTx::Status status, const uint256& block_hash, int posInBlock = 0, bool update_tx = true) EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);\n \n     /* the HD chain data model (external chain counters) */\n     CHDChain hdChain;"
+      }
+    ]
+  },
+  {
+    "sha": "7e89994133725125dddbfa8d45484e3b9ed51c6e",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3ZTg5OTk0MTMzNzI1MTI1ZGRkYmZhOGQ0NTQ4NGUzYjllZDUxYzZl",
+    "commit": {
+      "author": {
+        "name": "Antoine Riard",
+        "email": "ariard@student.42.fr",
+        "date": "2019-08-15T15:42:16Z"
+      },
+      "committer": {
+        "name": "Antoine Riard",
+        "email": "ariard@student.42.fr",
+        "date": "2019-08-23T18:53:23Z"
+      },
+      "message": "Remove SyncTransaction for conflicted txn in CWallet::BlockConnected\n\nWe shouldn't rely on this sync call to get an accurate view of txn\nstate, if a tx conflicts with one in mapTx we are going to update\nour wallet dependencies in AddToWalletIfInvolvingMe while conflicting\ntxn get connected. If it doesn't conflict with one of our dependencies\nwe are not going to track it anyway.\n\nThis is a cleanup, as this SyncTransaction is redundant with the\nfollowing one for confirmation which is triggering the MarkConflicted\nlogic. We keep the loop because set of conflicted txn isn't same as txn\nincluded in block.",
+      "tree": {
+        "sha": "91559665e653857ad3a9c03e718bdf13f654009d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/91559665e653857ad3a9c03e718bdf13f654009d"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/7e89994133725125dddbfa8d45484e3b9ed51c6e",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7e89994133725125dddbfa8d45484e3b9ed51c6e",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/7e89994133725125dddbfa8d45484e3b9ed51c6e",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7e89994133725125dddbfa8d45484e3b9ed51c6e/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "a31be09bfd77eed497a8e251d31358e16e2f2eb1",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a31be09bfd77eed497a8e251d31358e16e2f2eb1",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/a31be09bfd77eed497a8e251d31358e16e2f2eb1"
+      }
+    ],
+    "stats": {
+      "total": 14,
+      "additions": 3,
+      "deletions": 11
+    },
+    "files": [
+      {
+        "sha": "8b636c41a2ef59b16f33c81742b928ce099514ff",
+        "filename": "src/wallet/wallet.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 11,
+        "changes": 14,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7e89994133725125dddbfa8d45484e3b9ed51c6e/src/wallet/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7e89994133725125dddbfa8d45484e3b9ed51c6e/src/wallet/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.cpp?ref=7e89994133725125dddbfa8d45484e3b9ed51c6e",
+        "patch": "@@ -1410,22 +1410,14 @@ void CWallet::BlockConnected(const CBlock& block, const std::vector<CTransaction\n     const uint256& block_hash = block.GetHash();\n     auto locked_chain = chain().lock();\n     LOCK(cs_wallet);\n-    // TODO: Temporarily ensure that mempool removals are notified before\n-    // connected transactions.  This shouldn't matter, but the abandoned\n-    // state of transactions in our wallet is currently cleared when we\n-    // receive another notification and there is a race condition where\n-    // notification of a connected conflict might cause an outside process\n-    // to abandon a transaction and then have it inadvertently cleared by\n-    // the notification that the conflicted transaction was evicted.\n \n-    for (const CTransactionRef& ptx : vtxConflicted) {\n-        SyncTransaction(ptx, CWalletTx::Status::CONFLICTED, {} /* block hash */, 0 /* position in block */);\n-        TransactionRemovedFromMempool(ptx);\n-    }\n     for (size_t i = 0; i < block.vtx.size(); i++) {\n         SyncTransaction(block.vtx[i], CWalletTx::Status::CONFIRMED, block_hash, i);\n         TransactionRemovedFromMempool(block.vtx[i]);\n     }\n+    for (const CTransactionRef& ptx : vtxConflicted) {\n+        TransactionRemovedFromMempool(ptx);\n+    }\n \n     m_last_block_processed = block_hash;\n }"
+      }
+    ]
+  },
+  {
+    "sha": "40ede992d97df38282919693dfe851c975c3b1d8",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0MGVkZTk5MmQ5N2RmMzgyODI5MTk2OTNkZmU4NTFjOTc1YzNiMWQ4",
+    "commit": {
+      "author": {
+        "name": "Antoine Riard",
+        "email": "ariard@student.42.fr",
+        "date": "2019-08-22T17:16:40Z"
+      },
+      "committer": {
+        "name": "Antoine Riard",
+        "email": "ariard@student.42.fr",
+        "date": "2019-08-29T15:17:51Z"
+      },
+      "message": "Modify wallet tx status if has been reorged out\n\nAdd a LockChain method to CWallet to know if we can lock or query\nchain state safely.\n\nAt tx loading, we rely on chain to know if hashBlock of tx is still\nin main chain. If not, we set its status to unconfirmed and reset\nits hashBlock/nIndex.\n\nIf wallet loaded is the wallet-tool one, all wallet txn will\nshow up with a height of zero. It doesn't matter as status is not\nused by wallet-tool.\n\nWe take lock prematurely in CWallet::LoadWallet and CWallet::Verify\nto ensure that lock order is respected between cs_main an cs_wallet.",
+      "tree": {
+        "sha": "471275793d60be9a5bf65c1a085e81513d54459f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/471275793d60be9a5bf65c1a085e81513d54459f"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/40ede992d97df38282919693dfe851c975c3b1d8",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/40ede992d97df38282919693dfe851c975c3b1d8",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/40ede992d97df38282919693dfe851c975c3b1d8",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/40ede992d97df38282919693dfe851c975c3b1d8/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "7e89994133725125dddbfa8d45484e3b9ed51c6e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7e89994133725125dddbfa8d45484e3b9ed51c6e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/7e89994133725125dddbfa8d45484e3b9ed51c6e"
+      }
+    ],
+    "stats": {
+      "total": 28,
+      "additions": 26,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "1c07f29c9849a9019d85a5050b2f4cef8c41b115",
+        "filename": "src/wallet/wallet.cpp",
+        "status": "modified",
+        "additions": 22,
+        "deletions": 1,
+        "changes": 23,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/40ede992d97df38282919693dfe851c975c3b1d8/src/wallet/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/40ede992d97df38282919693dfe851c975c3b1d8/src/wallet/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.cpp?ref=40ede992d97df38282919693dfe851c975c3b1d8",
+        "patch": "@@ -1172,8 +1172,19 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn, bool fFlushOnClose)\n     return true;\n }\n \n-void CWallet::LoadToWallet(const CWalletTx& wtxIn)\n+void CWallet::LoadToWallet(CWalletTx& wtxIn)\n {\n+    // If wallet doesn't have a chain (e.g wallet-tool), lock can't be taken.\n+    auto locked_chain = LockChain();\n+    // If tx hasn't been reorged out of chain while wallet being shutdown\n+    // change tx status to UNCONFIRMED and reset hashBlock/nIndex.\n+    if (!wtxIn.m_confirm.hashBlock.IsNull()) {\n+        if (locked_chain && !locked_chain->getBlockHeight(wtxIn.m_confirm.hashBlock)) {\n+            wtxIn.setUnconfirmed();\n+            wtxIn.m_confirm.hashBlock = uint256();\n+            wtxIn.m_confirm.nIndex = 0;\n+        }\n+    }\n     uint256 hash = wtxIn.GetHash();\n     const auto& ins = mapWallet.emplace(hash, wtxIn);\n     CWalletTx& wtx = ins.first->second;\n@@ -3330,6 +3341,11 @@ bool CWallet::CommitTransaction(CTransactionRef tx, mapValue_t mapValue, std::ve\n \n DBErrors CWallet::LoadWallet(bool& fFirstRunRet)\n {\n+    // Even if we don't use this lock in this function, we want to preserve\n+    // lock order in LoadToWallet if query of chain state is needed to know\n+    // tx status. If lock can't be taken (e.g wallet-tool), tx confirmation\n+    // status may be not reliable.\n+    auto locked_chain = LockChain();\n     LOCK(cs_wallet);\n \n     fFirstRunRet = false;\n@@ -4231,6 +4247,11 @@ bool CWallet::Verify(interfaces::Chain& chain, const WalletLocation& location, b\n         // Recover readable keypairs:\n         CWallet dummyWallet(&chain, WalletLocation(), WalletDatabase::CreateDummy());\n         std::string backup_filename;\n+        // Even if we don't use this lock in this function, we want to preserve\n+        // lock order in LoadToWallet if query of chain state is needed to know\n+        // tx status. If lock can't be taken, tx confirmation status may be not\n+        // reliable.\n+        auto locked_chain = dummyWallet.LockChain();\n         if (!WalletBatch::Recover(wallet_path, (void *)&dummyWallet, WalletBatch::RecoverKeysOnlyFilter, backup_filename)) {\n             return false;\n         }"
+      },
+      {
+        "sha": "3428e8e001102ea2817ed81950b54d385a7d979a",
+        "filename": "src/wallet/wallet.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 1,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/40ede992d97df38282919693dfe851c975c3b1d8/src/wallet/wallet.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/40ede992d97df38282919693dfe851c975c3b1d8/src/wallet/wallet.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.h?ref=40ede992d97df38282919693dfe851c975c3b1d8",
+        "patch": "@@ -946,6 +946,9 @@ class CWallet final : public FillableSigningProvider, private interfaces::Chain:\n     bool IsLocked() const;\n     bool Lock();\n \n+    /** Interface to assert chain access and if successful lock it */\n+    std::unique_ptr<interfaces::Chain::Lock> LockChain() { return m_chain ? m_chain->lock() : nullptr; }\n+\n     std::map<uint256, CWalletTx> mapWallet GUARDED_BY(cs_wallet);\n \n     typedef std::multimap<int64_t, CWalletTx*> TxItems;\n@@ -1091,7 +1094,7 @@ class CWallet final : public FillableSigningProvider, private interfaces::Chain:\n \n     void MarkDirty();\n     bool AddToWallet(const CWalletTx& wtxIn, bool fFlushOnClose=true);\n-    void LoadToWallet(const CWalletTx& wtxIn) EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);\n+    void LoadToWallet(CWalletTx& wtxIn) EXCLUSIVE_LOCKS_REQUIRED(cs_wallet);\n     void TransactionAddedToMempool(const CTransactionRef& tx) override;\n     void BlockConnected(const CBlock& block, const std::vector<CTransactionRef>& vtxConflicted) override;\n     void BlockDisconnected(const CBlock& block) override;"
+      }
+    ]
+  },
+  {
+    "sha": "442a87cc0ae43ebc9b6654a6165778eecb931f74",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0NDJhODdjYzBhZTQzZWJjOWI2NjU0YTYxNjU3NzhlZWNiOTMxZjc0",
+    "commit": {
+      "author": {
+        "name": "Antoine Riard",
+        "email": "ariard@student.42.fr",
+        "date": "2019-08-22T20:39:48Z"
+      },
+      "committer": {
+        "name": "Antoine Riard",
+        "email": "ariard@student.42.fr",
+        "date": "2019-08-29T16:01:51Z"
+      },
+      "message": "Add a test wallet_reorgsrestore\n\nTest we change tx status at loading in case of reorgs while wallet\nwas shutdown.",
+      "tree": {
+        "sha": "e755ee769e93c82918c88fdd02210d0469783668",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/e755ee769e93c82918c88fdd02210d0469783668"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/442a87cc0ae43ebc9b6654a6165778eecb931f74",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/442a87cc0ae43ebc9b6654a6165778eecb931f74",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/442a87cc0ae43ebc9b6654a6165778eecb931f74",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/442a87cc0ae43ebc9b6654a6165778eecb931f74/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "40ede992d97df38282919693dfe851c975c3b1d8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/40ede992d97df38282919693dfe851c975c3b1d8",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/40ede992d97df38282919693dfe851c975c3b1d8"
+      }
+    ],
+    "stats": {
+      "total": 106,
+      "additions": 106,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "dd61efa7577a12eea068d15e454e84aef2f6beaa",
+        "filename": "test/functional/test_runner.py",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/442a87cc0ae43ebc9b6654a6165778eecb931f74/test/functional/test_runner.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/442a87cc0ae43ebc9b6654a6165778eecb931f74/test/functional/test_runner.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/test_runner.py?ref=442a87cc0ae43ebc9b6654a6165778eecb931f74",
+        "patch": "@@ -131,6 +131,7 @@\n     'wallet_createwallet.py --usecli',\n     'wallet_watchonly.py',\n     'wallet_watchonly.py --usecli',\n+    'wallet_reorgsrestore.py',\n     'interface_http.py',\n     'interface_rpc.py',\n     'rpc_psbt.py',"
+      },
+      {
+        "sha": "f48018e9fbe8fc2ae59ad63e5d36bd4db04f4811",
+        "filename": "test/functional/wallet_reorgsrestore.py",
+        "status": "added",
+        "additions": 105,
+        "deletions": 0,
+        "changes": 105,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/442a87cc0ae43ebc9b6654a6165778eecb931f74/test/functional/wallet_reorgsrestore.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/442a87cc0ae43ebc9b6654a6165778eecb931f74/test/functional/wallet_reorgsrestore.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/wallet_reorgsrestore.py?ref=442a87cc0ae43ebc9b6654a6165778eecb931f74",
+        "patch": "@@ -0,0 +1,105 @@\n+#!/usr/bin/env python3\n+# Copyright (c) 2019 The Bitcoin Core developers\n+# Distributed under the MIT software license, see the accompanying\n+# file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+\"\"\"Test tx status in case of reorgs while wallet being shutdown.\n+\n+Wallet txn status rely on block connection/disconnection for its\n+accuracy. In case of reorgs happening while wallet being shutdown\n+block updates are not going to be received. At wallet loading, we\n+check against chain if confirmed txn are still in chain and change\n+their status if block in which they have been included has been\n+disconnected.\n+\"\"\"\n+\n+from decimal import Decimal\n+import os\n+import shutil\n+\n+from test_framework.test_framework import BitcoinTestFramework\n+from test_framework.util import (\n+        assert_equal,\n+        connect_nodes,\n+        disconnect_nodes,\n+)\n+\n+class ReorgsRestoreTest(BitcoinTestFramework):\n+    def set_test_params(self):\n+        self.num_nodes = 3\n+\n+    def skip_test_if_missing_module(self):\n+        self.skip_if_no_wallet()\n+\n+    def run_test(self):\n+        # Send a tx from which to conflict outputs later\n+        txid_conflict_from = self.nodes[0].sendtoaddress(self.nodes[0].getnewaddress(), Decimal(\"10\"))\n+        self.nodes[0].generate(1)\n+        self.sync_blocks()\n+\n+        # Disconnect node1 from others to reorg its chain later\n+        disconnect_nodes(self.nodes[0], 1)\n+        disconnect_nodes(self.nodes[1], 2)\n+        connect_nodes(self.nodes[0], 2)\n+\n+        # Send a tx to be unconfirmed later\n+        txid = self.nodes[0].sendtoaddress(self.nodes[0].getnewaddress(), Decimal(\"10\"))\n+        tx = self.nodes[0].gettransaction(txid)\n+        self.nodes[0].generate(4)\n+        tx_before_reorg = self.nodes[0].gettransaction(txid)\n+        assert_equal(tx_before_reorg[\"confirmations\"], 4)\n+\n+        # Disconnect node0 from node2 to broadcast a conflict on their respective chains\n+        disconnect_nodes(self.nodes[0], 2)\n+        nA = next(tx_out[\"vout\"] for tx_out in self.nodes[0].gettransaction(txid_conflict_from)[\"details\"] if tx_out[\"amount\"] == Decimal(\"10\"))\n+        inputs = []\n+        inputs.append({\"txid\": txid_conflict_from, \"vout\": nA})\n+        outputs_1 = {}\n+        outputs_2 = {}\n+\n+        # Create a conflicted tx broadcast on node0 chain and conflicting tx broadcast on node1 chain. Both spend from txid_conflict_from\n+        outputs_1[self.nodes[0].getnewaddress()] = Decimal(\"9.99998\")\n+        outputs_2[self.nodes[0].getnewaddress()] = Decimal(\"9.99998\")\n+        conflicted = self.nodes[0].signrawtransactionwithwallet(self.nodes[0].createrawtransaction(inputs, outputs_1))\n+        conflicting = self.nodes[0].signrawtransactionwithwallet(self.nodes[0].createrawtransaction(inputs, outputs_2))\n+\n+        conflicted_txid = self.nodes[0].sendrawtransaction(conflicted[\"hex\"])\n+        self.nodes[0].generate(1)\n+        conflicting_txid = self.nodes[2].sendrawtransaction(conflicting[\"hex\"])\n+        self.nodes[2].generate(9)\n+\n+        # Reconnect node0 and node2 and check that conflicted_txid is effectively conflicted\n+        connect_nodes(self.nodes[0], 2)\n+        self.sync_blocks([self.nodes[0], self.nodes[2]])\n+        conflicted = self.nodes[0].gettransaction(conflicted_txid)\n+        conflicting = self.nodes[0].gettransaction(conflicting_txid)\n+        assert_equal(conflicted[\"confirmations\"], -9)\n+        assert_equal(conflicted[\"walletconflicts\"][0], conflicting[\"txid\"])\n+\n+        # Node0 wallet is shutdown\n+        self.stop_node(0)\n+        self.start_node(0)\n+\n+        # The block chain re-orgs and the tx is included in a different block\n+        self.nodes[1].generate(9)\n+        self.nodes[1].sendrawtransaction(tx[\"hex\"])\n+        self.nodes[1].generate(1)\n+        self.nodes[1].sendrawtransaction(conflicted[\"hex\"])\n+        self.nodes[1].generate(1)\n+\n+        # Node0 wallet file is loaded on longest sync'ed node1\n+        self.stop_node(1)\n+        self.nodes[0].backupwallet(os.path.join(self.nodes[0].datadir, 'wallet.bak'))\n+        shutil.copyfile(os.path.join(self.nodes[0].datadir, 'wallet.bak'), os.path.join(self.nodes[1].datadir, 'regtest', 'wallet.dat'))\n+        self.start_node(1)\n+        tx_after_reorg = self.nodes[1].gettransaction(txid)\n+        # Check that normal confirmed tx is confirmed again but with different blockhash\n+        assert_equal(tx_after_reorg[\"confirmations\"], 2)\n+        assert(tx_before_reorg[\"blockhash\"] != tx_after_reorg[\"blockhash\"])\n+        conflicted_after_reorg = self.nodes[1].gettransaction(conflicted_txid)\n+        # Check that conflicted tx is confirmed again with blockhash different than previously conflicting tx\n+        assert_equal(conflicted_after_reorg[\"confirmations\"], 1)\n+        assert(conflicting[\"blockhash\"] != conflicted_after_reorg[\"blockhash\"])\n+\n+if __name__ == '__main__':\n+    ReorgsRestoreTest().main()"
+      }
+    ]
+  }
+]

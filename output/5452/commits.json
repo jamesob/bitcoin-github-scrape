@@ -1,0 +1,122 @@
+[
+  {
+    "sha": "73f7ee893060f33abc1a7482aa94d04b0b9918fb",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3M2Y3ZWU4OTMwNjBmMzNhYmMxYTc0ODJhYTk0ZDA0YjBiOTkxOGZi",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-12-09T13:50:01Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-12-12T12:16:28Z"
+      },
+      "message": "minor rework of SendMoney in rpcwallet\n\n- rework the function to not log errors but use throw JSONRPCError\n- remove a check for IsLocked() that is done in sendtoaddress and\n  sendfrom RPC calls already\n- cache GetBalance() return value, because it's possibly used twice",
+      "tree": {
+        "sha": "354a7b61b25d0bccebe6dd5ad2ef0ca11bbf23a0",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/354a7b61b25d0bccebe6dd5ad2ef0ca11bbf23a0"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/73f7ee893060f33abc1a7482aa94d04b0b9918fb",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/73f7ee893060f33abc1a7482aa94d04b0b9918fb",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/73f7ee893060f33abc1a7482aa94d04b0b9918fb",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/73f7ee893060f33abc1a7482aa94d04b0b9918fb/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "3bb29a3e13f78f534d96b71048a128843f3bab85",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3bb29a3e13f78f534d96b71048a128843f3bab85",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/3bb29a3e13f78f534d96b71048a128843f3bab85"
+      }
+    ],
+    "stats": {
+      "total": 24,
+      "additions": 9,
+      "deletions": 15
+    },
+    "files": [
+      {
+        "sha": "bca8cc3c5d79c57ebd532adf3acd8779ecae4c01",
+        "filename": "src/rpcwallet.cpp",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 15,
+        "changes": 24,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/73f7ee893060f33abc1a7482aa94d04b0b9918fb/src/rpcwallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/73f7ee893060f33abc1a7482aa94d04b0b9918fb/src/rpcwallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcwallet.cpp?ref=73f7ee893060f33abc1a7482aa94d04b0b9918fb",
+        "patch": "@@ -312,33 +312,27 @@ Value getaddressesbyaccount(const Array& params, bool fHelp)\n \n void SendMoney(const CTxDestination &address, CAmount nValue, CWalletTx& wtxNew)\n {\n+    CAmount curBalance = pwalletMain->GetBalance();\n+\n     // Check amount\n     if (nValue <= 0)\n         throw JSONRPCError(RPC_INVALID_PARAMETER, \"Invalid amount\");\n \n-    if (nValue > pwalletMain->GetBalance())\n+    if (nValue > curBalance)\n         throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, \"Insufficient funds\");\n \n-    string strError;\n-    if (pwalletMain->IsLocked())\n-    {\n-        strError = \"Error: Wallet locked, unable to create transaction!\";\n-        LogPrintf(\"SendMoney() : %s\", strError);\n-        throw JSONRPCError(RPC_WALLET_ERROR, strError);\n-    }\n-\n     // Parse Bitcoin address\n     CScript scriptPubKey = GetScriptForDestination(address);\n \n     // Create and send the transaction\n     CReserveKey reservekey(pwalletMain);\n     CAmount nFeeRequired;\n-    if (!pwalletMain->CreateTransaction(scriptPubKey, nValue, wtxNew, reservekey, nFeeRequired, strError))\n-    {\n-        if (nValue + nFeeRequired > pwalletMain->GetBalance())\n-            strError = strprintf(\"Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds!\", FormatMoney(nFeeRequired));\n-        LogPrintf(\"SendMoney() : %s\\n\", strError);\n-        throw JSONRPCError(RPC_WALLET_ERROR, strError);\n+    std::string strError;\n+    if (!pwalletMain->CreateTransaction(scriptPubKey, nValue, wtxNew, reservekey, nFeeRequired, strError)) {\n+        if (nValue + nFeeRequired > curBalance)\n+            throw JSONRPCError(RPC_WALLET_ERROR, strprintf(\"Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds!\", FormatMoney(nFeeRequired)));\n+        else\n+            throw JSONRPCError(RPC_WALLET_ERROR, strError);\n     }\n     if (!pwalletMain->CommitTransaction(wtxNew, reservekey))\n         throw JSONRPCError(RPC_WALLET_ERROR, \"Error: The transaction was rejected! This might happen if some of the coins in your wallet were already spent, such as if you used a copy of wallet.dat and coins were spent in the copy but not marked as spent here.\");"
+      }
+    ]
+  },
+  {
+    "sha": "022887909d117a6017effc7d202f472530672156",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowMjI4ODc5MDlkMTE3YTYwMTdlZmZjN2QyMDJmNDcyNTMwNjcyMTU2",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-12-09T13:53:05Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-12-12T12:16:28Z"
+      },
+      "message": "very minor include ordering cleanup for rpcwallet.cpp",
+      "tree": {
+        "sha": "45d91dd6539d5c92f0f74eb4e2c88dbec1d4f98b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/45d91dd6539d5c92f0f74eb4e2c88dbec1d4f98b"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/022887909d117a6017effc7d202f472530672156",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/022887909d117a6017effc7d202f472530672156",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/022887909d117a6017effc7d202f472530672156",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/022887909d117a6017effc7d202f472530672156/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "73f7ee893060f33abc1a7482aa94d04b0b9918fb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/73f7ee893060f33abc1a7482aa94d04b0b9918fb",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/73f7ee893060f33abc1a7482aa94d04b0b9918fb"
+      }
+    ],
+    "stats": {
+      "total": 5,
+      "additions": 3,
+      "deletions": 2
+    },
+    "files": [
+      {
+        "sha": "b333be418409af9aa466d1fde95ba535eaa57fdc",
+        "filename": "src/rpcwallet.cpp",
+        "status": "modified",
+        "additions": 3,
+        "deletions": 2,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/022887909d117a6017effc7d202f472530672156/src/rpcwallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/022887909d117a6017effc7d202f472530672156/src/rpcwallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpcwallet.cpp?ref=022887909d117a6017effc7d202f472530672156",
+        "patch": "@@ -6,10 +6,10 @@\n #include \"amount.h\"\n #include \"base58.h\"\n #include \"core_io.h\"\n-#include \"rpcserver.h\"\n #include \"init.h\"\n #include \"net.h\"\n #include \"netbase.h\"\n+#include \"rpcserver.h\"\n #include \"timedata.h\"\n #include \"util.h\"\n #include \"utilmoneystr.h\"\n@@ -19,13 +19,14 @@\n #include <stdint.h>\n \n #include <boost/assign/list_of.hpp>\n+\n #include \"json/json_spirit_utils.h\"\n #include \"json/json_spirit_value.h\"\n \n-using namespace std;\n using namespace boost;\n using namespace boost::assign;\n using namespace json_spirit;\n+using namespace std;\n \n int64_t nWalletUnlockTime;\n static CCriticalSection cs_nWalletUnlockTime;"
+      }
+    ]
+  }
+]

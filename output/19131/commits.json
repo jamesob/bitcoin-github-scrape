@@ -1,0 +1,146 @@
+[
+  {
+    "sha": "d15db4b1fc988736b08c092d000ca1d1ff686975",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkMTVkYjRiMWZjOTg4NzM2YjA4YzA5MmQwMDBjYTFkMWZmNjg2OTc1",
+    "commit": {
+      "author": {
+        "name": "Jonathan Schoeller",
+        "email": "jonathan.schoeller@rea-group.com",
+        "date": "2020-06-01T08:05:15Z"
+      },
+      "committer": {
+        "name": "Jonathan Schoeller",
+        "email": "jonathan.schoeller@rea-group.com",
+        "date": "2020-06-01T20:20:04Z"
+      },
+      "message": "refactor: Fix unreachable code in init arg checks\n\nBuilding with -Wunreachable-code-loop-increment causes a warning\ndue to always returning on the first iteration of the loop that\noutputs errors on invalid args.\n\nCollect all errors, and output them in a single error message\nafter the loop completes, resolving the warning and avoiding\npopup hell by outputting a seperate message for each error.",
+      "tree": {
+        "sha": "9b223f81d2a0deca3d8082216a00ddb13608d93c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/9b223f81d2a0deca3d8082216a00ddb13608d93c"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/d15db4b1fc988736b08c092d000ca1d1ff686975",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d15db4b1fc988736b08c092d000ca1d1ff686975",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/d15db4b1fc988736b08c092d000ca1d1ff686975",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d15db4b1fc988736b08c092d000ca1d1ff686975/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "091cc4b94e009f7140493cd37798d447c6881e5e",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/091cc4b94e009f7140493cd37798d447c6881e5e",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/091cc4b94e009f7140493cd37798d447c6881e5e"
+      }
+    ],
+    "stats": {
+      "total": 23,
+      "additions": 19,
+      "deletions": 4
+    },
+    "files": [
+      {
+        "sha": "0ff89eb81676f592566a1677a1c9f7c4fca8d488",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 3,
+        "changes": 16,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d15db4b1fc988736b08c092d000ca1d1ff686975/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d15db4b1fc988736b08c092d000ca1d1ff686975/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=d15db4b1fc988736b08c092d000ca1d1ff686975",
+        "patch": "@@ -964,17 +964,27 @@ bool AppInitParameterInteraction()\n \n     // also see: InitParameterInteraction()\n \n-    // Warn if network-specific options (-addnode, -connect, etc) are\n+    // Error if network-specific options (-addnode, -connect, etc) are\n     // specified in default section of config file, but not overridden\n     // on the command line or in this network's section of the config file.\n     std::string network = gArgs.GetChainName();\n+    bilingual_str errors;\n     for (const auto& arg : gArgs.GetUnsuitableSectionOnlyArgs()) {\n-        return InitError(strprintf(_(\"Config setting for %s only applied on %s network when in [%s] section.\"), arg, network, network));\n+        errors += strprintf(_(\"Config setting for %s only applied on %s network when in [%s] section.\") + Untranslated(\"\\n\"), arg, network, network);\n+    }\n+\n+    if (!errors.empty()) {\n+        return InitError(errors);\n     }\n \n     // Warn if unrecognized section name are present in the config file.\n+    bilingual_str warnings;\n     for (const auto& section : gArgs.GetUnrecognizedSections()) {\n-        InitWarning(strprintf(Untranslated(\"%s:%i \") + _(\"Section [%s] is not recognized.\"), section.m_file, section.m_line, section.m_name));\n+        warnings += strprintf(Untranslated(\"%s:%i \") + _(\"Section [%s] is not recognized.\") + Untranslated(\"\\n\"), section.m_file, section.m_line, section.m_name);\n+    }\n+\n+    if (!warnings.empty()) {\n+        InitWarning(warnings);\n     }\n \n     if (!fs::is_directory(GetBlocksDir())) {"
+      },
+      {
+        "sha": "695d6dac96544cb481aaff4f5435f0164f92f703",
+        "filename": "src/util/translation.h",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 0,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d15db4b1fc988736b08c092d000ca1d1ff686975/src/util/translation.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d15db4b1fc988736b08c092d000ca1d1ff686975/src/util/translation.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/util/translation.h?ref=d15db4b1fc988736b08c092d000ca1d1ff686975",
+        "patch": "@@ -23,6 +23,11 @@ struct bilingual_str {\n         translated += rhs.translated;\n         return *this;\n     }\n+\n+    bool empty() const\n+    {\n+        return original.empty();\n+    }\n };\n \n inline bilingual_str operator+(bilingual_str lhs, const bilingual_str& rhs)"
+      },
+      {
+        "sha": "a4dc455d5710d1ae1037298c1fa181d89b918e54",
+        "filename": "test/functional/feature_config_args.py",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d15db4b1fc988736b08c092d000ca1d1ff686975/test/functional/feature_config_args.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d15db4b1fc988736b08c092d000ca1d1ff686975/test/functional/feature_config_args.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/test/functional/feature_config_args.py?ref=d15db4b1fc988736b08c092d000ca1d1ff686975",
+        "patch": "@@ -71,7 +71,7 @@ def test_config_file_parser(self):\n         with open(inc_conf_file2_path, 'w', encoding='utf-8') as conf:\n             conf.write('[testnet]\\n')\n         self.restart_node(0)\n-        self.nodes[0].stop_node(expected_stderr='Warning: ' + inc_conf_file_path + ':1 Section [testnot] is not recognized.' + os.linesep + 'Warning: ' + inc_conf_file2_path + ':1 Section [testnet] is not recognized.')\n+        self.nodes[0].stop_node(expected_stderr='Warning: ' + inc_conf_file_path + ':1 Section [testnot] is not recognized.' + os.linesep + inc_conf_file2_path + ':1 Section [testnet] is not recognized.')\n \n         with open(inc_conf_file_path, 'w', encoding='utf-8') as conf:\n             conf.write('')  # clear"
+      }
+    ]
+  },
+  {
+    "sha": "eea81146571480b2acd12c8cd7f36b04d056c47f",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplZWE4MTE0NjU3MTQ4MGIyYWNkMTJjOGNkN2YzNmIwNGQwNTZjNDdm",
+    "commit": {
+      "author": {
+        "name": "Jonathan Schoeller",
+        "email": "jonathan.schoeller@rea-group.com",
+        "date": "2020-06-01T20:24:10Z"
+      },
+      "committer": {
+        "name": "Jonathan Schoeller",
+        "email": "jonathan.schoeller@rea-group.com",
+        "date": "2020-06-01T20:24:10Z"
+      },
+      "message": "build: Enable unreachable-code-loop-increment\n\nEnable unreachable-code-loop-increment and treat as error.\nrefs: #19015",
+      "tree": {
+        "sha": "6e61974d5c61fa99937c10853cd5fa256f6ae9b8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/6e61974d5c61fa99937c10853cd5fa256f6ae9b8"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/eea81146571480b2acd12c8cd7f36b04d056c47f",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/eea81146571480b2acd12c8cd7f36b04d056c47f",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/eea81146571480b2acd12c8cd7f36b04d056c47f",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/eea81146571480b2acd12c8cd7f36b04d056c47f/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "d15db4b1fc988736b08c092d000ca1d1ff686975",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d15db4b1fc988736b08c092d000ca1d1ff686975",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/d15db4b1fc988736b08c092d000ca1d1ff686975"
+      }
+    ],
+    "stats": {
+      "total": 2,
+      "additions": 2,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "6955353693897eca72c46a9d417a8489f43fc184",
+        "filename": "configure.ac",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/eea81146571480b2acd12c8cd7f36b04d056c47f/configure.ac",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/eea81146571480b2acd12c8cd7f36b04d056c47f/configure.ac",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/configure.ac?ref=eea81146571480b2acd12c8cd7f36b04d056c47f",
+        "patch": "@@ -391,6 +391,7 @@ if test \"x$enable_werror\" = \"xyes\"; then\n   dnl https://gcc.gnu.org/bugzilla/show_bug.cgi?id=78010\n   AX_CHECK_COMPILE_FLAG([-Werror=suggest-override],[ERROR_CXXFLAGS=\"$ERROR_CXXFLAGS -Werror=suggest-override\"],,[[$CXXFLAG_WERROR]],\n                         [AC_LANG_SOURCE([[struct A { virtual void f(); }; struct B : A { void f() final; };]])])\n+  AX_CHECK_COMPILE_FLAG([-Werror=unreachable-code-loop-increment],[ERROR_CXXFLAGS=\"$ERROR_CXXFLAGS -Werror=unreachable-code-loop-increment\"],,[[$CXXFLAG_WERROR]])\n fi\n \n if test \"x$CXXFLAGS_overridden\" = \"xno\"; then\n@@ -410,6 +411,7 @@ if test \"x$CXXFLAGS_overridden\" = \"xno\"; then\n   AX_CHECK_COMPILE_FLAG([-Wsign-compare],[WARN_CXXFLAGS=\"$WARN_CXXFLAGS -Wsign-compare\"],,[[$CXXFLAG_WERROR]])\n   AX_CHECK_COMPILE_FLAG([-Wsuggest-override],[WARN_CXXFLAGS=\"$WARN_CXXFLAGS -Wsuggest-override\"],,[[$CXXFLAG_WERROR]],\n                         [AC_LANG_SOURCE([[struct A { virtual void f(); }; struct B : A { void f() final; };]])])\n+  AX_CHECK_COMPILE_FLAG([-Wunreachable-code-loop-increment],[WARN_CXXFLAGS=\"$WARN_CXXFLAGS -Wunreachable-code-loop-increment\"],,[[$CXXFLAG_WERROR]])\n \n   dnl Some compilers (gcc) ignore unknown -Wno-* options, but warn about all\n   dnl unknown options if any other warning is produced. Test the -Wfoo case, and"
+      }
+    ]
+  }
+]

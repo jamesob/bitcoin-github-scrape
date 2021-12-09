@@ -1,0 +1,86 @@
+[
+  {
+    "sha": "05a85b2b38d516a8701f684fcd2ab99f3e5b462d",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowNWE4NWIyYjM4ZDUxNmE4NzAxZjY4NGZjZDJhYjk5ZjNlNWI0NjJk",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-07-31T21:42:35Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-07-31T21:42:35Z"
+      },
+      "message": "Add 'mempool' P2P command, and extend 'getdata' behavior\nto permit downloading of mempool transactions from the remote peer.",
+      "tree": {
+        "sha": "6d03e0f22dd6c299e2a11e8ad0e8b1daa5d1c1f8",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/6d03e0f22dd6c299e2a11e8ad0e8b1daa5d1c1f8"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/05a85b2b38d516a8701f684fcd2ab99f3e5b462d",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/05a85b2b38d516a8701f684fcd2ab99f3e5b462d",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/05a85b2b38d516a8701f684fcd2ab99f3e5b462d",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/05a85b2b38d516a8701f684fcd2ab99f3e5b462d/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "3c83387c298b6462b176fe6f335502770007f192",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3c83387c298b6462b176fe6f335502770007f192",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/3c83387c298b6462b176fe6f335502770007f192"
+      }
+    ],
+    "stats": {
+      "total": 41,
+      "additions": 37,
+      "deletions": 4
+    },
+    "files": [
+      {
+        "sha": "293e7bca5c539789df693bdf89594153ee867a0d",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 32,
+        "deletions": 3,
+        "changes": 35,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/05a85b2b38d516a8701f684fcd2ab99f3e5b462d/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/05a85b2b38d516a8701f684fcd2ab99f3e5b462d/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=05a85b2b38d516a8701f684fcd2ab99f3e5b462d",
+        "patch": "@@ -2562,7 +2562,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n     {\n         vector<CInv> vInv;\n         vRecv >> vInv;\n-        if (vInv.size() > 50000)\n+        if (vInv.size() > MAX_INV_SZ)\n         {\n             pfrom->Misbehaving(20);\n             return error(\"message inv size() = %d\", vInv.size());\n@@ -2613,7 +2613,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n     {\n         vector<CInv> vInv;\n         vRecv >> vInv;\n-        if (vInv.size() > 50000)\n+        if (vInv.size() > MAX_INV_SZ)\n         {\n             pfrom->Misbehaving(20);\n             return error(\"message getdata size() = %d\", vInv.size());\n@@ -2655,11 +2655,24 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n             else if (inv.IsKnownType())\n             {\n                 // Send stream from relay memory\n+                bool pushed = false;\n                 {\n                     LOCK(cs_mapRelay);\n                     map<CInv, CDataStream>::iterator mi = mapRelay.find(inv);\n-                    if (mi != mapRelay.end())\n+                    if (mi != mapRelay.end()) {\n                         pfrom->PushMessage(inv.GetCommand(), (*mi).second);\n+                        pushed = true;\n+                    }\n+                }\n+                if (!pushed && inv.type == MSG_TX) {\n+                    LOCK(mempool.cs);\n+                    if (mempool.exists(inv.hash)) {\n+                        CTransaction tx = mempool.lookup(inv.hash);\n+                        CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);\n+                        ss.reserve(1000);\n+                        ss << tx;\n+                        pfrom->PushMessage(\"tx\", ss);\n+                    }\n                 }\n             }\n \n@@ -2834,6 +2847,22 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)\n     }\n \n \n+    else if (strCommand == \"mempool\")\n+    {\n+        std::vector<uint256> vtxid;\n+        mempool.queryHashes(vtxid);\n+        vector<CInv> vInv;\n+        for (unsigned int i = 0; i < vtxid.size(); i++) {\n+            CInv inv(MSG_TX, vtxid[i]);\n+            vInv.push_back(inv);\n+            if (i == (MAX_INV_SZ - 1))\n+                    break;\n+        }\n+        if (vInv.size() > 0)\n+            pfrom->PushMessage(\"inv\", vInv);\n+    }\n+\n+\n     else if (strCommand == \"checkorder\")\n     {\n         uint256 hashReply;"
+      },
+      {
+        "sha": "62187e42878c985bb57e849e191d5baa8830d75e",
+        "filename": "src/main.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/05a85b2b38d516a8701f684fcd2ab99f3e5b462d/src/main.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/05a85b2b38d516a8701f684fcd2ab99f3e5b462d/src/main.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.h?ref=05a85b2b38d516a8701f684fcd2ab99f3e5b462d",
+        "patch": "@@ -27,6 +27,7 @@ static const unsigned int MAX_BLOCK_SIZE = 1000000;\n static const unsigned int MAX_BLOCK_SIZE_GEN = MAX_BLOCK_SIZE/2;\n static const unsigned int MAX_BLOCK_SIGOPS = MAX_BLOCK_SIZE/50;\n static const unsigned int MAX_ORPHAN_TRANSACTIONS = MAX_BLOCK_SIZE/100;\n+static const unsigned int MAX_INV_SZ = 50000;\n static const int64 MIN_TX_FEE = 50000;\n static const int64 MIN_RELAY_TX_FEE = 10000;\n static const int64 MAX_MONEY = 21000000 * COIN;"
+      },
+      {
+        "sha": "9d2fa6bbc81783edeeddc21758982f0d4fae0615",
+        "filename": "src/version.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 1,
+        "changes": 5,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/05a85b2b38d516a8701f684fcd2ab99f3e5b462d/src/version.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/05a85b2b38d516a8701f684fcd2ab99f3e5b462d/src/version.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/version.h?ref=05a85b2b38d516a8701f684fcd2ab99f3e5b462d",
+        "patch": "@@ -30,7 +30,7 @@ extern const std::string CLIENT_DATE;\n // network protocol versioning\n //\n \n-static const int PROTOCOL_VERSION = 60001;\n+static const int PROTOCOL_VERSION = 60002;\n \n // earlier versions not supported as of Feb 2012, and are disconnected\n static const int MIN_PROTO_VERSION = 209;\n@@ -46,4 +46,7 @@ static const int NOBLKS_VERSION_END = 32400;\n // BIP 0031, pong message, is enabled for all versions AFTER this one\n static const int BIP0031_VERSION = 60000;\n \n+// \"mempool\" command, enhanced \"getdata\" behavior starts with this version:\n+static const int MEMPOOL_GD_VERSION = 60002;\n+\n #endif"
+      }
+    ]
+  }
+]

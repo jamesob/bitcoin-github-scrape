@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "a1ed2010b79ea3813809d757d6d683b1c7269ab8",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphMWVkMjAxMGI3OWVhMzgxMzgwOWQ3NTdkNmQ2ODNiMWM3MjY5YWI4",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-05-24T16:55:27Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2012-05-24T16:55:27Z"
+      },
+      "message": "mirco-optimize control-flow clauses in net.cpp / add a variable re-use instead of double-calling vNodes.size()",
+      "tree": {
+        "sha": "fa241db1329cb580320f5b5b5fa3b0a1fb1bf931",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/fa241db1329cb580320f5b5b5fa3b0a1fb1bf931"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a1ed2010b79ea3813809d757d6d683b1c7269ab8",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a1ed2010b79ea3813809d757d6d683b1c7269ab8",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a1ed2010b79ea3813809d757d6d683b1c7269ab8",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a1ed2010b79ea3813809d757d6d683b1c7269ab8/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "8e154e4d742530f0836a4e5fedd2b086f51499eb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/8e154e4d742530f0836a4e5fedd2b086f51499eb",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/8e154e4d742530f0836a4e5fedd2b086f51499eb"
+      }
+    ],
+    "stats": {
+      "total": 16,
+      "additions": 8,
+      "deletions": 8
+    },
+    "files": [
+      {
+        "sha": "60f4fac83bcd89faf4cb070c72f1630257af0083",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 8,
+        "changes": 16,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a1ed2010b79ea3813809d757d6d683b1c7269ab8/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a1ed2010b79ea3813809d757d6d683b1c7269ab8/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=a1ed2010b79ea3813809d757d6d683b1c7269ab8",
+        "patch": "@@ -99,7 +99,7 @@ void CNode::PushGetBlocks(CBlockIndex* pindexBegin, uint256 hashEnd)\n // find 'best' local address for a particular peer\n bool GetLocal(CService& addr, const CNetAddr *paddrPeer)\n {\n-    if (fUseProxy || mapArgs.count(\"-connect\") || fNoListen)\n+    if (fUseProxy || fNoListen || mapArgs.count(\"-connect\"))\n         return false;\n \n     int nBestScore = -1;\n@@ -196,7 +196,7 @@ void static AdvertizeLocal()\n         if (pnode->fSuccessfullyConnected)\n         {\n             CAddress addrLocal = GetLocalAddress(&pnode->addr);\n-            if (addrLocal.IsRoutable() && (CService)addrLocal != (CService)pnode->addrLocal)\n+            if ((CService)addrLocal != (CService)pnode->addrLocal && addrLocal.IsRoutable())\n             {\n                 pnode->PushAddress(addrLocal);\n                 pnode->addrLocal = addrLocal;\n@@ -211,7 +211,7 @@ bool AddLocal(const CService& addr, int nScore)\n     if (!addr.IsRoutable())\n         return false;\n \n-    if (!GetBoolArg(\"-discover\", true) && nScore < LOCAL_MANUAL)\n+    if (nScore < LOCAL_MANUAL && !GetBoolArg(\"-discover\", true))\n         return false;\n \n     if (IsLimited(addr))\n@@ -345,7 +345,7 @@ bool GetMyExternalIP(CNetAddr& ipRet)\n     const char* pszGet;\n     const char* pszKeyword;\n \n-    if (fNoListen||fUseProxy)\n+    if (fNoListen || fUseProxy)\n         return false;\n \n     for (int nLookup = 0; nLookup <= 1; nLookup++)\n@@ -705,7 +705,7 @@ void ThreadSocketHandler2(void* parg)\n         if (vNodes.size() != nPrevNodeCount)\n         {\n             nPrevNodeCount = vNodes.size();\n-            uiInterface.NotifyNumConnectionsChanged(vNodes.size());\n+            uiInterface.NotifyNumConnectionsChanged(nPrevNodeCount);\n         }\n \n \n@@ -1395,7 +1395,7 @@ void ThreadOpenConnections2(void* parg)\n \n         // Add seed nodes if IRC isn't working\n         bool fTOR = (fUseProxy && addrProxy.GetPort() == 9050);\n-        if (addrman.size()==0 && (GetTime() - nStart > 60 || fTOR) && !fTestNet)\n+        if (!fTestNet && addrman.size() == 0 && (GetTime() - nStart > 60 || fTOR))\n         {\n             std::vector<CAddress> vAdd;\n             for (unsigned int i = 0; i < ARRAYLEN(pnSeed); i++)\n@@ -1454,7 +1454,7 @@ void ThreadOpenConnections2(void* parg)\n                 continue;\n \n             // do not allow non-default ports, unless after 50 invalid addresses selected already\n-            if (addr.GetPort() != GetDefaultPort() && nTries < 50)\n+            if (nTries < 50 && addr.GetPort() != GetDefaultPort())\n                 continue;\n \n             addrConnect = addr;\n@@ -1835,7 +1835,7 @@ void static Discover()\n     }\n #endif\n \n-    if (!fUseProxy && !mapArgs.count(\"-connect\") && !fNoListen)\n+    if (!fUseProxy && !fNoListen && !mapArgs.count(\"-connect\"))\n     {\n         CreateThread(ThreadGetMyExternalIP, NULL);\n     }"
+      }
+    ]
+  }
+]

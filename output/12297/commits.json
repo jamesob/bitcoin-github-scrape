@@ -1,0 +1,198 @@
+[
+  {
+    "sha": "a9eb90c0d498870425dc4eaae30c1c08e341e216",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphOWViOTBjMGQ0OTg4NzA0MjVkYzRlYWFlMzBjMWMwOGUzNDFlMjE2",
+    "commit": {
+      "author": {
+        "name": "Jo\u00e3o Barbosa",
+        "email": "joao.paulo.barbosa@gmail.com",
+        "date": "2018-01-29T23:27:51Z"
+      },
+      "committer": {
+        "name": "Jo\u00e3o Barbosa",
+        "email": "joao.paulo.barbosa@gmail.com",
+        "date": "2018-02-05T22:55:07Z"
+      },
+      "message": "[wallet] Improve IsAllFromMe for false results",
+      "tree": {
+        "sha": "75e8cfcf6e15f39bbadd42de1ca1a78d1d82ed3a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/75e8cfcf6e15f39bbadd42de1ca1a78d1d82ed3a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a9eb90c0d498870425dc4eaae30c1c08e341e216",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a9eb90c0d498870425dc4eaae30c1c08e341e216",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a9eb90c0d498870425dc4eaae30c1c08e341e216",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a9eb90c0d498870425dc4eaae30c1c08e341e216/comments",
+    "author": {
+      "login": "promag",
+      "id": 3534524,
+      "node_id": "MDQ6VXNlcjM1MzQ1MjQ=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3534524?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/promag",
+      "html_url": "https://github.com/promag",
+      "followers_url": "https://api.github.com/users/promag/followers",
+      "following_url": "https://api.github.com/users/promag/following{/other_user}",
+      "gists_url": "https://api.github.com/users/promag/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/promag/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/promag/subscriptions",
+      "organizations_url": "https://api.github.com/users/promag/orgs",
+      "repos_url": "https://api.github.com/users/promag/repos",
+      "events_url": "https://api.github.com/users/promag/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/promag/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "promag",
+      "id": 3534524,
+      "node_id": "MDQ6VXNlcjM1MzQ1MjQ=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3534524?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/promag",
+      "html_url": "https://github.com/promag",
+      "followers_url": "https://api.github.com/users/promag/followers",
+      "following_url": "https://api.github.com/users/promag/following{/other_user}",
+      "gists_url": "https://api.github.com/users/promag/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/promag/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/promag/subscriptions",
+      "organizations_url": "https://api.github.com/users/promag/orgs",
+      "repos_url": "https://api.github.com/users/promag/repos",
+      "events_url": "https://api.github.com/users/promag/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/promag/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "9d9c4185fadaf243bb97c226e2fef16b65299699",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/9d9c4185fadaf243bb97c226e2fef16b65299699",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/9d9c4185fadaf243bb97c226e2fef16b65299699"
+      }
+    ],
+    "stats": {
+      "total": 31,
+      "additions": 22,
+      "deletions": 9
+    },
+    "files": [
+      {
+        "sha": "d4fcf1b6280e7d0febbdeb97ee560a1074180bd3",
+        "filename": "src/wallet/wallet.cpp",
+        "status": "modified",
+        "additions": 22,
+        "deletions": 9,
+        "changes": 31,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a9eb90c0d498870425dc4eaae30c1c08e341e216/src/wallet/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a9eb90c0d498870425dc4eaae30c1c08e341e216/src/wallet/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.cpp?ref=a9eb90c0d498870425dc4eaae30c1c08e341e216",
+        "patch": "@@ -1403,20 +1403,33 @@ bool CWallet::IsAllFromMe(const CTransaction& tx, const isminefilter& filter) co\n {\n     LOCK(cs_wallet);\n \n-    for (const CTxIn& txin : tx.vin)\n-    {\n+    std::vector<const CTxOut*> outs;\n+    outs.reserve(tx.vin.size());\n+\n+    // The folllwing is a 2 pass algorithm. Both passes can early return if an\n+    // input fails a check. Therefore, the checks in the 2nd pass, which are\n+    // more expensive, are only performed if the 1st pass succeeds.\n+    //  - 1st pass: all inputs are valid and must belong to the wallet.\n+    for (const CTxIn& txin : tx.vin) {\n         auto mi = mapWallet.find(txin.prevout.hash);\n-        if (mi == mapWallet.end())\n-            return false; // any unknown inputs can't be from us\n \n-        const CWalletTx& prev = (*mi).second;\n+        // any unknown inputs can't be from us\n+        if (mi == mapWallet.end()) return false;\n \n-        if (txin.prevout.n >= prev.tx->vout.size())\n-            return false; // invalid input!\n+        const CWalletTx& prev = mi->second;\n+        // check for invalid input\n+        if (txin.prevout.n >= prev.tx->vout.size()) return false;\n \n-        if (!(IsMine(prev.tx->vout[txin.prevout.n]) & filter))\n-            return false;\n+        outs.push_back(&prev.tx->vout[txin.prevout.n]);\n     }\n+\n+    assert(outs.size() == tx.vin.size());\n+\n+    //  - 2nd pass: all inputs match the isminetype filter.\n+    for (const CTxOut* txout : outs) {\n+        if (!(IsMine(*txout) & filter)) return false;\n+    }\n+\n     return true;\n }\n "
+      }
+    ]
+  },
+  {
+    "sha": "6037efd7c5087b1e53f426c0e48595dc073da9d3",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2MDM3ZWZkN2M1MDg3YjFlNTNmNDI2YzBlNDg1OTVkYzA3M2RhOWQz",
+    "commit": {
+      "author": {
+        "name": "Jo\u00e3o Barbosa",
+        "email": "joao.paulo.barbosa@gmail.com",
+        "date": "2018-02-05T22:55:57Z"
+      },
+      "committer": {
+        "name": "Jo\u00e3o Barbosa",
+        "email": "joao.paulo.barbosa@gmail.com",
+        "date": "2018-02-05T22:55:57Z"
+      },
+      "message": "[wallet] Replace lock with assertion in CWallet::IsAllFromMe",
+      "tree": {
+        "sha": "0484a3f2304ccdf00b1ec61592d9d0bf36c6347b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/0484a3f2304ccdf00b1ec61592d9d0bf36c6347b"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/6037efd7c5087b1e53f426c0e48595dc073da9d3",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6037efd7c5087b1e53f426c0e48595dc073da9d3",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/6037efd7c5087b1e53f426c0e48595dc073da9d3",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6037efd7c5087b1e53f426c0e48595dc073da9d3/comments",
+    "author": {
+      "login": "promag",
+      "id": 3534524,
+      "node_id": "MDQ6VXNlcjM1MzQ1MjQ=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3534524?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/promag",
+      "html_url": "https://github.com/promag",
+      "followers_url": "https://api.github.com/users/promag/followers",
+      "following_url": "https://api.github.com/users/promag/following{/other_user}",
+      "gists_url": "https://api.github.com/users/promag/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/promag/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/promag/subscriptions",
+      "organizations_url": "https://api.github.com/users/promag/orgs",
+      "repos_url": "https://api.github.com/users/promag/repos",
+      "events_url": "https://api.github.com/users/promag/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/promag/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "promag",
+      "id": 3534524,
+      "node_id": "MDQ6VXNlcjM1MzQ1MjQ=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3534524?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/promag",
+      "html_url": "https://github.com/promag",
+      "followers_url": "https://api.github.com/users/promag/followers",
+      "following_url": "https://api.github.com/users/promag/following{/other_user}",
+      "gists_url": "https://api.github.com/users/promag/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/promag/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/promag/subscriptions",
+      "organizations_url": "https://api.github.com/users/promag/orgs",
+      "repos_url": "https://api.github.com/users/promag/repos",
+      "events_url": "https://api.github.com/users/promag/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/promag/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "a9eb90c0d498870425dc4eaae30c1c08e341e216",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a9eb90c0d498870425dc4eaae30c1c08e341e216",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/a9eb90c0d498870425dc4eaae30c1c08e341e216"
+      }
+    ],
+    "stats": {
+      "total": 2,
+      "additions": 1,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "af18305f084eb182392d5176064b35656f296eef",
+        "filename": "src/wallet/wallet.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/6037efd7c5087b1e53f426c0e48595dc073da9d3/src/wallet/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/6037efd7c5087b1e53f426c0e48595dc073da9d3/src/wallet/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/wallet.cpp?ref=6037efd7c5087b1e53f426c0e48595dc073da9d3",
+        "patch": "@@ -1401,7 +1401,7 @@ CAmount CWallet::GetDebit(const CTransaction& tx, const isminefilter& filter) co\n \n bool CWallet::IsAllFromMe(const CTransaction& tx, const isminefilter& filter) const\n {\n-    LOCK(cs_wallet);\n+    AssertLockHeld(cs_wallet);\n \n     std::vector<const CTxOut*> outs;\n     outs.reserve(tx.vin.size());"
+      }
+    ]
+  }
+]

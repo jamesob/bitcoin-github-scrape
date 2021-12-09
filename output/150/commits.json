@@ -1,0 +1,81 @@
+[
+  {
+    "sha": "d9068ad5a175a6ea22d48df35331c155a1e2f99b",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkOTA2OGFkNWExNzVhNmVhMjJkNDhkZjM1MzMxYzE1NWExZTJmOTli",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jeff@garzik.org",
+        "date": "2011-05-09T18:35:30Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@pobox.com",
+        "date": "2011-05-09T18:35:30Z"
+      },
+      "message": "Add settxfee RPC, to permit setting default TX fee at runtime.",
+      "tree": {
+        "sha": "b9050012288a331f4de982667305ff85bb2ab28a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/b9050012288a331f4de982667305ff85bb2ab28a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/d9068ad5a175a6ea22d48df35331c155a1e2f99b",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d9068ad5a175a6ea22d48df35331c155a1e2f99b",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/d9068ad5a175a6ea22d48df35331c155a1e2f99b",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d9068ad5a175a6ea22d48df35331c155a1e2f99b/comments",
+    "author": null,
+    "committer": {
+      "login": "jgarzik",
+      "id": 494411,
+      "node_id": "MDQ6VXNlcjQ5NDQxMQ==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/494411?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/jgarzik",
+      "html_url": "https://github.com/jgarzik",
+      "followers_url": "https://api.github.com/users/jgarzik/followers",
+      "following_url": "https://api.github.com/users/jgarzik/following{/other_user}",
+      "gists_url": "https://api.github.com/users/jgarzik/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/jgarzik/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/jgarzik/subscriptions",
+      "organizations_url": "https://api.github.com/users/jgarzik/orgs",
+      "repos_url": "https://api.github.com/users/jgarzik/repos",
+      "events_url": "https://api.github.com/users/jgarzik/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/jgarzik/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "e8adcf88cd36340cabef6e82dc18e712714f5081",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e8adcf88cd36340cabef6e82dc18e712714f5081",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/e8adcf88cd36340cabef6e82dc18e712714f5081"
+      }
+    ],
+    "stats": {
+      "total": 18,
+      "additions": 18,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "8af659e2ac7a6c2e811b3969744d0e37a7e1fc25",
+        "filename": "src/rpc.cpp",
+        "status": "modified",
+        "additions": 18,
+        "deletions": 0,
+        "changes": 18,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d9068ad5a175a6ea22d48df35331c155a1e2f99b/src/rpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d9068ad5a175a6ea22d48df35331c155a1e2f99b/src/rpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc.cpp?ref=d9068ad5a175a6ea22d48df35331c155a1e2f99b",
+        "patch": "@@ -465,6 +465,22 @@ Value getaddressesbyaccount(const Array& params, bool fHelp)\n     return ret;\n }\n \n+Value settxfee(const Array& params, bool fHelp)\n+{\n+    if (fHelp || params.size() < 1 || params.size() > 1)\n+        throw runtime_error(\n+            \"settxfee <amount>\\n\"\n+            \"<amount> is a real and is rounded to the nearest 0.00000001\");\n+\n+    // Amount\n+    int64 nAmount = 0;\n+    if (params[0].get_real() != 0.0)\n+        nAmount = AmountFromValue(params[0]);        // rejects 0.0 amounts\n+\n+    nTransactionFee = nAmount;\n+    return true;\n+}\n+\n Value sendtoaddress(const Array& params, bool fHelp)\n {\n     if (fHelp || params.size() < 2 || params.size() > 4)\n@@ -1441,6 +1457,7 @@ pair<string, rpcfn_type> pCallTable[] =\n     make_pair(\"listtransactions\",      &listtransactions),\n     make_pair(\"getwork\",               &getwork),\n     make_pair(\"listaccounts\",          &listaccounts),\n+    make_pair(\"settxfee\",              &settxfee),\n };\n map<string, rpcfn_type> mapCallTable(pCallTable, pCallTable + sizeof(pCallTable)/sizeof(pCallTable[0]));\n \n@@ -2074,6 +2091,7 @@ int CommandLineRPC(int argc, char *argv[])\n         if (strMethod == \"setgenerate\"            && n > 0) ConvertTo<bool>(params[0]);\n         if (strMethod == \"setgenerate\"            && n > 1) ConvertTo<boost::int64_t>(params[1]);\n         if (strMethod == \"sendtoaddress\"          && n > 1) ConvertTo<double>(params[1]);\n+        if (strMethod == \"settxfee\"               && n > 0) ConvertTo<double>(params[0]);\n         if (strMethod == \"getamountreceived\"      && n > 1) ConvertTo<boost::int64_t>(params[1]); // deprecated\n         if (strMethod == \"getreceivedbyaddress\"   && n > 1) ConvertTo<boost::int64_t>(params[1]);\n         if (strMethod == \"getreceivedbyaccount\"   && n > 1) ConvertTo<boost::int64_t>(params[1]);"
+      }
+    ]
+  }
+]

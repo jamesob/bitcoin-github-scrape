@@ -1,0 +1,110 @@
+[
+  {
+    "sha": "518f3bdae3415fdb60cef984b69b36f2633c1fe1",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1MThmM2JkYWUzNDE1ZmRiNjBjZWY5ODRiNjliMzZmMjYzM2MxZmUx",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-02-14T16:33:07Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@bitpay.com",
+        "date": "2014-02-14T16:33:07Z"
+      },
+      "message": "Add -zapwallettxes cli/config option, used for wallet recovery\n\nThis diagnostic tool removes all \"tx\" records from the wallet db,\nthen forces a full rescan, to rebuild \"tx\" records accurately.",
+      "tree": {
+        "sha": "98022a0e8b5a3c2b5ab50fbb6089a8d2e29c0967",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/98022a0e8b5a3c2b5ab50fbb6089a8d2e29c0967"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/518f3bdae3415fdb60cef984b69b36f2633c1fe1",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/518f3bdae3415fdb60cef984b69b36f2633c1fe1",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/518f3bdae3415fdb60cef984b69b36f2633c1fe1",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/518f3bdae3415fdb60cef984b69b36f2633c1fe1/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "6056c87d25994bbceb23d6ae50df1276a51d51bd",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/6056c87d25994bbceb23d6ae50df1276a51d51bd",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/6056c87d25994bbceb23d6ae50df1276a51d51bd"
+      }
+    ],
+    "stats": {
+      "total": 128,
+      "additions": 128,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "2bfa8810c8341fe99cb96a0853e5a73c33940db2",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 21,
+        "deletions": 0,
+        "changes": 21,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/518f3bdae3415fdb60cef984b69b36f2633c1fe1/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/518f3bdae3415fdb60cef984b69b36f2633c1fe1/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=518f3bdae3415fdb60cef984b69b36f2633c1fe1",
+        "patch": "@@ -270,6 +270,7 @@ std::string HelpMessage(HelpMessageMode hmm)\n     strUsage += \"  -disablewallet         \" + _(\"Do not load the wallet and disable wallet RPC calls\") + \"\\n\";\n     strUsage += \"  -paytxfee=<amt>        \" + _(\"Fee per kB to add to transactions you send\") + \"\\n\";\n     strUsage += \"  -rescan                \" + _(\"Rescan the block chain for missing wallet transactions\") + \"\\n\";\n+    strUsage += \"  -zapwallettxes         \" + _(\"Clear list of wallet transactions (diagnostic tool; implies -rescan)\") + \"\\n\";\n     strUsage += \"  -salvagewallet         \" + _(\"Attempt to recover private keys from a corrupt wallet.dat\") + \"\\n\";\n     strUsage += \"  -upgradewallet         \" + _(\"Upgrade wallet to latest format\") + \"\\n\";\n     strUsage += \"  -wallet=<file>         \" + _(\"Specify wallet file (within data directory)\") + \"\\n\";\n@@ -454,6 +455,12 @@ bool AppInit2(boost::thread_group& threadGroup)\n             LogPrintf(\"AppInit2 : parameter interaction: -salvagewallet=1 -> setting -rescan=1\\n\");\n     }\n \n+    // -zapwallettx implies a rescan\n+    if (GetBoolArg(\"-zapwallettxes\", false)) {\n+        if (SoftSetBoolArg(\"-rescan\", true))\n+            LogPrintf(\"AppInit2 : parameter interaction: -zapwallettxes=1 -> setting -rescan=1\\n\");\n+    }\n+\n     // Make sure enough file descriptors are available\n     int nBind = std::max((int)mapArgs.count(\"-bind\"), 1);\n     nMaxConnections = GetArg(\"-maxconnections\", 125);\n@@ -899,6 +906,20 @@ bool AppInit2(boost::thread_group& threadGroup)\n         pwalletMain = NULL;\n         LogPrintf(\"Wallet disabled!\\n\");\n     } else {\n+        if (GetBoolArg(\"-zapwallettxes\", false)) {\n+            uiInterface.InitMessage(_(\"Zapping all transactions from wallet...\"));\n+\n+            pwalletMain = new CWallet(strWalletFile);\n+            DBErrors nZapWalletRet = pwalletMain->ZapWalletTx();\n+            if (nZapWalletRet != DB_LOAD_OK) {\n+                uiInterface.InitMessage(_(\"Error loading wallet.dat: Wallet corrupted\"));\n+                return false;\n+            }\n+\n+            delete pwalletMain;\n+            pwalletMain = NULL;\n+        }\n+\n         uiInterface.InitMessage(_(\"Loading wallet...\"));\n \n         nStart = GetTimeMillis();"
+      },
+      {
+        "sha": "1ba70c1160be5d93f896cc0d3afc3967454d2b46",
+        "filename": "src/wallet.cpp",
+        "status": "modified",
+        "additions": 24,
+        "deletions": 0,
+        "changes": 24,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/518f3bdae3415fdb60cef984b69b36f2633c1fe1/src/wallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/518f3bdae3415fdb60cef984b69b36f2633c1fe1/src/wallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.cpp?ref=518f3bdae3415fdb60cef984b69b36f2633c1fe1",
+        "patch": "@@ -1497,6 +1497,30 @@ DBErrors CWallet::LoadWallet(bool& fFirstRunRet)\n }\n \n \n+DBErrors CWallet::ZapWalletTx()\n+{\n+    if (!fFileBacked)\n+        return DB_LOAD_OK;\n+    DBErrors nZapWalletTxRet = CWalletDB(strWalletFile,\"cr+\").ZapWalletTx(this);\n+    if (nZapWalletTxRet == DB_NEED_REWRITE)\n+    {\n+        if (CDB::Rewrite(strWalletFile, \"\\x04pool\"))\n+        {\n+            LOCK(cs_wallet);\n+            setKeyPool.clear();\n+            // Note: can't top-up keypool here, because wallet is locked.\n+            // User will be prompted to unlock wallet the next operation\n+            // the requires a new key.\n+        }\n+    }\n+\n+    if (nZapWalletTxRet != DB_LOAD_OK)\n+        return nZapWalletTxRet;\n+\n+    return DB_LOAD_OK;\n+}\n+\n+\n bool CWallet::SetAddressBook(const CTxDestination& address, const string& strName, const string& strPurpose)\n {\n     AssertLockHeld(cs_wallet); // mapAddressBook"
+      },
+      {
+        "sha": "a8f1a81b3cb001be9284b0efcd0edc3061d13b45",
+        "filename": "src/wallet.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/518f3bdae3415fdb60cef984b69b36f2633c1fe1/src/wallet.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/518f3bdae3415fdb60cef984b69b36f2633c1fe1/src/wallet.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet.h?ref=518f3bdae3415fdb60cef984b69b36f2633c1fe1",
+        "patch": "@@ -323,6 +323,7 @@ class CWallet : public CCryptoKeyStore, public CWalletInterface\n     void SetBestChain(const CBlockLocator& loc);\n \n     DBErrors LoadWallet(bool& fFirstRunRet);\n+    DBErrors ZapWalletTx();\n \n     bool SetAddressBook(const CTxDestination& address, const std::string& strName, const std::string& purpose);\n "
+      },
+      {
+        "sha": "b3cc9a235028a893b7920a6461b799fcd36f5c5e",
+        "filename": "src/walletdb.cpp",
+        "status": "modified",
+        "additions": 80,
+        "deletions": 0,
+        "changes": 80,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/518f3bdae3415fdb60cef984b69b36f2633c1fe1/src/walletdb.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/518f3bdae3415fdb60cef984b69b36f2633c1fe1/src/walletdb.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/walletdb.cpp?ref=518f3bdae3415fdb60cef984b69b36f2633c1fe1",
+        "patch": "@@ -684,6 +684,86 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)\n     return result;\n }\n \n+DBErrors CWalletDB::FindWalletTx(CWallet* pwallet, vector<uint256>& vTxHash)\n+{\n+    pwallet->vchDefaultKey = CPubKey();\n+    CWalletScanState wss;\n+    bool fNoncriticalErrors = false;\n+    DBErrors result = DB_LOAD_OK;\n+\n+    try {\n+        LOCK(pwallet->cs_wallet);\n+        int nMinVersion = 0;\n+        if (Read((string)\"minversion\", nMinVersion))\n+        {\n+            if (nMinVersion > CLIENT_VERSION)\n+                return DB_TOO_NEW;\n+            pwallet->LoadMinVersion(nMinVersion);\n+        }\n+\n+        // Get cursor\n+        Dbc* pcursor = GetCursor();\n+        if (!pcursor)\n+        {\n+            LogPrintf(\"Error getting wallet database cursor\\n\");\n+            return DB_CORRUPT;\n+        }\n+\n+        while (true)\n+        {\n+            // Read next record\n+            CDataStream ssKey(SER_DISK, CLIENT_VERSION);\n+            CDataStream ssValue(SER_DISK, CLIENT_VERSION);\n+            int ret = ReadAtCursor(pcursor, ssKey, ssValue);\n+            if (ret == DB_NOTFOUND)\n+                break;\n+            else if (ret != 0)\n+            {\n+                LogPrintf(\"Error reading next record from wallet database\\n\");\n+                return DB_CORRUPT;\n+            }\n+\n+            string strType;\n+            ssKey >> strType;\n+            if (strType == \"tx\") {\n+                uint256 hash;\n+                ssKey >> hash;\n+\n+                vTxHash.push_back(hash);\n+            }\n+        }\n+        pcursor->close();\n+    }\n+    catch (boost::thread_interrupted) {\n+        throw;\n+    }\n+    catch (...) {\n+        result = DB_CORRUPT;\n+    }\n+\n+    if (fNoncriticalErrors && result == DB_LOAD_OK)\n+        result = DB_NONCRITICAL_ERROR;\n+\n+    return result;\n+}\n+\n+DBErrors CWalletDB::ZapWalletTx(CWallet* pwallet)\n+{\n+    // build list of wallet TXs\n+    vector<uint256> vTxHash;\n+    DBErrors err = FindWalletTx(pwallet, vTxHash);\n+    if (err != DB_LOAD_OK)\n+        return err;\n+\n+    // erase each wallet TX\n+    BOOST_FOREACH (uint256& hash, vTxHash) {\n+        if (!EraseTx(hash))\n+            return DB_CORRUPT;\n+    }\n+\n+    return DB_LOAD_OK;\n+}\n+\n void ThreadFlushWalletDB(const string& strFile)\n {\n     // Make this thread recognisable as the wallet flushing thread"
+      },
+      {
+        "sha": "3bfb436050476266bcd8edc04ace664568703fe4",
+        "filename": "src/walletdb.h",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/518f3bdae3415fdb60cef984b69b36f2633c1fe1/src/walletdb.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/518f3bdae3415fdb60cef984b69b36f2633c1fe1/src/walletdb.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/walletdb.h?ref=518f3bdae3415fdb60cef984b69b36f2633c1fe1",
+        "patch": "@@ -122,6 +122,8 @@ class CWalletDB : public CDB\n \n     DBErrors ReorderTransactions(CWallet*);\n     DBErrors LoadWallet(CWallet* pwallet);\n+    DBErrors FindWalletTx(CWallet* pwallet, std::vector<uint256>& vTxHash);\n+    DBErrors ZapWalletTx(CWallet* pwallet);\n     static bool Recover(CDBEnv& dbenv, std::string filename, bool fOnlyKeys);\n     static bool Recover(CDBEnv& dbenv, std::string filename);\n };"
+      }
+    ]
+  }
+]

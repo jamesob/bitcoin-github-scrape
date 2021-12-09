@@ -1,0 +1,314 @@
+[
+  {
+    "sha": "e93c2eb78f36a2f9718220e80a7e1d7a8bd685fb",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzplOTNjMmViNzhmMzZhMmY5NzE4MjIwZTgwYTdlMWQ3YThiZDY4NWZi",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2015-09-22T11:58:28Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2015-09-24T14:57:59Z"
+      },
+      "message": "[Qt] rework signal handling when banning/unbanning nodes\n\n- remove the need for manually calling BanTableModel::refresh() in the GUI\n  code by using BannedListChanged signal in DumpBanlist()",
+      "tree": {
+        "sha": "991fe535f4b0a363945ebef135ad11a40d94af94",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/991fe535f4b0a363945ebef135ad11a40d94af94"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/e93c2eb78f36a2f9718220e80a7e1d7a8bd685fb",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e93c2eb78f36a2f9718220e80a7e1d7a8bd685fb",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/e93c2eb78f36a2f9718220e80a7e1d7a8bd685fb",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e93c2eb78f36a2f9718220e80a7e1d7a8bd685fb/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "ef4945f2218789d521da81fa9348a85eaef24b6f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ef4945f2218789d521da81fa9348a85eaef24b6f",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/ef4945f2218789d521da81fa9348a85eaef24b6f"
+      }
+    ],
+    "stats": {
+      "total": 14,
+      "additions": 7,
+      "deletions": 7
+    },
+    "files": [
+      {
+        "sha": "67bcebea0aebcb161bcbe4aed20b178da01f77d9",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 2,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e93c2eb78f36a2f9718220e80a7e1d7a8bd685fb/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e93c2eb78f36a2f9718220e80a7e1d7a8bd685fb/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=e93c2eb78f36a2f9718220e80a7e1d7a8bd685fb",
+        "patch": "@@ -2470,14 +2470,14 @@ bool CBanDB::Read(banmap_t& banSet)\n         // ... verify the network matches ours\n         if (memcmp(pchMsgTmp, Params().MessageStart(), sizeof(pchMsgTmp)))\n             return error(\"%s: Invalid network magic number\", __func__);\n-        \n+\n         // de-serialize address data into one CAddrMan object\n         ssBanlist >> banSet;\n     }\n     catch (const std::exception& e) {\n         return error(\"%s: Deserialize or I/O error - %s\", __func__, e.what());\n     }\n-    \n+\n     return true;\n }\n \n@@ -2492,6 +2492,9 @@ void DumpBanlist()\n     CNode::GetBanned(banmap);\n     bandb.Write(banmap);\n \n+    // Notify UI about changed banlist\n+    uiInterface.BannedListChanged();\n+\n     LogPrint(\"net\", \"Flushed %d banned node ips/subnets to banlist.dat  %dms\\n\",\n              banmap.size(), GetTimeMillis() - nStart);\n }"
+      },
+      {
+        "sha": "41cd519214f4c082a4a625c86a272385c33cd26b",
+        "filename": "src/qt/rpcconsole.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 5,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/e93c2eb78f36a2f9718220e80a7e1d7a8bd685fb/src/qt/rpcconsole.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/e93c2eb78f36a2f9718220e80a7e1d7a8bd685fb/src/qt/rpcconsole.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/rpcconsole.cpp?ref=e93c2eb78f36a2f9718220e80a7e1d7a8bd685fb",
+        "patch": "@@ -809,10 +809,8 @@ void RPCConsole::banSelectedNode(int bantime)\n \n         CNode::Ban(CNetAddr(addr), BanReasonManuallyAdded, bantime);\n         bannedNode->fDisconnect = true;\n-        DumpBanlist();\n-\n         clearSelectedNode();\n-        clientModel->getBanTableModel()->refresh();\n+        DumpBanlist(); // store banlist to disk\n     }\n }\n \n@@ -828,8 +826,7 @@ void RPCConsole::unbanSelectedNode()\n     if (possibleSubnet.IsValid())\n     {\n         CNode::Unban(possibleSubnet);\n-        DumpBanlist();\n-        clientModel->getBanTableModel()->refresh();\n+        DumpBanlist(); // store banlist to disk\n     }\n }\n "
+      }
+    ]
+  },
+  {
+    "sha": "38d92ea790a88813b1dea8406c0a07be089d2788",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozOGQ5MmVhNzkwYTg4ODEzYjFkZWE4NDA2YzBhMDdiZTA4OWQyNzg4",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2015-09-22T12:05:45Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2015-09-24T14:58:00Z"
+      },
+      "message": "[Qt] remove dup include of bantablemodel.h from rpcconsole.cpp",
+      "tree": {
+        "sha": "64461c4340d8545b82ce980975944642c4324474",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/64461c4340d8545b82ce980975944642c4324474"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/38d92ea790a88813b1dea8406c0a07be089d2788",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/38d92ea790a88813b1dea8406c0a07be089d2788",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/38d92ea790a88813b1dea8406c0a07be089d2788",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/38d92ea790a88813b1dea8406c0a07be089d2788/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "e93c2eb78f36a2f9718220e80a7e1d7a8bd685fb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/e93c2eb78f36a2f9718220e80a7e1d7a8bd685fb",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/e93c2eb78f36a2f9718220e80a7e1d7a8bd685fb"
+      }
+    ],
+    "stats": {
+      "total": 1,
+      "additions": 0,
+      "deletions": 1
+    },
+    "files": [
+      {
+        "sha": "b7ac86f74e8cc248eb77ec072ad10b92a1b705ba",
+        "filename": "src/qt/rpcconsole.cpp",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 1,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/38d92ea790a88813b1dea8406c0a07be089d2788/src/qt/rpcconsole.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/38d92ea790a88813b1dea8406c0a07be089d2788/src/qt/rpcconsole.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/rpcconsole.cpp?ref=38d92ea790a88813b1dea8406c0a07be089d2788",
+        "patch": "@@ -9,7 +9,6 @@\n #include \"clientmodel.h\"\n #include \"guiutil.h\"\n #include \"platformstyle.h\"\n-#include \"bantablemodel.h\"\n \n #include \"chainparams.h\"\n #include \"rpcserver.h\""
+      }
+    ]
+  },
+  {
+    "sha": "09165d3b78c2deb5a92f6c07c4f25621e0260a3f",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowOTE2NWQzYjc4YzJkZWI1YTkyZjZjMDdjNGYyNTYyMWUwMjYwYTNm",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2015-09-22T12:07:12Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2015-09-24T14:58:01Z"
+      },
+      "message": "[Qt] remove shortcuts for context menu while banning/unbanning nodes\n\n- this is not used anywhere else in our code and also doesn't work at all",
+      "tree": {
+        "sha": "611f1d482d43780dd097e167b033b42eb7ab9417",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/611f1d482d43780dd097e167b033b42eb7ab9417"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/09165d3b78c2deb5a92f6c07c4f25621e0260a3f",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/09165d3b78c2deb5a92f6c07c4f25621e0260a3f",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/09165d3b78c2deb5a92f6c07c4f25621e0260a3f",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/09165d3b78c2deb5a92f6c07c4f25621e0260a3f/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "38d92ea790a88813b1dea8406c0a07be089d2788",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/38d92ea790a88813b1dea8406c0a07be089d2788",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/38d92ea790a88813b1dea8406c0a07be089d2788"
+      }
+    ],
+    "stats": {
+      "total": 8,
+      "additions": 4,
+      "deletions": 4
+    },
+    "files": [
+      {
+        "sha": "c7aab6263c80c4ded4039241569369909729e260",
+        "filename": "src/qt/rpcconsole.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 4,
+        "changes": 8,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/09165d3b78c2deb5a92f6c07c4f25621e0260a3f/src/qt/rpcconsole.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/09165d3b78c2deb5a92f6c07c4f25621e0260a3f/src/qt/rpcconsole.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/rpcconsole.cpp?ref=09165d3b78c2deb5a92f6c07c4f25621e0260a3f",
+        "patch": "@@ -356,10 +356,10 @@ void RPCConsole::setClientModel(ClientModel *model)\n \n         // create peer table context menu actions\n         QAction* disconnectAction = new QAction(tr(\"&Disconnect Node\"), this);\n-        QAction* banAction1h      = new QAction(tr(\"Ban Node for\") + \" \" + tr(\"1 &hour\"), this);\n-        QAction* banAction24h     = new QAction(tr(\"Ban Node for\") + \" \" + tr(\"1 &day\"), this);\n-        QAction* banAction7d      = new QAction(tr(\"Ban Node for\") + \" \" + tr(\"1 &week\"), this);\n-        QAction* banAction365d    = new QAction(tr(\"Ban Node for\") + \" \" + tr(\"1 &year\"), this);\n+        QAction* banAction1h      = new QAction(tr(\"Ban Node for\") + \" \" + tr(\"1 hour\"), this);\n+        QAction* banAction24h     = new QAction(tr(\"Ban Node for\") + \" \" + tr(\"1 day\"), this);\n+        QAction* banAction7d      = new QAction(tr(\"Ban Node for\") + \" \" + tr(\"1 week\"), this);\n+        QAction* banAction365d    = new QAction(tr(\"Ban Node for\") + \" \" + tr(\"1 year\"), this);\n \n         // create peer table context menu\n         peersTableContextMenu = new QMenu();"
+      }
+    ]
+  },
+  {
+    "sha": "575016dbd2da48935ca481be70c1750ea178aaf2",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1NzUwMTZkYmQyZGE0ODkzNWNhNDgxYmU3MGMxNzUwZWExNzhhYWYy",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2015-09-22T12:08:31Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2015-09-24T14:58:02Z"
+      },
+      "message": "[Qt, Trivial] remove unneeded/unused tags from rpcconsole.ui",
+      "tree": {
+        "sha": "0598f0d18b282bb0a738882cf8cfbc54f1c48e2f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/0598f0d18b282bb0a738882cf8cfbc54f1c48e2f"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/575016dbd2da48935ca481be70c1750ea178aaf2",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/575016dbd2da48935ca481be70c1750ea178aaf2",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/575016dbd2da48935ca481be70c1750ea178aaf2",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/575016dbd2da48935ca481be70c1750ea178aaf2/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "09165d3b78c2deb5a92f6c07c4f25621e0260a3f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/09165d3b78c2deb5a92f6c07c4f25621e0260a3f",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/09165d3b78c2deb5a92f6c07c4f25621e0260a3f"
+      }
+    ],
+    "stats": {
+      "total": 15,
+      "additions": 0,
+      "deletions": 15
+    },
+    "files": [
+      {
+        "sha": "82bb376bd1af393c36c67ab0e20c9bc54e844826",
+        "filename": "src/qt/forms/debugwindow.ui",
+        "status": "modified",
+        "additions": 0,
+        "deletions": 15,
+        "changes": 15,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/575016dbd2da48935ca481be70c1750ea178aaf2/src/qt/forms/debugwindow.ui",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/575016dbd2da48935ca481be70c1750ea178aaf2/src/qt/forms/debugwindow.ui",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/forms/debugwindow.ui?ref=575016dbd2da48935ca481be70c1750ea178aaf2",
+        "patch": "@@ -755,31 +755,16 @@\n              <pointsize>12</pointsize>\n             </font>\n            </property>\n-           <property name=\"cursor\">\n-            <cursorShape>IBeamCursor</cursorShape>\n-           </property>\n            <property name=\"text\">\n             <string>Banned peers</string>\n            </property>\n            <property name=\"alignment\">\n             <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>\n            </property>\n-           <property name=\"wordWrap\">\n-            <bool>true</bool>\n-           </property>\n-           <property name=\"textInteractionFlags\">\n-            <set>Qt::NoTextInteraction</set>\n-           </property>\n           </widget>\n          </item>\n          <item>\n           <widget class=\"QTableView\" name=\"banlistWidget\">\n-           <property name=\"sizePolicy\">\n-            <sizepolicy hsizetype=\"Expanding\" vsizetype=\"Expanding\">\n-             <horstretch>0</horstretch>\n-             <verstretch>0</verstretch>\n-            </sizepolicy>\n-           </property>\n            <property name=\"horizontalScrollBarPolicy\">\n             <enum>Qt::ScrollBarAsNeeded</enum>\n            </property>"
+      }
+    ]
+  },
+  {
+    "sha": "3b6d8edb5fa47ab0aff95915e9c7b183149b3593",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozYjZkOGVkYjVmYTQ3YWIwYWZmOTU5MTVlOWM3YjE4MzE0OWIzNTkz",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2015-09-22T12:16:04Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2015-09-24T14:58:03Z"
+      },
+      "message": "[Qt] make use of Q_FOREACH in bantablemodel.cpp\n\n- allows an easy replacement when switching to C++11 and also matches code\n  in peertablemodel.cpp",
+      "tree": {
+        "sha": "7ce3be5cbd153393081fa693845489a330872873",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/7ce3be5cbd153393081fa693845489a330872873"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/3b6d8edb5fa47ab0aff95915e9c7b183149b3593",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3b6d8edb5fa47ab0aff95915e9c7b183149b3593",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/3b6d8edb5fa47ab0aff95915e9c7b183149b3593",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3b6d8edb5fa47ab0aff95915e9c7b183149b3593/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "575016dbd2da48935ca481be70c1750ea178aaf2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/575016dbd2da48935ca481be70c1750ea178aaf2",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/575016dbd2da48935ca481be70c1750ea178aaf2"
+      }
+    ],
+    "stats": {
+      "total": 7,
+      "additions": 4,
+      "deletions": 3
+    },
+    "files": [
+      {
+        "sha": "22aca516ac2458f82a700ac778600a1f4bfcb3b7",
+        "filename": "src/qt/bantablemodel.cpp",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 3,
+        "changes": 7,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/3b6d8edb5fa47ab0aff95915e9c7b183149b3593/src/qt/bantablemodel.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/3b6d8edb5fa47ab0aff95915e9c7b183149b3593/src/qt/bantablemodel.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/qt/bantablemodel.cpp?ref=3b6d8edb5fa47ab0aff95915e9c7b183149b3593",
+        "patch": "@@ -10,6 +10,7 @@\n \n #include \"sync.h\"\n #include \"utiltime.h\"\n+#include \"utilstrencodings.h\"\n \n #include <QDebug>\n #include <QList>\n@@ -54,11 +55,11 @@ class BanTablePriv\n #if QT_VERSION >= 0x040700\n         cachedBanlist.reserve(banMap.size());\n #endif\n-        for (banmap_t::iterator it = banMap.begin(); it != banMap.end(); it++)\n+        Q_FOREACH (const PAIRTYPE(CSubNet, CBanEntry)& banentry, banMap)\n         {\n             CCombinedBan banEntry;\n-            banEntry.subnet = (*it).first;\n-            banEntry.banEntry = (*it).second;\n+            banEntry.subnet = banentry.first;\n+            banEntry.banEntry = banentry.second;\n             cachedBanlist.append(banEntry);\n         }\n "
+      }
+    ]
+  }
+]

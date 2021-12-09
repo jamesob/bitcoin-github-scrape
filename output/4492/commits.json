@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "5e00df5d0c36d2943ffd8f0e0536d980b384d01d",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo1ZTAwZGY1ZDBjMzZkMjk0M2ZmZDhmMGUwNTM2ZDk4MGIzODRkMDFk",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-07-09T09:03:03Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-07-09T09:03:03Z"
+      },
+      "message": "fix a lock indentation in main",
+      "tree": {
+        "sha": "b959ceee73cf112259e4cf831308cf54ce62af66",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/b959ceee73cf112259e4cf831308cf54ce62af66"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/5e00df5d0c36d2943ffd8f0e0536d980b384d01d",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5e00df5d0c36d2943ffd8f0e0536d980b384d01d",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/5e00df5d0c36d2943ffd8f0e0536d980b384d01d",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/5e00df5d0c36d2943ffd8f0e0536d980b384d01d/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "2ee918d1214d0027285bb7558c237888d6ee175b",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/2ee918d1214d0027285bb7558c237888d6ee175b",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/2ee918d1214d0027285bb7558c237888d6ee175b"
+      }
+    ],
+    "stats": {
+      "total": 121,
+      "additions": 60,
+      "deletions": 61
+    },
+    "files": [
+      {
+        "sha": "8301fd233a82126b3554b18a43ff335c2fdf02e5",
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "additions": 60,
+        "deletions": 61,
+        "changes": 121,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/5e00df5d0c36d2943ffd8f0e0536d980b384d01d/src/main.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/5e00df5d0c36d2943ffd8f0e0536d980b384d01d/src/main.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/main.cpp?ref=5e00df5d0c36d2943ffd8f0e0536d980b384d01d",
+        "patch": "@@ -2640,75 +2640,74 @@ bool ProcessBlock(CValidationState &state, CNode* pfrom, CBlock* pblock, CDiskBl\n     uint256 hash = pblock->GetHash();\n \n     {\n-    LOCK(cs_main);\n-    if (mapBlockIndex.count(hash))\n-        return state.Invalid(error(\"ProcessBlock() : already have block %d %s\", mapBlockIndex[hash]->nHeight, hash.ToString()), 0, \"duplicate\");\n-    if (mapOrphanBlocks.count(hash))\n-        return state.Invalid(error(\"ProcessBlock() : already have block (orphan) %s\", hash.ToString()), 0, \"duplicate\");\n-\n-    // Preliminary checks\n-    if (!CheckBlock(*pblock, state))\n-        return error(\"ProcessBlock() : CheckBlock FAILED\");\n-\n-    // If we don't already have its previous block (with full data), shunt it off to holding area until we get it\n-    std::map<uint256, CBlockIndex*>::iterator it = mapBlockIndex.find(pblock->hashPrevBlock);\n-    if (pblock->hashPrevBlock != 0 && (it == mapBlockIndex.end() || !(it->second->nStatus & BLOCK_HAVE_DATA)))\n-    {\n-        LogPrintf(\"ProcessBlock: ORPHAN BLOCK %lu, prev=%s\\n\", (unsigned long)mapOrphanBlocks.size(), pblock->hashPrevBlock.ToString());\n+        LOCK(cs_main);\n+        if (mapBlockIndex.count(hash))\n+            return state.Invalid(error(\"ProcessBlock() : already have block %d %s\", mapBlockIndex[hash]->nHeight, hash.ToString()), 0, \"duplicate\");\n+        if (mapOrphanBlocks.count(hash))\n+            return state.Invalid(error(\"ProcessBlock() : already have block (orphan) %s\", hash.ToString()), 0, \"duplicate\");\n+\n+        // Preliminary checks\n+        if (!CheckBlock(*pblock, state))\n+            return error(\"ProcessBlock() : CheckBlock FAILED\");\n+\n+        // If we don't already have its previous block (with full data), shunt it off to holding area until we get it\n+        std::map<uint256, CBlockIndex*>::iterator it = mapBlockIndex.find(pblock->hashPrevBlock);\n+        if (pblock->hashPrevBlock != 0 && (it == mapBlockIndex.end() || !(it->second->nStatus & BLOCK_HAVE_DATA)))\n+        {\n+            LogPrintf(\"ProcessBlock: ORPHAN BLOCK %lu, prev=%s\\n\", (unsigned long)mapOrphanBlocks.size(), pblock->hashPrevBlock.ToString());\n \n-        // Accept orphans as long as there is a node to request its parents from\n-        if (pfrom) {\n-            PruneOrphanBlocks();\n-            COrphanBlock* pblock2 = new COrphanBlock();\n-            {\n-                CDataStream ss(SER_DISK, CLIENT_VERSION);\n-                ss << *pblock;\n-                pblock2->vchBlock = std::vector<unsigned char>(ss.begin(), ss.end());\n-            }\n-            pblock2->hashBlock = hash;\n-            pblock2->hashPrev = pblock->hashPrevBlock;\n-            mapOrphanBlocks.insert(make_pair(hash, pblock2));\n-            mapOrphanBlocksByPrev.insert(make_pair(pblock2->hashPrev, pblock2));\n+            // Accept orphans as long as there is a node to request its parents from\n+            if (pfrom) {\n+                PruneOrphanBlocks();\n+                COrphanBlock* pblock2 = new COrphanBlock();\n+                {\n+                    CDataStream ss(SER_DISK, CLIENT_VERSION);\n+                    ss << *pblock;\n+                    pblock2->vchBlock = std::vector<unsigned char>(ss.begin(), ss.end());\n+                }\n+                pblock2->hashBlock = hash;\n+                pblock2->hashPrev = pblock->hashPrevBlock;\n+                mapOrphanBlocks.insert(make_pair(hash, pblock2));\n+                mapOrphanBlocksByPrev.insert(make_pair(pblock2->hashPrev, pblock2));\n \n-            // Ask this guy to fill in what we're missing\n-            PushGetBlocks(pfrom, chainActive.Tip(), GetOrphanRoot(hash));\n+                // Ask this guy to fill in what we're missing\n+                PushGetBlocks(pfrom, chainActive.Tip(), GetOrphanRoot(hash));\n+            }\n+            return true;\n         }\n-        return true;\n-    }\n \n-    // Store to disk\n-    CBlockIndex *pindex = NULL;\n-    bool ret = AcceptBlock(*pblock, state, &pindex, dbp);\n-    if (!ret)\n-        return error(\"ProcessBlock() : AcceptBlock FAILED\");\n-\n-    // Recursively process any orphan blocks that depended on this one\n-    vector<uint256> vWorkQueue;\n-    vWorkQueue.push_back(hash);\n-    for (unsigned int i = 0; i < vWorkQueue.size(); i++)\n-    {\n-        uint256 hashPrev = vWorkQueue[i];\n-        for (multimap<uint256, COrphanBlock*>::iterator mi = mapOrphanBlocksByPrev.lower_bound(hashPrev);\n-             mi != mapOrphanBlocksByPrev.upper_bound(hashPrev);\n-             ++mi)\n+        // Store to disk\n+        CBlockIndex *pindex = NULL;\n+        bool ret = AcceptBlock(*pblock, state, &pindex, dbp);\n+        if (!ret)\n+            return error(\"ProcessBlock() : AcceptBlock FAILED\");\n+\n+        // Recursively process any orphan blocks that depended on this one\n+        vector<uint256> vWorkQueue;\n+        vWorkQueue.push_back(hash);\n+        for (unsigned int i = 0; i < vWorkQueue.size(); i++)\n         {\n-            CBlock block;\n+            uint256 hashPrev = vWorkQueue[i];\n+            for (multimap<uint256, COrphanBlock*>::iterator mi = mapOrphanBlocksByPrev.lower_bound(hashPrev);\n+                 mi != mapOrphanBlocksByPrev.upper_bound(hashPrev);\n+                 ++mi)\n             {\n-                CDataStream ss(mi->second->vchBlock, SER_DISK, CLIENT_VERSION);\n-                ss >> block;\n+                CBlock block;\n+                {\n+                    CDataStream ss(mi->second->vchBlock, SER_DISK, CLIENT_VERSION);\n+                    ss >> block;\n+                }\n+                block.BuildMerkleTree();\n+                // Use a dummy CValidationState so someone can't setup nodes to counter-DoS based on orphan resolution (that is, feeding people an invalid block based on LegitBlockX in order to get anyone relaying LegitBlockX banned)\n+                CValidationState stateDummy;\n+                CBlockIndex *pindexChild = NULL;\n+                if (AcceptBlock(block, stateDummy, &pindexChild))\n+                    vWorkQueue.push_back(mi->second->hashBlock);\n+                mapOrphanBlocks.erase(mi->second->hashBlock);\n+                delete mi->second;\n             }\n-            block.BuildMerkleTree();\n-            // Use a dummy CValidationState so someone can't setup nodes to counter-DoS based on orphan resolution (that is, feeding people an invalid block based on LegitBlockX in order to get anyone relaying LegitBlockX banned)\n-            CValidationState stateDummy;\n-            CBlockIndex *pindexChild = NULL;\n-            if (AcceptBlock(block, stateDummy, &pindexChild))\n-                vWorkQueue.push_back(mi->second->hashBlock);\n-            mapOrphanBlocks.erase(mi->second->hashBlock);\n-            delete mi->second;\n+            mapOrphanBlocksByPrev.erase(hashPrev);\n         }\n-        mapOrphanBlocksByPrev.erase(hashPrev);\n-    }\n-\n     }\n \n     if (!ActivateBestChain(state))"
+      }
+    ]
+  }
+]

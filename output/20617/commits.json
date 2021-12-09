@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "a33442fdc73eabd1c5596ab92954344edc9517e6",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzphMzM0NDJmZGM3M2VhYmQxYzU1OTZhYjkyOTU0MzQ0ZWRjOTUxN2U2",
+    "commit": {
+      "author": {
+        "name": "Antoine Riard",
+        "email": "ariard@student.42.fr",
+        "date": "2020-12-10T17:47:18Z"
+      },
+      "committer": {
+        "name": "Antoine Riard",
+        "email": "ariard@student.42.fr",
+        "date": "2020-12-10T17:53:02Z"
+      },
+      "message": "Remove m_is_manual_connection from CNodeState\n\nCurrently, this member is only used to exclude MANUAL peers from discouragement\nin MaybePunishNodeForBlock(). Manual connections are already protected in\nMaybeDiscourageAndDisconnect(), independently from their network\nprocessing behaviors.",
+      "tree": {
+        "sha": "d2d17f7f5b89bfaf825ec6a7bf130b3ffaff6878",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/d2d17f7f5b89bfaf825ec6a7bf130b3ffaff6878"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/a33442fdc73eabd1c5596ab92954344edc9517e6",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a33442fdc73eabd1c5596ab92954344edc9517e6",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/a33442fdc73eabd1c5596ab92954344edc9517e6",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/a33442fdc73eabd1c5596ab92954344edc9517e6/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "b76abae387b9ac2526c315c95b0f2da8c78e16fc",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b76abae387b9ac2526c315c95b0f2da8c78e16fc",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b76abae387b9ac2526c315c95b0f2da8c78e16fc"
+      }
+    ],
+    "stats": {
+      "total": 13,
+      "additions": 5,
+      "deletions": 8
+    },
+    "files": [
+      {
+        "sha": "05f418cfaa4a4fce53668f75a26a3e9fbbaad4fe",
+        "filename": "src/net_processing.cpp",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 8,
+        "changes": 13,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/a33442fdc73eabd1c5596ab92954344edc9517e6/src/net_processing.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/a33442fdc73eabd1c5596ab92954344edc9517e6/src/net_processing.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net_processing.cpp?ref=a33442fdc73eabd1c5596ab92954344edc9517e6",
+        "patch": "@@ -376,17 +376,14 @@ struct CNodeState {\n     //! Whether this peer is an inbound connection\n     bool m_is_inbound;\n \n-    //! Whether this peer is a manual connection\n-    bool m_is_manual_connection;\n-\n     //! A rolling bloom filter of all announced tx CInvs to this peer.\n     CRollingBloomFilter m_recently_announced_invs = CRollingBloomFilter{INVENTORY_MAX_RECENT_RELAY, 0.000001};\n \n     //! Whether this peer relays txs via wtxid\n     bool m_wtxid_relay{false};\n \n-    CNodeState(CAddress addrIn, bool is_inbound, bool is_manual)\n-        : address(addrIn), m_is_inbound(is_inbound), m_is_manual_connection(is_manual)\n+    CNodeState(CAddress addrIn, bool is_inbound)\n+        : address(addrIn), m_is_inbound(is_inbound)\n     {\n         pindexBestKnownBlock = nullptr;\n         hashLastUnknownBlock.SetNull();\n@@ -754,7 +751,7 @@ void PeerManager::InitializeNode(CNode *pnode) {\n     NodeId nodeid = pnode->GetId();\n     {\n         LOCK(cs_main);\n-        mapNodeState.emplace_hint(mapNodeState.end(), std::piecewise_construct, std::forward_as_tuple(nodeid), std::forward_as_tuple(addr, pnode->IsInboundConn(), pnode->IsManualConn()));\n+        mapNodeState.emplace_hint(mapNodeState.end(), std::piecewise_construct, std::forward_as_tuple(nodeid), std::forward_as_tuple(addr, pnode->IsInboundConn()));\n         assert(m_txrequest.Count(nodeid) == 0);\n     }\n     {\n@@ -1054,8 +1051,8 @@ bool PeerManager::MaybePunishNodeForBlock(NodeId nodeid, const BlockValidationSt\n             }\n \n             // Discourage outbound (but not inbound) peers if on an invalid chain.\n-            // Exempt HB compact block peers and manual connections.\n-            if (!via_compact_block && !node_state->m_is_inbound && !node_state->m_is_manual_connection) {\n+            // Exempt HB compact block peers. Manual connections are always protected from discouragement.\n+            if (!via_compact_block && !node_state->m_is_inbound) {\n                 Misbehaving(nodeid, 100, message);\n                 return true;\n             }"
+      }
+    ]
+  }
+]

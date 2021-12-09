@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "13f903187c3aed26993b89dd3a135e646cfc7437",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxM2Y5MDMxODdjM2FlZDI2OTkzYjg5ZGQzYTEzNWU2NDZjZmM3NDM3",
+    "commit": {
+      "author": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-11-13T14:15:53Z"
+      },
+      "committer": {
+        "name": "Philip Kaufmann",
+        "email": "phil.kaufmann@t-online.de",
+        "date": "2014-11-13T14:15:53Z"
+      },
+      "message": "init: minor parameter interaction updates\n\n- use __func__ instead of hard-coded function name for logging\n- update -discover help message to reflect newly added parameter\n  interaction\n- use DEFAULT_LISTEN in a parameter interaction check instead a hard coded\n  value",
+      "tree": {
+        "sha": "cdfd414d668df2ff2055c79e03ecc82c58e34a19",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/cdfd414d668df2ff2055c79e03ecc82c58e34a19"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/13f903187c3aed26993b89dd3a135e646cfc7437",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/13f903187c3aed26993b89dd3a135e646cfc7437",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/13f903187c3aed26993b89dd3a135e646cfc7437",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/13f903187c3aed26993b89dd3a135e646cfc7437/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "ed98a6284b4c2f0be2e128dc7cf59d42eb49046c",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/ed98a6284b4c2f0be2e128dc7cf59d42eb49046c",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/ed98a6284b4c2f0be2e128dc7cf59d42eb49046c"
+      }
+    ],
+    "stats": {
+      "total": 35,
+      "additions": 20,
+      "deletions": 15
+    },
+    "files": [
+      {
+        "sha": "fd5fcb09df66d96e31b040263b9a26156b3919dc",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 20,
+        "deletions": 15,
+        "changes": 35,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/13f903187c3aed26993b89dd3a135e646cfc7437/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/13f903187c3aed26993b89dd3a135e646cfc7437/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=13f903187c3aed26993b89dd3a135e646cfc7437",
+        "patch": "@@ -254,7 +254,7 @@ std::string HelpMessage(HelpMessageMode mode)\n     strUsage += \"  -bantime=<n>           \" + strprintf(_(\"Number of seconds to keep misbehaving peers from reconnecting (default: %u)\"), 86400) + \"\\n\";\n     strUsage += \"  -bind=<addr>           \" + _(\"Bind to given address and always listen on it. Use [host]:port notation for IPv6\") + \"\\n\";\n     strUsage += \"  -connect=<ip>          \" + _(\"Connect only to the specified node(s)\") + \"\\n\";\n-    strUsage += \"  -discover              \" + _(\"Discover own IP address (default: 1 when listening and no -externalip)\") + \"\\n\";\n+    strUsage += \"  -discover              \" + _(\"Discover own IP addresses (default: 1 when listening and no -externalip or -proxy)\") + \"\\n\";\n     strUsage += \"  -dns                   \" + _(\"Allow DNS lookups for -addnode, -seednode and -connect\") + \" \" + _(\"(default: 1)\") + \"\\n\";\n     strUsage += \"  -dnsseed               \" + _(\"Query for peer addresses via DNS lookup, if low on addresses (default: 1 unless -connect)\") + \"\\n\";\n     strUsage += \"  -externalip=<ip>       \" + _(\"Specify your own public address\") + \"\\n\";\n@@ -550,59 +550,64 @@ bool AppInit2(boost::thread_group& threadGroup)\n #endif\n \n     // ********************************************************* Step 2: parameter interactions\n+\n     // Set this early so that parameter interactions go to console\n     fPrintToConsole = GetBoolArg(\"-printtoconsole\", false);\n     fLogTimestamps = GetBoolArg(\"-logtimestamps\", true);\n     fLogIPs = GetBoolArg(\"-logips\", false);\n \n-    if (mapArgs.count(\"-bind\") || mapArgs.count(\"-whitebind\")) {\n-        // when specifying an explicit binding address, you want to listen on it\n-        // even when -connect or -proxy is specified\n+    // when specifying an explicit binding address, you want to listen on it\n+    // even when -connect or -proxy is specified\n+    if (mapArgs.count(\"-bind\")) {\n+        if (SoftSetBoolArg(\"-listen\", true))\n+            LogPrintf(\"%s: parameter interaction: -bind set -> setting -listen=1\\n\", __func__);\n+    }\n+    if (mapArgs.count(\"-whitebind\")) {\n         if (SoftSetBoolArg(\"-listen\", true))\n-            LogPrintf(\"AppInit2 : parameter interaction: -bind or -whitebind set -> setting -listen=1\\n\");\n+            LogPrintf(\"%s: parameter interaction: -whitebind set -> setting -listen=1\\n\", __func__);\n     }\n \n     if (mapArgs.count(\"-connect\") && mapMultiArgs[\"-connect\"].size() > 0) {\n         // when only connecting to trusted nodes, do not seed via DNS, or listen by default\n         if (SoftSetBoolArg(\"-dnsseed\", false))\n-            LogPrintf(\"AppInit2 : parameter interaction: -connect set -> setting -dnsseed=0\\n\");\n+            LogPrintf(\"%s: parameter interaction: -connect set -> setting -dnsseed=0\\n\", __func__);\n         if (SoftSetBoolArg(\"-listen\", false))\n-            LogPrintf(\"AppInit2 : parameter interaction: -connect set -> setting -listen=0\\n\");\n+            LogPrintf(\"%s: parameter interaction: -connect set -> setting -listen=0\\n\", __func__);\n     }\n \n     if (mapArgs.count(\"-proxy\")) {\n         // to protect privacy, do not listen by default if a default proxy server is specified\n         if (SoftSetBoolArg(\"-listen\", false))\n-            LogPrintf(\"AppInit2 : parameter interaction: -proxy set -> setting -listen=0\\n\");\n+            LogPrintf(\"%s: parameter interaction: -proxy set -> setting -listen=0\\n\", __func__);\n         // to protect privacy, do not discover addresses by default\n         if (SoftSetBoolArg(\"-discover\", false))\n-            LogPrintf(\"AppInit2 : parameter interaction: -proxy set -> setting -discover=0\\n\");\n+            LogPrintf(\"%s: parameter interaction: -proxy set -> setting -discover=0\\n\", __func__);\n     }\n \n-    if (!GetBoolArg(\"-listen\", true)) {\n+    if (!GetBoolArg(\"-listen\", DEFAULT_LISTEN)) {\n         // do not map ports or try to retrieve public IP when not listening (pointless)\n         if (SoftSetBoolArg(\"-upnp\", false))\n-            LogPrintf(\"AppInit2 : parameter interaction: -listen=0 -> setting -upnp=0\\n\");\n+            LogPrintf(\"%s: parameter interaction: -listen=0 -> setting -upnp=0\\n\", __func__);\n         if (SoftSetBoolArg(\"-discover\", false))\n-            LogPrintf(\"AppInit2 : parameter interaction: -listen=0 -> setting -discover=0\\n\");\n+            LogPrintf(\"%s: parameter interaction: -listen=0 -> setting -discover=0\\n\", __func__);\n     }\n \n     if (mapArgs.count(\"-externalip\")) {\n         // if an explicit public IP is specified, do not try to find others\n         if (SoftSetBoolArg(\"-discover\", false))\n-            LogPrintf(\"AppInit2 : parameter interaction: -externalip set -> setting -discover=0\\n\");\n+            LogPrintf(\"%s: parameter interaction: -externalip set -> setting -discover=0\\n\", __func__);\n     }\n \n     if (GetBoolArg(\"-salvagewallet\", false)) {\n         // Rewrite just private keys: rescan to find transactions\n         if (SoftSetBoolArg(\"-rescan\", true))\n-            LogPrintf(\"AppInit2 : parameter interaction: -salvagewallet=1 -> setting -rescan=1\\n\");\n+            LogPrintf(\"%s: parameter interaction: -salvagewallet=1 -> setting -rescan=1\\n\", __func__);\n     }\n \n     // -zapwallettx implies a rescan\n     if (GetBoolArg(\"-zapwallettxes\", false)) {\n         if (SoftSetBoolArg(\"-rescan\", true))\n-            LogPrintf(\"AppInit2 : parameter interaction: -zapwallettxes=<mode> -> setting -rescan=1\\n\");\n+            LogPrintf(\"%s: parameter interaction: -zapwallettxes=<mode> -> setting -rescan=1\\n\", __func__);\n     }\n \n     // Make sure enough file descriptors are available"
+      }
+    ]
+  }
+]

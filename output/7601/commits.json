@@ -1,0 +1,796 @@
+[
+  {
+    "sha": "7a36d0a932678e7ae908fc22d3922423289e1025",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3YTM2ZDBhOTMyNjc4ZTdhZTkwOGZjMjJkMzkyMjQyMzI4OWUxMDI1",
+    "commit": {
+      "author": {
+        "name": "Sean Bowe",
+        "email": "ewillbefull@gmail.com",
+        "date": "2017-02-28T18:57:33Z"
+      },
+      "committer": {
+        "name": "Sean Bowe",
+        "email": "ewillbefull@gmail.com",
+        "date": "2017-02-28T18:57:33Z"
+      },
+      "message": "`AddPreimage` and `GetPreimage` keystore methods.",
+      "tree": {
+        "sha": "0e84f4d827047fa65105929b0518a155defcba9d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/0e84f4d827047fa65105929b0518a155defcba9d"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/7a36d0a932678e7ae908fc22d3922423289e1025",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7a36d0a932678e7ae908fc22d3922423289e1025",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/7a36d0a932678e7ae908fc22d3922423289e1025",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7a36d0a932678e7ae908fc22d3922423289e1025/comments",
+    "author": {
+      "login": "ebfull",
+      "id": 3794471,
+      "node_id": "MDQ6VXNlcjM3OTQ0NzE=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3794471?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ebfull",
+      "html_url": "https://github.com/ebfull",
+      "followers_url": "https://api.github.com/users/ebfull/followers",
+      "following_url": "https://api.github.com/users/ebfull/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ebfull/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ebfull/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ebfull/subscriptions",
+      "organizations_url": "https://api.github.com/users/ebfull/orgs",
+      "repos_url": "https://api.github.com/users/ebfull/repos",
+      "events_url": "https://api.github.com/users/ebfull/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ebfull/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "ebfull",
+      "id": 3794471,
+      "node_id": "MDQ6VXNlcjM3OTQ0NzE=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3794471?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ebfull",
+      "html_url": "https://github.com/ebfull",
+      "followers_url": "https://api.github.com/users/ebfull/followers",
+      "following_url": "https://api.github.com/users/ebfull/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ebfull/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ebfull/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ebfull/subscriptions",
+      "organizations_url": "https://api.github.com/users/ebfull/orgs",
+      "repos_url": "https://api.github.com/users/ebfull/repos",
+      "events_url": "https://api.github.com/users/ebfull/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ebfull/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "11049f4fe62606d1b0380a9ef800ac130f0fbadf",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/11049f4fe62606d1b0380a9ef800ac130f0fbadf",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/11049f4fe62606d1b0380a9ef800ac130f0fbadf"
+      }
+    ],
+    "stats": {
+      "total": 50,
+      "additions": 50,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "f2154a91ce165a9da6150ec3ae951d448eee7efa",
+        "filename": "src/keystore.cpp",
+        "status": "modified",
+        "additions": 27,
+        "deletions": 0,
+        "changes": 27,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7a36d0a932678e7ae908fc22d3922423289e1025/src/keystore.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7a36d0a932678e7ae908fc22d3922423289e1025/src/keystore.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/keystore.cpp?ref=7a36d0a932678e7ae908fc22d3922423289e1025",
+        "patch": "@@ -66,6 +66,33 @@ bool CBasicKeyStore::GetCScript(const CScriptID &hash, CScript& redeemScriptOut)\n     return false;\n }\n \n+bool CBasicKeyStore::GetPreimage(\n+    const std::vector<unsigned char>& image,\n+    std::vector<unsigned char>& preimage\n+) const\n+{\n+    LOCK(cs_KeyStore);\n+\n+    PreimageMap::const_iterator it = mapPreimages.find(image);\n+    if (it != mapPreimages.end()) {\n+        preimage = it->second;\n+\n+        return true;\n+    }\n+    return false;\n+}\n+\n+bool CBasicKeyStore::AddPreimage(\n+    const std::vector<unsigned char>& image,\n+    const std::vector<unsigned char>& preimage\n+)\n+{\n+    LOCK(cs_KeyStore);\n+\n+    mapPreimages[image] = preimage;\n+    return true;\n+}\n+\n static bool ExtractPubKey(const CScript &dest, CPubKey& pubKeyOut)\n {\n     //TODO: Use Solver to extract this?"
+      },
+      {
+        "sha": "1f2692e068d39a8fe0b4ee5b7e2613e95a00cab1",
+        "filename": "src/keystore.h",
+        "status": "modified",
+        "additions": 23,
+        "deletions": 0,
+        "changes": 23,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/7a36d0a932678e7ae908fc22d3922423289e1025/src/keystore.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/7a36d0a932678e7ae908fc22d3922423289e1025/src/keystore.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/keystore.h?ref=7a36d0a932678e7ae908fc22d3922423289e1025",
+        "patch": "@@ -39,6 +39,17 @@ class CKeyStore\n     virtual bool HaveCScript(const CScriptID &hash) const =0;\n     virtual bool GetCScript(const CScriptID &hash, CScript& redeemScriptOut) const =0;\n \n+    //! Support for HTLC preimages\n+    virtual bool GetPreimage(\n+        const std::vector<unsigned char>& image,\n+        std::vector<unsigned char>& preimage\n+    ) const =0;\n+\n+    virtual bool AddPreimage(\n+        const std::vector<unsigned char>& image,\n+        const std::vector<unsigned char>& preimage\n+    ) =0;\n+\n     //! Support for Watch-only addresses\n     virtual bool AddWatchOnly(const CScript &dest) =0;\n     virtual bool RemoveWatchOnly(const CScript &dest) =0;\n@@ -50,6 +61,7 @@ typedef std::map<CKeyID, CKey> KeyMap;\n typedef std::map<CKeyID, CPubKey> WatchKeyMap;\n typedef std::map<CScriptID, CScript > ScriptMap;\n typedef std::set<CScript> WatchOnlySet;\n+typedef std::map<std::vector<unsigned char>, std::vector<unsigned char>> PreimageMap;\n \n /** Basic key store, that keeps keys in an address->secret map */\n class CBasicKeyStore : public CKeyStore\n@@ -59,6 +71,7 @@ class CBasicKeyStore : public CKeyStore\n     WatchKeyMap mapWatchKeys;\n     ScriptMap mapScripts;\n     WatchOnlySet setWatchOnly;\n+    PreimageMap mapPreimages;\n \n public:\n     bool AddKeyPubKey(const CKey& key, const CPubKey &pubkey);\n@@ -102,6 +115,16 @@ class CBasicKeyStore : public CKeyStore\n     virtual bool HaveCScript(const CScriptID &hash) const;\n     virtual bool GetCScript(const CScriptID &hash, CScript& redeemScriptOut) const;\n \n+    bool GetPreimage(\n+        const std::vector<unsigned char>& image,\n+        std::vector<unsigned char>& preimage\n+    ) const;\n+    \n+    bool AddPreimage(\n+        const std::vector<unsigned char>& image,\n+        const std::vector<unsigned char>& preimage\n+    );\n+\n     virtual bool AddWatchOnly(const CScript &dest);\n     virtual bool RemoveWatchOnly(const CScript &dest);\n     virtual bool HaveWatchOnly(const CScript &dest) const;"
+      }
+    ]
+  },
+  {
+    "sha": "979f17cdb870e8415715e59eafd00ae516904a67",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo5NzlmMTdjZGI4NzBlODQxNTcxNWU1OWVhZmQwMGFlNTE2OTA0YTY3",
+    "commit": {
+      "author": {
+        "name": "Sean Bowe",
+        "email": "ewillbefull@gmail.com",
+        "date": "2017-02-28T19:29:02Z"
+      },
+      "committer": {
+        "name": "Sean Bowe",
+        "email": "ewillbefull@gmail.com",
+        "date": "2017-02-28T19:29:02Z"
+      },
+      "message": "importpreimage wallet RPC command.",
+      "tree": {
+        "sha": "49e9852613a87fc28cf47f8b13cde977e00d34d4",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/49e9852613a87fc28cf47f8b13cde977e00d34d4"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/979f17cdb870e8415715e59eafd00ae516904a67",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/979f17cdb870e8415715e59eafd00ae516904a67",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/979f17cdb870e8415715e59eafd00ae516904a67",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/979f17cdb870e8415715e59eafd00ae516904a67/comments",
+    "author": {
+      "login": "ebfull",
+      "id": 3794471,
+      "node_id": "MDQ6VXNlcjM3OTQ0NzE=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3794471?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ebfull",
+      "html_url": "https://github.com/ebfull",
+      "followers_url": "https://api.github.com/users/ebfull/followers",
+      "following_url": "https://api.github.com/users/ebfull/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ebfull/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ebfull/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ebfull/subscriptions",
+      "organizations_url": "https://api.github.com/users/ebfull/orgs",
+      "repos_url": "https://api.github.com/users/ebfull/repos",
+      "events_url": "https://api.github.com/users/ebfull/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ebfull/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "ebfull",
+      "id": 3794471,
+      "node_id": "MDQ6VXNlcjM3OTQ0NzE=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3794471?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ebfull",
+      "html_url": "https://github.com/ebfull",
+      "followers_url": "https://api.github.com/users/ebfull/followers",
+      "following_url": "https://api.github.com/users/ebfull/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ebfull/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ebfull/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ebfull/subscriptions",
+      "organizations_url": "https://api.github.com/users/ebfull/orgs",
+      "repos_url": "https://api.github.com/users/ebfull/repos",
+      "events_url": "https://api.github.com/users/ebfull/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ebfull/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "7a36d0a932678e7ae908fc22d3922423289e1025",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/7a36d0a932678e7ae908fc22d3922423289e1025",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/7a36d0a932678e7ae908fc22d3922423289e1025"
+      }
+    ],
+    "stats": {
+      "total": 45,
+      "additions": 45,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "f06eaa1277f4c6b158acfa3b3d46ed6558d250fc",
+        "filename": "src/wallet/rpcdump.cpp",
+        "status": "modified",
+        "additions": 43,
+        "deletions": 0,
+        "changes": 43,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/979f17cdb870e8415715e59eafd00ae516904a67/src/wallet/rpcdump.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/979f17cdb870e8415715e59eafd00ae516904a67/src/wallet/rpcdump.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/rpcdump.cpp?ref=979f17cdb870e8415715e59eafd00ae516904a67",
+        "patch": "@@ -640,6 +640,49 @@ UniValue dumpwallet(const JSONRPCRequest& request)\n     return NullUniValue;\n }\n \n+UniValue importpreimage(const JSONRPCRequest& request)\n+{\n+    if (!EnsureWalletIsAvailable(request.fHelp))\n+        return NullUniValue;\n+\n+    if (request.fHelp || request.params.size() != 1)\n+        throw runtime_error(\n+            \"importpreimage \\\"data\\\"\\n\"\n+            \"\\nImports a preimage for use in HTLC transactions. Only remains in memory.\\n\"\n+            \"\\nArguments:\\n\"\n+            \"1. \\\"data\\\"    (string, required) The preimage of a SHA256 or RIPEMD160 hash\\n\"\n+            \"\\nExamples:\\n\"\n+            + HelpExampleCli(\"importpreimage\", \"\\\"mylittlesecret\\\"\")\n+            + HelpExampleRpc(\"importpreimage\", \"\\\"mylittlesecret\\\"\")\n+        );\n+\n+    LOCK2(cs_main, pwalletMain->cs_wallet);\n+\n+    vector<unsigned char> preimage = ParseHexV(request.params[0], \"preimage\");\n+\n+    // SHA256\n+    {\n+        std::vector<unsigned char> vch(32);\n+        CSHA256 hash;\n+        hash.Write(preimage.data(), preimage.size());\n+        hash.Finalize(vch.data());\n+\n+        pwalletMain->AddPreimage(vch, preimage);\n+    }\n+\n+    // RIPEMD160\n+    {\n+        std::vector<unsigned char> vch(20);\n+        CRIPEMD160 hash;\n+        hash.Write(preimage.data(), preimage.size());\n+        hash.Finalize(vch.data());\n+\n+        pwalletMain->AddPreimage(vch, preimage);\n+    }\n+\n+    return NullUniValue;\n+}\n+\n \n UniValue ProcessImport(const UniValue& data, const int64_t timestamp)\n {"
+      },
+      {
+        "sha": "6f3ffa67524d22fa9bb753e7e00449c29ac842c8",
+        "filename": "src/wallet/rpcwallet.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/979f17cdb870e8415715e59eafd00ae516904a67/src/wallet/rpcwallet.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/979f17cdb870e8415715e59eafd00ae516904a67/src/wallet/rpcwallet.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/wallet/rpcwallet.cpp?ref=979f17cdb870e8415715e59eafd00ae516904a67",
+        "patch": "@@ -2989,6 +2989,7 @@ extern UniValue importprivkey(const JSONRPCRequest& request);\n extern UniValue importaddress(const JSONRPCRequest& request);\n extern UniValue importpubkey(const JSONRPCRequest& request);\n extern UniValue dumpwallet(const JSONRPCRequest& request);\n+extern UniValue importpreimage(const JSONRPCRequest& request);\n extern UniValue importwallet(const JSONRPCRequest& request);\n extern UniValue importprunedfunds(const JSONRPCRequest& request);\n extern UniValue removeprunedfunds(const JSONRPCRequest& request);\n@@ -3006,6 +3007,7 @@ static const CRPCCommand commands[] =\n     { \"wallet\",             \"bumpfee\",                  &bumpfee,                  true,   {\"txid\", \"options\"} },\n     { \"wallet\",             \"dumpprivkey\",              &dumpprivkey,              true,   {\"address\"}  },\n     { \"wallet\",             \"dumpwallet\",               &dumpwallet,               true,   {\"filename\"} },\n+    { \"wallet\",             \"importpreimage\",           &importpreimage,           true,   {\"preimage\"} },\n     { \"wallet\",             \"encryptwallet\",            &encryptwallet,            true,   {\"passphrase\"} },\n     { \"wallet\",             \"getaccountaddress\",        &getaccountaddress,        true,   {\"account\"} },\n     { \"wallet\",             \"getaccount\",               &getaccount,               true,   {\"address\"} },"
+      }
+    ]
+  },
+  {
+    "sha": "74a43f9dbd197d4b7b1c441d4c381a54d3be951f",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo3NGE0M2Y5ZGJkMTk3ZDRiN2IxYzQ0MWQ0YzM4MWE1NGQzYmU5NTFm",
+    "commit": {
+      "author": {
+        "name": "Sean Bowe",
+        "email": "ewillbefull@gmail.com",
+        "date": "2017-02-28T22:10:14Z"
+      },
+      "committer": {
+        "name": "Sean Bowe",
+        "email": "ewillbefull@gmail.com",
+        "date": "2017-02-28T22:10:14Z"
+      },
+      "message": "Add wallet support for recognizing and signing HTLC transactions.",
+      "tree": {
+        "sha": "a7053803274ac4629859c9324d4eb37b15f18d43",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/a7053803274ac4629859c9324d4eb37b15f18d43"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/74a43f9dbd197d4b7b1c441d4c381a54d3be951f",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/74a43f9dbd197d4b7b1c441d4c381a54d3be951f",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/74a43f9dbd197d4b7b1c441d4c381a54d3be951f",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/74a43f9dbd197d4b7b1c441d4c381a54d3be951f/comments",
+    "author": {
+      "login": "ebfull",
+      "id": 3794471,
+      "node_id": "MDQ6VXNlcjM3OTQ0NzE=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3794471?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ebfull",
+      "html_url": "https://github.com/ebfull",
+      "followers_url": "https://api.github.com/users/ebfull/followers",
+      "following_url": "https://api.github.com/users/ebfull/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ebfull/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ebfull/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ebfull/subscriptions",
+      "organizations_url": "https://api.github.com/users/ebfull/orgs",
+      "repos_url": "https://api.github.com/users/ebfull/repos",
+      "events_url": "https://api.github.com/users/ebfull/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ebfull/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "ebfull",
+      "id": 3794471,
+      "node_id": "MDQ6VXNlcjM3OTQ0NzE=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3794471?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ebfull",
+      "html_url": "https://github.com/ebfull",
+      "followers_url": "https://api.github.com/users/ebfull/followers",
+      "following_url": "https://api.github.com/users/ebfull/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ebfull/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ebfull/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ebfull/subscriptions",
+      "organizations_url": "https://api.github.com/users/ebfull/orgs",
+      "repos_url": "https://api.github.com/users/ebfull/repos",
+      "events_url": "https://api.github.com/users/ebfull/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ebfull/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "979f17cdb870e8415715e59eafd00ae516904a67",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/979f17cdb870e8415715e59eafd00ae516904a67",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/979f17cdb870e8415715e59eafd00ae516904a67"
+      }
+    ],
+    "stats": {
+      "total": 118,
+      "additions": 118,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "32b09cb6110a129f120bb70ad05f5f8b3c920ea3",
+        "filename": "src/policy/policy.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/74a43f9dbd197d4b7b1c441d4c381a54d3be951f/src/policy/policy.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/74a43f9dbd197d4b7b1c441d4c381a54d3be951f/src/policy/policy.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/policy/policy.cpp?ref=74a43f9dbd197d4b7b1c441d4c381a54d3be951f",
+        "patch": "@@ -46,6 +46,8 @@ bool IsStandard(const CScript& scriptPubKey, txnouttype& whichType, const bool w\n             return false;\n         if (m < 1 || m > n)\n             return false;\n+    } else if (whichType == TX_HTLC) {\n+        return false;\n     } else if (whichType == TX_NULL_DATA &&\n                (!fAcceptDatacarrier || scriptPubKey.size() > nMaxDatacarrierBytes))\n           return false;"
+      },
+      {
+        "sha": "5a74e5ac621761b47068d48bfb1803bf2ca3580d",
+        "filename": "src/script/ismine.cpp",
+        "status": "modified",
+        "additions": 13,
+        "deletions": 0,
+        "changes": 13,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/74a43f9dbd197d4b7b1c441d4c381a54d3be951f/src/script/ismine.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/74a43f9dbd197d4b7b1c441d4c381a54d3be951f/src/script/ismine.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/ismine.cpp?ref=74a43f9dbd197d4b7b1c441d4c381a54d3be951f",
+        "patch": "@@ -125,6 +125,19 @@ isminetype IsMine(const CKeyStore &keystore, const CScript& scriptPubKey, bool&\n         break;\n     }\n \n+    case TX_HTLC:\n+    {\n+        // Only consider HTLC's \"mine\" if we own ALL the keys\n+        // involved.\n+        vector<valtype> keys;\n+        keys.push_back(vSolutions[1]);\n+        keys.push_back(vSolutions[3]);\n+        if (HaveKeys(keys, keystore) == keys.size()) {\n+            return ISMINE_SPENDABLE;\n+        }\n+        break;\n+    }\n+\n     case TX_MULTISIG:\n     {\n         // Only consider transactions \"mine\" if we own ALL the"
+      },
+      {
+        "sha": "0049f21d9593380e5245b6aee872a9c13fb37599",
+        "filename": "src/script/script.h",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 0,
+        "changes": 4,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/74a43f9dbd197d4b7b1c441d4c381a54d3be951f/src/script/script.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/74a43f9dbd197d4b7b1c441d4c381a54d3be951f/src/script/script.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/script.h?ref=74a43f9dbd197d4b7b1c441d4c381a54d3be951f",
+        "patch": "@@ -179,6 +179,10 @@ enum opcodetype\n \n \n     // template matching params\n+    OP_BLOB20 = 0xf7,\n+    OP_BLOB32 = 0xf8,\n+    OP_U32INT = 0xf9,\n+\n     OP_SMALLINTEGER = 0xfa,\n     OP_PUBKEYS = 0xfb,\n     OP_PUBKEYHASH = 0xfd,"
+      },
+      {
+        "sha": "692ec6872ef213d8df6efe251fdd7131bccc9b08",
+        "filename": "src/script/sign.cpp",
+        "status": "modified",
+        "additions": 25,
+        "deletions": 0,
+        "changes": 25,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/74a43f9dbd197d4b7b1c441d4c381a54d3be951f/src/script/sign.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/74a43f9dbd197d4b7b1c441d4c381a54d3be951f/src/script/sign.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/sign.cpp?ref=74a43f9dbd197d4b7b1c441d4c381a54d3be951f",
+        "patch": "@@ -108,6 +108,30 @@ static bool SignStep(const BaseSignatureCreator& creator, const CScript& scriptP\n         ret.push_back(valtype()); // workaround CHECKMULTISIG bug\n         return (SignN(vSolutions, creator, scriptPubKey, ret, sigversion));\n \n+    case TX_HTLC:\n+        {\n+            std::vector<unsigned char> image(vSolutions[0]);\n+            std::vector<unsigned char> preimage;\n+\n+            if (creator.KeyStore().GetPreimage(image, preimage)) {\n+                keyID = CPubKey(vSolutions[1]).GetID();\n+                if (!Sign1(keyID, creator, scriptPubKey, ret, sigversion)) {\n+                    return false;\n+                }\n+\n+                ret.push_back(preimage);\n+                ret.push_back({1});\n+            } else {\n+                keyID = CPubKey(vSolutions[3]).GetID();\n+                if (!Sign1(keyID, creator, scriptPubKey, ret, sigversion)) {\n+                    return false;\n+                }\n+\n+                ret.push_back(valtype());\n+            }\n+            return true;\n+        }\n+\n     case TX_WITNESS_V0_KEYHASH:\n         ret.push_back(vSolutions[0]);\n         return true;\n@@ -312,6 +336,7 @@ static Stacks CombineSignatures(const CScript& scriptPubKey, const BaseSignature\n     switch (txType)\n     {\n     case TX_NONSTANDARD:\n+    case TX_HTLC:\n     case TX_NULL_DATA:\n         // Don't know anything about this, assume bigger one is correct:\n         if (sigs1.script.size() >= sigs2.script.size())"
+      },
+      {
+        "sha": "d906d9c020d730fbbf0a8437ad30822af0473f8e",
+        "filename": "src/script/standard.cpp",
+        "status": "modified",
+        "additions": 73,
+        "deletions": 0,
+        "changes": 73,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/74a43f9dbd197d4b7b1c441d4c381a54d3be951f/src/script/standard.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/74a43f9dbd197d4b7b1c441d4c381a54d3be951f/src/script/standard.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/standard.cpp?ref=74a43f9dbd197d4b7b1c441d4c381a54d3be951f",
+        "patch": "@@ -27,6 +27,7 @@ const char* GetTxnOutputType(txnouttype t)\n     {\n     case TX_NONSTANDARD: return \"nonstandard\";\n     case TX_PUBKEY: return \"pubkey\";\n+    case TX_HTLC: return \"htlc\";\n     case TX_PUBKEYHASH: return \"pubkeyhash\";\n     case TX_SCRIPTHASH: return \"scripthash\";\n     case TX_MULTISIG: return \"multisig\";\n@@ -54,6 +55,29 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, vector<vector<unsi\n \n         // Sender provides N pubkeys, receivers provides M signatures\n         mTemplates.insert(make_pair(TX_MULTISIG, CScript() << OP_SMALLINTEGER << OP_PUBKEYS << OP_SMALLINTEGER << OP_CHECKMULTISIG));\n+\n+        // HTLC where sender requests preimage of a hash\n+        {\n+            // Hash opcode and template opcode to match digest\n+            const std::pair<opcodetype, opcodetype> accepted_hashers[] = {\n+                make_pair(OP_SHA256, OP_BLOB32),\n+                make_pair(OP_RIPEMD160, OP_BLOB20)\n+            };\n+            const opcodetype accepted_timeout_ops[] = {OP_CHECKLOCKTIMEVERIFY, OP_CHECKSEQUENCEVERIFY};\n+\n+            BOOST_FOREACH(auto hasher, accepted_hashers) {\n+                BOOST_FOREACH(opcodetype timeout_op, accepted_timeout_ops) {\n+                    mTemplates.insert(make_pair(TX_HTLC, CScript()\n+                        << OP_IF\n+                        <<     hasher.first << hasher.second << OP_EQUALVERIFY << OP_PUBKEY\n+                        << OP_ELSE\n+                        <<     OP_U32INT << timeout_op << OP_DROP << OP_PUBKEY\n+                        << OP_ENDIF\n+                        << OP_CHECKSIG\n+                    ));\n+                }\n+            }\n+        }\n     }\n \n     vSolutionsRet.clear();\n@@ -166,6 +190,33 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, vector<vector<unsi\n                 else\n                     break;\n             }\n+            else if (opcode2 == OP_U32INT)\n+            {\n+                CScriptNum sn(0);\n+                try {\n+                    sn = CScriptNum(vch1, true, 5);\n+                } catch(scriptnum_error) {\n+                    break;\n+                }\n+\n+                if (sn < 0 || sn > std::numeric_limits<uint32_t>::max()) {\n+                    break;\n+                }\n+\n+                vSolutionsRet.push_back(vch1);\n+            }\n+            else if (opcode2 == OP_BLOB32)\n+            {\n+                if (vch1.size() != sizeof(uint256))\n+                    break;\n+                vSolutionsRet.push_back(vch1);\n+            }\n+            else if (opcode2 == OP_BLOB20)\n+            {\n+                if (vch1.size() != sizeof(uint160))\n+                    break;\n+                vSolutionsRet.push_back(vch1);\n+            }\n             else if (opcode1 != opcode2 || vch1 != vch2)\n             {\n                 // Others must match exactly\n@@ -237,6 +288,28 @@ bool ExtractDestinations(const CScript& scriptPubKey, txnouttype& typeRet, vecto\n         if (addressRet.empty())\n             return false;\n     }\n+    else if (typeRet == TX_HTLC)\n+    {\n+        // Seller\n+        {\n+            CPubKey pubKey(vSolutions[1]);\n+            if (pubKey.IsValid()) {\n+                CTxDestination address = pubKey.GetID();\n+                addressRet.push_back(address);\n+            }\n+        }\n+        // Refund\n+        {\n+            CPubKey pubKey(vSolutions[3]);\n+            if (pubKey.IsValid()) {\n+                CTxDestination address = pubKey.GetID();\n+                addressRet.push_back(address);\n+            }\n+        }\n+\n+        if (addressRet.empty())\n+            return false;\n+    }\n     else\n     {\n         nRequiredRet = 1;"
+      },
+      {
+        "sha": "09e72e79a9c560cb26d69faa35d56553d89c8e87",
+        "filename": "src/script/standard.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/74a43f9dbd197d4b7b1c441d4c381a54d3be951f/src/script/standard.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/74a43f9dbd197d4b7b1c441d4c381a54d3be951f/src/script/standard.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/standard.h?ref=74a43f9dbd197d4b7b1c441d4c381a54d3be951f",
+        "patch": "@@ -45,6 +45,7 @@ static const unsigned int MANDATORY_SCRIPT_VERIFY_FLAGS = SCRIPT_VERIFY_P2SH;\n enum txnouttype\n {\n     TX_NONSTANDARD,\n+    TX_HTLC,\n     // 'standard' transaction types:\n     TX_PUBKEY,\n     TX_PUBKEYHASH,"
+      }
+    ]
+  },
+  {
+    "sha": "483c04c548989345480bbf693225272e1e0daf05",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo0ODNjMDRjNTQ4OTg5MzQ1NDgwYmJmNjkzMjI1MjcyZTFlMGRhZjA1",
+    "commit": {
+      "author": {
+        "name": "Sean Bowe",
+        "email": "ewillbefull@gmail.com",
+        "date": "2017-03-01T13:00:34Z"
+      },
+      "committer": {
+        "name": "Sean Bowe",
+        "email": "ewillbefull@gmail.com",
+        "date": "2017-03-01T13:00:34Z"
+      },
+      "message": "GetScriptForHTLC helper function.",
+      "tree": {
+        "sha": "96df49306b2d5c25fd06fb8caae6f6eac5c85cf1",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/96df49306b2d5c25fd06fb8caae6f6eac5c85cf1"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/483c04c548989345480bbf693225272e1e0daf05",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/483c04c548989345480bbf693225272e1e0daf05",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/483c04c548989345480bbf693225272e1e0daf05",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/483c04c548989345480bbf693225272e1e0daf05/comments",
+    "author": {
+      "login": "ebfull",
+      "id": 3794471,
+      "node_id": "MDQ6VXNlcjM3OTQ0NzE=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3794471?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ebfull",
+      "html_url": "https://github.com/ebfull",
+      "followers_url": "https://api.github.com/users/ebfull/followers",
+      "following_url": "https://api.github.com/users/ebfull/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ebfull/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ebfull/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ebfull/subscriptions",
+      "organizations_url": "https://api.github.com/users/ebfull/orgs",
+      "repos_url": "https://api.github.com/users/ebfull/repos",
+      "events_url": "https://api.github.com/users/ebfull/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ebfull/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "ebfull",
+      "id": 3794471,
+      "node_id": "MDQ6VXNlcjM3OTQ0NzE=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3794471?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ebfull",
+      "html_url": "https://github.com/ebfull",
+      "followers_url": "https://api.github.com/users/ebfull/followers",
+      "following_url": "https://api.github.com/users/ebfull/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ebfull/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ebfull/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ebfull/subscriptions",
+      "organizations_url": "https://api.github.com/users/ebfull/orgs",
+      "repos_url": "https://api.github.com/users/ebfull/repos",
+      "events_url": "https://api.github.com/users/ebfull/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ebfull/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "74a43f9dbd197d4b7b1c441d4c381a54d3be951f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/74a43f9dbd197d4b7b1c441d4c381a54d3be951f",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/74a43f9dbd197d4b7b1c441d4c381a54d3be951f"
+      }
+    ],
+    "stats": {
+      "total": 32,
+      "additions": 32,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "094df24b679d40110867a8fc8181bdfe9bbf1986",
+        "filename": "src/script/standard.cpp",
+        "status": "modified",
+        "additions": 26,
+        "deletions": 0,
+        "changes": 26,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/483c04c548989345480bbf693225272e1e0daf05/src/script/standard.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/483c04c548989345480bbf693225272e1e0daf05/src/script/standard.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/standard.cpp?ref=483c04c548989345480bbf693225272e1e0daf05",
+        "patch": "@@ -374,6 +374,32 @@ CScript GetScriptForMultisig(int nRequired, const std::vector<CPubKey>& keys)\n     return script;\n }\n \n+CScript GetScriptForHTLC(const CPubKey& seller,\n+                         const CPubKey& refund,\n+                         const std::vector<unsigned char> image,\n+                         uint32_t timeout,\n+                         opcodetype hasher_type,\n+                         opcodetype timeout_type)\n+{\n+    CScript script;\n+\n+    script << OP_IF;\n+    script <<   hasher_type << image << OP_EQUALVERIFY << ToByteVector(seller);\n+    script << OP_ELSE;\n+\n+    if (timeout <= 16) {\n+        script << CScript::EncodeOP_N(timeout);\n+    } else {\n+        script << CScriptNum(timeout);\n+    }\n+\n+    script <<   timeout_type << OP_DROP << ToByteVector(refund);\n+    script << OP_ENDIF;\n+    script << OP_CHECKSIG;\n+\n+    return script;\n+}\n+\n CScript GetScriptForWitness(const CScript& redeemscript)\n {\n     CScript ret;"
+      },
+      {
+        "sha": "ac023d66663c09ee2e7c1ec1ee1599e9d91ce1a8",
+        "filename": "src/script/standard.h",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 0,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/483c04c548989345480bbf693225272e1e0daf05/src/script/standard.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/483c04c548989345480bbf693225272e1e0daf05/src/script/standard.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/script/standard.h?ref=483c04c548989345480bbf693225272e1e0daf05",
+        "patch": "@@ -80,6 +80,12 @@ bool ExtractDestinations(const CScript& scriptPubKey, txnouttype& typeRet, std::\n CScript GetScriptForDestination(const CTxDestination& dest);\n CScript GetScriptForRawPubKey(const CPubKey& pubkey);\n CScript GetScriptForMultisig(int nRequired, const std::vector<CPubKey>& keys);\n+CScript GetScriptForHTLC(const CPubKey& seller,\n+                         const CPubKey& refund,\n+                         const std::vector<unsigned char> image,\n+                         uint32_t timeout,\n+                         opcodetype hasher_type,\n+                         opcodetype timeout_type);\n CScript GetScriptForWitness(const CScript& redeemscript);\n \n #endif // BITCOIN_SCRIPT_STANDARD_H"
+      }
+    ]
+  },
+  {
+    "sha": "37722f0b637a5b3f654c3479c4840d4185792ae7",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzozNzcyMmYwYjYzN2E1YjNmNjU0YzM0NzljNDg0MGQ0MTg1NzkyYWU3",
+    "commit": {
+      "author": {
+        "name": "Sean Bowe",
+        "email": "ewillbefull@gmail.com",
+        "date": "2017-03-01T13:08:09Z"
+      },
+      "committer": {
+        "name": "Sean Bowe",
+        "email": "ewillbefull@gmail.com",
+        "date": "2017-03-01T13:08:09Z"
+      },
+      "message": "Refactor _createmultisig_redeemScript key recognition.",
+      "tree": {
+        "sha": "6d777025ea5c0225df47f61d6714b5597c4ac04a",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/6d777025ea5c0225df47f61d6714b5597c4ac04a"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/37722f0b637a5b3f654c3479c4840d4185792ae7",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/37722f0b637a5b3f654c3479c4840d4185792ae7",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/37722f0b637a5b3f654c3479c4840d4185792ae7",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/37722f0b637a5b3f654c3479c4840d4185792ae7/comments",
+    "author": {
+      "login": "ebfull",
+      "id": 3794471,
+      "node_id": "MDQ6VXNlcjM3OTQ0NzE=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3794471?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ebfull",
+      "html_url": "https://github.com/ebfull",
+      "followers_url": "https://api.github.com/users/ebfull/followers",
+      "following_url": "https://api.github.com/users/ebfull/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ebfull/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ebfull/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ebfull/subscriptions",
+      "organizations_url": "https://api.github.com/users/ebfull/orgs",
+      "repos_url": "https://api.github.com/users/ebfull/repos",
+      "events_url": "https://api.github.com/users/ebfull/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ebfull/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "ebfull",
+      "id": 3794471,
+      "node_id": "MDQ6VXNlcjM3OTQ0NzE=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3794471?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ebfull",
+      "html_url": "https://github.com/ebfull",
+      "followers_url": "https://api.github.com/users/ebfull/followers",
+      "following_url": "https://api.github.com/users/ebfull/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ebfull/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ebfull/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ebfull/subscriptions",
+      "organizations_url": "https://api.github.com/users/ebfull/orgs",
+      "repos_url": "https://api.github.com/users/ebfull/repos",
+      "events_url": "https://api.github.com/users/ebfull/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ebfull/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "483c04c548989345480bbf693225272e1e0daf05",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/483c04c548989345480bbf693225272e1e0daf05",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/483c04c548989345480bbf693225272e1e0daf05"
+      }
+    ],
+    "stats": {
+      "total": 69,
+      "additions": 37,
+      "deletions": 32
+    },
+    "files": [
+      {
+        "sha": "49480c89209abd6cff27ce711f0edf4a8c8b9921",
+        "filename": "src/rpc/misc.cpp",
+        "status": "modified",
+        "additions": 37,
+        "deletions": 32,
+        "changes": 69,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/37722f0b637a5b3f654c3479c4840d4185792ae7/src/rpc/misc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/37722f0b637a5b3f654c3479c4840d4185792ae7/src/rpc/misc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/misc.cpp?ref=37722f0b637a5b3f654c3479c4840d4185792ae7",
+        "patch": "@@ -224,6 +224,42 @@ UniValue validateaddress(const JSONRPCRequest& request)\n     return ret;\n }\n \n+void _publickey_from_string(const std::string &ks, CPubKey &out)\n+{\n+#ifdef ENABLE_WALLET\n+    // Case 1: Bitcoin address and we have full public key:\n+    CBitcoinAddress address(ks);\n+    if (pwalletMain && address.IsValid())\n+    {\n+        CKeyID keyID;\n+        if (!address.GetKeyID(keyID))\n+            throw runtime_error(\n+                strprintf(\"%s does not refer to a key\",ks));\n+        CPubKey vchPubKey;\n+        if (!pwalletMain->GetPubKey(keyID, vchPubKey))\n+            throw runtime_error(\n+                strprintf(\"no full public key for address %s\",ks));\n+        if (!vchPubKey.IsFullyValid())\n+            throw runtime_error(\" Invalid public key: \"+ks);\n+        out = vchPubKey;\n+    }\n+\n+    // Case 2: hex public key\n+    else\n+#endif\n+    if (IsHex(ks))\n+    {\n+        CPubKey vchPubKey(ParseHex(ks));\n+        if (!vchPubKey.IsFullyValid())\n+            throw runtime_error(\" Invalid public key: \"+ks);\n+        out = vchPubKey;\n+    }\n+    else\n+    {\n+        throw runtime_error(\" Invalid public key: \"+ks);\n+    }\n+}\n+\n /**\n  * Used by addmultisigaddress / createmultisig:\n  */\n@@ -246,38 +282,7 @@ CScript _createmultisig_redeemScript(const UniValue& params)\n     for (unsigned int i = 0; i < keys.size(); i++)\n     {\n         const std::string& ks = keys[i].get_str();\n-#ifdef ENABLE_WALLET\n-        // Case 1: Bitcoin address and we have full public key:\n-        CBitcoinAddress address(ks);\n-        if (pwalletMain && address.IsValid())\n-        {\n-            CKeyID keyID;\n-            if (!address.GetKeyID(keyID))\n-                throw runtime_error(\n-                    strprintf(\"%s does not refer to a key\",ks));\n-            CPubKey vchPubKey;\n-            if (!pwalletMain->GetPubKey(keyID, vchPubKey))\n-                throw runtime_error(\n-                    strprintf(\"no full public key for address %s\",ks));\n-            if (!vchPubKey.IsFullyValid())\n-                throw runtime_error(\" Invalid public key: \"+ks);\n-            pubkeys[i] = vchPubKey;\n-        }\n-\n-        // Case 2: hex public key\n-        else\n-#endif\n-        if (IsHex(ks))\n-        {\n-            CPubKey vchPubKey(ParseHex(ks));\n-            if (!vchPubKey.IsFullyValid())\n-                throw runtime_error(\" Invalid public key: \"+ks);\n-            pubkeys[i] = vchPubKey;\n-        }\n-        else\n-        {\n-            throw runtime_error(\" Invalid public key: \"+ks);\n-        }\n+        _publickey_from_string(ks, pubkeys[i]);\n     }\n     CScript result = GetScriptForMultisig(nRequired, pubkeys);\n "
+      }
+    ]
+  },
+  {
+    "sha": "d13d5da6b804a1d64b3b63728be7c0369259c972",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpkMTNkNWRhNmI4MDRhMWQ2NGIzYjYzNzI4YmU3YzAzNjkyNTljOTcy",
+    "commit": {
+      "author": {
+        "name": "Sean Bowe",
+        "email": "ewillbefull@gmail.com",
+        "date": "2017-03-06T14:53:31Z"
+      },
+      "committer": {
+        "name": "Sean Bowe",
+        "email": "ewillbefull@gmail.com",
+        "date": "2017-03-06T14:53:31Z"
+      },
+      "message": "Add `createhtlc` RPC command.",
+      "tree": {
+        "sha": "0add4368e4af17e47e517b24b496fccd10052385",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/0add4368e4af17e47e517b24b496fccd10052385"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/d13d5da6b804a1d64b3b63728be7c0369259c972",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d13d5da6b804a1d64b3b63728be7c0369259c972",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/d13d5da6b804a1d64b3b63728be7c0369259c972",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d13d5da6b804a1d64b3b63728be7c0369259c972/comments",
+    "author": {
+      "login": "ebfull",
+      "id": 3794471,
+      "node_id": "MDQ6VXNlcjM3OTQ0NzE=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3794471?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ebfull",
+      "html_url": "https://github.com/ebfull",
+      "followers_url": "https://api.github.com/users/ebfull/followers",
+      "following_url": "https://api.github.com/users/ebfull/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ebfull/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ebfull/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ebfull/subscriptions",
+      "organizations_url": "https://api.github.com/users/ebfull/orgs",
+      "repos_url": "https://api.github.com/users/ebfull/repos",
+      "events_url": "https://api.github.com/users/ebfull/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ebfull/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "ebfull",
+      "id": 3794471,
+      "node_id": "MDQ6VXNlcjM3OTQ0NzE=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3794471?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ebfull",
+      "html_url": "https://github.com/ebfull",
+      "followers_url": "https://api.github.com/users/ebfull/followers",
+      "following_url": "https://api.github.com/users/ebfull/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ebfull/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ebfull/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ebfull/subscriptions",
+      "organizations_url": "https://api.github.com/users/ebfull/orgs",
+      "repos_url": "https://api.github.com/users/ebfull/repos",
+      "events_url": "https://api.github.com/users/ebfull/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ebfull/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "37722f0b637a5b3f654c3479c4840d4185792ae7",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/37722f0b637a5b3f654c3479c4840d4185792ae7",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/37722f0b637a5b3f654c3479c4840d4185792ae7"
+      }
+    ],
+    "stats": {
+      "total": 84,
+      "additions": 84,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "08f874c48573edf21597db116c3ab6f5801d63a8",
+        "filename": "src/rpc/misc.cpp",
+        "status": "modified",
+        "additions": 84,
+        "deletions": 0,
+        "changes": 84,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/d13d5da6b804a1d64b3b63728be7c0369259c972/src/rpc/misc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/d13d5da6b804a1d64b3b63728be7c0369259c972/src/rpc/misc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/rpc/misc.cpp?ref=d13d5da6b804a1d64b3b63728be7c0369259c972",
+        "patch": "@@ -336,6 +336,89 @@ UniValue createmultisig(const JSONRPCRequest& request)\n     return result;\n }\n \n+\n+UniValue createhtlc(const JSONRPCRequest& request)\n+{\n+    if (request.fHelp || request.params.size() != 4) {\n+        string msg = \"createhtlc seller_key refund_key hash timeout_type timeout\\n\"\n+            \"\\nCreates an address whose funds can be unlocked with a preimage or as a refund\\n\"\n+            \"It returns a json object with the address and redeemScript.\\n\"\n+\n+            \"\\nArguments:\\n\"\n+            \"1. seller_key    (string, required) The public key of the possessor of the preimage.\\n\"\n+            \"2. refund_key    (string, required) The public key of the recipient of the refund.\\n\"\n+            \"3. hash          (string, required) SHA256 or RIPEMD160 hash of the preimage.\\n\"\n+            \"4. timeout       (string, required) Timeout of the contract (denominated in blocks) relative to its placement in the blockchain\\n\"\n+\n+            \"\\nResult:\"\n+            \"{\\n\"\n+            \"  \\\"address\\\":\\\"htlcaddress\\\"   (string) The value of the new HTLC address.\\n\"\n+            \"  \\\"redeemScript\\\":\\\"script\\\"   (string) The string value of the hex-encoded redemption script.\\n\"\n+            \"}\\n\"\n+\n+            \"\\nExamples:\\n\"\n+            \"\\nPay someone for the preimage of 254e38932fdb9fc27f82aac2a5cc6d789664832383e3cf3298f8c120812712db\\n\"\n+            + HelpExampleCli(\"createhtlc\", \"0333ffc4d18c7b2adbd1df49f5486030b0b70449c421189c2c0f8981d0da9669af 0333ffc4d18c7b2adbd1df49f5486030b0b70449c421189c2c0f8981d0da9669af 254e38932fdb9fc27f82aac2a5cc6d789664832383e3cf3298f8c120812712db 10\") +\n+            \"\\nAs a json rpc call\\n\"\n+            + HelpExampleRpc(\"createhtlc\", \"0333ffc4d18c7b2adbd1df49f5486030b0b70449c421189c2c0f8981d0da9669af, 0333ffc4d18c7b2adbd1df49f5486030b0b70449c421189c2c0f8981d0da9669af, 254e38932fdb9fc27f82aac2a5cc6d789664832383e3cf3298f8c120812712db, 10\")\n+        ;\n+\n+        throw runtime_error(msg);\n+    }\n+\n+    CPubKey seller_key;\n+    CPubKey refund_key;\n+    _publickey_from_string(request.params[0].get_str(), seller_key);\n+    _publickey_from_string(request.params[1].get_str(), refund_key);\n+\n+    std::string hs = request.params[2].get_str();\n+    std::vector<unsigned char> image;\n+    opcodetype hasher;\n+    if (IsHex(hs)) {\n+        image = ParseHex(hs);\n+\n+        if (image.size() == 32) {\n+            hasher = OP_SHA256;\n+        } else if (image.size() == 20) {\n+            hasher = OP_RIPEMD160;\n+        } else {\n+            throw JSONRPCError(RPC_TYPE_ERROR, \"Invalid hash image length, 32 (SHA256) and 20 (RIPEMD160) accepted\");\n+        }\n+    } else {\n+        throw JSONRPCError(RPC_TYPE_ERROR, \"Invalid hash image\");\n+    }\n+\n+    uint32_t blocks;\n+    // This will make request.params[3] forward compatible with '10h'/'3d' style timeout\n+    // values if it is extended in the future.\n+    {\n+        // FIXME: This duplicates the functionality of `ParseNonRFCJSONValue` in\n+        // `client`, so perhaps it should just be added to univalue itself?\n+        UniValue timeout;\n+        if (!timeout.read(std::string(\"[\")+request.params[3].get_str()+std::string(\"]\")) ||\n+            !timeout.isArray() || timeout.size()!=1)\n+            throw runtime_error(string(\"Error parsing JSON:\")+request.params[3].get_str());\n+\n+        blocks = timeout[0].get_int();\n+    }\n+\n+    if (blocks >= CTxIn::SEQUENCE_LOCKTIME_TYPE_FLAG) {\n+        throw JSONRPCError(RPC_TYPE_ERROR, \"Invalid block denominated relative timeout\");\n+    }\n+\n+    CScript inner = GetScriptForHTLC(seller_key, refund_key, image,\n+                                     blocks, hasher, OP_CHECKSEQUENCEVERIFY);\n+\n+    CScriptID innerID(inner);\n+    CBitcoinAddress address(innerID);\n+\n+    UniValue result(UniValue::VOBJ);\n+    result.push_back(Pair(\"address\", address.ToString()));\n+    result.push_back(Pair(\"redeemScript\", HexStr(inner.begin(), inner.end())));\n+\n+    return result;\n+}\n+\n UniValue verifymessage(const JSONRPCRequest& request)\n {\n     if (request.fHelp || request.params.size() != 3)\n@@ -521,6 +604,7 @@ static const CRPCCommand commands[] =\n     { \"control\",            \"getmemoryinfo\",          &getmemoryinfo,          true,  {} },\n     { \"util\",               \"validateaddress\",        &validateaddress,        true,  {\"address\"} }, /* uses wallet if enabled */\n     { \"util\",               \"createmultisig\",         &createmultisig,         true,  {\"nrequired\",\"keys\"} },\n+    { \"util\",               \"createhtlc\",             &createhtlc,             true,  {\"seller_key\",\"refund_key\",\"hash\",\"timeout\"} },\n     { \"util\",               \"verifymessage\",          &verifymessage,          true,  {\"address\",\"signature\",\"message\"} },\n     { \"util\",               \"signmessagewithprivkey\", &signmessagewithprivkey, true,  {\"privkey\",\"message\"} },\n "
+      }
+    ]
+  },
+  {
+    "sha": "0ba1a5008b80041114771c98ff0e9b349945b473",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzowYmExYTUwMDhiODAwNDExMTQ3NzFjOThmZjBlOWIzNDk5NDViNDcz",
+    "commit": {
+      "author": {
+        "name": "Sean Bowe",
+        "email": "ewillbefull@gmail.com",
+        "date": "2017-03-06T14:58:56Z"
+      },
+      "committer": {
+        "name": "Sean Bowe",
+        "email": "ewillbefull@gmail.com",
+        "date": "2017-03-06T14:58:56Z"
+      },
+      "message": "Add RPC test for `createhtlc`.",
+      "tree": {
+        "sha": "3167a3a9202f8c44ba615b093a88497082d2b2ba",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/3167a3a9202f8c44ba615b093a88497082d2b2ba"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/0ba1a5008b80041114771c98ff0e9b349945b473",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0ba1a5008b80041114771c98ff0e9b349945b473",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/0ba1a5008b80041114771c98ff0e9b349945b473",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/0ba1a5008b80041114771c98ff0e9b349945b473/comments",
+    "author": {
+      "login": "ebfull",
+      "id": 3794471,
+      "node_id": "MDQ6VXNlcjM3OTQ0NzE=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3794471?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ebfull",
+      "html_url": "https://github.com/ebfull",
+      "followers_url": "https://api.github.com/users/ebfull/followers",
+      "following_url": "https://api.github.com/users/ebfull/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ebfull/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ebfull/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ebfull/subscriptions",
+      "organizations_url": "https://api.github.com/users/ebfull/orgs",
+      "repos_url": "https://api.github.com/users/ebfull/repos",
+      "events_url": "https://api.github.com/users/ebfull/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ebfull/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "ebfull",
+      "id": 3794471,
+      "node_id": "MDQ6VXNlcjM3OTQ0NzE=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/3794471?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/ebfull",
+      "html_url": "https://github.com/ebfull",
+      "followers_url": "https://api.github.com/users/ebfull/followers",
+      "following_url": "https://api.github.com/users/ebfull/following{/other_user}",
+      "gists_url": "https://api.github.com/users/ebfull/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/ebfull/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/ebfull/subscriptions",
+      "organizations_url": "https://api.github.com/users/ebfull/orgs",
+      "repos_url": "https://api.github.com/users/ebfull/repos",
+      "events_url": "https://api.github.com/users/ebfull/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/ebfull/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "d13d5da6b804a1d64b3b63728be7c0369259c972",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/d13d5da6b804a1d64b3b63728be7c0369259c972",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/d13d5da6b804a1d64b3b63728be7c0369259c972"
+      }
+    ],
+    "stats": {
+      "total": 153,
+      "additions": 153,
+      "deletions": 0
+    },
+    "files": [
+      {
+        "sha": "cff7fbdaa4fda35bd3d47fe405e1de9c0feae575",
+        "filename": "qa/pull-tester/rpc-tests.py",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0ba1a5008b80041114771c98ff0e9b349945b473/qa/pull-tester/rpc-tests.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0ba1a5008b80041114771c98ff0e9b349945b473/qa/pull-tester/rpc-tests.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/qa/pull-tester/rpc-tests.py?ref=0ba1a5008b80041114771c98ff0e9b349945b473",
+        "patch": "@@ -83,6 +83,7 @@\n     'rpcnamedargs.py',\n     'listsinceblock.py',\n     'p2p-leaktests.py',\n+    'htlc.py'\n ]\n \n ZMQ_SCRIPTS = ["
+      },
+      {
+        "sha": "0de0c1a548576e51bec7fbf431d8e1055eaad60e",
+        "filename": "qa/rpc-tests/htlc.py",
+        "status": "added",
+        "additions": 152,
+        "deletions": 0,
+        "changes": 152,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/0ba1a5008b80041114771c98ff0e9b349945b473/qa/rpc-tests/htlc.py",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/0ba1a5008b80041114771c98ff0e9b349945b473/qa/rpc-tests/htlc.py",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/qa/rpc-tests/htlc.py?ref=0ba1a5008b80041114771c98ff0e9b349945b473",
+        "patch": "@@ -0,0 +1,152 @@\n+#!/usr/bin/env python3\n+# Copyright (c) 2014-2016 The Bitcoin Core developers\n+# Distributed under the MIT software license, see the accompanying\n+# file COPYING or http://www.opensource.org/licenses/mit-license.php.\n+\n+#\n+# Test usage of HTLC transactions with RPC\n+#\n+\n+from test_framework.test_framework import BitcoinTestFramework\n+from test_framework.util import *\n+from test_framework.mininode import sha256, ripemd160\n+\n+class HTLCTest(BitcoinTestFramework):\n+    BUYER = 0\n+    SELLER = 1\n+\n+    def __init__(self):\n+        super().__init__()\n+        self.num_nodes = 2\n+        self.setup_clean_chain = False\n+\n+    def setup_network(self):\n+        self.nodes = start_nodes(self.num_nodes, self.options.tmpdir)\n+        connect_nodes_bi(self.nodes, 0, 1)\n+        self.is_network_split = False\n+        self.sync_all()\n+\n+    def activateCSV(self):\n+        # activation should happen at block height 432 (3 periods)\n+        min_activation_height = 432\n+        height = self.nodes[0].getblockcount()\n+        assert(height < 432)\n+        self.nodes[0].generate(432-height)\n+        assert(get_bip9_status(self.nodes[0], 'csv')['status'] == 'active')\n+        sync_blocks(self.nodes)\n+\n+    def run_test(self):\n+        # Activate checksequenceverify\n+        self.activateCSV()\n+\n+        # The buyer wishes to purchase the preimage of \"254e38932fdb9fc27f82aac2a5cc6d789664832383e3cf3298f8c120812712db\"\n+        image = \"254e38932fdb9fc27f82aac2a5cc6d789664832383e3cf3298f8c120812712db\"\n+        # The seller wishes to sell the preimage\n+        preimage = \"696c6c756d696e617469\"\n+\n+        assert_equal(image, bytes_to_hex_str(sha256(hex_str_to_bytes(preimage))))\n+\n+        self.run_tests_with_preimage_and_image(preimage, image)\n+\n+        image = \"5bb50b07a120dba7f1aae9623825071bc1fe4b40\"\n+        preimage = \"ffffffffff\"\n+\n+        assert_equal(image, bytes_to_hex_str(ripemd160(hex_str_to_bytes(preimage))))\n+\n+        self.run_tests_with_preimage_and_image(preimage, image)\n+\n+    def run_tests_with_preimage_and_image(self, preimage, image):\n+        self.test_refund(image, 10)\n+        self.test_refund(image, 100)\n+\n+        assert_equal(False, self.test_sell(image, 10))\n+        self.nodes[self.SELLER].importpreimage(preimage)\n+        assert(self.test_sell(image, 10))\n+\n+    def test_refund(self, image, num_blocks):\n+        (seller_spending_tx, buyer_refund_tx) = self.fund_htlc(image, num_blocks)\n+\n+        # The buyer signs the refund transaction\n+        buyer_sign = self.nodes[self.BUYER].signrawtransaction(buyer_refund_tx)\n+        assert_equal(buyer_sign[\"complete\"], True)\n+\n+        # The buyer should not be able to spend the funds yet\n+        assert(self.expect_cannot_send(self.BUYER, buyer_sign[\"hex\"]))\n+\n+        # After appearing in num_blocks number of blocks, the buyer can.\n+        self.nodes[self.BUYER].generate(num_blocks-1)\n+        sync_blocks(self.nodes)\n+\n+        self.nodes[self.BUYER].sendrawtransaction(buyer_sign[\"hex\"])\n+\n+        self.nodes[self.BUYER].generate(1)\n+        sync_blocks(self.nodes)\n+\n+    def test_sell(self, image, num_blocks):\n+        (seller_spending_tx, buyer_refund_tx) = self.fund_htlc(image, num_blocks)\n+\n+        # The seller signs the spending transaction\n+        seller_sign = self.nodes[self.SELLER].signrawtransaction(seller_spending_tx)\n+\n+        if seller_sign[\"complete\"] == False:\n+            return False\n+\n+        self.nodes[self.SELLER].sendrawtransaction(seller_sign[\"hex\"])\n+\n+        return True\n+\n+    def fund_htlc(self, image, num_blocks):\n+        buyer_addr = self.nodes[self.BUYER].getnewaddress(\"\")\n+        buyer_pubkey = self.nodes[self.BUYER].validateaddress(buyer_addr)[\"pubkey\"]\n+        seller_addr = self.nodes[self.SELLER].getnewaddress(\"\")\n+        seller_pubkey = self.nodes[self.SELLER].validateaddress(seller_addr)[\"pubkey\"]\n+\n+        # Create the HTLC transaction\n+        htlc = self.nodes[self.BUYER].createhtlc(seller_pubkey, buyer_pubkey, image, str(num_blocks))\n+\n+        # Import into wallets\n+        self.nodes[self.BUYER].importaddress(htlc[\"redeemScript\"], \"\", False, True)\n+        self.nodes[self.SELLER].importaddress(htlc[\"redeemScript\"], \"\", False, True)\n+\n+        # Buyer sends the funds\n+        self.nodes[self.BUYER].sendtoaddress(htlc[\"address\"], 10)\n+        self.nodes[self.BUYER].generate(1)\n+        sync_blocks(self.nodes)\n+\n+        funding_tx = False\n+\n+        for tx in self.nodes[self.SELLER].listtransactions(\"*\", 500, 0, True):\n+            if tx[\"address\"] == htlc[\"address\"]:\n+                funding_tx = tx\n+\n+        assert(funding_tx != False)\n+\n+        seller_spending_tx = self.nodes[self.SELLER].createrawtransaction(\n+            [{\"txid\": funding_tx[\"txid\"], \"vout\": funding_tx[\"vout\"]}],\n+            {seller_addr: 9.99}\n+        )\n+        buyer_refund_tx = self.nodes[self.BUYER].createrawtransaction(\n+            [{\"txid\": funding_tx[\"txid\"], \"vout\": funding_tx[\"vout\"], \"sequence\": num_blocks}],\n+            {buyer_addr: 9.99}\n+        )\n+\n+        # TODO: why isn't this already version 2? or shouldn't the signer figure\n+        # out that it's necessary?\n+        seller_spending_tx = \"02\" + seller_spending_tx[2:]\n+        buyer_refund_tx = \"02\" + buyer_refund_tx[2:]\n+\n+        return (seller_spending_tx, buyer_refund_tx)\n+\n+    def expect_cannot_send(self, i, tx):\n+        exception_triggered = False\n+\n+        try:\n+            self.nodes[i].sendrawtransaction(tx)\n+        except JSONRPCException:\n+            exception_triggered = True\n+\n+        return exception_triggered\n+\n+if __name__ == '__main__':\n+    HTLCTest().main()\n+"
+      }
+    ]
+  }
+]

@@ -1,0 +1,100 @@
+[
+  {
+    "sha": "f36754839b5462b330b92fa488c467cc4b38a028",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpmMzY3NTQ4MzliNTQ2MmIzMzBiOTJmYTQ4OGM0NjdjYzRiMzhhMDI4",
+    "commit": {
+      "author": {
+        "name": "Gregory Maxwell",
+        "email": "greg@xiph.org",
+        "date": "2014-04-06T07:18:52Z"
+      },
+      "committer": {
+        "name": "Gregory Maxwell",
+        "email": "greg@xiph.org",
+        "date": "2014-04-06T07:26:10Z"
+      },
+      "message": "Make CCryptoKeyStore::Unlock check all keys.\n\nCCryptoKeyStore::Unlock has a loop to attempt decrypting each key which\n only executes once, likely due to a simple mistake when the code was\n originally written.\n\nThis patch fixes the behavior by making it check all keys. It also adds\n a fatal assertion in the case some decrypt but some do not, since that\n indicates that the wallet is in some kind of really bad state.\n\nThis may make unlocking noticeably slower on wallets with many keys.",
+      "tree": {
+        "sha": "544a086207866bd1e190143c67f7bc675e34558f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/544a086207866bd1e190143c67f7bc675e34558f"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/f36754839b5462b330b92fa488c467cc4b38a028",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f36754839b5462b330b92fa488c467cc4b38a028",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/f36754839b5462b330b92fa488c467cc4b38a028",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/f36754839b5462b330b92fa488c467cc4b38a028/comments",
+    "author": {
+      "login": "gmaxwell",
+      "id": 858454,
+      "node_id": "MDQ6VXNlcjg1ODQ1NA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/858454?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/gmaxwell",
+      "html_url": "https://github.com/gmaxwell",
+      "followers_url": "https://api.github.com/users/gmaxwell/followers",
+      "following_url": "https://api.github.com/users/gmaxwell/following{/other_user}",
+      "gists_url": "https://api.github.com/users/gmaxwell/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/gmaxwell/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/gmaxwell/subscriptions",
+      "organizations_url": "https://api.github.com/users/gmaxwell/orgs",
+      "repos_url": "https://api.github.com/users/gmaxwell/repos",
+      "events_url": "https://api.github.com/users/gmaxwell/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/gmaxwell/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "gmaxwell",
+      "id": 858454,
+      "node_id": "MDQ6VXNlcjg1ODQ1NA==",
+      "avatar_url": "https://avatars.githubusercontent.com/u/858454?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/gmaxwell",
+      "html_url": "https://github.com/gmaxwell",
+      "followers_url": "https://api.github.com/users/gmaxwell/followers",
+      "following_url": "https://api.github.com/users/gmaxwell/following{/other_user}",
+      "gists_url": "https://api.github.com/users/gmaxwell/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/gmaxwell/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/gmaxwell/subscriptions",
+      "organizations_url": "https://api.github.com/users/gmaxwell/orgs",
+      "repos_url": "https://api.github.com/users/gmaxwell/repos",
+      "events_url": "https://api.github.com/users/gmaxwell/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/gmaxwell/received_events",
+      "type": "User",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "513412fd73af0e62d8780a8de9721b7822ff2c6f",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/513412fd73af0e62d8780a8de9721b7822ff2c6f",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/513412fd73af0e62d8780a8de9721b7822ff2c6f"
+      }
+    ],
+    "stats": {
+      "total": 26,
+      "additions": 22,
+      "deletions": 4
+    },
+    "files": [
+      {
+        "sha": "2f94e0827361c85cce1216ce97636a221f6f5e33",
+        "filename": "src/crypter.cpp",
+        "status": "modified",
+        "additions": 22,
+        "deletions": 4,
+        "changes": 26,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/f36754839b5462b330b92fa488c467cc4b38a028/src/crypter.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/f36754839b5462b330b92fa488c467cc4b38a028/src/crypter.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/crypter.cpp?ref=f36754839b5462b330b92fa488c467cc4b38a028",
+        "patch": "@@ -152,22 +152,40 @@ bool CCryptoKeyStore::Unlock(const CKeyingMaterial& vMasterKeyIn)\n         if (!SetCrypted())\n             return false;\n \n+        bool keyPass = false;\n+        bool keyFail = false;\n         CryptedKeyMap::const_iterator mi = mapCryptedKeys.begin();\n         for (; mi != mapCryptedKeys.end(); ++mi)\n         {\n             const CPubKey &vchPubKey = (*mi).second.first;\n             const std::vector<unsigned char> &vchCryptedSecret = (*mi).second.second;\n             CKeyingMaterial vchSecret;\n             if(!DecryptSecret(vMasterKeyIn, vchCryptedSecret, vchPubKey.GetHash(), vchSecret))\n-                return false;\n+            {\n+                keyFail = true;\n+                break;\n+            }\n             if (vchSecret.size() != 32)\n-                return false;\n+            {\n+                keyFail = true;\n+                break;\n+            }\n             CKey key;\n             key.Set(vchSecret.begin(), vchSecret.end(), vchPubKey.IsCompressed());\n-            if (key.GetPubKey() == vchPubKey)\n+            if (key.GetPubKey() != vchPubKey)\n+            {\n+                keyFail = true;\n                 break;\n-            return false;\n+            }\n+            keyPass = true;\n+        }\n+        if (keyPass && keyFail)\n+        {\n+            LogPrintf(\"The wallet is probably corrupted: Some keys decrypt but not all.\");\n+            assert(false);\n         }\n+        if (keyFail || !keyPass)\n+            return false;\n         vMasterKey = vMasterKeyIn;\n     }\n     NotifyStatusChanged(this);"
+      }
+    ]
+  }
+]

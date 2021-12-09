@@ -1,0 +1,158 @@
+[
+  {
+    "sha": "b24e6e4d1b917210b9e22711fb2535f53e949547",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpiMjRlNmU0ZDFiOTE3MjEwYjllMjI3MTFmYjI1MzVmNTNlOTQ5NTQ3",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-12-17T00:48:03Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-01-13T03:13:16Z"
+      },
+      "message": "Add -keepnode which attempts to -addnode and keep a connection open",
+      "tree": {
+        "sha": "65aef349a108c011dc828b3645dd0a8606d878cb",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/65aef349a108c011dc828b3645dd0a8606d878cb"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/b24e6e4d1b917210b9e22711fb2535f53e949547",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b24e6e4d1b917210b9e22711fb2535f53e949547",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/b24e6e4d1b917210b9e22711fb2535f53e949547",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b24e6e4d1b917210b9e22711fb2535f53e949547/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "3f64fa1369bde45034e451c4093e0852e59a1cdf",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/3f64fa1369bde45034e451c4093e0852e59a1cdf",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/3f64fa1369bde45034e451c4093e0852e59a1cdf"
+      }
+    ],
+    "stats": {
+      "total": 122,
+      "additions": 100,
+      "deletions": 22
+    },
+    "files": [
+      {
+        "sha": "890a7d03a2371af2a33d51f3ccaa24461ae08bb2",
+        "filename": "src/init.cpp",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b24e6e4d1b917210b9e22711fb2535f53e949547/src/init.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b24e6e4d1b917210b9e22711fb2535f53e949547/src/init.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/init.cpp?ref=b24e6e4d1b917210b9e22711fb2535f53e949547",
+        "patch": "@@ -192,7 +192,7 @@ bool AppInit2(int argc, char* argv[])\n             \"  -dns             \\t  \"   + _(\"Allow DNS lookups for addnode and connect\") + \"\\n\" +\n             \"  -port=<port>     \\t\\t  \" + _(\"Listen for connections on <port> (default: 8333 or testnet: 18333)\") + \"\\n\" +\n             \"  -maxconnections=<n>\\t  \" + _(\"Maintain at most <n> connections to peers (default: 125)\") + \"\\n\" +\n-            \"  -addnode=<ip>    \\t  \"   + _(\"Add a node to connect to\") + \"\\n\" +\n+            \"  -addnode=<ip>    \\t  \"   + _(\"Add a node to connect to and attempt to keep the connection open\") + \"\\n\" +\n             \"  -connect=<ip>    \\t\\t  \" + _(\"Connect only to the specified node\") + \"\\n\" +\n             \"  -noirc           \\t  \"   + _(\"Don't find peers using internet relay chat\") + \"\\n\" +\n             \"  -nolisten        \\t  \"   + _(\"Don't accept connections from outside\") + \"\\n\" +"
+      },
+      {
+        "sha": "f3544326c35666dbbd2968710825675cdeb2b5bb",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 83,
+        "deletions": 18,
+        "changes": 101,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b24e6e4d1b917210b9e22711fb2535f53e949547/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b24e6e4d1b917210b9e22711fb2535f53e949547/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=b24e6e4d1b917210b9e22711fb2535f53e949547",
+        "patch": "@@ -29,6 +29,7 @@ static const int MAX_OUTBOUND_CONNECTIONS = 8;\n void ThreadMessageHandler2(void* parg);\n void ThreadSocketHandler2(void* parg);\n void ThreadOpenConnections2(void* parg);\n+void ThreadOpenAddedConnections2(void* parg);\n #ifdef USE_UPNP\n void ThreadMapPort2(void* parg);\n #endif\n@@ -61,6 +62,9 @@ CCriticalSection cs_mapRelay;\n map<CInv, int64> mapAlreadyAskedFor;\n \n \n+set<CNetAddr> setservAddNodeAddresses;\n+CCriticalSection cs_setservAddNodeAddresses;\n+\n \n \n \n@@ -750,7 +754,9 @@ void ThreadSocketHandler2(void* parg)\n             }\n             else if (nInbound >= GetArg(\"-maxconnections\", 125) - MAX_OUTBOUND_CONNECTIONS)\n             {\n-                closesocket(hSocket);\n+                CRITICAL_BLOCK(cs_setservAddNodeAddresses)\n+                    if (!setservAddNodeAddresses.count(addr))\n+                        closesocket(hSocket);\n             }\n             else if (CNode::IsBanned(addr))\n             {\n@@ -1214,22 +1220,6 @@ void ThreadOpenConnections2(void* parg)\n         }\n     }\n \n-    // Connect to manually added nodes first\n-    if (mapArgs.count(\"-addnode\"))\n-    {\n-        BOOST_FOREACH(string strAddr, mapMultiArgs[\"-addnode\"])\n-        {\n-            CAddress addr(strAddr, fAllowDNS);\n-            if (addr.IsValid())\n-            {\n-                OpenNetworkConnection(addr);\n-                Sleep(500);\n-                if (fShutdown)\n-                    return;\n-            }\n-        }\n-    }\n-\n     // Initiate network connections\n     int64 nStart = GetTime();\n     loop\n@@ -1358,6 +1348,76 @@ void ThreadOpenConnections2(void* parg)\n     }\n }\n \n+void ThreadOpenAddedConnections(void* parg)\n+{\n+    IMPLEMENT_RANDOMIZE_STACK(ThreadOpenAddedConnections(parg));\n+    try\n+    {\n+        vnThreadsRunning[7]++;\n+        ThreadOpenAddedConnections2(parg);\n+        vnThreadsRunning[7]--;\n+    }\n+    catch (std::exception& e) {\n+        vnThreadsRunning[7]--;\n+        PrintException(&e, \"ThreadOpenAddedConnections()\");\n+    } catch (...) {\n+        vnThreadsRunning[7]--;\n+        PrintException(NULL, \"ThreadOpenAddedConnections()\");\n+    }\n+    printf(\"ThreadOpenAddedConnections exiting\\n\");\n+}\n+\n+void ThreadOpenAddedConnections2(void* parg)\n+{\n+    printf(\"ThreadOpenAddedConnections started\\n\");\n+\n+    if (mapArgs.count(\"-addnode\") == 0)\n+        return;\n+\n+    vector<vector<CService> > vservAddressesToAdd(0);\n+    BOOST_FOREACH(string& strAddNode, mapMultiArgs[\"-addnode\"])\n+    {\n+        vector<CService> vservNode(0);\n+        if(Lookup(strAddNode.c_str(), vservNode, GetDefaultPort(), fAllowDNS, 0))\n+        {\n+            vservAddressesToAdd.push_back(vservNode);\n+            CRITICAL_BLOCK(cs_setservAddNodeAddresses)\n+                BOOST_FOREACH(CService& serv, vservNode)\n+                    setservAddNodeAddresses.insert(serv);\n+        }\n+    }\n+    loop\n+    {\n+        vector<vector<CService> > vservConnectAddresses = vservAddressesToAdd;\n+        // Attempt to connect to each IP for each addnode entry until at least one is successful per addnode entry\n+        // (keeping in mind that addnode entries can have many IPs if fAllowDNS)\n+        CRITICAL_BLOCK(cs_vNodes)\n+            BOOST_FOREACH(CNode* pnode, vNodes)\n+                for (vector<vector<CService> >::iterator it = vservConnectAddresses.begin(); it != vservConnectAddresses.end(); it++)\n+                    BOOST_FOREACH(CService& addrNode, *(it))\n+                        if (pnode->addr == addrNode)\n+                        {\n+                            it = vservConnectAddresses.erase(it);\n+                            it--;\n+                            break;\n+                        }\n+        BOOST_FOREACH(vector<CService>& vserv, vservConnectAddresses)\n+        {\n+            OpenNetworkConnection(CAddress(*(vserv.begin())));\n+            Sleep(500);\n+            if (fShutdown)\n+                return;\n+        }\n+        if (fShutdown)\n+            return;\n+        vnThreadsRunning[7]--;\n+        Sleep(120000); // Retry every 2 minutes\n+        vnThreadsRunning[7]++;\n+        if (fShutdown)\n+            return;\n+    }\n+}\n+\n bool OpenNetworkConnection(const CAddress& addrConnect)\n {\n     //\n@@ -1634,6 +1694,10 @@ void StartNode(void* parg)\n     if (!CreateThread(ThreadSocketHandler, NULL))\n         printf(\"Error: CreateThread(ThreadSocketHandler) failed\\n\");\n \n+    // Initiate outbound connections from -addnode\n+    if (!CreateThread(ThreadOpenAddedConnections, NULL))\n+        printf(\"Error: CreateThread(ThreadOpenAddedConnections) failed\\n\");\n+\n     // Initiate outbound connections\n     if (!CreateThread(ThreadOpenConnections, NULL))\n         printf(\"Error: CreateThread(ThreadOpenConnections) failed\\n\");\n@@ -1652,7 +1716,7 @@ bool StopNode()\n     fShutdown = true;\n     nTransactionsUpdated++;\n     int64 nStart = GetTime();\n-    while (vnThreadsRunning[0] > 0 || vnThreadsRunning[2] > 0 || vnThreadsRunning[3] > 0 || vnThreadsRunning[4] > 0\n+    while (vnThreadsRunning[0] > 0 || vnThreadsRunning[2] > 0 || vnThreadsRunning[3] > 0 || vnThreadsRunning[4] > 0 || vnThreadsRunning[6] > 0 || vnThreadsRunning[7] > 0\n #ifdef USE_UPNP\n         || vnThreadsRunning[5] > 0\n #endif\n@@ -1669,6 +1733,7 @@ bool StopNode()\n     if (vnThreadsRunning[4] > 0) printf(\"ThreadRPCServer still running\\n\");\n     if (fHaveUPnP && vnThreadsRunning[5] > 0) printf(\"ThreadMapPort still running\\n\");\n     if (vnThreadsRunning[6] > 0) printf(\"ThreadDNSAddressSeed still running\\n\");\n+    if (vnThreadsRunning[7] > 0) printf(\"ThreadOpenAddedConnections still running\\n\");\n     while (vnThreadsRunning[2] > 0 || vnThreadsRunning[4] > 0)\n         Sleep(20);\n     Sleep(50);"
+      },
+      {
+        "sha": "34d58f90a366c0de22f623b1824a12617f809753",
+        "filename": "src/netbase.cpp",
+        "status": "modified",
+        "additions": 15,
+        "deletions": 3,
+        "changes": 18,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b24e6e4d1b917210b9e22711fb2535f53e949547/src/netbase.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b24e6e4d1b917210b9e22711fb2535f53e949547/src/netbase.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/netbase.cpp?ref=b24e6e4d1b917210b9e22711fb2535f53e949547",
+        "patch": "@@ -96,7 +96,7 @@ bool LookupHostNumeric(const char *pszName, std::vector<CNetAddr>& vIP, int nMax\n     return LookupHost(pszName, vIP, nMaxSolutions, false);\n }\n \n-bool Lookup(const char *pszName, CService& addr, int portDefault, bool fAllowLookup)\n+bool Lookup(const char *pszName, std::vector<CService>& vAddr, int portDefault, bool fAllowLookup, int nMaxSolutions)\n {\n     if (pszName[0] == 0)\n         return false;\n@@ -130,10 +130,22 @@ bool Lookup(const char *pszName, CService& addr, int portDefault, bool fAllowLoo\n     }\n \n     std::vector<CNetAddr> vIP;\n-    bool fRet = LookupIntern(pszHost, vIP, 1, fAllowLookup);\n+    bool fRet = LookupIntern(pszHost, vIP, nMaxSolutions, fAllowLookup);\n+    if (!fRet)\n+        return false;\n+    vAddr.resize(vIP.size());\n+    for (int i = 0; i < vIP.size(); i++)\n+        vAddr[i] = CService(vIP[i], port);\n+    return true;\n+}\n+\n+bool Lookup(const char *pszName, CService& addr, int portDefault, bool fAllowLookup)\n+{\n+    std::vector<CService> vService;\n+    bool fRet = Lookup(pszName, vService, portDefault, fAllowLookup, 1);\n     if (!fRet)\n         return false;\n-    addr = CService(vIP[0], port);\n+    addr = vService[0];\n     return true;\n }\n "
+      },
+      {
+        "sha": "b12fb0045afc627383473cc1e204c202f27c2eea",
+        "filename": "src/netbase.h",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/b24e6e4d1b917210b9e22711fb2535f53e949547/src/netbase.h",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/b24e6e4d1b917210b9e22711fb2535f53e949547/src/netbase.h",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/netbase.h?ref=b24e6e4d1b917210b9e22711fb2535f53e949547",
+        "patch": "@@ -128,6 +128,7 @@ class CService : public CNetAddr\n bool LookupHost(const char *pszName, std::vector<CNetAddr>& vIP, int nMaxSolutions = 0, bool fAllowLookup = true);\n bool LookupHostNumeric(const char *pszName, std::vector<CNetAddr>& vIP, int nMaxSolutions = 0);\n bool Lookup(const char *pszName, CService& addr, int portDefault = 0, bool fAllowLookup = true);\n+bool Lookup(const char *pszName, std::vector<CService>& vAddr, int portDefault = 0, bool fAllowLookup = true, int nMaxSolutions = 0);\n bool LookupNumeric(const char *pszName, CService& addr, int portDefault = 0);\n bool ConnectSocket(const CService &addr, SOCKET& hSocketRet, int nTimeout = nConnectTimeout);\n "
+      }
+    ]
+  },
+  {
+    "sha": "10ba0a3efc350b82d1415736a545f17e739c0098",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzoxMGJhMGEzZWZjMzUwYjgyZDE0MTU3MzZhNTQ1ZjE3ZTczOWMwMDk4",
+    "commit": {
+      "author": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2011-12-09T01:34:11Z"
+      },
+      "committer": {
+        "name": "Matt Corallo",
+        "email": "matt@bluematt.me",
+        "date": "2012-01-13T03:13:16Z"
+      },
+      "message": "Minor code cleanup to use fHaveUPnP instead of #ifdef",
+      "tree": {
+        "sha": "a8028bdff4a5596a49953953e5689c7d6bc2a50d",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/a8028bdff4a5596a49953953e5689c7d6bc2a50d"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/10ba0a3efc350b82d1415736a545f17e739c0098",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/10ba0a3efc350b82d1415736a545f17e739c0098",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/10ba0a3efc350b82d1415736a545f17e739c0098",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/10ba0a3efc350b82d1415736a545f17e739c0098/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "b24e6e4d1b917210b9e22711fb2535f53e949547",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/b24e6e4d1b917210b9e22711fb2535f53e949547",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/b24e6e4d1b917210b9e22711fb2535f53e949547"
+      }
+    ],
+    "stats": {
+      "total": 6,
+      "additions": 2,
+      "deletions": 4
+    },
+    "files": [
+      {
+        "sha": "74ff79d1d9ccc35d207ff1de4584f4e8f2fb0581",
+        "filename": "src/net.cpp",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 4,
+        "changes": 6,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/10ba0a3efc350b82d1415736a545f17e739c0098/src/net.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/10ba0a3efc350b82d1415736a545f17e739c0098/src/net.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/net.cpp?ref=10ba0a3efc350b82d1415736a545f17e739c0098",
+        "patch": "@@ -1716,10 +1716,8 @@ bool StopNode()\n     fShutdown = true;\n     nTransactionsUpdated++;\n     int64 nStart = GetTime();\n-    while (vnThreadsRunning[0] > 0 || vnThreadsRunning[2] > 0 || vnThreadsRunning[3] > 0 || vnThreadsRunning[4] > 0 || vnThreadsRunning[6] > 0 || vnThreadsRunning[7] > 0\n-#ifdef USE_UPNP\n-        || vnThreadsRunning[5] > 0\n-#endif\n+    while (vnThreadsRunning[0] > 0 || vnThreadsRunning[2] > 0 || vnThreadsRunning[3] > 0 || vnThreadsRunning[4] > 0\n+        || (fHaveUPnP && vnThreadsRunning[5] > 0) || vnThreadsRunning[6] > 0 || vnThreadsRunning[7] > 0\n     )\n     {\n         if (GetTime() - nStart > 20)"
+      }
+    ]
+  }
+]

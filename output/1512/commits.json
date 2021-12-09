@@ -1,0 +1,122 @@
+[
+  {
+    "sha": "c6494d82fa31913eb075b222293e87ae40c9f9b2",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzpjNjQ5NGQ4MmZhMzE5MTNlYjA3NWIyMjIyOTNlODdhZTQwYzlmOWIy",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-06-27T17:47:02Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-07-04T02:53:30Z"
+      },
+      "message": "RPC: break out high level JSON-RPC req/resp into their own functions\n\nThis prepares for JSON-RPC 2.0 batches.",
+      "tree": {
+        "sha": "0c529ea0e87943bc05d4755f40ff50e51f3689d3",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/0c529ea0e87943bc05d4755f40ff50e51f3689d3"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/c6494d82fa31913eb075b222293e87ae40c9f9b2",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c6494d82fa31913eb075b222293e87ae40c9f9b2",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/c6494d82fa31913eb075b222293e87ae40c9f9b2",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c6494d82fa31913eb075b222293e87ae40c9f9b2/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "38986093045f252753e35b3d9d4c3e2ad0c82af3",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/38986093045f252753e35b3d9d4c3e2ad0c82af3",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/38986093045f252753e35b3d9d4c3e2ad0c82af3"
+      }
+    ],
+    "stats": {
+      "total": 85,
+      "additions": 55,
+      "deletions": 30
+    },
+    "files": [
+      {
+        "sha": "134c3be93fb7f7905b7a9210693cb2040e2095e7",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 55,
+        "deletions": 30,
+        "changes": 85,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/c6494d82fa31913eb075b222293e87ae40c9f9b2/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/c6494d82fa31913eb075b222293e87ae40c9f9b2/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=c6494d82fa31913eb075b222293e87ae40c9f9b2",
+        "patch": "@@ -2552,7 +2552,7 @@ string JSONRPCRequest(const string& strMethod, const Array& params, const Value&\n     return write_string(Value(request), false) + \"\\n\";\n }\n \n-string JSONRPCReply(const Value& result, const Value& error, const Value& id)\n+Object JSONRPCReplyObj(const Value& result, const Value& error, const Value& id)\n {\n     Object reply;\n     if (error.type() != null_type)\n@@ -2561,6 +2561,12 @@ string JSONRPCReply(const Value& result, const Value& error, const Value& id)\n         reply.push_back(Pair(\"result\", result));\n     reply.push_back(Pair(\"error\", error));\n     reply.push_back(Pair(\"id\", id));\n+    return reply;\n+}\n+\n+string JSONRPCReply(const Value& result, const Value& error, const Value& id)\n+{\n+    Object reply = JSONRPCReplyObj(result, error, id);\n     return write_string(Value(reply), false) + \"\\n\";\n }\n \n@@ -2905,6 +2911,47 @@ void ThreadRPCServer2(void* parg)\n     StopRequests();\n }\n \n+class JSONRequest\n+{\n+public:\n+    Value id;\n+    string strMethod;\n+    Array params;\n+\n+    JSONRequest() { id = Value::null; }\n+    void parse(const Value& valRequest);\n+};\n+\n+void JSONRequest::parse(const Value& valRequest)\n+{\n+    // Parse request\n+    if (valRequest.type() != obj_type)\n+        throw JSONRPCError(-32600, \"Invalid Request object\");\n+    const Object& request = valRequest.get_obj();\n+\n+    // Parse id now so errors from here on will have the id\n+    id = find_value(request, \"id\");\n+\n+    // Parse method\n+    Value valMethod = find_value(request, \"method\");\n+    if (valMethod.type() == null_type)\n+        throw JSONRPCError(-32600, \"Missing method\");\n+    if (valMethod.type() != str_type)\n+        throw JSONRPCError(-32600, \"Method must be a string\");\n+    strMethod = valMethod.get_str();\n+    if (strMethod != \"getwork\" && strMethod != \"getmemorypool\")\n+        printf(\"ThreadRPCServer method=%s\\n\", strMethod.c_str());\n+\n+    // Parse params\n+    Value valParams = find_value(request, \"params\");\n+    if (valParams.type() == array_type)\n+        params = valParams.get_array();\n+    else if (valParams.type() == null_type)\n+        params = Array();\n+    else\n+        throw JSONRPCError(-32600, \"Params must be an array\");\n+}\n+\n static CCriticalSection cs_THREAD_RPCHANDLER;\n \n void ThreadRPCServer3(void* parg)\n@@ -2954,52 +3001,30 @@ void ThreadRPCServer3(void* parg)\n         if (mapHeaders[\"connection\"] == \"close\")\n             fRun = false;\n \n-        Value id = Value::null;\n+        JSONRequest jreq;\n         try\n         {\n             // Parse request\n             Value valRequest;\n             if (!read_string(strRequest, valRequest) || valRequest.type() != obj_type)\n                 throw JSONRPCError(-32700, \"Parse error\");\n-            const Object& request = valRequest.get_obj();\n-\n-            // Parse id now so errors from here on will have the id\n-            id = find_value(request, \"id\");\n-\n-            // Parse method\n-            Value valMethod = find_value(request, \"method\");\n-            if (valMethod.type() == null_type)\n-                throw JSONRPCError(-32600, \"Missing method\");\n-            if (valMethod.type() != str_type)\n-                throw JSONRPCError(-32600, \"Method must be a string\");\n-            string strMethod = valMethod.get_str();\n-            if (strMethod != \"getwork\" && strMethod != \"getmemorypool\")\n-                printf(\"ThreadRPCServer method=%s\\n\", strMethod.c_str());\n-\n-            // Parse params\n-            Value valParams = find_value(request, \"params\");\n-            Array params;\n-            if (valParams.type() == array_type)\n-                params = valParams.get_array();\n-            else if (valParams.type() == null_type)\n-                params = Array();\n-            else\n-                throw JSONRPCError(-32600, \"Params must be an array\");\n \n-            Value result = tableRPC.execute(strMethod, params);\n+            jreq.parse(valRequest);\n+\n+            Value result = tableRPC.execute(jreq.strMethod, jreq.params);\n \n             // Send reply\n-            string strReply = JSONRPCReply(result, Value::null, id);\n+            string strReply = JSONRPCReply(result, Value::null, jreq.id);\n             conn->stream() << HTTPReply(200, strReply, fRun) << std::flush;\n         }\n         catch (Object& objError)\n         {\n-            ErrorReply(conn->stream(), objError, id);\n+            ErrorReply(conn->stream(), objError, jreq.id);\n             break;\n         }\n         catch (std::exception& e)\n         {\n-            ErrorReply(conn->stream(), JSONRPCError(-32700, e.what()), id);\n+            ErrorReply(conn->stream(), JSONRPCError(-32700, e.what()), jreq.id);\n             break;\n         }\n     }"
+      }
+    ]
+  },
+  {
+    "sha": "613389019e6e3c0e903f78f6186d598c5194c395",
+    "node_id": "MDY6Q29tbWl0MTE4MTkyNzo2MTMzODkwMTllNmUzYzBlOTAzZjc4ZjYxODZkNTk4YzUxOTRjMzk1",
+    "commit": {
+      "author": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@exmulti.com",
+        "date": "2012-06-24T06:01:28Z"
+      },
+      "committer": {
+        "name": "Jeff Garzik",
+        "email": "jgarzik@redhat.com",
+        "date": "2012-07-04T02:53:57Z"
+      },
+      "message": "RPC: add support for JSON-RPC 2.0-style request batching\n\nIf the top-level object is an array, it is assumed to be an array of\nJSON-RPC requests.  An array is returned, containing one response (error or\nnot) per request, in the order submitted.\n\nIn a slight change in semantics, batched requests -always- return\nan HTTP 200 OK status, even ones full of invalid or incorrect requests.",
+      "tree": {
+        "sha": "4ee9314b7d5f8bce126101308142b5784bc7f9a2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/git/trees/4ee9314b7d5f8bce126101308142b5784bc7f9a2"
+      },
+      "url": "https://api.github.com/repos/bitcoin/bitcoin/git/commits/613389019e6e3c0e903f78f6186d598c5194c395",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null
+      }
+    },
+    "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/613389019e6e3c0e903f78f6186d598c5194c395",
+    "html_url": "https://github.com/bitcoin/bitcoin/commit/613389019e6e3c0e903f78f6186d598c5194c395",
+    "comments_url": "https://api.github.com/repos/bitcoin/bitcoin/commits/613389019e6e3c0e903f78f6186d598c5194c395/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "c6494d82fa31913eb075b222293e87ae40c9f9b2",
+        "url": "https://api.github.com/repos/bitcoin/bitcoin/commits/c6494d82fa31913eb075b222293e87ae40c9f9b2",
+        "html_url": "https://github.com/bitcoin/bitcoin/commit/c6494d82fa31913eb075b222293e87ae40c9f9b2"
+      }
+    ],
+    "stats": {
+      "total": 54,
+      "additions": 49,
+      "deletions": 5
+    },
+    "files": [
+      {
+        "sha": "109cb92f32835e8a984fa560496e7b4c69500323",
+        "filename": "src/bitcoinrpc.cpp",
+        "status": "modified",
+        "additions": 49,
+        "deletions": 5,
+        "changes": 54,
+        "blob_url": "https://github.com/bitcoin/bitcoin/blob/613389019e6e3c0e903f78f6186d598c5194c395/src/bitcoinrpc.cpp",
+        "raw_url": "https://github.com/bitcoin/bitcoin/raw/613389019e6e3c0e903f78f6186d598c5194c395/src/bitcoinrpc.cpp",
+        "contents_url": "https://api.github.com/repos/bitcoin/bitcoin/contents/src/bitcoinrpc.cpp?ref=613389019e6e3c0e903f78f6186d598c5194c395",
+        "patch": "@@ -2952,6 +2952,39 @@ void JSONRequest::parse(const Value& valRequest)\n         throw JSONRPCError(-32600, \"Params must be an array\");\n }\n \n+static Object JSONRPCExecOne(const Value& req)\n+{\n+    Object rpc_result;\n+\n+    JSONRequest jreq;\n+    try {\n+        jreq.parse(req);\n+\n+        Value result = tableRPC.execute(jreq.strMethod, jreq.params);\n+        rpc_result = JSONRPCReplyObj(result, Value::null, jreq.id);\n+    }\n+    catch (Object& objError)\n+    {\n+        rpc_result = JSONRPCReplyObj(Value::null, objError, jreq.id);\n+    }\n+    catch (std::exception& e)\n+    {\n+        rpc_result = JSONRPCReplyObj(Value::null,\n+                                     JSONRPCError(-32700, e.what()), jreq.id);\n+    }\n+\n+    return rpc_result;\n+}\n+\n+static string JSONRPCExecBatch(const Array& vReq)\n+{\n+    Array ret;\n+    for (unsigned int reqIdx = 0; reqIdx < vReq.size(); reqIdx++)\n+        ret.push_back(JSONRPCExecOne(vReq[reqIdx]));\n+\n+    return write_string(Value(ret), false) + \"\\n\";\n+}\n+\n static CCriticalSection cs_THREAD_RPCHANDLER;\n \n void ThreadRPCServer3(void* parg)\n@@ -3006,15 +3039,26 @@ void ThreadRPCServer3(void* parg)\n         {\n             // Parse request\n             Value valRequest;\n-            if (!read_string(strRequest, valRequest) || valRequest.type() != obj_type)\n+            if (!read_string(strRequest, valRequest))\n                 throw JSONRPCError(-32700, \"Parse error\");\n \n-            jreq.parse(valRequest);\n+            string strReply;\n+\n+            // singleton request\n+            if (valRequest.type() == obj_type) {\n+                jreq.parse(valRequest);\n \n-            Value result = tableRPC.execute(jreq.strMethod, jreq.params);\n+                Value result = tableRPC.execute(jreq.strMethod, jreq.params);\n \n-            // Send reply\n-            string strReply = JSONRPCReply(result, Value::null, jreq.id);\n+                // Send reply\n+                strReply = JSONRPCReply(result, Value::null, jreq.id);\n+\n+            // array of requests\n+            } else if (valRequest.type() == array_type)\n+                strReply = JSONRPCExecBatch(valRequest.get_array());\n+            else\n+                throw JSONRPCError(-32700, \"Top-level object parse error\");\n+                \n             conn->stream() << HTTPReply(200, strReply, fRun) << std::flush;\n         }\n         catch (Object& objError)"
+      }
+    ]
+  }
+]
